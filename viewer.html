@@ -42,7 +42,8 @@
       z-index: 10;
     }
     #time-axis-wrapper {
-      overflow-x: auto;
+      overflow: hidden;
+      height: auto;
     }
     #time-axis {
       height: 20px;
@@ -178,27 +179,10 @@
       timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)'
     }
 
-    // 🔁 雙向同步 scroll，避免閃爍
-    let isSyncing = false
     viewer.addEventListener('scroll', () => {
-      if (!isSyncing) {
-        isSyncing = true
-        requestAnimationFrame(() => {
-          timeWrapper.scrollLeft = viewer.scrollLeft
-          isSyncing = false
-        })
-      }
+      timeWrapper.scrollLeft = viewer.scrollLeft
     })
-    timeWrapper.addEventListener('scroll', () => {
-      if (!isSyncing) {
-        isSyncing = true
-        requestAnimationFrame(() => {
-          viewer.scrollLeft = timeWrapper.scrollLeft
-          isSyncing = false
-        })
-      }
-    })
-
+    
     // 🖱 hover 頻率顯示
     viewer.addEventListener('mousemove', (e) => {
       const rect = viewer.getBoundingClientRect()
