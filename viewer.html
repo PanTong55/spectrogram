@@ -1,0 +1,21 @@
+<div id="waveform"></div>
+<div id="spectrogram"></div>
+<script src="https://unpkg.com/wavesurfer.js"></script>
+<script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.spectrogram.min.js"></script>
+<script src="https://unpkg.com/d3@5.16.0/dist/d3.min.js"></script>
+
+<script>
+  const wavesurfer = WaveSurfer.create({
+    container: '#waveform',
+    waveColor: '#A8DBA8',
+    progressColor: '#3B8686',
+    plugins: [
+      WaveSurfer.spectrogram.create({
+        container: '#spectrogram',
+        labels: true
+      })
+    ]
+  });
+
+  wavesurfer.load('https://yoursite.com/path-to-your-audio.wav');
+</script>
