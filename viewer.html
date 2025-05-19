@@ -2,42 +2,67 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Bat Spectrogram Viewer with Zoom</title>
+  <title>🦇 Bat Spectrogram Viewer with Zoom + Scroll</title>
   <style>
     body {
       font-family: sans-serif;
       margin: 20px;
       background: #f5f5f5;
     }
+
+    #viewer-container {
+      width: 100%;
+      overflow-x: auto;  /* ✅ 可水平滾動 */
+      border: 1px solid #ccc;
+      padding-bottom: 10px;
+    }
+
     #waveform {
       height: 100px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
+
     canvas {
-      border: 1px solid #ccc;
+      border-top: 1px solid #ccc;
     }
+
     #zoom-controls {
-      margin-top: 10px;
+      margin-top: 15px;
+    }
+
+    .zoom-button {
+      padding: 6px 12px;
+      margin-right: 6px;
+      font-size: 14px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <h2>🦇 Bat Recording Viewer</h2>
-  <p><small>Sample rate: 256 kHz, Spectrogram up to 128 kHz</small></p>
+  <p><small>Sample rate: 256 kHz | Spectrogram up to 128 kHz</small></p>
 
-  <div id="waveform"></div>
+  <!-- ✅ 可滾動容器 -->
+  <div id="viewer-container">
+    <div id="waveform"></div>
+  </div>
 
+  <!-- ✅ Zoom 控制按鈕 -->
   <div id="zoom-controls">
-    <label for="zoom">Zoom: <span id="zoom-value">150</span> px/sec</label><br />
-    <input type="range" id="zoom" min="50" max="500" step="10" value="150" />
+    <button class="zoom-button" id="zoom-in">Zoom In +</button>
+    <button class="zoom-button" id="zoom-out">Zoom Out −</button>
+    <span>Zoom: <span id="zoom-value">150</span> px/sec</span>
   </div>
 
   <script type="module">
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js'
     import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
 
+    const waveformContainer = document.getElementById('waveform')
+    const zoomValueDisplay = document.getElementById('zoom-value')
+
     const ws = WaveSurfer.create({
-      container: '#waveform',
+      container: waveformContainer,
       waveColor: 'violet',
       progressColor: 'indigo',
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
@@ -59,19 +84,32 @@
 
     ws.once('interaction', () => ws.play())
 
-    // Zoom 控制邏輯
-    const zoomSlider = document.getElementById('zoom')
-    const zoomValueLabel = document.getElementById('zoom-value')
+    // ✅ Zoom 控制
+    let zoomLevel = 150
+    const minZoom = 50
+    const maxZoom = 500
 
-    zoomSlider.addEventListener('input', () => {
-      const value = parseInt(zoomSlider.value)
-      zoomValueLabel.textContent = value
-      ws.zoom(value)
+    const applyZoom = () => {
+      ws.zoom(zoomLevel)
+      zoomValueDisplay.textContent = zoomLevel
+    }
+
+    document.getElementById('zoom-in').addEventListener('click', () => {
+      if (zoomLevel < maxZoom) {
+        zoomLevel += 25
+        applyZoom()
+      }
     })
 
-    // 預設載入後放大 150 px/sec
+    document.getElementById('zoom-out').addEventListener('click', () => {
+      if (zoomLevel > minZoom) {
+        zoomLevel -= 25
+        applyZoom()
+      }
+    })
+
     ws.on('ready', () => {
-      ws.zoom(150)
+      applyZoom()
     })
   </script>
 </body>
