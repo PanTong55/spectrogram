@@ -123,6 +123,7 @@
     let duration = 0
     const spectrogramHeight = 1000
     let zoomLevel = 500
+    let lastScrollLeft = 0
 
     const ws = WaveSurfer.create({
       container: container,
@@ -187,7 +188,6 @@
       timeLabel.style.textAlign = 'center'
     }
 
-    let lastScrollLeft = 0
     wrapper.addEventListener('scroll', () => {
       const scrollX = wrapper.scrollLeft
       if (Math.abs(scrollX - lastScrollLeft) > 1) {
