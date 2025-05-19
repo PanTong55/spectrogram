@@ -103,10 +103,11 @@
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000
     })
-
+    const spectrogramHeight = 1000
+    
     const specPlugin = Spectrogram.create({
       labels: true,
-      height: 1000,
+      height: spectrogramHeight, 
       fftSamples: 1024,
       frequencyMin: 0,
       frequencyMax: 128000,
@@ -154,7 +155,7 @@
       const rect = spectrogramContainer.getBoundingClientRect()
       const y = e.clientY - rect.top
       const height = specPlugin.params.height
-      const freq = (1 - y / height) * 128
+      const freq = (1 - y / spectrogramHeight) * 128
       if (freq >= 0 && freq <= 128) {
         hoverLine.style.top = `${y}px`
         hoverLine.style.display = 'block'
