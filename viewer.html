@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>🪷 Bat Spectrogram Viewer (Fixed)</title>
+  <title>Bat Spectrogram Viewer</title>
   <style>
     body {
       font-family: sans-serif;
@@ -95,7 +95,7 @@
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
     <button class="zoom-button" id="zoom-out">Zoom Out −</button>
-    <span>Zoom: <span id="zoom-value">500</span> px/sec</span>
+    <!-- ✅ 移除 Zoom scale 顯示 -->
   </div>
 
   <script type="module">
@@ -107,12 +107,15 @@
     const hoverLine = document.getElementById('hover-line')
     const freqLabel = document.getElementById('freq-label')
     const timeAxis = document.getElementById('time-axis')
+    const timeWrapper = document.getElementById('time-axis-wrapper')
     const timeLabel = document.getElementById('time-label')
     const freqGrid = document.getElementById('freq-grid')
 
     let duration = 0
     const spectrogramHeight = 1000
     let zoomLevel = 500
+    const maxZoom = 1000
+    const minZoom = 50
 
     const ws = WaveSurfer.create({
       container: container,
@@ -138,34 +141,31 @@
     ws.on('decode', () => {
       duration = ws.getDuration()
       applyZoom()
-      drawTimeAxis()
+      drawFrequencyGrid()
     })
 
-    const zoomValue = document.getElementById('zoom-value')
-    const applyZoom = () => {
-      ws.zoom(zoomLevel)
-      zoomValue.textContent = zoomLevel
-      drawTimeAxis()
-    }
-
     document.getElementById('zoom-in').onclick = () => {
-      zoomLevel = Math.min(zoomLevel + 250, 1000)
+      zoomLevel = Math.min(zoomLevel + 250, maxZoom)
       applyZoom()
     }
     document.getElementById('zoom-out').onclick = () => {
-      zoomLevel = Math.max(zoomLevel - 250, 50)
+      zoomLevel = Math.max(zoomLevel - 250, minZoom)
       applyZoom()
+    }
+
+    function applyZoom() {
+      ws.zoom(zoomLevel)
+      drawTimeAxis()
+      drawFrequencyGrid()
     }
 
     function drawTimeAxis() {
       const pxPerSec = zoomLevel
       const totalWidth = duration * pxPerSec
-      let step
-
+      let step = 1000
       if (pxPerSec >= 800) step = 100
       else if (pxPerSec >= 500) step = 200
       else if (pxPerSec >= 300) step = 500
-      else step = 1000
 
       const html = []
       for (let t = 0; t < duration * 1000; t += step) {
@@ -176,41 +176,55 @@
       timeAxis.innerHTML = html.join('')
       timeAxis.style.width = `${totalWidth}px`
       timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)'
-      timeLabel.style.textAlign = 'center'
     }
 
+    // 🔁 雙向同步 scroll，避免閃爍
+    let isSyncing = false
     viewer.addEventListener('scroll', () => {
-      document.getElementById('time-axis-wrapper').scrollLeft = viewer.scrollLeft
+      if (!isSyncing) {
+        isSyncing = true
+        requestAnimationFrame(() => {
+          timeWrapper.scrollLeft = viewer.scrollLeft
+          isSyncing = false
+        })
+      }
     })
-
-    viewer.addEventListener('mousemove', (e) => {
-      const rect = viewer.getBoundingClientRect()
-      const y = e.clientY - rect.top + viewer.scrollTop
-      const freq = (1 - y / spectrogramHeight) * 128
-      if (freq >= 0 && freq <= 128) {
-        hoverLine.style.top = `${y}px`
-        hoverLine.style.display = 'block'
-        freqLabel.style.top = `${y - 12}px`
-        freqLabel.style.display = 'block'
-        freqLabel.textContent = `${freq.toFixed(1)} kHz`
-      } else {
-        hoverLine.style.display = 'none'
-        freqLabel.style.display = 'none'
+    timeWrapper.addEventListener('scroll', () => {
+      if (!isSyncing) {
+        isSyncing = true
+        requestAnimationFrame(() => {
+          viewer.scrollLeft = timeWrapper.scrollLeft
+          isSyncing = false
+        })
       }
     })
 
+    // 🖱 hover 頻率顯示
+    viewer.addEventListener('mousemove', (e) => {
+      const rect = viewer.getBoundingClientRect()
+      const y = e.clientY - rect.top + viewer.scrollTop
+      let freq = (1 - y / spectrogramHeight) * 128
+      freq = Math.max(0, Math.min(128, freq))
+      hoverLine.style.top = `${y}px`
+      hoverLine.style.display = 'block'
+      freqLabel.style.top = `${y - 12}px`
+      freqLabel.style.display = 'block'
+      freqLabel.textContent = `${freq.toFixed(1)} kHz`
+    })
     viewer.addEventListener('mouseleave', () => {
       hoverLine.style.display = 'none'
       freqLabel.style.display = 'none'
     })
 
+    // 📈 頻率格線每 10kHz 一格
     function drawFrequencyGrid() {
-      freqGrid.width = container.scrollWidth
+      const width = container.scrollWidth
+      freqGrid.width = width
       freqGrid.height = spectrogramHeight
-      freqGrid.style.width = container.scrollWidth + 'px'
+      freqGrid.style.width = width + 'px'
       freqGrid.style.height = spectrogramHeight + 'px'
       const ctx = freqGrid.getContext('2d')
-      ctx.clearRect(0, 0, freqGrid.width, freqGrid.height)
+      ctx.clearRect(0, 0, width, spectrogramHeight)
       ctx.strokeStyle = 'rgba(255,255,255,0.3)'
       ctx.fillStyle = '#fff'
       ctx.font = '12px sans-serif'
@@ -218,15 +232,11 @@
         const y = (1 - f / 128) * spectrogramHeight
         ctx.beginPath()
         ctx.moveTo(0, y)
-        ctx.lineTo(freqGrid.width, y)
+        ctx.lineTo(width, y)
         ctx.stroke()
         ctx.fillText(`${f}kHz`, 5, y - 2)
       }
     }
-
-    ws.on('ready', () => {
-      drawFrequencyGrid()
-    })
   </script>
 </body>
 </html>
