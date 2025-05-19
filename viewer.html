@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Bat Spectrogram Viewer</title>
+  <title>Bat Spectrogram Viewer with Zoom</title>
   <style>
     body {
       font-family: sans-serif;
@@ -16,6 +16,9 @@
     canvas {
       border: 1px solid #ccc;
     }
+    #zoom-controls {
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -23,6 +26,11 @@
   <p><small>Sample rate: 256 kHz, Spectrogram up to 128 kHz</small></p>
 
   <div id="waveform"></div>
+
+  <div id="zoom-controls">
+    <label for="zoom">Zoom: <span id="zoom-value">150</span> px/sec</label><br />
+    <input type="range" id="zoom" min="50" max="500" step="10" value="150" />
+  </div>
 
   <script type="module">
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js'
@@ -44,12 +52,27 @@
         frequencyMin: 10000,
         frequencyMax: 128000,
         scale: 'linear',
+        windowFunc: 'hann',
         labelsBackground: 'rgba(0,0,0,0.05)',
       })
     )
 
-    // Auto play on interaction
     ws.once('interaction', () => ws.play())
+
+    // Zoom 控制邏輯
+    const zoomSlider = document.getElementById('zoom')
+    const zoomValueLabel = document.getElementById('zoom-value')
+
+    zoomSlider.addEventListener('input', () => {
+      const value = parseInt(zoomSlider.value)
+      zoomValueLabel.textContent = value
+      ws.zoom(value)
+    })
+
+    // 預設載入後放大 150 px/sec
+    ws.on('ready', () => {
+      ws.zoom(150)
+    })
   </script>
 </body>
 </html>
