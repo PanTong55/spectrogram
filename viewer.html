@@ -2,14 +2,13 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>🦇 Bat Spectrogram Viewer Advanced</title>
+  <title>🪷 Bat Spectrogram Viewer (Fixed)</title>
   <style>
     body {
       font-family: sans-serif;
       margin: 20px;
       background: #f5f5f5;
     }
-
     #viewer-container {
       width: 100%;
       height: 1020px;
@@ -18,20 +17,17 @@
       position: relative;
       border: 1px solid #ccc;
     }
-
     #spectrogram-only {
       position: relative;
     }
-
-    #frequency-hover-line {
+    #hover-line {
       position: absolute;
-      left: 0;
       width: 100%;
       height: 1px;
-      background-color: red;
+      background: red;
       pointer-events: none;
+      display: none;
     }
-
     #freq-label {
       position: absolute;
       left: 10px;
@@ -41,8 +37,8 @@
       border: 1px solid #ccc;
       border-radius: 3px;
       pointer-events: none;
+      display: none;
     }
-
     #time-axis {
       height: 20px;
       background: white;
@@ -55,29 +51,34 @@
       top: 0;
       z-index: 10;
     }
-
     #zoom-controls {
       margin-top: 15px;
     }
-
     .zoom-button {
       padding: 6px 12px;
       margin-right: 6px;
       font-size: 14px;
       cursor: pointer;
     }
+    #freq-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
-  <h2>🦇 Bat Recording Viewer</h2>
+  <h2>🪷 Bat Recording Viewer</h2>
   <p><small>256 kHz | 1024 FFT | Time axis in ms | Hover shows frequency</small></p>
 
   <div id="time-axis">Loading...</div>
-
   <div id="viewer-container">
     <div id="spectrogram-only"></div>
-    <div id="frequency-hover-line" style="display: none;"></div>
-    <div id="freq-label" style="display: none;">-</div>
+    <canvas id="freq-grid"></canvas>
+    <div id="hover-line"></div>
+    <div id="freq-label">-</div>
   </div>
 
   <div id="zoom-controls">
@@ -90,69 +91,76 @@
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js'
     import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
 
-    const spectrogramContainer = document.getElementById('spectrogram-only')
-    const hoverLine = document.getElementById('frequency-hover-line')
+    const container = document.getElementById('spectrogram-only')
+    const viewer = document.getElementById('viewer-container')
+    const hoverLine = document.getElementById('hover-line')
     const freqLabel = document.getElementById('freq-label')
     const timeAxis = document.getElementById('time-axis')
+    const freqGrid = document.getElementById('freq-grid')
+
+    let duration = 0
+    const spectrogramHeight = 1000
+    let zoomLevel = 150
 
     const ws = WaveSurfer.create({
-      container: spectrogramContainer,
+      container: container,
+      height: 0,
       interact: false,
       cursorWidth: 0,
-      height: 0,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
-      sampleRate: 256000
+      sampleRate: 256000,
     })
-    const spectrogramHeight = 1000
-    
+
     const specPlugin = Spectrogram.create({
       labels: true,
-      height: spectrogramHeight, 
+      height: spectrogramHeight,
       fftSamples: 1024,
       frequencyMin: 0,
       frequencyMax: 128000,
       scale: 'linear',
       windowFunc: 'hann',
-      labelsBackground: 'rgba(255,255,255,0.6)',
-      labelInterval: 10000, // ← not official API, but we’ll handle manually below
     })
 
     ws.registerPlugin(specPlugin)
 
-    let duration = 0
-    let zoomLevel = 150
-    const minZoom = 50
-    const maxZoom = 500
-    const zoomValueDisplay = document.getElementById('zoom-value')
+    ws.on('decode', () => {
+      duration = ws.getDuration()
+      applyZoom()
+      drawTimeAxis()
+    })
 
+    const zoomValue = document.getElementById('zoom-value')
     const applyZoom = () => {
       ws.zoom(zoomLevel)
-      zoomValueDisplay.textContent = zoomLevel
+      zoomValue.textContent = zoomLevel
       drawTimeAxis()
     }
 
-    document.getElementById('zoom-in').addEventListener('click', () => {
-      if (zoomLevel < maxZoom) {
-        zoomLevel += 25
-        applyZoom()
-      }
-    })
-
-    document.getElementById('zoom-out').addEventListener('click', () => {
-      if (zoomLevel > minZoom) {
-        zoomLevel -= 25
-        applyZoom()
-      }
-    })
-
-    ws.on('ready', () => {
-      duration = ws.getDuration()
+    document.getElementById('zoom-in').onclick = () => {
+      zoomLevel = Math.min(zoomLevel + 25, 500)
       applyZoom()
-    })
+    }
+    document.getElementById('zoom-out').onclick = () => {
+      zoomLevel = Math.max(zoomLevel - 25, 50)
+      applyZoom()
+    }
 
-    // Frequency hover logic
-    spectrogramContainer.addEventListener('mousemove', (e) => {
-      const rect = spectrogramContainer.getBoundingClientRect()
+    function drawTimeAxis() {
+      const pxPerSec = zoomLevel
+      const totalWidth = duration * pxPerSec
+      const step = 100 // 100ms
+      const html = []
+      for (let t = 0; t < duration * 1000; t += step) {
+        const left = (t / 1000) * pxPerSec
+        html.push(`<span style="position:absolute;left:${left}px;">${t}ms</span>`)
+      }
+      timeAxis.innerHTML = html.join('')
+      timeAxis.style.position = 'relative'
+      timeAxis.style.width = `${totalWidth}px`
+    }
+
+    container.addEventListener('mousemove', (e) => {
+      const rect = viewer.getBoundingClientRect()
       const y = e.clientY - rect.top
       const freq = (1 - y / spectrogramHeight) * 128
       if (freq >= 0 && freq <= 128) {
@@ -167,27 +175,34 @@
       }
     })
 
-    spectrogramContainer.addEventListener('mouseleave', () => {
+    container.addEventListener('mouseleave', () => {
       hoverLine.style.display = 'none'
       freqLabel.style.display = 'none'
     })
 
-    // Time axis generation
-    function drawTimeAxis() {
-      const container = spectrogramContainer.querySelector('canvas')
-      if (!container) return
-      const pxPerSec = zoomLevel
-      const totalWidth = duration * pxPerSec
-      const step = 100 // ms
-      const html = []
-      for (let t = 0; t < duration * 1000; t += step) {
-        const left = (t / 1000) * pxPerSec
-        html.push(`<span style="position:absolute;left:${left}px;">${t}ms</span>`)
+    function drawFrequencyGrid() {
+      freqGrid.width = container.scrollWidth
+      freqGrid.height = spectrogramHeight
+      freqGrid.style.width = container.scrollWidth + 'px'
+      freqGrid.style.height = spectrogramHeight + 'px'
+      const ctx = freqGrid.getContext('2d')
+      ctx.clearRect(0, 0, freqGrid.width, freqGrid.height)
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+      ctx.fillStyle = '#fff'
+      ctx.font = '12px sans-serif'
+      for (let f = 0; f <= 128; f += 10) {
+        const y = (1 - f / 128) * spectrogramHeight
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(freqGrid.width, y)
+        ctx.stroke()
+        ctx.fillText(`${f}kHz`, 5, y - 2)
       }
-      timeAxis.innerHTML = html.join('')
-      timeAxis.style.position = 'relative'
-      timeAxis.style.width = `${totalWidth}px`
     }
+
+    ws.on('ready', () => {
+      drawFrequencyGrid()
+    })
   </script>
 </body>
 </html>
