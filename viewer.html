@@ -154,7 +154,6 @@
     spectrogramContainer.addEventListener('mousemove', (e) => {
       const rect = spectrogramContainer.getBoundingClientRect()
       const y = e.clientY - rect.top
-      const height = specPlugin.params.height
       const freq = (1 - y / spectrogramHeight) * 128
       if (freq >= 0 && freq <= 128) {
         hoverLine.style.top = `${y}px`
