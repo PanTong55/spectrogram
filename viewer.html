@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>🦇 Bat Spectrogram Viewer with Zoom + Scroll</title>
+  <title>🦇 Bat Spectrogram Viewer (Zoom + Scroll)</title>
   <style>
     body {
       font-family: sans-serif;
@@ -12,17 +12,14 @@
 
     #viewer-container {
       width: 100%;
-      overflow-x: auto;  /* ✅ 可水平滾動 */
+      height: 1020px;         /* ✅ 適合 1024-bin 的高頻蝙蝠聲譜 */
+      overflow-x: auto;       /* ✅ 水平捲動 */
+      overflow-y: hidden;     /* 垂直不捲動，畫面保持固定高度 */
       border: 1px solid #ccc;
-      padding-bottom: 10px;
-    }
-
-    #waveform {
-      height: 100px;
-      margin-bottom: 10px;
     }
 
     canvas {
+      display: block;
       border-top: 1px solid #ccc;
     }
 
@@ -39,15 +36,16 @@
   </style>
 </head>
 <body>
-  <h2>🦇 Bat Recording Viewer</h2>
-  <p><small>Sample rate: 256 kHz | Spectrogram up to 128 kHz</small></p>
+  <h2>🦇 Bat Spectrogram Viewer</h2>
+  <p><small>256 kHz sampling rate | Spectrogram: 10–128 kHz | Zoom enabled</small></p>
 
-  <!-- ✅ 可滾動容器 -->
+  <!-- ✅ 可捲動容器只含 spectrogram -->
   <div id="viewer-container">
-    <div id="waveform"></div>
+    <!-- wavesurfer will auto-inject canvas into this container -->
+    <div id="spectrogram-only"></div>
   </div>
 
-  <!-- ✅ Zoom 控制按鈕 -->
+  <!-- ✅ Zoom 控制 -->
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
     <button class="zoom-button" id="zoom-out">Zoom Out −</button>
@@ -58,15 +56,14 @@
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js'
     import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
 
-    const waveformContainer = document.getElementById('waveform')
-    const zoomValueDisplay = document.getElementById('zoom-value')
-
+    // 用空白容器初始化 WaveSurfer，只用來生成 Spectrogram
     const ws = WaveSurfer.create({
-      container: waveformContainer,
-      waveColor: 'violet',
-      progressColor: 'indigo',
+      container: '#spectrogram-only',
+      interact: false,               // 不要滑動播放頭
+      cursorWidth: 0,               // 不要顯示播放游標
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
+      height: 0                     // ✅ 不畫 waveform（完全隱藏）
     })
 
     ws.registerPlugin(
@@ -82,12 +79,11 @@
       })
     )
 
-    ws.once('interaction', () => ws.play())
-
-    // ✅ Zoom 控制
+    // Zoom 控制
     let zoomLevel = 150
     const minZoom = 50
     const maxZoom = 500
+    const zoomValueDisplay = document.getElementById('zoom-value')
 
     const applyZoom = () => {
       ws.zoom(zoomLevel)
