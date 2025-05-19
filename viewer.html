@@ -24,7 +24,7 @@
       position: absolute;
       width: 100%;
       height: 1px;
-      background: red;
+      background: white;
       pointer-events: none;
       display: none;
       z-index: 10;
@@ -85,7 +85,7 @@
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
     <button class="zoom-button" id="zoom-out">Zoom Out −</button>
-    <span>Zoom: <span id="zoom-value">250</span> px/sec</span>
+    <span>Zoom: <span id="zoom-value">500</span> px/sec</span>
   </div>
 
   <script type="module">
@@ -101,7 +101,7 @@
 
     let duration = 0
     const spectrogramHeight = 1000
-    let zoomLevel = 250
+    let zoomLevel = 500
 
     const ws = WaveSurfer.create({
       container: container,
@@ -138,11 +138,11 @@
     }
 
     document.getElementById('zoom-in').onclick = () => {
-      zoomLevel = Math.min(zoomLevel + 25, 1000)
+      zoomLevel = Math.min(zoomLevel + 250, 1000)
       applyZoom()
     }
     document.getElementById('zoom-out').onclick = () => {
-      zoomLevel = Math.max(zoomLevel - 25, 50)
+      zoomLevel = Math.max(zoomLevel - 250, 50)
       applyZoom()
     }
 
@@ -169,7 +169,7 @@
         hoverLine.style.display = 'block'
         freqLabel.style.top = `${y - 12}px`
         freqLabel.style.display = 'block'
-        freqLabel.textContent = `${Math.round(freq)} kHz`
+        freqLabel.textContent = `${freq.toFixed(1)} kHz`
       } else {
         hoverLine.style.display = 'none'
         freqLabel.style.display = 'none'
