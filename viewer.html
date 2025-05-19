@@ -1,25 +1,33 @@
-<div id="waveform"></div>
-<div id="spectrogram"></div>
-<script src="https://unpkg.com/wavesurfer.js"></script>
-<script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.spectrogram.min.js"></script>
-<script src="https://unpkg.com/d3@5.16.0/dist/d3.min.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Bat Spectrogram Viewer</title>
+</head>
+<body>
+  <div id="waveform"></div>
+  <div id="spectrogram"></div>
 
-<script>
-  const wavesurfer = WaveSurfer.create({
-    container: '#waveform',
-    waveColor: 'violet',
-    progressColor: 'purple',
-    backend: 'WebAudio',
-    plugins: [
-      WaveSurfer.spectrogram.create({
-        container: '#spectrogram',
-        fftSamples: 1024,             // 解析度：可以嘗試 4096 / 8192 提升精度
-        labels: true,
-        frequencyMax: 128000          // ❗需手動設置上限為 128 kHz（Nyquist）
-      })
-    ]
-  });
+  <script src="https://unpkg.com/wavesurfer.js"></script>
+  <script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.spectrogram.min.js"></script>
+  <script src="https://unpkg.com/d3@5.16.0/dist/d3.min.js"></script>
 
-  wavesurfer.load('https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav
-');
-</script>
+  <script>
+    const wavesurfer = WaveSurfer.create({
+      container: '#waveform',
+      waveColor: '#a0d8ef',
+      progressColor: '#007bbb',
+      plugins: [
+        WaveSurfer.spectrogram.create({
+          container: '#spectrogram',
+          labels: true,
+          fftSamples: 1024,
+          frequencyMax: 128000
+        })
+      ]
+    });
+
+    wavesurfer.load('https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav');
+  </script>
+</body>
+</html>
