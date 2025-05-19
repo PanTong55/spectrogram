@@ -187,8 +187,13 @@
       timeLabel.style.textAlign = 'center'
     }
 
+    let lastScrollLeft = 0
     wrapper.addEventListener('scroll', () => {
-      document.getElementById('time-axis-wrapper').scrollLeft = wrapper.scrollLeft
+      const scrollX = wrapper.scrollLeft
+      if (Math.abs(scrollX - lastScrollLeft) > 1) {
+        document.getElementById('time-axis-wrapper').scrollLeft = scrollX
+        lastScrollLeft = scrollX
+      }
     })
 
     wrapper.addEventListener('mousemove', (e) => {
