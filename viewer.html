@@ -41,21 +41,22 @@
       display: none;
       z-index: 10;
     }
+    #time-axis-wrapper {
+      overflow-x: hidden;
+    }
     #time-axis {
       height: 20px;
       background: white;
       border-top: 1px solid #ccc;
       font-size: 10px;
-      display: flex;
-      align-items: center;
-      padding-left: 10px;
+      display: block;
       position: relative;
       z-index: 5;
     }
     #time-label {
       font-size: 12px;
       margin-top: 4px;
-      text-align: left;
+      text-align: center;
     }
     #zoom-controls {
       margin-top: 15px;
@@ -77,7 +78,7 @@
 </head>
 <body>
   <h2>🪷 Bat Recording Viewer</h2>
-  <p><small>256 kHz | 1024 FFT | Time axis in ms | Hover shows frequency</small></p>
+  <p><small>256 kHz | 1024 FFT | Time axis adapts to zoom | Hover shows frequency</small></p>
 
   <div id="viewer-container">
     <div id="spectrogram-only"></div>
@@ -85,8 +86,11 @@
     <div id="hover-line"></div>
     <div id="freq-label">-</div>
   </div>
-  <div id="time-axis">Loading...</div>
-  <div id="time-label">Time (ms)</div>
+
+  <div id="time-axis-wrapper">
+    <div id="time-axis"></div>
+    <div id="time-label">Time (ms)</div>
+  </div>
 
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
@@ -166,15 +170,21 @@
       const html = []
       for (let t = 0; t < duration * 1000; t += step) {
         const left = (t / 1000) * pxPerSec
-        html.push(`<span style="position:absolute;left:${left}px;">${t}</span>`)
+        let label = step >= 1000 ? `${(t / 1000)}s` : `${t}`
+        html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`)
       }
       timeAxis.innerHTML = html.join('')
       timeAxis.style.position = 'relative'
       timeAxis.style.width = `${totalWidth}px`
 
-      // 更新單位標籤
+      // 更新單位標籤居中
       timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)'
+      timeLabel.style.textAlign = 'center'
     }
+
+    viewer.addEventListener('scroll', () => {
+      timeAxis.scrollLeft = viewer.scrollLeft
+    })
 
     viewer.addEventListener('mousemove', (e) => {
       const rect = viewer.getBoundingClientRect()
