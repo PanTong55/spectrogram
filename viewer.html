@@ -52,6 +52,11 @@
       position: relative;
       z-index: 5;
     }
+    #time-label {
+      font-size: 12px;
+      margin-top: 4px;
+      text-align: left;
+    }
     #zoom-controls {
       margin-top: 15px;
     }
@@ -81,6 +86,7 @@
     <div id="freq-label">-</div>
   </div>
   <div id="time-axis">Loading...</div>
+  <div id="time-label">Time (ms)</div>
 
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
@@ -97,6 +103,7 @@
     const hoverLine = document.getElementById('hover-line')
     const freqLabel = document.getElementById('freq-label')
     const timeAxis = document.getElementById('time-axis')
+    const timeLabel = document.getElementById('time-label')
     const freqGrid = document.getElementById('freq-grid')
 
     let duration = 0
@@ -149,15 +156,24 @@
     function drawTimeAxis() {
       const pxPerSec = zoomLevel
       const totalWidth = duration * pxPerSec
-      const step = 100 // 100ms
+      let step
+
+      if (pxPerSec >= 800) step = 100
+      else if (pxPerSec >= 500) step = 200
+      else if (pxPerSec >= 300) step = 500
+      else step = 1000
+
       const html = []
       for (let t = 0; t < duration * 1000; t += step) {
         const left = (t / 1000) * pxPerSec
-        html.push(`<span style="position:absolute;left:${left}px;">${t}ms</span>`)
+        html.push(`<span style="position:absolute;left:${left}px;">${t}</span>`)
       }
       timeAxis.innerHTML = html.join('')
       timeAxis.style.position = 'relative'
       timeAxis.style.width = `${totalWidth}px`
+
+      // 更新單位標籤
+      timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)'
     }
 
     viewer.addEventListener('mousemove', (e) => {
