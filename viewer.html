@@ -3,25 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <title>Bat Spectrogram Viewer</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #waveform, #spectrogram { margin-top: 20px; }
+  </style>
 </head>
 <body>
+  <h2>Bat Recording Viewer (256kHz)</h2>
   <div id="waveform"></div>
   <div id="spectrogram"></div>
 
-  <script src="https://unpkg.com/wavesurfer.js"></script>
-  <script src="https://unpkg.com/wavesurfer.js/dist/plugin/wavesurfer.spectrogram.min.js"></script>
+  <!-- ✅ 使用 v6.6.4 版本，支援 spectrogram plugin -->
+  <script src="https://unpkg.com/wavesurfer.js@6.6.4"></script>
+  <script src="https://unpkg.com/wavesurfer.js@6.6.4/dist/plugin/wavesurfer.spectrogram.min.js"></script>
   <script src="https://unpkg.com/d3@5.16.0/dist/d3.min.js"></script>
 
   <script>
     const wavesurfer = WaveSurfer.create({
       container: '#waveform',
-      waveColor: '#a0d8ef',
-      progressColor: '#007bbb',
+      waveColor: '#aad8ff',
+      progressColor: '#0077cc',
       plugins: [
         WaveSurfer.spectrogram.create({
           container: '#spectrogram',
+          fftSamples: 4096,
           labels: true,
-          fftSamples: 1024,
           frequencyMax: 128000
         })
       ]
