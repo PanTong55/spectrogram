@@ -7,15 +7,19 @@
 <script>
   const wavesurfer = WaveSurfer.create({
     container: '#waveform',
-    waveColor: '#A8DBA8',
-    progressColor: '#3B8686',
+    waveColor: 'violet',
+    progressColor: 'purple',
+    backend: 'WebAudio',
     plugins: [
       WaveSurfer.spectrogram.create({
         container: '#spectrogram',
-        labels: true
+        fftSamples: 1024,             // 解析度：可以嘗試 4096 / 8192 提升精度
+        labels: true,
+        frequencyMax: 128000          // ❗需手動設置上限為 128 kHz（Nyquist）
       })
     ]
   });
 
-  wavesurfer.load('https://yoursite.com/path-to-your-audio.wav');
+  wavesurfer.load('https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav
+');
 </script>
