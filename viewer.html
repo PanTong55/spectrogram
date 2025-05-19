@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>🦇 Bat Spectrogram Viewer (Zoom + Scroll)</title>
+  <title>🦇 Bat Spectrogram Viewer Advanced</title>
   <style>
     body {
       font-family: sans-serif;
@@ -12,15 +12,48 @@
 
     #viewer-container {
       width: 100%;
-      height: 1020px;         /* ✅ 適合 1024-bin 的高頻蝙蝠聲譜 */
-      overflow-x: auto;       /* ✅ 水平捲動 */
-      overflow-y: hidden;     /* 垂直不捲動，畫面保持固定高度 */
+      height: 1020px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      position: relative;
       border: 1px solid #ccc;
     }
 
-    canvas {
-      display: block;
-      border-top: 1px solid #ccc;
+    #spectrogram-only {
+      position: relative;
+    }
+
+    #frequency-hover-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background-color: red;
+      pointer-events: none;
+    }
+
+    #freq-label {
+      position: absolute;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 2px 6px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    #time-axis {
+      height: 20px;
+      background: white;
+      border-bottom: 1px solid #ccc;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     #zoom-controls {
@@ -36,16 +69,17 @@
   </style>
 </head>
 <body>
-  <h2>🦇 Bat Spectrogram Viewer</h2>
-  <p><small>256 kHz sampling rate | Spectrogram: 10–128 kHz | Zoom enabled</small></p>
+  <h2>🦇 Bat Recording Viewer</h2>
+  <p><small>256 kHz | 1024 FFT | Time axis in ms | Hover shows frequency</small></p>
 
-  <!-- ✅ 可捲動容器只含 spectrogram -->
+  <div id="time-axis">Loading...</div>
+
   <div id="viewer-container">
-    <!-- wavesurfer will auto-inject canvas into this container -->
     <div id="spectrogram-only"></div>
+    <div id="frequency-hover-line" style="display: none;"></div>
+    <div id="freq-label" style="display: none;">-</div>
   </div>
 
-  <!-- ✅ Zoom 控制 -->
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
     <button class="zoom-button" id="zoom-out">Zoom Out −</button>
@@ -56,30 +90,35 @@
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js'
     import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
 
-    // 用空白容器初始化 WaveSurfer，只用來生成 Spectrogram
+    const spectrogramContainer = document.getElementById('spectrogram-only')
+    const hoverLine = document.getElementById('frequency-hover-line')
+    const freqLabel = document.getElementById('freq-label')
+    const timeAxis = document.getElementById('time-axis')
+
     const ws = WaveSurfer.create({
-      container: '#spectrogram-only',
-      interact: false,               // 不要滑動播放頭
-      cursorWidth: 0,               // 不要顯示播放游標
+      container: spectrogramContainer,
+      interact: false,
+      cursorWidth: 0,
+      height: 0,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
-      sampleRate: 256000,
-      height: 0                     // ✅ 不畫 waveform（完全隱藏）
+      sampleRate: 256000
     })
 
-    ws.registerPlugin(
-      Spectrogram.create({
-        labels: true,
-        height: 1000,
-        fftSamples: 1024,
-        frequencyMin: 10000,
-        frequencyMax: 128000,
-        scale: 'linear',
-        windowFunc: 'hann',
-        labelsBackground: 'rgba(0,0,0,0.05)',
-      })
-    )
+    const specPlugin = Spectrogram.create({
+      labels: true,
+      height: 1000,
+      fftSamples: 1024,
+      frequencyMin: 0,
+      frequencyMax: 128000,
+      scale: 'linear',
+      windowFunc: 'hann',
+      labelsBackground: 'rgba(255,255,255,0.6)',
+      labelInterval: 10000, // ← not official API, but we’ll handle manually below
+    })
 
-    // Zoom 控制
+    ws.registerPlugin(specPlugin)
+
+    let duration = 0
     let zoomLevel = 150
     const minZoom = 50
     const maxZoom = 500
@@ -88,6 +127,7 @@
     const applyZoom = () => {
       ws.zoom(zoomLevel)
       zoomValueDisplay.textContent = zoomLevel
+      drawTimeAxis()
     }
 
     document.getElementById('zoom-in').addEventListener('click', () => {
@@ -105,8 +145,49 @@
     })
 
     ws.on('ready', () => {
+      duration = ws.getDuration()
       applyZoom()
     })
+
+    // Frequency hover logic
+    spectrogramContainer.addEventListener('mousemove', (e) => {
+      const rect = spectrogramContainer.getBoundingClientRect()
+      const y = e.clientY - rect.top
+      const height = specPlugin.params.height
+      const freq = (1 - y / height) * 128
+      if (freq >= 0 && freq <= 128) {
+        hoverLine.style.top = `${y}px`
+        hoverLine.style.display = 'block'
+        freqLabel.style.top = `${y - 12}px`
+        freqLabel.style.display = 'block'
+        freqLabel.textContent = `${Math.round(freq)} kHz`
+      } else {
+        hoverLine.style.display = 'none'
+        freqLabel.style.display = 'none'
+      }
+    })
+
+    spectrogramContainer.addEventListener('mouseleave', () => {
+      hoverLine.style.display = 'none'
+      freqLabel.style.display = 'none'
+    })
+
+    // Time axis generation
+    function drawTimeAxis() {
+      const container = spectrogramContainer.querySelector('canvas')
+      if (!container) return
+      const pxPerSec = zoomLevel
+      const totalWidth = duration * pxPerSec
+      const step = 100 // ms
+      const html = []
+      for (let t = 0; t < duration * 1000; t += step) {
+        const left = (t / 1000) * pxPerSec
+        html.push(`<span style="position:absolute;left:${left}px;">${t}ms</span>`)
+      }
+      timeAxis.innerHTML = html.join('')
+      timeAxis.style.position = 'relative'
+      timeAxis.style.width = `${totalWidth}px`
+    }
   </script>
 </body>
 </html>
