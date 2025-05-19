@@ -9,19 +9,13 @@
       margin: 20px;
       background: #f5f5f5;
     }
-    #scroll-sync-wrapper {
-      width: 100%;
-      overflow-x: auto;
-    }
     #viewer-container {
+      width: 100%;
       height: 1020px;
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
       position: relative;
       border: 1px solid #ccc;
-    }
-    #viewer-inner {
-      display: inline-block;
-      position: relative;
     }
     #spectrogram-only {
       position: relative;
@@ -48,8 +42,7 @@
       z-index: 10;
     }
     #time-axis-wrapper {
-      width: 100%;
-      overflow: hidden;
+      overflow-x: auto;
     }
     #time-axis {
       height: 20px;
@@ -87,24 +80,22 @@
   <h2>🪷 Bat Recording Viewer</h2>
   <p><small>256 kHz | 1024 FFT | Time axis adapts to zoom | Hover shows frequency</small></p>
 
-  <div id="scroll-sync-wrapper">
-    <div id="viewer-inner">
-      <div id="viewer-container">
-        <div id="spectrogram-only"></div>
-        <canvas id="freq-grid"></canvas>
-        <div id="hover-line"></div>
-        <div id="freq-label">-</div>
-      </div>
-      <div id="time-axis-wrapper">
-        <div id="time-axis"></div>
-        <div id="time-label">Time (ms)</div>
-      </div>
-    </div>
+  <div id="viewer-container">
+    <div id="spectrogram-only"></div>
+    <canvas id="freq-grid"></canvas>
+    <div id="hover-line"></div>
+    <div id="freq-label">-</div>
+  </div>
+
+  <div id="time-axis-wrapper">
+    <div id="time-axis"></div>
+    <div id="time-label">Time (ms)</div>
   </div>
 
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
     <button class="zoom-button" id="zoom-out">Zoom Out −</button>
+    <span>Zoom: <span id="zoom-value">500</span> px/sec</span>
   </div>
 
   <script type="module">
@@ -113,7 +104,6 @@
 
     const container = document.getElementById('spectrogram-only')
     const viewer = document.getElementById('viewer-container')
-    const wrapper = document.getElementById('scroll-sync-wrapper')
     const hoverLine = document.getElementById('hover-line')
     const freqLabel = document.getElementById('freq-label')
     const timeAxis = document.getElementById('time-axis')
@@ -123,7 +113,6 @@
     let duration = 0
     const spectrogramHeight = 1000
     let zoomLevel = 500
-    let lastScrollLeft = 0
 
     const ws = WaveSurfer.create({
       container: container,
@@ -152,8 +141,10 @@
       drawTimeAxis()
     })
 
+    const zoomValue = document.getElementById('zoom-value')
     const applyZoom = () => {
       ws.zoom(zoomLevel)
+      zoomValue.textContent = zoomLevel
       drawTimeAxis()
     }
 
@@ -188,17 +179,13 @@
       timeLabel.style.textAlign = 'center'
     }
 
-    wrapper.addEventListener('scroll', () => {
-      const scrollX = wrapper.scrollLeft
-      if (Math.abs(scrollX - lastScrollLeft) > 1) {
-        document.getElementById('time-axis-wrapper').scrollLeft = scrollX
-        lastScrollLeft = scrollX
-      }
+    viewer.addEventListener('scroll', () => {
+      document.getElementById('time-axis-wrapper').scrollLeft = viewer.scrollLeft
     })
 
-    wrapper.addEventListener('mousemove', (e) => {
-      const rect = wrapper.getBoundingClientRect()
-      const y = e.clientY - rect.top + wrapper.scrollTop
+    viewer.addEventListener('mousemove', (e) => {
+      const rect = viewer.getBoundingClientRect()
+      const y = e.clientY - rect.top + viewer.scrollTop
       const freq = (1 - y / spectrogramHeight) * 128
       if (freq >= 0 && freq <= 128) {
         hoverLine.style.top = `${y}px`
@@ -212,7 +199,7 @@
       }
     })
 
-    wrapper.addEventListener('mouseleave', () => {
+    viewer.addEventListener('mouseleave', () => {
       hoverLine.style.display = 'none'
       freqLabel.style.display = 'none'
     })
