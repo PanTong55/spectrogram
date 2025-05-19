@@ -17,7 +17,7 @@
     }
     #spectrogram {
       width: 100%;
-      height: 550px;
+      height: 1200px;
       background: #fff;
       border: 1px solid #ccc;
     }
@@ -42,9 +42,9 @@
       plugins: [
         WaveSurfer.spectrogram.create({
           container: '#spectrogram',
-          fftSamples: 1024,                // 提高頻率解析度
+          fftSamples: 1024, 
           labels: true,
-          frequencyMax: 128000             // 對應 256kHz 錄音
+          frequencyMax: 128000
         })
       ]
     });
