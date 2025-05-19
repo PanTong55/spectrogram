@@ -42,16 +42,16 @@
       z-index: 10;
     }
     #time-axis-wrapper {
-      overflow-x: hidden;
+      overflow-x: auto;
     }
     #time-axis {
       height: 20px;
       background: white;
       border-top: 1px solid #ccc;
       font-size: 10px;
-      display: block;
       position: relative;
       z-index: 5;
+      white-space: nowrap;
     }
     #time-label {
       font-size: 12px;
@@ -174,16 +174,13 @@
         html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`)
       }
       timeAxis.innerHTML = html.join('')
-      timeAxis.style.position = 'relative'
       timeAxis.style.width = `${totalWidth}px`
-
-      // 更新單位標籤居中
       timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)'
       timeLabel.style.textAlign = 'center'
     }
 
     viewer.addEventListener('scroll', () => {
-      timeAxis.scrollLeft = viewer.scrollLeft
+      document.getElementById('time-axis-wrapper').scrollLeft = viewer.scrollLeft
     })
 
     viewer.addEventListener('mousemove', (e) => {
