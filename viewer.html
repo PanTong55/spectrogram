@@ -53,49 +53,31 @@
     }
     #time-axis-wrapper {
       overflow: hidden;
+      margin-left:60px;
     }
     #time-axis {
-      margin-left: 60px;
       height: 20px;
       background: white;
       border-top: 1px solid #ccc;
-      font-size: 10px;
+      font-size: 12px;
       position: relative;
       z-index: 5;
       white-space: nowrap;
     }
     #time-label {
-      margin-left: 60px;
       font-size: 12px;
+      margin-left: 60px;
       margin-top: 4px;
       text-align: center;
     }
     #zoom-controls {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: #fff;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      margin-top: 15px;
     }
     .zoom-button {
-      padding: 6px 10px;
-      font-size: 20px;
+      padding: 6px 12px;
+      margin-right: 6px;
+      font-size: 14px;
       cursor: pointer;
-      text-align: center;
-      border: none;
-      background: white;
-      color: black;
-    }
-    .zoom-button:disabled {
-      background: #ddd;
-      color: #888;
-      cursor: default;
     }
     #freq-grid {
       position: absolute;
@@ -104,47 +86,56 @@
       z-index: 2;
       pointer-events: none;
     }
-    #freq-labels {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 0;
-      z-index: 5;
-      pointer-events: none;
+    .viewer-row {
+      display: flex;
+      align-items: start;
+      position: relative;
+      backgroud:white;
     }
+    
+    #freq-labels {
+      width: 60px;
+      position: relative;
+      height: 1020px;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+    
     .freq-label-static {
       text-align: right;
       width: 50px;
       position: absolute;
       left: 10px;
-      color: #000;
       font-size: 12px;
-      background: #f5f5f5;
+      color: black;
       pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <h2>🪇 Bat Recording Viewer</h2>
-  <p><small>Sampling rate: 256 kHz | FFT: 1024 </small></p>
+  <h2>Bat Recording Viewer</h2>
 
-  <div id="viewer-container">
-    <div id="spectrogram-only"></div>
-    <canvas id="freq-grid"></canvas>
-    <div id="hover-line"></div>
-    <div id="freq-label">-</div>
+  <p><small>Sampling rate: 256 kHz | 1024 FFT</small></p>
+
+  <div class="viewer-row">
     <div id="freq-labels"></div>
-    <div id="zoom-controls">
-      <button class="zoom-button" id="zoom-in">+</button>
-      <button class="zoom-button" id="zoom-out">−</button>
+    <div id="viewer-container">
+      <div id="spectrogram-only"></div>
+      <canvas id="freq-grid"></canvas>
+      <div id="hover-line"></div>
+      <div id="freq-label">-</div>
     </div>
   </div>
 
   <div id="time-axis-wrapper">
     <div id="time-axis"></div>
   </div>
-  <div id="time-label">Time (ms)</div>
+  <div id="time-label">Time (ms)</div>  
+
+  <div id="zoom-controls">
+    <button class="zoom-button" id="zoom-in">Zoom In +</button>
+    <button class="zoom-button" id="zoom-out">Zoom Out −</button>
+  </div>
 
   <script type="module">
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
@@ -159,8 +150,6 @@
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
-    const zoomInButton = document.getElementById('zoom-in');
-    const zoomOutButton = document.getElementById('zoom-out');
 
     let duration = 0;
     const spectrogramHeight = 1000;
@@ -193,21 +182,13 @@
       drawFrequencyGrid();
     });
 
-    function updateZoomButtons() {
-      zoomInButton.disabled = zoomLevel >= 1000;
-      zoomOutButton.disabled = zoomLevel <= 50;
-    }
-
-    zoomInButton.onclick = () => {
+    document.getElementById('zoom-in').onclick = () => {
       zoomLevel = Math.min(zoomLevel + 250, 1000);
       applyZoom();
-      updateZoomButtons();
     };
-
-    zoomOutButton.onclick = () => {
+    document.getElementById('zoom-out').onclick = () => {
       zoomLevel = Math.max(zoomLevel - 250, 50);
       applyZoom();
-      updateZoomButtons();
     };
 
     function applyZoom() {
