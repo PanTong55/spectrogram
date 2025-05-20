@@ -229,6 +229,7 @@
     ws.on('ready', () => {
       applyZoom();           // 初始化 zoom 與時間軸
       drawFrequencyGrid();   // 初始化頻率軸
+      specPlugin.render();
     });
     
     ws.on('decode', () => {
