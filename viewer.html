@@ -280,6 +280,7 @@
     });
 
     viewer.addEventListener('mousemove', (e) => {
+      if (e.target.id === 'hover-line') return;
       const y = e.offsetY;
       const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
       hoverLine.style.top = `${y}px`;
