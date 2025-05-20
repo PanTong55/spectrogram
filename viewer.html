@@ -85,8 +85,8 @@
       pointer-events: none;
     }
     .freq-label-static {
-      position: fixed;
-      left: 25px;
+      position: absolute;
+      left: 10px;
       color: #000;
       font-size: 12px;
       background: #f5f5f5;
@@ -104,6 +104,7 @@
     <canvas id="freq-grid"></canvas>
     <div id="hover-line"></div>
     <div id="freq-label">-</div>
+    <div id="freq-labels"></div>
   </div>
 
   <div id="time-axis-wrapper">
@@ -128,6 +129,7 @@
     const timeWrapper = document.getElementById('time-axis-wrapper');
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
+    const freqLabelContainer = document.getElementById('freq-labels');
 
     let duration = 0;
     const spectrogramHeight = 1000;
@@ -235,14 +237,15 @@
         ctx.stroke();
       }
 
-      document.querySelectorAll('.freq-label-static').forEach(e => e.remove());
+      freqLabelContainer.innerHTML = '';
       for (let f = 0; f <= 128; f += 10) {
         const y = (1 - f / 128) * spectrogramHeight;
         const label = document.createElement('div');
         label.className = 'freq-label-static';
         label.style.top = `${y - 6}px`;
+        label.style.position = 'absolute';
         label.textContent = `${f}kHz`;
-        document.body.appendChild(label);
+        freqLabelContainer.appendChild(label);
       }
     }
   </script>
