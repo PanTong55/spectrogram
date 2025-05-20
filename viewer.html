@@ -4,18 +4,27 @@
   <meta charset="UTF-8" />
   <title>Bat Spectrogram Viewer</title>
   <style>
-    body {
-      font-family: sans-serif;
-      margin: 20px;
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
       background: #f5f5f5;
+      font-family: sans-serif;
+    }
+    body {
+      padding: 20px;
     }
     #viewer-container {
       width: 100%;
+      max-width: 100%;
       height: 1020px;
       overflow-x: auto;
       overflow-y: hidden;
       position: relative;
       border: 1px solid #ccc;
+      box-sizing: border-box;
+      white-space: nowrap;
+      display: block;
     }
     #spectrogram-only {
       position: relative;
@@ -43,7 +52,6 @@
     }
     #time-axis-wrapper {
       overflow: hidden;
-      height: auto;
     }
     #time-axis {
       height: 20px;
@@ -78,7 +86,7 @@
   </style>
 </head>
 <body>
-  <h2>🪷 Bat Recording Viewer</h2>
+  <h2>🪇 Bat Recording Viewer</h2>
   <p><small>256 kHz | 1024 FFT | Time axis adapts to zoom | Hover shows frequency</small></p>
 
   <div id="viewer-container">
@@ -96,27 +104,24 @@
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
     <button class="zoom-button" id="zoom-out">Zoom Out −</button>
-    <!-- ✅ 移除 Zoom scale 顯示 -->
   </div>
 
   <script type="module">
-    import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js'
-    import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js'
+    import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
+    import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
 
-    const container = document.getElementById('spectrogram-only')
-    const viewer = document.getElementById('viewer-container')
-    const hoverLine = document.getElementById('hover-line')
-    const freqLabel = document.getElementById('freq-label')
-    const timeAxis = document.getElementById('time-axis')
-    const timeWrapper = document.getElementById('time-axis-wrapper')
-    const timeLabel = document.getElementById('time-label')
-    const freqGrid = document.getElementById('freq-grid')
+    const container = document.getElementById('spectrogram-only');
+    const viewer = document.getElementById('viewer-container');
+    const hoverLine = document.getElementById('hover-line');
+    const freqLabel = document.getElementById('freq-label');
+    const timeAxis = document.getElementById('time-axis');
+    const timeWrapper = document.getElementById('time-axis-wrapper');
+    const timeLabel = document.getElementById('time-label');
+    const freqGrid = document.getElementById('freq-grid');
 
-    let duration = 0
-    const spectrogramHeight = 1000
-    let zoomLevel = 500
-    const maxZoom = 1000
-    const minZoom = 50
+    let duration = 0;
+    const spectrogramHeight = 1000;
+    let zoomLevel = 500;
 
     const ws = WaveSurfer.create({
       container: container,
@@ -125,7 +130,7 @@
       cursorWidth: 0,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
-    })
+    });
 
     const specPlugin = Spectrogram.create({
       labels: false,
@@ -135,90 +140,91 @@
       frequencyMax: 128000,
       scale: 'linear',
       windowFunc: 'hann',
-    })
+    });
 
-    ws.registerPlugin(specPlugin)
+    ws.registerPlugin(specPlugin);
 
     ws.on('decode', () => {
-      duration = ws.getDuration()
-      applyZoom()
-      drawFrequencyGrid()
-    })
+      duration = ws.getDuration();
+      applyZoom();
+      drawFrequencyGrid();
+    });
 
     document.getElementById('zoom-in').onclick = () => {
-      zoomLevel = Math.min(zoomLevel + 250, maxZoom)
-      applyZoom()
-    }
+      zoomLevel = Math.min(zoomLevel + 250, 1000);
+      applyZoom();
+    };
     document.getElementById('zoom-out').onclick = () => {
-      zoomLevel = Math.max(zoomLevel - 250, minZoom)
-      applyZoom()
-    }
+      zoomLevel = Math.max(zoomLevel - 250, 50);
+      applyZoom();
+    };
 
     function applyZoom() {
-      ws.zoom(zoomLevel)
-      drawTimeAxis()
-      drawFrequencyGrid()
+      ws.zoom(zoomLevel);
+      drawTimeAxis();
+      drawFrequencyGrid();
     }
 
     function drawTimeAxis() {
-      const pxPerSec = zoomLevel
-      const totalWidth = duration * pxPerSec
-      let step = 1000
-      if (pxPerSec >= 800) step = 100
-      else if (pxPerSec >= 500) step = 200
-      else if (pxPerSec >= 300) step = 500
+      const pxPerSec = zoomLevel;
+      const totalWidth = duration * pxPerSec;
+      let step = 1000;
+      if (pxPerSec >= 800) step = 100;
+      else if (pxPerSec >= 500) step = 200;
+      else if (pxPerSec >= 300) step = 500;
 
-      const html = []
+      const html = [];
       for (let t = 0; t < duration * 1000; t += step) {
-        const left = (t / 1000) * pxPerSec
-        let label = step >= 1000 ? `${(t / 1000)}s` : `${t}`
-        html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`)
+        const left = (t / 1000) * pxPerSec;
+        let label = step >= 1000 ? `${(t / 1000)}s` : `${t}`;
+        html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`);
       }
-      timeAxis.innerHTML = html.join('')
-      timeAxis.style.width = `${totalWidth}px`
-      timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)'
+      timeAxis.innerHTML = html.join('');
+      timeAxis.style.width = `${totalWidth}px`;
+      timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)';
     }
 
+    // ✅ 單向同步 scroll（只 viewer 控制 time axis）
     viewer.addEventListener('scroll', () => {
-      timeWrapper.scrollLeft = viewer.scrollLeft
-    })
-    
-    // 🖱 hover 頻率顯示
-    viewer.addEventListener('mousemove', (e) => {
-      const rect = viewer.getBoundingClientRect()
-      const y = e.clientY - rect.top + viewer.scrollTop
-      let freq = (1 - y / spectrogramHeight) * 128
-      freq = Math.max(0, Math.min(128, freq))
-      hoverLine.style.top = `${y}px`
-      hoverLine.style.display = 'block'
-      freqLabel.style.top = `${y - 12}px`
-      freqLabel.style.display = 'block'
-      freqLabel.textContent = `${freq.toFixed(1)} kHz`
-    })
-    viewer.addEventListener('mouseleave', () => {
-      hoverLine.style.display = 'none'
-      freqLabel.style.display = 'none'
-    })
+      timeWrapper.scrollLeft = viewer.scrollLeft;
+    });
 
-    // 📈 頻率格線每 10kHz 一格
+    // Hover frequency line
+    viewer.addEventListener('mousemove', (e) => {
+      const rect = viewer.getBoundingClientRect();
+      const y = e.clientY - rect.top + viewer.scrollTop;
+      let freq = (1 - y / spectrogramHeight) * 128;
+      freq = Math.max(0, Math.min(128, freq));
+      hoverLine.style.top = `${y}px`;
+      hoverLine.style.display = 'block';
+      freqLabel.style.top = `${y - 12}px`;
+      freqLabel.style.display = 'block';
+      freqLabel.textContent = `${freq.toFixed(1)} kHz`;
+    });
+
+    viewer.addEventListener('mouseleave', () => {
+      hoverLine.style.display = 'none';
+      freqLabel.style.display = 'none';
+    });
+
     function drawFrequencyGrid() {
-      const width = container.scrollWidth
-      freqGrid.width = width
-      freqGrid.height = spectrogramHeight
-      freqGrid.style.width = width + 'px'
-      freqGrid.style.height = spectrogramHeight + 'px'
-      const ctx = freqGrid.getContext('2d')
-      ctx.clearRect(0, 0, width, spectrogramHeight)
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)'
-      ctx.fillStyle = '#fff'
-      ctx.font = '12px sans-serif'
+      const width = container.scrollWidth;
+      freqGrid.width = width;
+      freqGrid.height = spectrogramHeight;
+      freqGrid.style.width = width + 'px';
+      freqGrid.style.height = spectrogramHeight + 'px';
+      const ctx = freqGrid.getContext('2d');
+      ctx.clearRect(0, 0, width, spectrogramHeight);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
       for (let f = 0; f <= 128; f += 10) {
-        const y = (1 - f / 128) * spectrogramHeight
-        ctx.beginPath()
-        ctx.moveTo(0, y)
-        ctx.lineTo(width, y)
-        ctx.stroke()
-        ctx.fillText(`${f}kHz`, 5, y - 2)
+        const y = (1 - f / 128) * spectrogramHeight;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+        ctx.fillText(`${f}kHz`, 5, y - 2);
       }
     }
   </script>
