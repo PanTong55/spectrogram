@@ -278,19 +278,22 @@
       timeWrapper.scrollLeft = viewer.scrollLeft;
     });
 
+    let lastY = null;
+    
     viewer.addEventListener('mousemove', (e) => {
       const y = e.offsetY;
-      const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
-      hoverLine.style.top = `${y}px`;
-      hoverLine.style.display = 'block';
-      freqLabel.style.top = `${y - 12}px`;
-      freqLabel.style.display = 'block';
-      freqLabel.textContent = `${freq.toFixed(1)} kHz`;
-    });
-
-    viewer.addEventListener('mouseleave', () => {
-      hoverLine.style.display = 'none';
-      freqLabel.style.display = 'none';
+      if (y === lastY) return;
+      lastY = y;
+    
+      requestAnimationFrame(() => {
+        const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
+        hoverLine.style.top = `${y}px`;
+        hoverLine.style.display = 'block';
+    
+        freqLabel.style.top = `${y - 12}px`;
+        freqLabel.style.display = 'block';
+        freqLabel.textContent = `${freq.toFixed(1)} kHz`;
+      });
     });
 
     function drawFrequencyGrid() {
