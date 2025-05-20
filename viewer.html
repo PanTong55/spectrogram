@@ -296,6 +296,11 @@
       });
     });
 
+    document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
+      hoverLine.style.display = 'none';
+      freqLabel.style.display = 'none';
+    });    
+
     function drawFrequencyGrid() {
       const width = container.scrollWidth;
       freqGrid.width = width;
