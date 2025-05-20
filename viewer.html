@@ -227,8 +227,8 @@
     });
 
     zoomInBtn.onclick = () => {
-      if (zoomLevel < 1000) {
-        zoomLevel = Math.min(zoomLevel + 250, 1000);
+      if (zoomLevel < 750) {
+        zoomLevel = Math.min(zoomLevel + 250, 750);
         applyZoom();
       }
       updateZoomButtons();
@@ -243,13 +243,13 @@
     };
 
     function updateZoomButtons() {
-      zoomInBtn.disabled = zoomLevel >= 1000;
+      zoomInBtn.disabled = zoomLevel >= 750;
       zoomOutBtn.disabled = zoomLevel <= 50;
     }
 
     function applyZoom() {
       ws.zoom(zoomLevel);
-      const width = Math.min(duration * zoomLevel, 10000);
+      const width = Math.min(duration * zoomLevel, 1000);
       container.style.width = `${width}px`;
       drawTimeAxis();
       drawFrequencyGrid();
