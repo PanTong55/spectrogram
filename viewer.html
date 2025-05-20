@@ -153,19 +153,6 @@
     });
 
     const specPlugin = Spectrogram.create({
-      colorMap: Array.from({ length: 256 }, (_, i) => {
-        const t = i / 255;
-        if (t < 0.3) {
-          const v = Math.round(t / 0.3 * 80);
-          return [v, v, 0, 255];
-        } else if (t < 0.7) {
-          const v = Math.round((t - 0.3) / 0.4 * (255 - 80) + 80);
-          return [v, v, 0, 255];
-        } else {
-          const v = Math.round((t - 0.7) / 0.3 * 255);
-          return [255, 255, v, 255];
-        }
-      }),
       labels: false,
       height: spectrogramHeight,
       fftSamples: 1024,
