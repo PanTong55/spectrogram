@@ -84,35 +84,43 @@
       z-index: 2;
       pointer-events: none;
     }
-    #freq-labels {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 0;
-      z-index: 5;
-      pointer-events: none;
+    .viewer-row {
+      display: flex;
+      align-items: start;
+      position: relative;
     }
+    
+    #freq-labels {
+      width: 60px;
+      position: relative;
+      height: 1020px;
+      pointer-events: none;
+      flex-shrink: 0;
+    }
+    
     .freq-label-static {
       position: absolute;
       left: 10px;
-      color: #000;
       font-size: 12px;
+      color: black;
       background: #f5f5f5;
       pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <h2>🪇 Bat Recording Viewer</h2>
+  <h2>Bat Recording Viewer</h2>
+
   <p><small>256 kHz | 1024 FFT | Time axis adapts to zoom | Hover shows frequency</small></p>
 
-  <div id="viewer-container">
-    <div id="spectrogram-only"></div>
-    <canvas id="freq-grid"></canvas>
-    <div id="hover-line"></div>
-    <div id="freq-label">-</div>
+  <div class="viewer-row">
     <div id="freq-labels"></div>
+    <div id="viewer-container">
+      <div id="spectrogram-only"></div>
+      <canvas id="freq-grid"></canvas>
+      <div id="hover-line"></div>
+      <div id="freq-label">-</div>
+    </div>
   </div>
 
   <div id="time-axis-wrapper">
