@@ -110,6 +110,8 @@
       pointer-events: none;
     }
     .viewer-row {
+      display: flex;
+      align-items: flex-start;
       position: relative;
     }
     #freq-labels {
@@ -274,10 +276,8 @@
     });
 
     viewer.addEventListener('mousemove', (e) => {
-      const rect = viewer.getBoundingClientRect();
-      const y = e.clientY - rect.top + viewer.scrollTop;
-      let freq = (1 - y / spectrogramHeight) * 128;
-      freq = Math.max(0, Math.min(128, freq));
+      const y = e.offsetY;
+      const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
       hoverLine.style.top = `${y}px`;
       hoverLine.style.display = 'block';
       freqLabel.style.top = `${y - 12}px`;
