@@ -296,6 +296,13 @@
       });
     });
 
+    viewer.addEventListener('mouseout', (e) => {
+      if (!viewer.contains(e.relatedTarget)) {
+        hoverLine.style.display = 'none';
+        freqLabel.style.display = 'none';
+      }
+    });    
+
     function drawFrequencyGrid() {
       const width = container.scrollWidth;
       freqGrid.width = width;
