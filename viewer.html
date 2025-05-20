@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bat Spectrogram Viewer</title>
   <style>
     html, body {
@@ -32,6 +33,7 @@
     #spectrogram-only {
       position: relative;
       display: inline-block;
+      min-width: 100%;
     }
     #hover-line {
       position: absolute;
@@ -248,7 +250,7 @@
 
     function applyZoom() {
       ws.zoom(zoomLevel);
-      const width = duration * zoomLevel;
+      const width = Math.min(duration * zoomLevel, 10000);
       container.style.width = `${width}px`;
       drawTimeAxis();
       drawFrequencyGrid();
