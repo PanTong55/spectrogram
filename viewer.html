@@ -235,8 +235,8 @@
     };
 
     zoomOutBtn.onclick = () => {
-      if (zoomLevel > 150) {
-        zoomLevel = Math.max(zoomLevel - 250, 150);
+      if (zoomLevel > 250) {
+        zoomLevel = Math.max(zoomLevel - 250, 250);
         applyZoom();
       }
       updateZoomButtons();
@@ -244,7 +244,7 @@
 
     function updateZoomButtons() {
       zoomInBtn.disabled = zoomLevel >= 1000;
-      zoomOutBtn.disabled = zoomLevel <= 150;
+      zoomOutBtn.disabled = zoomLevel <= 250;
     }
 
     function applyZoom() {
