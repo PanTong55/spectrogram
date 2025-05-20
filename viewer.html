@@ -235,8 +235,8 @@
     };
 
     zoomOutBtn.onclick = () => {
-      if (zoomLevel > 50) {
-        zoomLevel = Math.max(zoomLevel - 250, 50);
+      if (zoomLevel > 150) {
+        zoomLevel = Math.max(zoomLevel - 250, 150);
         applyZoom();
       }
       updateZoomButtons();
@@ -244,7 +244,7 @@
 
     function updateZoomButtons() {
       zoomInBtn.disabled = zoomLevel >= 1000;
-      zoomOutBtn.disabled = zoomLevel <= 50;
+      zoomOutBtn.disabled = zoomLevel <= 150;
     }
 
     function applyZoom() {
@@ -285,7 +285,7 @@
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
     
-      const scrollbarThickness = 10;
+      const scrollbarThickness = 1;
       const nearBottomEdge = mouseY > (viewer.clientHeight - scrollbarThickness);
     
       if (nearBottomEdge) {
