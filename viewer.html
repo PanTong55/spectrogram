@@ -84,13 +84,21 @@
       z-index: 2;
       pointer-events: none;
     }
+    #freq-labels {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
     .freq-label-static {
       position: absolute;
       left: 10px;
       color: #000;
       font-size: 12px;
       background: #f5f5f5;
-      z-index: 4;
       pointer-events: none;
     }
   </style>
@@ -243,7 +251,6 @@
         const label = document.createElement('div');
         label.className = 'freq-label-static';
         label.style.top = `${y - 6}px`;
-        label.style.position = 'absolute';
         label.textContent = `${f}kHz`;
         freqLabelContainer.appendChild(label);
       }
