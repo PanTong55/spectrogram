@@ -153,6 +153,13 @@
     });
 
     const specPlugin = Spectrogram.create({
+      colorMap: [
+        [0, 0, 0],         // black (background)
+        [80, 80, 0],       // dark yellow-brown (low energy)
+        [160, 160, 0],     // dull yellow (mid energy)
+        [255, 255, 0],     // bright yellow (strong)
+        [255, 255, 255]    // white (peak)
+      ],
       labels: false,
       height: spectrogramHeight,
       fftSamples: 1024,
