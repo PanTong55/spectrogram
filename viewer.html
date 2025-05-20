@@ -85,12 +85,12 @@
       pointer-events: none;
     }
     .freq-label-static {
-      position: absolute;
-      left: 5px;
+      position: fixed;
+      left: 25px;
       color: #000;
       font-size: 12px;
       background: #f5f5f5;
-      z-index: 3;
+      z-index: 4;
       pointer-events: none;
     }
   </style>
@@ -226,15 +226,15 @@
       const ctx = freqGrid.getContext('2d');
       ctx.clearRect(0, 0, width, spectrogramHeight);
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.beginPath();
+      ctx.lineWidth = 1;
       for (let f = 0; f <= 128; f += 10) {
         const y = (1 - f / 128) * spectrogramHeight;
+        ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(width, y);
         ctx.stroke();
       }
 
-      // Draw static text labels separately so they stay in place
       document.querySelectorAll('.freq-label-static').forEach(e => e.remove());
       for (let f = 0; f <= 128; f += 10) {
         const y = (1 - f / 128) * spectrogramHeight;
@@ -242,7 +242,7 @@
         label.className = 'freq-label-static';
         label.style.top = `${y - 6}px`;
         label.textContent = `${f}kHz`;
-        viewer.appendChild(label);
+        document.body.appendChild(label);
       }
     }
   </script>
