@@ -59,7 +59,7 @@
       height: 20px;
       background: white;
       border-top: 1px solid #ccc;
-      font-size: 10px;
+      font-size: 12px;
       position: relative;
       z-index: 5;
       white-space: nowrap;
@@ -115,7 +115,7 @@
 <body>
   <h2>Bat Recording Viewer</h2>
 
-  <p><small>256 kHz | 1024 FFT | Time axis adapts to zoom | Hover shows frequency</small></p>
+  <p><small>Sampling rate: 256 kHz | 1024 FFT</small></p>
 
   <div class="viewer-row">
     <div id="freq-labels"></div>
@@ -127,10 +127,10 @@
     </div>
   </div>
 
-  <div id="time-label">Time (ms)</div>  
   <div id="time-axis-wrapper">
     <div id="time-axis"></div>
   </div>
+  <div id="time-label">Time (ms)</div>  
 
   <div id="zoom-controls">
     <button class="zoom-button" id="zoom-in">Zoom In +</button>
