@@ -28,7 +28,8 @@
     }
     #spectrogram-only {
       position: relative;
-    }
+      display: inline-block; /* 🔧 必須：撐開寬度以產生 scroll */
+    } 
     #hover-line {
       position: absolute;
       width: 100%;
@@ -161,6 +162,8 @@
 
     function applyZoom() {
       ws.zoom(zoomLevel);
+      const width = duration * zoomLevel;
+      container.style.width = `${width}px`;  // 🔧 讓 canvas 寬度撐開 div
       drawTimeAxis();
       drawFrequencyGrid();
     }
