@@ -194,7 +194,7 @@
     const zoomOutBtn = document.getElementById('zoom-out');
 
     let duration = 0;
-    const spectrogramHeight = 1000;
+    const spectrogramHeight = 900;
     let zoomLevel = 500;
 
     const ws = WaveSurfer.create({
@@ -210,8 +210,8 @@
       labels: false,
       height: spectrogramHeight,
       fftSamples: 1024,
-      frequencyMin: 10000,
-      frequencyMax: 100000,
+      frequencyMin: 0,
+      frequencyMax: 128000,
       scale: 'linear',
       windowFunc: 'hann',
     });
