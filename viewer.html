@@ -144,6 +144,10 @@
       <canvas id="freq-grid"></canvas>
       <div id="hover-line"></div>
       <div id="freq-label">-</div>
+      <div id="zoom-controls">
+        <button class="zoom-button" id="zoom-in">+</button>
+        <button class="zoom-button" id="zoom-out">−</button>
+      </div>
     </div>
   </div>
 
@@ -151,11 +155,6 @@
     <div id="time-axis"></div>
   </div>
   <div id="time-label">Time (ms)</div>
-
-  <div id="zoom-controls">
-    <button class="zoom-button" id="zoom-in">+</button>
-    <button class="zoom-button" id="zoom-out">−</button>
-  </div>
 
   <script type="module">
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
