@@ -71,13 +71,34 @@
       text-align: center;
     }
     #zoom-controls {
-      margin-top: 15px;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      z-index: 100;
     }
     .zoom-button {
-      padding: 6px 12px;
-      margin-right: 6px;
-      font-size: 14px;
+      padding: 10px;
+      font-size: 18px;
       cursor: pointer;
+      background: white;
+      border: none;
+      border-top: 1px solid #ccc;
+      text-align: center;
+    }
+    .zoom-button:first-child {
+      border-top: none;
+    }
+    .zoom-button:disabled {
+      background: #eee;
+      color: #aaa;
+      cursor: not-allowed;
     }
     #freq-grid {
       position: absolute;
@@ -92,7 +113,6 @@
       position: relative;
       backgroud:white;
     }
-    
     #freq-labels {
       width: 60px;
       position: relative;
@@ -100,7 +120,6 @@
       pointer-events: none;
       flex-shrink: 0;
     }
-    
     .freq-label-static {
       text-align: right;
       width: 50px;
@@ -114,7 +133,6 @@
 </head>
 <body>
   <h2>Bat Recording Viewer</h2>
-
   <p><small>Sampling rate: 256 kHz | 1024 FFT</small></p>
 
   <div class="viewer-row">
@@ -130,11 +148,11 @@
   <div id="time-axis-wrapper">
     <div id="time-axis"></div>
   </div>
-  <div id="time-label">Time (ms)</div>  
+  <div id="time-label">Time (ms)</div>
 
   <div id="zoom-controls">
-    <button class="zoom-button" id="zoom-in">Zoom In +</button>
-    <button class="zoom-button" id="zoom-out">Zoom Out −</button>
+    <button class="zoom-button" id="zoom-in">+</button>
+    <button class="zoom-button" id="zoom-out">−</button>
   </div>
 
   <script type="module">
@@ -150,6 +168,8 @@
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
 
     let duration = 0;
     const spectrogramHeight = 1000;
@@ -182,14 +202,26 @@
       drawFrequencyGrid();
     });
 
-    document.getElementById('zoom-in').onclick = () => {
-      zoomLevel = Math.min(zoomLevel + 250, 1000);
-      applyZoom();
+    zoomInBtn.onclick = () => {
+      if (zoomLevel < 1000) {
+        zoomLevel = Math.min(zoomLevel + 250, 1000);
+        applyZoom();
+      }
+      updateZoomButtons();
     };
-    document.getElementById('zoom-out').onclick = () => {
-      zoomLevel = Math.max(zoomLevel - 250, 50);
-      applyZoom();
+
+    zoomOutBtn.onclick = () => {
+      if (zoomLevel > 50) {
+        zoomLevel = Math.max(zoomLevel - 250, 50);
+        applyZoom();
+      }
+      updateZoomButtons();
     };
+
+    function updateZoomButtons() {
+      zoomInBtn.disabled = zoomLevel >= 1000;
+      zoomOutBtn.disabled = zoomLevel <= 50;
+    }
 
     function applyZoom() {
       ws.zoom(zoomLevel);
