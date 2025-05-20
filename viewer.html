@@ -220,6 +220,12 @@
 
     ws.registerPlugin(specPlugin);
 
+    document.body.addEventListener('touchstart', () => {
+      if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
+        ws.backend.ac.resume();
+      }
+    }, { once: true });    
+
     ws.on('ready', () => {
       applyZoom();           // 初始化 zoom 與時間軸
       drawFrequencyGrid();   // 初始化頻率軸
