@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Bat Spectrogram Viewer 2</title>
   <style>
     html, body {
@@ -220,6 +220,11 @@
 
     ws.registerPlugin(specPlugin);
 
+    ws.on('ready', () => {
+      applyZoom();           // 初始化 zoom 與時間軸
+      drawFrequencyGrid();   // 初始化頻率軸
+    });
+    
     ws.on('decode', () => {
       duration = ws.getDuration();
       applyZoom();
