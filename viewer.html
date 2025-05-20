@@ -285,18 +285,15 @@
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
     
-      const scrollbarThickness = 18; // 一般 scrollbar 大約 15~20px，可依情況微調
-    
-      const nearRightEdge = mouseX > (viewer.clientWidth - scrollbarThickness);
+      const scrollbarThickness = 10;
       const nearBottomEdge = mouseY > (viewer.clientHeight - scrollbarThickness);
     
-      if (nearRightEdge || nearBottomEdge) {
+      if (nearBottomEdge) {
         hoverLine.style.display = 'none';
         freqLabel.style.display = 'none';
         return;
       }
     
-      // 照常顯示 hover line
       const y = e.offsetY;
       const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
       hoverLine.style.top = `${y}px`;
