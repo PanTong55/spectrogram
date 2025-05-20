@@ -162,11 +162,10 @@
           const v = Math.round((t - 0.3) / 0.4 * (255 - 80) + 80);
           return [v, v, 0, 255];
         } else {
-          const v = Math.round((t - 0.7) / 0.3 * (255 - 255) + 255);
+          const v = Math.round((t - 0.7) / 0.3 * 255);
           return [255, 255, v, 255];
         }
-      }),         // black (background)
-        [80, 80, 0],       // dark yellow-brown (low energy)
+      }),       // dark yellow-brown (low energy)
         [160, 160, 0],     // dull yellow (mid energy)
         [255, 255, 0],     // bright yellow (strong)
         [255, 255, 255]    // white (peak)
