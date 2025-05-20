@@ -281,19 +281,30 @@
     let lastY = null;
     
     viewer.addEventListener('mousemove', (e) => {
+      const rect = viewer.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+    
+      const scrollbarThickness = 18; // 一般 scrollbar 大約 15~20px，可依情況微調
+    
+      const nearRightEdge = mouseX > (viewer.clientWidth - scrollbarThickness);
+      const nearBottomEdge = mouseY > (viewer.clientHeight - scrollbarThickness);
+    
+      if (nearRightEdge || nearBottomEdge) {
+        hoverLine.style.display = 'none';
+        freqLabel.style.display = 'none';
+        return;
+      }
+    
+      // 照常顯示 hover line
       const y = e.offsetY;
-      if (y === lastY) return;
-      lastY = y;
+      const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
+      hoverLine.style.top = `${y}px`;
+      hoverLine.style.display = 'block';
     
-      requestAnimationFrame(() => {
-        const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
-        hoverLine.style.top = `${y}px`;
-        hoverLine.style.display = 'block';
-    
-        freqLabel.style.top = `${y - 12}px`;
-        freqLabel.style.display = 'block';
-        freqLabel.textContent = `${freq.toFixed(1)} kHz`;
-      });
+      freqLabel.style.top = `${y - 12}px`;
+      freqLabel.style.display = 'block';
+      freqLabel.textContent = `${freq.toFixed(1)} kHz`;
     });
 
     document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
