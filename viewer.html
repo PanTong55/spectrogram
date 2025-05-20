@@ -14,44 +14,44 @@
     body {
       padding: 20px;
     }
-    #viewer-container {
+    #viewer-wrapper {
       position: relative;
       width: 100%;
-      max-width: 100%;
-      height: 1020px;
+    }
+    
+    #viewer-container {
       overflow-x: auto;
       overflow-y: hidden;
-      position: relative;
+      height: 1020px;
       border: 1px solid #ccc;
-      box-sizing: border-box;
       white-space: nowrap;
-      display: block;
+      position: relative;
     }
     #spectrogram-only {
       position: relative;
       display: inline-block;
     }
     #hover-line {
-  position: absolute;
-  width: 100%;
-  height: 1px;
-  background: white;
-  pointer-events: none;
-  display: none;
-  z-index: 12;
-}
+      position: absolute;
+      width: 100%;
+      height: 1px;
+      background: white;
+      pointer-events: none;
+      display: none;
+      z-index: 12;
+    }
     #freq-label {
-  position: absolute;
-  left: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 2px 6px;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  pointer-events: none;
-  display: none;
-  z-index: 12;
-}
+      position: absolute;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 2px 6px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      pointer-events: none;
+      display: none;
+      z-index: 12;
+    }
     #time-axis-wrapper {
       overflow: hidden;
       margin-left:60px;
@@ -72,18 +72,18 @@
       text-align: center;
     }
     #zoom-controls {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  display: flex;
-  flex-direction: row;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
-  z-index: 12;
-}
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      display: flex;
+      flex-direction: row;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      z-index: 12;
+    }
     .zoom-button {
       width: 40px;
       height: 40px;
@@ -128,20 +128,21 @@
       color: black;
       pointer-events: none;
     }
+
     #fixed-overlay {
       position: absolute;
       top: 0;
-      left: 60px; /* 假設 freq-labels 寬度為 60px */
-      width: calc(100% - 60px); /* 避免蓋到左側標籤欄 */
-      height: 1020px;
-      pointer-events: none;
+      left: 0;
+      height: 100%;
+      width: 100%;
       z-index: 11;
+      pointer-events: none;
       overflow: hidden;
     }
-
-#fixed-overlay > * {
-  pointer-events: auto;
-}
+    
+    #fixed-overlay > * {
+      pointer-events: auto;
+    }
 </style>
 </head>
 <body>
@@ -150,19 +151,20 @@
 
   <div class="viewer-row">
     <div id="freq-labels"></div>
-    
-    <div id="viewer-container">
-      <div id="spectrogram-only"></div>
-      <canvas id="freq-grid"></canvas>
-    </div>
   
-    <!-- 把 fixed-overlay 拉出來，這樣就不會跟著 scroll 內容跑了 -->
-    <div id="fixed-overlay">
-      <div id="hover-line"></div>
-      <div id="freq-label">-</div>
-      <div id="zoom-controls">
-        <button class="zoom-button" id="zoom-in">+</button>
-        <button class="zoom-button" id="zoom-out">−</button>
+    <div id="viewer-wrapper" style="position: relative;">
+      <div id="viewer-container">
+        <div id="spectrogram-only"></div>
+        <canvas id="freq-grid"></canvas>
+      </div>
+  
+      <div id="fixed-overlay">
+        <div id="hover-line"></div>
+        <div id="freq-label">-</div>
+        <div id="zoom-controls">
+          <button class="zoom-button" id="zoom-in">+</button>
+          <button class="zoom-button" id="zoom-out">−</button>
+        </div>
       </div>
     </div>
   </div>
@@ -269,7 +271,6 @@
 
     viewer.addEventListener('scroll', () => {
       timeWrapper.scrollLeft = viewer.scrollLeft;
-      document.getElementById('fixed-overlay').scrollLeft = viewer.scrollLeft;
     });
 
     viewer.addEventListener('mousemove', (e) => {
