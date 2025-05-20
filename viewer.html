@@ -16,16 +16,18 @@
     }
     #viewer-wrapper {
       position: relative;
-      width: 100%;
+      flex-grow: 1;
+      min-width: 0;
     }
-    
     #viewer-container {
+      width: 100%;
       overflow-x: auto;
       overflow-y: hidden;
       height: 1020px;
       border: 1px solid #ccc;
       white-space: nowrap;
       position: relative;
+      box-sizing: border-box;
     }
     #spectrogram-only {
       position: relative;
