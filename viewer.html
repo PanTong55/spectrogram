@@ -71,70 +71,66 @@
       return [v, v, v, 1];
     });
     
-let currentSpecPlugin = Spectrogram.create({
-  labels: false,
-  height: spectrogramHeight,
-  fftSamples: 1024,
-  frequencyMin: 0,
-  frequencyMax: 128000,
-  scale: 'linear',
-  windowFunc: 'hann',
-  colorMap: colorMap,
-});
+    const specPlugin = Spectrogram.create({
+      labels: false,
+      height: spectrogramHeight,
+      fftSamples: 1024,
+      frequencyMin: 0,
+      frequencyMax: 128000,
+      scale: 'linear',
+      windowFunc: 'hann',
+      colorMap: colorMap,
+    });
 
-ws.registerPlugin(currentSpecPlugin);
+    ws.registerPlugin(specPlugin);
 
- let currentSpecPlugin = null;  // ⬅️ 全域追蹤目前 plugin
-
-function applyCustomColorMap(newBrightness, newGain) {
-  brightness = newBrightness;
-  gain = newGain;
-
-  const newColorMap = Array.from({ length: 256 }, (_, i) => {
-    const t = Math.pow(i / 255, gain);
-    let v = 1 - t + brightness;
-    v = Math.max(0, Math.min(1, v));
-    return [v, v, v, 1];
-  });
-
-  // 🔥 安全 destroy 上一個 plugin
-  if (currentSpecPlugin && typeof currentSpecPlugin.destroy === 'function') {
-    try {
-      currentSpecPlugin.destroy();
-    } catch (err) {
-      console.warn('⚠️ Plugin already destroyed or invalid:', err);
+    function applyCustomColorMap(newBrightness, newGain) {
+      brightness = newBrightness;
+      gain = newGain;
+    
+      const newColorMap = Array.from({ length: 256 }, (_, i) => {
+        const t = Math.pow(i / 255, gain);
+        let v = 1 - t + brightness;
+        v = Math.max(0, Math.min(1, v));
+        return [v, v, v, 1];
+      });
+    
+      // ⚠️ 清除舊 spectrogram plugin（假設 ws.plugins.spectrogram = specPlugin）
+      if (specPlugin && typeof specPlugin.destroy === 'function') {
+        specPlugin.destroy(); // 卸載舊 plugin
+      }
+    
+      // ⚙️ 重新建立新 plugin 並註冊
+      const newSpecPlugin = Spectrogram.create({
+        labels: false,
+        height: spectrogramHeight,
+        fftSamples: 1024,
+        frequencyMin: 0,
+        frequencyMax: 128000,
+        scale: 'linear',
+        windowFunc: 'hann',
+        colorMap: newColorMap,
+      });
+    
+      ws.registerPlugin(newSpecPlugin);
+    
+      // 強制渲染（需延遲執行以等 plugin 掛上）
+      setTimeout(() => {
+        newSpecPlugin.render();
+      }, 50);
     }
-  }
 
-  // 🔁 建立新 plugin 並記錄
-  const newPlugin = Spectrogram.create({
-    labels: false,
-    height: spectrogramHeight,
-    fftSamples: 1024,
-    frequencyMin: 0,
-    frequencyMax: 128000,
-    scale: 'linear',
-    windowFunc: 'hann',
-    colorMap: newColorMap,
-  });
-
-  ws.registerPlugin(newPlugin);
-  currentSpecPlugin = newPlugin;
-
-  // 延遲渲染以確保掛載完成
-  setTimeout(() => {
-    newPlugin.render();
-  }, 50);
-}
-
-function handleSliderInput() {
-  const b = parseFloat(document.getElementById('brightnessSlider').value);
-  const g = parseFloat(document.getElementById('gainSlider').value);
-  applyCustomColorMap(b, g);
-}
-
-document.getElementById('brightnessSlider').addEventListener('input', handleSliderInput);
-document.getElementById('gainSlider').addEventListener('input', handleSliderInput);
+    document.getElementById('brightnessSlider').addEventListener('input', (e) => {
+      const newBrightness = parseFloat(e.target.value);
+      const newGain = parseFloat(document.getElementById('gainSlider').value);
+      applyCustomColorMap(newBrightness, newGain);
+    });
+    
+    document.getElementById('gainSlider').addEventListener('input', (e) => {
+      const newGain = parseFloat(e.target.value);
+      const newBrightness = parseFloat(document.getElementById('brightnessSlider').value);
+      applyCustomColorMap(newBrightness, newGain);
+    });
 
     document.body.addEventListener('touchstart', () => {
       if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
@@ -145,10 +141,7 @@ document.getElementById('gainSlider').addEventListener('input', handleSliderInpu
     ws.on('ready', () => {
       applyZoom();
       drawFrequencyGrid();
-    
-      if (currentSpecPlugin && typeof currentSpecPlugin.render === 'function') {
-        currentSpecPlugin.render();
-      }
+      specPlugin.render();
     });
 
     ws.on('decode', () => {
