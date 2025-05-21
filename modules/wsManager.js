@@ -46,9 +46,7 @@ export function replacePlugin(colorMap, height = 900) {
   plugin = createSpectrogramPlugin({ colorMap, height });
   ws.registerPlugin(plugin);
 
-  setTimeout(() => {
-    plugin.render();
-  }, 50);
+  return plugin;
 }
 
 export function getWavesurfer() {
