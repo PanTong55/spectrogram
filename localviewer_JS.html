@@ -52,8 +52,12 @@
   </div>
 
   <script type="module">
-    import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
-    import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
+    import {
+      initWavesurfer,
+      getWavesurfer,
+      getPlugin,
+      replacePlugin,
+    } from './modules/wsManager.js';
 
     import { initZoomControls } from './modules/zoomControl.js';
     import { initFileLoader } from './modules/fileLoader.js';
@@ -69,23 +73,18 @@
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
-
     const spectrogramHeight = 900;
     let duration = 0;
     const getDuration = () => duration;
 
-    const ws = WaveSurfer.create({
+    // Initialize WaveSurfer
+    initWavesurfer({
       container,
-      height: 0,
-      interact: false,
-      cursorWidth: 0,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
 
-    let specPlugin = null;
-
-    function renderAxes() {
+    const renderAxes = () => {
       drawTimeAxis({
         containerWidth: container.scrollWidth,
         duration,
@@ -100,9 +99,9 @@
         spectrogramHeight,
         maxFrequency: 128,
       });
-    }
+    };
 
-    const zoomControl = initZoomControls(ws, container, getDuration, renderAxes);
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
 
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
@@ -111,37 +110,20 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        if (specPlugin?.destroy) specPlugin.destroy();
-
-        specPlugin = Spectrogram.create({
-          labels: false,
-          height: spectrogramHeight,
-          fftSamples: 1024,
-          frequencyMin: 0,
-          frequencyMax: 128000,
-          scale: 'linear',
-          windowFunc: 'hann',
-          colorMap,
-        });
-
-        ws.registerPlugin(specPlugin);
-        setTimeout(() => {
-          specPlugin.render();
-        }, 50);
+        replacePlugin(colorMap, spectrogramHeight);
       },
     });
 
     initFileLoader({
       fileInputId: 'fileInput',
-      wavesurfer: ws,
+      wavesurfer: getWavesurfer(),
       spectrogramHeight,
-      colorMap: [], // 將由 brightnessControl 傳入
-      onPluginReplaced: (newPlugin) => {
-        specPlugin = newPlugin;
+      colorMap: [],
+      onPluginReplaced: () => {
         setTimeout(() => {
-          duration = ws.getDuration();
-          specPlugin.render();
-          zoomControl.applyZoom(); // renderAxes will be called internally
+          duration = getWavesurfer().getDuration();
+          getPlugin()?.render();
+          zoomControl.applyZoom();
         }, 100);
       },
     });
@@ -150,19 +132,8 @@
       viewerId: 'viewer-container',
       hoverLineId: 'hover-line',
       freqLabelId: 'freq-label',
-      spectrogramHeight: 900,
+      spectrogramHeight,
       maxFrequency: 128,
-    });
-
-    ws.on('ready', () => {
-      duration = ws.getDuration();
-      zoomControl.applyZoom();
-      specPlugin?.render();
-    });
-
-    ws.on('decode', () => {
-      duration = ws.getDuration();
-      zoomControl.applyZoom();
     });
 
     initScrollSync({
@@ -170,9 +141,21 @@
       scrollTargetId: 'time-axis-wrapper',
     });
 
+    // Wavesurfer lifecycle events
+    getWavesurfer().on('ready', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      getPlugin()?.render();
+    });
+
+    getWavesurfer().on('decode', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+    });
+
     document.body.addEventListener('touchstart', () => {
-      if (ws?.backend?.ac?.state === 'suspended') {
-        ws.backend.ac.resume();
+      if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
+        getWavesurfer().backend.ac.resume();
       }
     }, { once: true });
   </script>
