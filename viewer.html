@@ -64,10 +64,12 @@
       sampleRate: 256000,
     });
 
-    const colorMap = Array.from({ length: 256 }, (_, i) => {
-      const gain = 1;
+    let gain = 1;
+    let brightness = 0;
+    let colorMap = Array.from({ length: 256 }, (_, i) => {
       const t = Math.pow(i / 255, gain);
-      const v = 1 - t;
+      let v = 1 - t + brightness;
+      v = Math.max(0, Math.min(1, v));
       return [v, v, v, 1];
     });
     
@@ -83,6 +85,30 @@
     });
 
     ws.registerPlugin(specPlugin);
+
+    function updateColorMap(newBrightness, newGain) {
+      brightness = newBrightness;
+      gain = newGain;
+      colorMap = Array.from({ length: 256 }, (_, i) => {
+        const t = Math.pow(i / 255, gain);
+        let v = 1 - t + brightness;
+        v = Math.max(0, Math.min(1, v));
+        return [v, v, v, 1];
+      });
+      specPlugin.setOptions({ colorMap });
+    }
+
+    document.getElementById('brightnessSlider').addEventListener('input', (e) => {
+      const newBrightness = parseFloat(e.target.value);
+      const newGain = parseFloat(document.getElementById('gainSlider').value);
+      updateColorMap(newBrightness, newGain);
+    });
+
+    document.getElementById('gainSlider').addEventListener('input', (e) => {
+      const newGain = parseFloat(e.target.value);
+      const newBrightness = parseFloat(document.getElementById('brightnessSlider').value);
+      updateColorMap(newBrightness, newGain);
+    });
 
     document.body.addEventListener('touchstart', () => {
       if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
@@ -214,5 +240,13 @@
       }
     }
   </script>
+  <div style="margin-top: 10px;">
+    <label>Brightness:
+      <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
+    </label>
+    <label style="margin-left: 20px;">Contrast:
+      <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="1">
+    </label>
+  </div>
 </body>
 </html>
