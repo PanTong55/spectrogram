@@ -73,7 +73,7 @@
       scale: 'linear',
       windowFunc: 'hann',
       colorMap: Array.from({ length: 256 }, (_, i) => {
-        const gain = 3.5;  // 增加整體對比，推薦範圍 2.5~5
+        const gain = 5;  // 增加整體對比，推薦範圍 2.5~5
         const t = Math.pow(i / 255, gain);  // 弱信號提前變暗
         const v = Math.round(255 * (1 - t));  // 反轉 → 高能量黑、低能量白
         return [v, v, v, 255];
