@@ -110,7 +110,9 @@
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
         replacePlugin(colorMap, spectrogramHeight);
-        getWavesurfer().zoom(getZoomLevel()); // ✔️ 保持 zoom level
+        getWavesurfer().once('decode', () => {
+          getWavesurfer().zoom(getZoomLevel());
+        });
       },
     });
 
