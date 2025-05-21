@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Bat Spectrogram Viewer 2</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h2>Bat Recording Viewer</h2>
+  <p><small>Sampling rate: 256 kHz | 1024 FFT</small></p>
+  
+  <div style="margin-bottom: 12px;">
+    <label>Load WAV file:
+      <input type="file" id="fileInput" accept=".wav" />
+    </label>
+  </div>
+
+  <div class="viewer-row">
+    <div id="freq-labels"></div>
+    <div id="viewer-wrapper" style="position: relative;">
+      <div id="viewer-container">
+        <div id="spectrogram-only"></div>
+        <canvas id="freq-grid"></canvas>
+      </div>
+      <div id="fixed-overlay">
+        <div id="hover-line"></div>
+        <div id="freq-label">-</div>
+        <div id="zoom-controls">
+          <button class="zoom-button" id="zoom-in">+</button>
+          <button class="zoom-button" id="zoom-out">−</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="time-axis-wrapper">
+    <div id="time-axis"></div>
+  </div>
+  <div id="time-label">Time (ms)</div>
+
+  <script type="module">
+    import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
+    import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
+
+    const container = document.getElementById('spectrogram-only');
+    const viewer = document.getElementById('viewer-container');
+    const hoverLine = document.getElementById('hover-line');
+    const freqLabel = document.getElementById('freq-label');
+    const timeAxis = document.getElementById('time-axis');
+    const timeWrapper = document.getElementById('time-axis-wrapper');
+    const timeLabel = document.getElementById('time-label');
+    const freqGrid = document.getElementById('freq-grid');
+    const freqLabelContainer = document.getElementById('freq-labels');
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
+
+    const brightnessSlider = document.getElementById('brightnessSlider');
+    const gainSlider = document.getElementById('gainSlider');
+    const brightnessVal = document.getElementById('brightnessVal');
+    const gainVal = document.getElementById('gainVal');
+    
+    brightnessSlider.addEventListener('input', () => {
+      brightnessVal.textContent = brightnessSlider.value;
+    });
+    
+    gainSlider.addEventListener('input', () => {
+      gainVal.textContent = gainSlider.value;
+    });
+    
+    let duration = 0;
+    const spectrogramHeight = 900;
+    let zoomLevel = 500;
+
+    const ws = WaveSurfer.create({
+      container: container,
+      height: 0,
+      interact: false,
+      cursorWidth: 0,
+      url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
+      sampleRate: 256000,
+    });
+
+      let lastObjectUrl = null;
+
+      const fileInput = document.getElementById('fileInput');
+      
+      fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+      
+        const fileUrl = URL.createObjectURL(file);
+      
+        // 卸載舊 spectrogram plugin
+        if (specPlugin && typeof specPlugin.destroy === 'function') {
+          specPlugin.destroy();
+        }
+      
+        // 釋放前一個 Object URL
+        if (lastObjectUrl) {
+          URL.revokeObjectURL(lastObjectUrl);
+        }
+        lastObjectUrl = fileUrl;
+      
+        // 載入新的音檔
+        await ws.load(fileUrl);
+      
+        // 建立新 spectrogram plugin
+        specPlugin = Spectrogram.create({
+          labels: false,
+          height: spectrogramHeight,
+          fftSamples: 1024,
+          frequencyMin: 0,
+          frequencyMax: 128000,
+          scale: 'linear',
+          windowFunc: 'hann',
+          colorMap: colorMap,
+        });
+      
+        ws.registerPlugin(specPlugin);
+      
+        // 強制渲染
+        setTimeout(() => {
+          specPlugin.render();
+          applyZoom();
+          drawFrequencyGrid();
+        }, 100);
+      });
+
+    let gain = 1;
+    let brightness = 0;
+    let colorMap = Array.from({ length: 256 }, (_, i) => {
+      const t = Math.pow(i / 255, gain);
+      let v = 1 - t + brightness;
+      v = Math.max(0, Math.min(1, v));
+      return [v, v, v, 1];
+    });
+    
+    let specPlugin = Spectrogram.create({
+      labels: false,
+      height: spectrogramHeight,
+      fftSamples: 1024,
+      frequencyMin: 0,
+      frequencyMax: 128000,
+      scale: 'linear',
+      windowFunc: 'hann',
+      colorMap: colorMap,
+    });
+
+    ws.registerPlugin(specPlugin);
+
+    function applyCustomColorMap(newBrightness, newGain) {
+      brightness = newBrightness;
+      gain = newGain;
+    
+      const newColorMap = Array.from({ length: 256 }, (_, i) => {
+        const t = Math.pow(i / 255, gain);
+        let v = 1 - t + brightness;
+        v = Math.max(0, Math.min(1, v));
+        return [v, v, v, 1];
+      });
+    
+      // ⚠️ 清除舊 spectrogram plugin（假設 ws.plugins.spectrogram = specPlugin）
+      if (specPlugin && typeof specPlugin.destroy === 'function') {
+        specPlugin.destroy(); // 卸載舊 plugin
+      }
+    
+      // ⚙️ 重新建立新 plugin 並註冊
+      specPlugin = Spectrogram.create({
+        labels: false,
+        height: spectrogramHeight,
+        fftSamples: 1024,
+        frequencyMin: 0,
+        frequencyMax: 128000,
+        scale: 'linear',
+        windowFunc: 'hann',
+        colorMap: newColorMap,
+      });
+      
+      ws.registerPlugin(specPlugin);
+      
+      // 強制渲染
+      setTimeout(() => {
+        specPlugin.render();
+      }, 50);
+    }
+
+    document.getElementById('brightnessSlider').addEventListener('input', (e) => {
+      const newBrightness = parseFloat(e.target.value);
+      const newGain = parseFloat(document.getElementById('gainSlider').value);
+      applyCustomColorMap(newBrightness, newGain);
+    });
+    
+    document.getElementById('gainSlider').addEventListener('input', (e) => {
+      const newGain = parseFloat(e.target.value);
+      const newBrightness = parseFloat(document.getElementById('brightnessSlider').value);
+      applyCustomColorMap(newBrightness, newGain);
+    });
+
+    document.body.addEventListener('touchstart', () => {
+      if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
+        ws.backend.ac.resume();
+      }
+    }, { once: true });
+
+    ws.on('ready', () => {
+      applyZoom();
+      drawFrequencyGrid();
+      specPlugin.render();
+    });
+
+    ws.on('decode', () => {
+      duration = ws.getDuration();
+      applyZoom();
+      drawFrequencyGrid();
+    });
+
+    zoomInBtn.onclick = () => {
+      if (zoomLevel < 1000) {
+        zoomLevel = Math.min(zoomLevel + 250, 1000);
+        applyZoom();
+      }
+      updateZoomButtons();
+    };
+
+    zoomOutBtn.onclick = () => {
+      if (zoomLevel > 250) {
+        zoomLevel = Math.max(zoomLevel - 250, 250);
+        applyZoom();
+      }
+      updateZoomButtons();
+    };
+
+    function updateZoomButtons() {
+      zoomInBtn.disabled = zoomLevel >= 1000;
+      zoomOutBtn.disabled = zoomLevel <= 250;
+    }
+
+    function applyZoom() {
+      ws.zoom(zoomLevel);
+      const width = Math.min(duration * zoomLevel, 10000);
+      container.style.width = `${width}px`;
+      drawTimeAxis();
+      drawFrequencyGrid();
+    }
+
+    function drawTimeAxis() {
+      const pxPerSec = zoomLevel;
+      const totalWidth = duration * pxPerSec;
+      let step = 1000;
+      if (pxPerSec >= 800) step = 100;
+      else if (pxPerSec >= 500) step = 200;
+      else if (pxPerSec >= 300) step = 500;
+
+      const html = [];
+      for (let t = 0; t < duration * 1000; t += step) {
+        const left = (t / 1000) * pxPerSec;
+        let label = step >= 1000 ? `${(t / 1000)}s` : `${t}`;
+        html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`);
+      }
+      timeAxis.innerHTML = html.join('');
+      timeAxis.style.width = `${totalWidth}px`;
+      timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)';
+    }
+
+    viewer.addEventListener('scroll', () => {
+      timeWrapper.scrollLeft = viewer.scrollLeft;
+    });
+
+    viewer.addEventListener('mousemove', (e) => {
+      const rect = viewer.getBoundingClientRect();
+      const mouseY = e.clientY - rect.top;
+
+      const scrollbarThickness = 1;
+      const nearBottomEdge = mouseY > (viewer.clientHeight - scrollbarThickness);
+
+      if (nearBottomEdge) {
+        hoverLine.style.display = 'none';
+        freqLabel.style.display = 'none';
+        return;
+      }
+
+      const y = e.offsetY;
+      const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
+      hoverLine.style.top = `${y}px`;
+      hoverLine.style.display = 'block';
+
+      freqLabel.style.top = `${y - 12}px`;
+      freqLabel.style.display = 'block';
+      freqLabel.textContent = `${freq.toFixed(1)} kHz`;
+    });
+
+    document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
+      hoverLine.style.display = 'none';
+      freqLabel.style.display = 'none';
+    });
+
+    function drawFrequencyGrid() {
+      const width = container.scrollWidth;
+      freqGrid.width = width;
+      freqGrid.height = spectrogramHeight;
+      freqGrid.style.width = width + 'px';
+      freqGrid.style.height = spectrogramHeight + 'px';
+      const ctx = freqGrid.getContext('2d');
+      ctx.clearRect(0, 0, width, spectrogramHeight);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      for (let f = 0; f <= 128; f += 10) {
+        const y = (1 - f / 128) * spectrogramHeight;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      freqLabelContainer.innerHTML = '';
+      for (let f = 0; f <= 128; f += 10) {
+        const y = (1 - f / 128) * spectrogramHeight;
+        const label = document.createElement('div');
+        label.className = 'freq-label-static';
+        label.style.top = `${y - 6}px`;
+        label.textContent = `${f}kHz`;
+        freqLabelContainer.appendChild(label);
+      }
+    }
+  </script>
+  
+
+  <div style="margin-top: 10px;">
+    <label class="slider-label">Brightness:
+      <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
+      <span class="slider-value" id="brightnessVal">0</span>
+    </label>
+    <label class="slider-label">Contrast:
+      <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="1">
+      <span class="slider-value" id="gainVal">1</span>
+    </label>
+  </div>
+</body>
+</html>
