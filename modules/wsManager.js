@@ -6,6 +6,17 @@ import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrog
 let ws = null;
 let plugin = null;
 
+let currentZoomLevel = 500;  // 預設
+
+export function setZoomLevel(zoomLevel) {
+  currentZoomLevel = zoomLevel;
+  if (ws) ws.zoom(zoomLevel);
+}
+
+export function getZoomLevel() {
+  return currentZoomLevel;
+}
+
 export function initWavesurfer({
   container,
   url,
