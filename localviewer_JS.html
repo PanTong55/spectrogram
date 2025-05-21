@@ -55,6 +55,7 @@
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
     import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
     import { initZoomControls } from './modules/zoomControl.js';
+    import { initFileLoader } from './modules/fileLoader.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -69,12 +70,10 @@
     const gainSlider = document.getElementById('gainSlider');
     const brightnessVal = document.getElementById('brightnessVal');
     const gainVal = document.getElementById('gainVal');
-    const fileInput = document.getElementById('fileInput');
 
     let duration = 0;
     const getDuration = () => duration;
     const spectrogramHeight = 900;
-    let lastObjectUrl = null;
 
     const ws = WaveSurfer.create({
       container: container,
@@ -110,6 +109,21 @@
     const zoomControl = initZoomControls(ws, container, getDuration, () => {
       drawTimeAxis();
       drawFrequencyGrid();
+    });
+
+    initFileLoader({
+      fileInputId: 'fileInput',
+      wavesurfer: ws,
+      spectrogramHeight,
+      colorMap,
+      onPluginReplaced: (newPlugin) => {
+        specPlugin = newPlugin;
+        setTimeout(() => {
+          duration = ws.getDuration();
+          specPlugin.render();
+          zoomControl.applyZoom();
+        }, 100);
+      },
     });
 
     function drawTimeAxis() {
@@ -205,38 +219,6 @@
       brightnessVal.textContent = '0';
       gainVal.textContent = '1';
       applyCustomColorMap(0, 1);
-    });
-
-    fileInput.addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const fileUrl = URL.createObjectURL(file);
-
-      if (specPlugin?.destroy) specPlugin.destroy();
-      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
-      lastObjectUrl = fileUrl;
-
-      await ws.load(fileUrl);
-
-      specPlugin = Spectrogram.create({
-        labels: false,
-        height: spectrogramHeight,
-        fftSamples: 1024,
-        frequencyMin: 0,
-        frequencyMax: 128000,
-        scale: 'linear',
-        windowFunc: 'hann',
-        colorMap,
-      });
-
-      ws.registerPlugin(specPlugin);
-
-      setTimeout(() => {
-        duration = ws.getDuration();      // 更新 duration，否則 zoom 無法正確計算
-        specPlugin.render();
-        zoomControl.applyZoom();         // ✅ 修復 zoom 套用失效問題
-      }, 100);
     });
 
     ws.on('ready', () => {
