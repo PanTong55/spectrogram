@@ -89,21 +89,16 @@
     function updateColorMap(newBrightness, newGain) {
       brightness = newBrightness;
       gain = newGain;
-    
       const newColorMap = Array.from({ length: 256 }, (_, i) => {
         const t = Math.pow(i / 255, gain);
         let v = 1 - t + brightness;
         v = Math.max(0, Math.min(1, v));
         return [v, v, v, 1];
       });
-    
       specPlugin.options.colorMap = newColorMap;
-    
-      // 強制清空畫面，再重新初始化
-      const canvas = container.querySelector('canvas');
-      if (canvas) canvas.remove();
-    
-      specPlugin.init(); // ✅ 重新初始化 → 生效
+      specPlugin._params.colorMap = newColorMap;
+      specPlugin.renderer.colorMap = newColorMap;
+      specPlugin.renderer.render(); 
     }
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
