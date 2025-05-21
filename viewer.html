@@ -84,38 +84,52 @@
 
     ws.registerPlugin(specPlugin);
 
-    function updateColorMap(newBrightness, newGain) {
+    function applyCustomColorMap(newBrightness, newGain) {
       brightness = newBrightness;
       gain = newGain;
-
+    
       const newColorMap = Array.from({ length: 256 }, (_, i) => {
         const t = Math.pow(i / 255, gain);
         let v = 1 - t + brightness;
         v = Math.max(0, Math.min(1, v));
         return [v, v, v, 1];
       });
-
-      // 更新 Spectrogram plugin 的顏色
-      if (specPlugin && specPlugin.renderer && typeof specPlugin.renderer.update === 'function') {
-        specPlugin.renderer.update({ colorMap: newColorMap });
+    
+      // ⚠️ 清除舊 spectrogram plugin（假設 ws.plugins.spectrogram = specPlugin）
+      if (specPlugin && typeof specPlugin.destroy === 'function') {
+        specPlugin.destroy(); // 卸載舊 plugin
       }
-
-      specPlugin.options.colorMap = newColorMap;
-      specPlugin._params.colorMap = newColorMap;
-      specPlugin.renderer.colorMap = newColorMap;
-      specPlugin.renderer.render(); 
+    
+      // ⚙️ 重新建立新 plugin 並註冊
+      const newSpecPlugin = Spectrogram.create({
+        labels: false,
+        height: spectrogramHeight,
+        fftSamples: 1024,
+        frequencyMin: 0,
+        frequencyMax: 128000,
+        scale: 'linear',
+        windowFunc: 'hann',
+        colorMap: newColorMap,
+      });
+    
+      ws.registerPlugin(newSpecPlugin);
+    
+      // 強制渲染（需延遲執行以等 plugin 掛上）
+      setTimeout(() => {
+        newSpecPlugin.render();
+      }, 50);
     }
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
       const newBrightness = parseFloat(e.target.value);
       const newGain = parseFloat(document.getElementById('gainSlider').value);
-      updateColorMap(newBrightness, newGain);
+      applyCustomColorMap(newBrightness, newGain);
     });
-
+    
     document.getElementById('gainSlider').addEventListener('input', (e) => {
       const newGain = parseFloat(e.target.value);
       const newBrightness = parseFloat(document.getElementById('brightnessSlider').value);
-      updateColorMap(newBrightness, newGain);
+      applyCustomColorMap(newBrightness, newGain);
     });
 
     document.body.addEventListener('touchstart', () => {
