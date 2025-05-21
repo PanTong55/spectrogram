@@ -71,18 +71,18 @@
       return [v, v, v, 1];
     });
     
-    const specPlugin = Spectrogram.create({
-      labels: false,
-      height: spectrogramHeight,
-      fftSamples: 1024,
-      frequencyMin: 0,
-      frequencyMax: 128000,
-      scale: 'linear',
-      windowFunc: 'hann',
-      colorMap: colorMap,
-    });
+let currentSpecPlugin = Spectrogram.create({
+  labels: false,
+  height: spectrogramHeight,
+  fftSamples: 1024,
+  frequencyMin: 0,
+  frequencyMax: 128000,
+  scale: 'linear',
+  windowFunc: 'hann',
+  colorMap: colorMap,
+});
 
-    ws.registerPlugin(specPlugin);
+ws.registerPlugin(currentSpecPlugin);
 
  let currentSpecPlugin = null;  // ⬅️ 全域追蹤目前 plugin
 
@@ -145,7 +145,10 @@ document.getElementById('gainSlider').addEventListener('input', handleSliderInpu
     ws.on('ready', () => {
       applyZoom();
       drawFrequencyGrid();
-      specPlugin.render();
+    
+      if (currentSpecPlugin && typeof currentSpecPlugin.render === 'function') {
+        currentSpecPlugin.render();
+      }
     });
 
     ws.on('decode', () => {
