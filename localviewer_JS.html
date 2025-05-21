@@ -58,11 +58,10 @@
     import { initZoomControls } from './modules/zoomControl.js';
     import { initFileLoader } from './modules/fileLoader.js';
     import { initBrightnessControl } from './modules/brightnessControl.js';
+    import { initFrequencyHover } from './modules/frequencyHover.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
-    const hoverLine = document.getElementById('hover-line');
-    const freqLabel = document.getElementById('freq-label');
     const timeAxis = document.getElementById('time-axis');
     const timeWrapper = document.getElementById('time-axis-wrapper');
     const timeLabel = document.getElementById('time-label');
@@ -120,7 +119,7 @@
       fileInputId: 'fileInput',
       wavesurfer: ws,
       spectrogramHeight,
-      colorMap: [], // 將由 brightnessControl 更新 colorMap
+      colorMap: [], // 將由 brightnessControl 更新
       onPluginReplaced: (newPlugin) => {
         specPlugin = newPlugin;
         setTimeout(() => {
@@ -129,6 +128,14 @@
           zoomControl.applyZoom();
         }, 100);
       },
+    });
+
+    initFrequencyHover({
+      viewerId: 'viewer-container',
+      hoverLineId: 'hover-line',
+      freqLabelId: 'freq-label',
+      spectrogramHeight: 900,
+      maxFrequency: 128,
     });
 
     function drawTimeAxis() {
@@ -192,28 +199,6 @@
 
     viewer.addEventListener('scroll', () => {
       timeWrapper.scrollLeft = viewer.scrollLeft;
-    });
-
-    viewer.addEventListener('mousemove', (e) => {
-      const rect = viewer.getBoundingClientRect();
-      const mouseY = e.clientY - rect.top;
-      if (mouseY > (viewer.clientHeight - 1)) {
-        hoverLine.style.display = 'none';
-        freqLabel.style.display = 'none';
-        return;
-      }
-      const y = e.offsetY;
-      const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
-      hoverLine.style.top = `${y}px`;
-      hoverLine.style.display = 'block';
-      freqLabel.style.top = `${y - 12}px`;
-      freqLabel.style.display = 'block';
-      freqLabel.textContent = `${freq.toFixed(1)} kHz`;
-    });
-
-    document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
-      hoverLine.style.display = 'none';
-      freqLabel.style.display = 'none';
     });
 
     document.body.addEventListener('touchstart', () => {
