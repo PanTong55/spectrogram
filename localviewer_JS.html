@@ -112,6 +112,9 @@
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
         replacePlugin(colorMap, spectrogramHeight);
+        setTimeout(() => {
+            zoomControl.applyZoom();
+          }, 30);        
       },
     });
 
