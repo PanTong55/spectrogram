@@ -12,13 +12,11 @@
 
   <div class="viewer-row">
     <div id="freq-labels"></div>
-  
     <div id="viewer-wrapper" style="position: relative;">
       <div id="viewer-container">
         <div id="spectrogram-only"></div>
         <canvas id="freq-grid"></canvas>
       </div>
-  
       <div id="fixed-overlay">
         <div id="hover-line"></div>
         <div id="freq-label">-</div>
@@ -87,40 +85,25 @@
     ws.registerPlugin(specPlugin);
 
     function updateColorMap(newBrightness, newGain) {
-  brightness = newBrightness;
-  gain = newGain;
+      brightness = newBrightness;
+      gain = newGain;
 
-  const newColorMap = Array.from({ length: 256 }, (_, i) => {
-    const t = Math.pow(i / 255, gain);
-    let v = 1 - t + brightness;
-    v = Math.max(0, Math.min(1, v));
-    return [v, v, v, 1];
-  });
+      const newColorMap = Array.from({ length: 256 }, (_, i) => {
+        const t = Math.pow(i / 255, gain);
+        let v = 1 - t + brightness;
+        v = Math.max(0, Math.min(1, v));
+        return [v, v, v, 1];
+      });
 
-  // ✅ Spectrogram plugin 顯示更新
-  if (specPlugin && specPlugin.renderer && typeof specPlugin.renderer.update === 'function') {
-    specPlugin.renderer.update({ colorMap: newColorMap });
-  }
-}, (_, i) => {
-    const t = Math.pow(i / 255, gain);
-    let v = 1 - t + brightness;
-    v = Math.max(0, Math.min(1, v));
-    return [v, v, v, 1];
-  });
+      // 更新 Spectrogram plugin 的顏色
+      if (specPlugin && specPlugin.renderer && typeof specPlugin.renderer.update === 'function') {
+        specPlugin.renderer.update({ colorMap: newColorMap });
+      }
 
-  if (specPlugin && specPlugin.renderer) {
-    specPlugin.renderer.update({ colorMap: newColorMap });
-  }
-}, (_, i) => {
-    const t = Math.pow(i / 255, gain);
-    let v = 1 - t + brightness;
-    v = Math.max(0, Math.min(1, v));
-    return [v, v, v, 1];
-  });
-  specPlugin.options.colorMap = newColorMap;
-  specPlugin._params.colorMap = newColorMap;
-  specPlugin.renderer.colorMap = newColorMap;
-  specPlugin.renderer.render(); 
+      specPlugin.options.colorMap = newColorMap;
+      specPlugin._params.colorMap = newColorMap;
+      specPlugin.renderer.colorMap = newColorMap;
+      specPlugin.renderer.render(); 
     }
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
@@ -139,14 +122,14 @@
       if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
         ws.backend.ac.resume();
       }
-    }, { once: true });    
+    }, { once: true });
 
     ws.on('ready', () => {
-      applyZoom();           // 初始化 zoom 與時間軸
-      drawFrequencyGrid();   // 初始化頻率軸
+      applyZoom();
+      drawFrequencyGrid();
       specPlugin.render();
     });
-    
+
     ws.on('decode', () => {
       duration = ws.getDuration();
       applyZoom();
@@ -205,27 +188,24 @@
       timeWrapper.scrollLeft = viewer.scrollLeft;
     });
 
-    let lastY = null;
-    
     viewer.addEventListener('mousemove', (e) => {
       const rect = viewer.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-    
+
       const scrollbarThickness = 1;
       const nearBottomEdge = mouseY > (viewer.clientHeight - scrollbarThickness);
-    
+
       if (nearBottomEdge) {
         hoverLine.style.display = 'none';
         freqLabel.style.display = 'none';
         return;
       }
-    
+
       const y = e.offsetY;
       const freq = Math.max(0, Math.min(128, (1 - y / spectrogramHeight) * 128));
       hoverLine.style.top = `${y}px`;
       hoverLine.style.display = 'block';
-    
+
       freqLabel.style.top = `${y - 12}px`;
       freqLabel.style.display = 'block';
       freqLabel.textContent = `${freq.toFixed(1)} kHz`;
@@ -234,7 +214,7 @@
     document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
       hoverLine.style.display = 'none';
       freqLabel.style.display = 'none';
-    });    
+    });
 
     function drawFrequencyGrid() {
       const width = container.scrollWidth;
@@ -265,6 +245,7 @@
       }
     }
   </script>
+
   <div style="margin-top: 10px;">
     <label>Brightness:
       <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
