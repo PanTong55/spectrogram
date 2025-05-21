@@ -1,4 +1,5 @@
 // zoomControl.js
+import { setZoomLevel } from './wsManager.js';
 
 export function initZoomControls(ws, container, duration, applyZoomCallback) {
   const zoomInBtn = document.getElementById('zoom-in');
