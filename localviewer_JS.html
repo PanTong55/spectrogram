@@ -110,8 +110,10 @@
       brightnessValId: 'brightnessVal',
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
+      getZoomLevel: () => zoomControl.getZoomLevel(),  // ✅ 傳入當前 zoom level
       onColorMapUpdated: (colorMap) => {
         replacePlugin(colorMap, spectrogramHeight);
+        getWavesurfer().zoom(zoomControl.getZoomLevel());  // ✅ 套用目前 zoom
       },
     });
 
