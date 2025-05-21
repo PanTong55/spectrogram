@@ -71,7 +71,7 @@
       return [v, v, v, 1];
     });
     
-    const specPlugin = Spectrogram.create({
+    let specPlugin = Spectrogram.create({
       labels: false,
       height: spectrogramHeight,
       fftSamples: 1024,
@@ -101,7 +101,7 @@
       }
     
       // ⚙️ 重新建立新 plugin 並註冊
-      const newSpecPlugin = Spectrogram.create({
+      specPlugin = Spectrogram.create({
         labels: false,
         height: spectrogramHeight,
         fftSamples: 1024,
@@ -111,12 +111,12 @@
         windowFunc: 'hann',
         colorMap: newColorMap,
       });
-    
-      ws.registerPlugin(newSpecPlugin);
-    
-      // 強制渲染（需延遲執行以等 plugin 掛上）
+      
+      ws.registerPlugin(specPlugin);
+      
+      // 強制渲染
       setTimeout(() => {
-        newSpecPlugin.render();
+        specPlugin.render();
       }, 50);
     }
 
