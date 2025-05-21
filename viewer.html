@@ -95,7 +95,7 @@
         v = Math.max(0, Math.min(1, v));
         return [v, v, v, 1];
       });
-      specPlugin.setOptions({ colorMap });
+      specPlugin.options.colorMap = colorMap;
       specPlugin.render();
     }
 
