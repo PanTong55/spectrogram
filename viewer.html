@@ -97,6 +97,17 @@
     return [v, v, v, 1];
   });
 
+  // ✅ Spectrogram plugin 顯示更新
+  if (specPlugin && specPlugin.renderer && typeof specPlugin.renderer.update === 'function') {
+    specPlugin.renderer.update({ colorMap: newColorMap });
+  }
+}, (_, i) => {
+    const t = Math.pow(i / 255, gain);
+    let v = 1 - t + brightness;
+    v = Math.max(0, Math.min(1, v));
+    return [v, v, v, 1];
+  });
+
   if (specPlugin && specPlugin.renderer) {
     specPlugin.renderer.update({ colorMap: newColorMap });
   }
