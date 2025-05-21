@@ -69,10 +69,12 @@
     const gainSlider = document.getElementById('gainSlider');
     const brightnessVal = document.getElementById('brightnessVal');
     const gainVal = document.getElementById('gainVal');
+    const fileInput = document.getElementById('fileInput');
 
     let duration = 0;
-    const spectrogramHeight = 900;
     const getDuration = () => duration;
+    const spectrogramHeight = 900;
+    let lastObjectUrl = null;
 
     const ws = WaveSurfer.create({
       container: container,
@@ -83,9 +85,12 @@
       sampleRate: 256000,
     });
 
+    let gain = 1;
+    let brightness = 0;
     let colorMap = Array.from({ length: 256 }, (_, i) => {
-      const t = Math.pow(i / 255, 1);
-      let v = 1 - t;
+      const t = Math.pow(i / 255, gain);
+      let v = 1 - t + brightness;
+      v = Math.max(0, Math.min(1, v));
       return [v, v, v, 1];
     });
 
@@ -155,6 +160,85 @@
       }
     }
 
+    function applyCustomColorMap(newBrightness, newGain) {
+      brightness = newBrightness;
+      gain = newGain;
+      const newColorMap = Array.from({ length: 256 }, (_, i) => {
+        const t = Math.pow(i / 255, gain);
+        let v = 1 - t + brightness;
+        v = Math.max(0, Math.min(1, v));
+        return [v, v, v, 1];
+      });
+
+      if (specPlugin?.destroy) specPlugin.destroy();
+
+      specPlugin = Spectrogram.create({
+        labels: false,
+        height: spectrogramHeight,
+        fftSamples: 1024,
+        frequencyMin: 0,
+        frequencyMax: 128000,
+        scale: 'linear',
+        windowFunc: 'hann',
+        colorMap: newColorMap,
+      });
+
+      ws.registerPlugin(specPlugin);
+      setTimeout(() => {
+        specPlugin.render();
+      }, 50);
+    }
+
+    brightnessSlider.addEventListener('input', (e) => {
+      applyCustomColorMap(parseFloat(e.target.value), parseFloat(gainSlider.value));
+      brightnessVal.textContent = e.target.value;
+    });
+
+    gainSlider.addEventListener('input', (e) => {
+      applyCustomColorMap(parseFloat(brightnessSlider.value), parseFloat(e.target.value));
+      gainVal.textContent = e.target.value;
+    });
+
+    document.getElementById('resetButton').addEventListener('click', () => {
+      brightnessSlider.value = 0;
+      gainSlider.value = 1;
+      brightnessVal.textContent = '0';
+      gainVal.textContent = '1';
+      applyCustomColorMap(0, 1);
+    });
+
+    fileInput.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const fileUrl = URL.createObjectURL(file);
+
+      if (specPlugin?.destroy) specPlugin.destroy();
+      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+      lastObjectUrl = fileUrl;
+
+      await ws.load(fileUrl);
+
+      specPlugin = Spectrogram.create({
+        labels: false,
+        height: spectrogramHeight,
+        fftSamples: 1024,
+        frequencyMin: 0,
+        frequencyMax: 128000,
+        scale: 'linear',
+        windowFunc: 'hann',
+        colorMap,
+      });
+
+      ws.registerPlugin(specPlugin);
+
+      setTimeout(() => {
+        duration = ws.getDuration();      // 更新 duration，否則 zoom 無法正確計算
+        specPlugin.render();
+        zoomControl.applyZoom();         // ✅ 修復 zoom 套用失效問題
+      }, 100);
+    });
+
     ws.on('ready', () => {
       duration = ws.getDuration();
       zoomControl.applyZoom();
@@ -164,11 +248,6 @@
     ws.on('decode', () => {
       duration = ws.getDuration();
       zoomControl.applyZoom();
-    });
-
-    document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
-      hoverLine.style.display = 'none';
-      freqLabel.style.display = 'none';
     });
 
     viewer.addEventListener('scroll', () => {
@@ -192,12 +271,16 @@
       freqLabel.textContent = `${freq.toFixed(1)} kHz`;
     });
 
+    document.getElementById('viewer-wrapper').addEventListener('mouseleave', () => {
+      hoverLine.style.display = 'none';
+      freqLabel.style.display = 'none';
+    });
+
     document.body.addEventListener('touchstart', () => {
-      if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
+      if (ws?.backend?.ac?.state === 'suspended') {
         ws.backend.ac.resume();
       }
     }, { once: true });
-
   </script>
 </body>
 </html>
