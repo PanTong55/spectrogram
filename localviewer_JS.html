@@ -116,10 +116,10 @@
 
         replacePlugin(colorMap, spectrogramHeight);
 
-        setTimeout(() => {
+        getWavesurfer().once('decode', () => {
           zoomControl.applyZoom();
           spectrogramEl.classList.remove('loading');
-        }, 30);
+        });
       },
     });
 
