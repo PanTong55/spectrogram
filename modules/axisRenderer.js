@@ -30,10 +30,11 @@ export function drawTimeAxis({
 export function drawFrequencyGrid({
   gridCanvas,
   labelContainer,
+  containerElement, // <== ✅ 新增：用來抓正確 scrollWidth
   spectrogramHeight = 900,
   maxFrequency = 128,
 }) {
-  const width = gridCanvas.scrollWidth;
+  const width = containerElement.scrollWidth;  // ✅ 抓 spectrogram container 的 scrollWidth
   gridCanvas.width = width;
   gridCanvas.height = spectrogramHeight;
   gridCanvas.style.width = width + 'px';
@@ -62,3 +63,4 @@ export function drawFrequencyGrid({
     labelContainer.appendChild(label);
   }
 }
+
