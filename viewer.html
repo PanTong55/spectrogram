@@ -73,7 +73,7 @@
       scale: 'linear',
       windowFunc: 'hann',
       colorMap: Array.from({ length: 256 }, (_, i) => {
-        const bias = 0.2; // 推薦範圍 0.1 ~ 0.3，越大越早變暗
+        const bias = 0.6; // 推薦範圍 0.1 ~ 0.3，越大越早變暗
         const t = Math.min(1, Math.max(0, (i / 255 - bias) / (1 - bias)));
         const v = Math.round(255 * (1 - t ** 1.5));  // 1.5 是 gamma，調對比
         return [v, v, v, 255];
