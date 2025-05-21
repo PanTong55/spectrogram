@@ -87,16 +87,17 @@
     ws.registerPlugin(specPlugin);
 
     function updateColorMap(newBrightness, newGain) {
-      brightness = newBrightness;
-      gain = newGain;
-      const newColorMap = Array.from({ length: 256 }, (_, i) => {
-        const t = Math.pow(i / 255, gain);
-        let v = 1 - t + brightness;
-        v = Math.max(0, Math.min(1, v));
-        return [v, v, v, 1];
-      });
-      specPlugin._colorMap = newColorMap;
-      specPlugin.render(); 
+  brightness = newBrightness;
+  gain = newGain;
+  const newColorMap = Array.from({ length: 256 }, (_, i) => {
+    const t = Math.pow(i / 255, gain);
+    let v = 1 - t + brightness;
+    v = Math.max(0, Math.min(1, v));
+    return [v, v, v, 1];
+  });
+  specPlugin.colorMap = newColorMap;
+  specPlugin._drawer.colorMap = newColorMap;
+  specPlugin.render(); 
     }
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
