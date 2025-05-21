@@ -4,29 +4,19 @@ export function initFrequencyHover({
   freqLabelId,
   spectrogramHeight = 900,
   maxFrequency = 128,
+  wrapperId = 'viewer-wrapper', // 加入 wrapperId，外層元素判定滑出
 }) {
   const viewer = document.getElementById(viewerId);
+  const wrapper = document.getElementById(wrapperId);
   const hoverLine = document.getElementById(hoverLineId);
   const freqLabel = document.getElementById(freqLabelId);
 
   viewer.addEventListener('mousemove', (e) => {
-    const target = e.target;
-
-    // 若滑鼠正在 hoverLine 或 freqLabel 上，保持顯示
-    if (
-      target === hoverLine ||
-      target === freqLabel ||
-      hoverLine.contains(target) ||
-      freqLabel.contains(target)
-    ) {
-      return;
-    }
-
     const rect = viewer.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
 
     const scrollbarThickness = 1;
-    if (mouseY > viewer.clientHeight - scrollbarThickness) {
+    if (mouseY > (viewer.clientHeight - scrollbarThickness)) {
       hoverLine.style.display = 'none';
       freqLabel.style.display = 'none';
       return;
@@ -43,7 +33,8 @@ export function initFrequencyHover({
     freqLabel.textContent = `${freq.toFixed(1)} kHz`;
   });
 
-  viewer.addEventListener('mouseleave', () => {
+  // ✅ 改為監聽 wrapper（修正閃爍）
+  wrapper.addEventListener('mouseleave', () => {
     hoverLine.style.display = 'none';
     freqLabel.style.display = 'none';
   });
