@@ -206,3 +206,8 @@ input[type="range"]::-moz-range-thumb {
 .flat-icon-button:active {
   background-color: #ccc;
 }
+
+#spectrogram-only.loading {
+  opacity: 0;
+  pointer-events: none;
+}
