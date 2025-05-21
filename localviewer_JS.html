@@ -39,12 +39,10 @@
 
   <div style="margin-top: 10px;">
     <button id="resetButton" title="Reset to default" class="flat-icon-button">↺</button>
-    
     <label class="slider-label">Brightness:
       <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
       <span class="slider-value" id="brightnessVal">0</span>
     </label>
-  
     <label class="slider-label">Contrast:
       <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="1">
       <span class="slider-value" id="gainVal">1</span>
@@ -57,6 +55,8 @@
       getWavesurfer,
       getPlugin,
       replacePlugin,
+      setZoomLevel,
+      getZoomLevel
     } from './modules/wsManager.js';
 
     import { initZoomControls } from './modules/zoomControl.js';
@@ -77,7 +77,6 @@
     let duration = 0;
     const getDuration = () => duration;
 
-    // Initialize WaveSurfer
     initWavesurfer({
       container,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
@@ -88,11 +87,10 @@
       drawTimeAxis({
         containerWidth: container.scrollWidth,
         duration,
-        zoomLevel: zoomControl.getZoomLevel(),
+        zoomLevel: getZoomLevel(),
         axisElement: timeAxis,
         labelElement: timeLabel,
       });
-
       drawFrequencyGrid({
         gridCanvas: freqGrid,
         labelContainer: freqLabelContainer,
@@ -110,10 +108,9 @@
       brightnessValId: 'brightnessVal',
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
-      getZoomLevel: () => zoomControl.getZoomLevel(),  // ✅ 傳入當前 zoom level
       onColorMapUpdated: (colorMap) => {
         replacePlugin(colorMap, spectrogramHeight);
-        getWavesurfer().zoom(zoomControl.getZoomLevel());  // ✅ 套用目前 zoom
+        getWavesurfer().zoom(getZoomLevel()); // ✔️ 保持 zoom level
       },
     });
 
@@ -126,6 +123,7 @@
         setTimeout(() => {
           duration = getWavesurfer().getDuration();
           getPlugin()?.render();
+          getWavesurfer().zoom(getZoomLevel());
           zoomControl.applyZoom();
         }, 100);
       },
@@ -145,7 +143,6 @@
       scrollTargetId: 'time-axis-wrapper',
     });
 
-    // Wavesurfer lifecycle events
     getWavesurfer().on('ready', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
