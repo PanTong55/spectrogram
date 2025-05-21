@@ -72,6 +72,10 @@
       frequencyMax: 128000,
       scale: 'linear',
       windowFunc: 'hann',
+      colorMap: Array.from({ length: 256 }, (_, i) => {
+        const v = 255 - i;
+        return [v, v, v, 255];
+      })  
     });
 
     ws.registerPlugin(specPlugin);
