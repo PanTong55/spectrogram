@@ -84,41 +84,48 @@
 
     ws.registerPlugin(specPlugin);
 
-    function applyCustomColorMap(newBrightness, newGain) {
-      brightness = newBrightness;
-      gain = newGain;
-    
-      const newColorMap = Array.from({ length: 256 }, (_, i) => {
-        const t = Math.pow(i / 255, gain);
-        let v = 1 - t + brightness;
-        v = Math.max(0, Math.min(1, v));
-        return [v, v, v, 1];
-      });
-    
-      // ⚠️ 清除舊 spectrogram plugin（假設 ws.plugins.spectrogram = specPlugin）
-      if (specPlugin && typeof specPlugin.destroy === 'function') {
-        specPlugin.destroy(); // 卸載舊 plugin
-      }
-    
-      // ⚙️ 重新建立新 plugin 並註冊
-      const newSpecPlugin = Spectrogram.create({
-        labels: false,
-        height: spectrogramHeight,
-        fftSamples: 1024,
-        frequencyMin: 0,
-        frequencyMax: 128000,
-        scale: 'linear',
-        windowFunc: 'hann',
-        colorMap: newColorMap,
-      });
-    
-      ws.registerPlugin(newSpecPlugin);
-    
-      // 強制渲染（需延遲執行以等 plugin 掛上）
-      setTimeout(() => {
-        newSpecPlugin.render();
-      }, 50);
+ let currentSpecPlugin = null;  // ⬅️ 全域追蹤目前 plugin
+
+function applyCustomColorMap(newBrightness, newGain) {
+  brightness = newBrightness;
+  gain = newGain;
+
+  const newColorMap = Array.from({ length: 256 }, (_, i) => {
+    const t = Math.pow(i / 255, gain);
+    let v = 1 - t + brightness;
+    v = Math.max(0, Math.min(1, v));
+    return [v, v, v, 1];
+  });
+
+  // 🔥 安全 destroy 上一個 plugin
+  if (currentSpecPlugin && typeof currentSpecPlugin.destroy === 'function') {
+    try {
+      currentSpecPlugin.destroy();
+    } catch (err) {
+      console.warn('⚠️ Plugin already destroyed or invalid:', err);
     }
+  }
+
+  // 🔁 建立新 plugin 並記錄
+  const newPlugin = Spectrogram.create({
+    labels: false,
+    height: spectrogramHeight,
+    fftSamples: 1024,
+    frequencyMin: 0,
+    frequencyMax: 128000,
+    scale: 'linear',
+    windowFunc: 'hann',
+    colorMap: newColorMap,
+  });
+
+  ws.registerPlugin(newPlugin);
+  currentSpecPlugin = newPlugin;
+
+  // 延遲渲染以確保掛載完成
+  setTimeout(() => {
+    newPlugin.render();
+  }, 50);
+}
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
       const newBrightness = parseFloat(e.target.value);
