@@ -1,5 +1,3 @@
-// modules/frequencyHover.js
-
 export function initFrequencyHover({
   viewerId,
   hoverLineId,
@@ -12,6 +10,18 @@ export function initFrequencyHover({
   const freqLabel = document.getElementById(freqLabelId);
 
   viewer.addEventListener('mousemove', (e) => {
+    const target = e.target;
+
+    // 若滑鼠正在 hoverLine 或 freqLabel 上，保持顯示
+    if (
+      target === hoverLine ||
+      target === freqLabel ||
+      hoverLine.contains(target) ||
+      freqLabel.contains(target)
+    ) {
+      return;
+    }
+
     const rect = viewer.getBoundingClientRect();
     const mouseY = e.clientY - rect.top;
 
