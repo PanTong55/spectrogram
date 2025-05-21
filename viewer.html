@@ -86,20 +86,22 @@
 
     ws.registerPlugin(specPlugin);
 
-    function updateColorMap(newBrightness, newGain) {
-      brightness = newBrightness;
-      gain = newGain;
-      const newColorMap = Array.from({ length: 256 }, (_, i) => {
-        const t = Math.pow(i / 255, gain);
-        let v = 1 - t + brightness;
-        v = Math.max(0, Math.min(1, v));
-        return [v, v, v, 1];
-      });
-      specPlugin.options.colorMap = newColorMap;
-      specPlugin._params.colorMap = newColorMap;
-      specPlugin.renderer.colorMap = newColorMap;
-      specPlugin.renderer.render(); 
-    }
+  function updateColorMap(newBrightness, newGain) {
+    brightness = newBrightness;
+    gain = newGain;
+  
+    const newColorMap = Array.from({ length: 256 }, (_, i) => {
+      const t = Math.pow(i / 255, gain);
+      let v = 1 - t + brightness;
+      v = Math.max(0, Math.min(1, v));
+      return [v, v, v, 1];
+    });
+  
+    // ✅ WaveSurfer v7 正確更新方式：
+    specPlugin.colorMap = newColorMap;
+    specPlugin.renderer.colorMap = newColorMap;
+    specPlugin.renderer.render(); // ⬅️ 重繪
+  }
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
       const newBrightness = parseFloat(e.target.value);
