@@ -111,10 +111,15 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
+        const spectrogramEl = document.getElementById('spectrogram-only');
+        spectrogramEl.classList.add('loading');
+
         replacePlugin(colorMap, spectrogramHeight);
+
         setTimeout(() => {
-            zoomControl.applyZoom();
-          }, 30);        
+          zoomControl.applyZoom();
+          spectrogramEl.classList.remove('loading');
+        }, 30);
       },
     });
 
