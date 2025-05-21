@@ -127,17 +127,14 @@ function applyCustomColorMap(newBrightness, newGain) {
   }, 50);
 }
 
-    document.getElementById('brightnessSlider').addEventListener('input', (e) => {
-      const newBrightness = parseFloat(e.target.value);
-      const newGain = parseFloat(document.getElementById('gainSlider').value);
-      applyCustomColorMap(newBrightness, newGain);
-    });
-    
-    document.getElementById('gainSlider').addEventListener('input', (e) => {
-      const newGain = parseFloat(e.target.value);
-      const newBrightness = parseFloat(document.getElementById('brightnessSlider').value);
-      applyCustomColorMap(newBrightness, newGain);
-    });
+function handleSliderInput() {
+  const b = parseFloat(document.getElementById('brightnessSlider').value);
+  const g = parseFloat(document.getElementById('gainSlider').value);
+  applyCustomColorMap(b, g);
+}
+
+document.getElementById('brightnessSlider').addEventListener('input', handleSliderInput);
+document.getElementById('gainSlider').addEventListener('input', handleSliderInput);
 
     document.body.addEventListener('touchstart', () => {
       if (ws && ws.backend && ws.backend.ac && ws.backend.ac.state === 'suspended') {
