@@ -60,6 +60,7 @@
     import { initBrightnessControl } from './modules/brightnessControl.js';
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
+    import { initScrollSync } from './modules/scrollSync.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -164,8 +165,9 @@
       zoomControl.applyZoom();
     });
 
-    viewer.addEventListener('scroll', () => {
-      timeWrapper.scrollLeft = viewer.scrollLeft;
+    initScrollSync({
+      scrollSourceId: 'viewer-container',
+      scrollTargetId: 'time-axis-wrapper',
     });
 
     document.body.addEventListener('touchstart', () => {
