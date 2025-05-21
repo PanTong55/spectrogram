@@ -67,8 +67,8 @@
     const colorMap = Array.from({ length: 256 }, (_, i) => {
       const gain = 3.5;
       const t = Math.pow(i / 255, gain);
-      const v = Math.round(255 * (1 - t));
-      return [v, v, v, 255];
+      const v = 1 - t;  // ✅ 注意：使用 0–1 浮點，不是乘 255
+      return [v, v, v, 1]; // ✅ RGBA 全部為 [0–1] 區間
     });
     
     const specPlugin = Spectrogram.create({
