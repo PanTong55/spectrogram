@@ -113,9 +113,12 @@
       onColorMapUpdated: (colorMap) => {
         const spectrogramEl = document.getElementById('spectrogram-only');
         spectrogramEl.classList.add('loading');
-
-        replacePlugin(colorMap, spectrogramHeight);
-
+      
+        const plugin = replacePlugin(colorMap, spectrogramHeight);
+      
+        // 強制 render，然後延遲 zoom
+        plugin.render();
+      
         setTimeout(() => {
           zoomControl.applyZoom();
           spectrogramEl.classList.remove('loading');
