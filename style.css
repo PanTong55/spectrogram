@@ -136,3 +136,52 @@ body {
 #fixed-overlay > * {
   pointer-events: auto;
 }
+/* === Modern Range Slider Style === */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 150px;
+  height: 6px;
+  background: #ddd;
+  border-radius: 3px;
+  outline: none;
+  vertical-align: middle;
+  margin-left: 6px;
+  margin-right: 6px;
+  transition: background 0.3s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+  transition: background 0.3s;
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #007bff;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
+/* 數值文字樣式 */
+.slider-label {
+  font-size: 14px;
+  font-family: sans-serif;
+  display: inline-block;
+  margin-right: 20px;
+}
+.slider-value {
+  display: inline-block;
+  width: 40px;
+  text-align: right;
+  font-weight: bold;
+  font-size: 13px;
+  color: #333;
+}
