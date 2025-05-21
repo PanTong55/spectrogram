@@ -59,6 +59,7 @@
     import { initFileLoader } from './modules/fileLoader.js';
     import { initBrightnessControl } from './modules/brightnessControl.js';
     import { initFrequencyHover } from './modules/frequencyHover.js';
+    import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -83,10 +84,24 @@
 
     let specPlugin = null;
 
-    const zoomControl = initZoomControls(ws, container, getDuration, () => {
-      drawTimeAxis();
-      drawFrequencyGrid();
-    });
+    function renderAxes() {
+      drawTimeAxis({
+        containerWidth: container.scrollWidth,
+        duration,
+        zoomLevel: zoomControl.getZoomLevel(),
+        axisElement: timeAxis,
+        labelElement: timeLabel,
+      });
+
+      drawFrequencyGrid({
+        gridCanvas: freqGrid,
+        labelContainer: freqLabelContainer,
+        spectrogramHeight,
+        maxFrequency: 128,
+      });
+    }
+
+    const zoomControl = initZoomControls(ws, container, getDuration, renderAxes);
 
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
@@ -119,13 +134,13 @@
       fileInputId: 'fileInput',
       wavesurfer: ws,
       spectrogramHeight,
-      colorMap: [], // 將由 brightnessControl 更新
+      colorMap: [], // 將由 brightnessControl 傳入
       onPluginReplaced: (newPlugin) => {
         specPlugin = newPlugin;
         setTimeout(() => {
           duration = ws.getDuration();
           specPlugin.render();
-          zoomControl.applyZoom();
+          zoomControl.applyZoom(); // renderAxes will be called internally
         }, 100);
       },
     });
@@ -137,54 +152,6 @@
       spectrogramHeight: 900,
       maxFrequency: 128,
     });
-
-    function drawTimeAxis() {
-      const pxPerSec = zoomControl.getZoomLevel();
-      const totalWidth = duration * pxPerSec;
-      let step = 1000;
-      if (pxPerSec >= 800) step = 100;
-      else if (pxPerSec >= 500) step = 200;
-      else if (pxPerSec >= 300) step = 500;
-
-      const html = [];
-      for (let t = 0; t < duration * 1000; t += step) {
-        const left = (t / 1000) * pxPerSec;
-        const label = step >= 1000 ? `${(t / 1000)}s` : `${t}`;
-        html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`);
-      }
-      timeAxis.innerHTML = html.join('');
-      timeAxis.style.width = `${totalWidth}px`;
-      timeLabel.textContent = step >= 1000 ? 'Time (s)' : 'Time (ms)';
-    }
-
-    function drawFrequencyGrid() {
-      const width = container.scrollWidth;
-      freqGrid.width = width;
-      freqGrid.height = spectrogramHeight;
-      freqGrid.style.width = width + 'px';
-      freqGrid.style.height = spectrogramHeight + 'px';
-      const ctx = freqGrid.getContext('2d');
-      ctx.clearRect(0, 0, width, spectrogramHeight);
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 1;
-      for (let f = 0; f <= 128; f += 10) {
-        const y = (1 - f / 128) * spectrogramHeight;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-
-      freqLabelContainer.innerHTML = '';
-      for (let f = 0; f <= 128; f += 10) {
-        const y = (1 - f / 128) * spectrogramHeight;
-        const label = document.createElement('div');
-        label.className = 'freq-label-static';
-        label.style.top = `${y - 6}px`;
-        label.textContent = `${f}kHz`;
-        freqLabelContainer.appendChild(label);
-      }
-    }
 
     ws.on('ready', () => {
       duration = ws.getDuration();
