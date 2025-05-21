@@ -89,14 +89,14 @@
     function updateColorMap(newBrightness, newGain) {
       brightness = newBrightness;
       gain = newGain;
-      colorMap = Array.from({ length: 256 }, (_, i) => {
+      const newColorMap = Array.from({ length: 256 }, (_, i) => {
         const t = Math.pow(i / 255, gain);
         let v = 1 - t + brightness;
         v = Math.max(0, Math.min(1, v));
         return [v, v, v, 1];
       });
-      specPlugin.options.colorMap = colorMap;
-      specPlugin.render();
+      specPlugin._colorMap = newColorMap;
+      specPlugin.render(); 
     }
 
     document.getElementById('brightnessSlider').addEventListener('input', (e) => {
