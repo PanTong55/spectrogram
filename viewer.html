@@ -65,7 +65,7 @@
     });
 
     const colorMap = Array.from({ length: 256 }, (_, i) => {
-      const gain = 10;
+      const gain = 1;
       const t = Math.pow(i / 255, gain);
       const v = 1 - t;
       return [v, v, v, 1];
