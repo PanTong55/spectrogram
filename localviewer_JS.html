@@ -54,8 +54,10 @@
   <script type="module">
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
     import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
+
     import { initZoomControls } from './modules/zoomControl.js';
     import { initFileLoader } from './modules/fileLoader.js';
+    import { initBrightnessControl } from './modules/brightnessControl.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -66,17 +68,13 @@
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
-    const brightnessSlider = document.getElementById('brightnessSlider');
-    const gainSlider = document.getElementById('gainSlider');
-    const brightnessVal = document.getElementById('brightnessVal');
-    const gainVal = document.getElementById('gainVal');
 
+    const spectrogramHeight = 900;
     let duration = 0;
     const getDuration = () => duration;
-    const spectrogramHeight = 900;
 
     const ws = WaveSurfer.create({
-      container: container,
+      container,
       height: 0,
       interact: false,
       cursorWidth: 0,
@@ -84,38 +82,45 @@
       sampleRate: 256000,
     });
 
-    let gain = 1;
-    let brightness = 0;
-    let colorMap = Array.from({ length: 256 }, (_, i) => {
-      const t = Math.pow(i / 255, gain);
-      let v = 1 - t + brightness;
-      v = Math.max(0, Math.min(1, v));
-      return [v, v, v, 1];
-    });
-
-    let specPlugin = Spectrogram.create({
-      labels: false,
-      height: spectrogramHeight,
-      fftSamples: 1024,
-      frequencyMin: 0,
-      frequencyMax: 128000,
-      scale: 'linear',
-      windowFunc: 'hann',
-      colorMap: colorMap,
-    });
-
-    ws.registerPlugin(specPlugin);
+    let specPlugin = null;
 
     const zoomControl = initZoomControls(ws, container, getDuration, () => {
       drawTimeAxis();
       drawFrequencyGrid();
     });
 
+    initBrightnessControl({
+      brightnessSliderId: 'brightnessSlider',
+      gainSliderId: 'gainSlider',
+      brightnessValId: 'brightnessVal',
+      gainValId: 'gainVal',
+      resetBtnId: 'resetButton',
+      onColorMapUpdated: (colorMap) => {
+        if (specPlugin?.destroy) specPlugin.destroy();
+
+        specPlugin = Spectrogram.create({
+          labels: false,
+          height: spectrogramHeight,
+          fftSamples: 1024,
+          frequencyMin: 0,
+          frequencyMax: 128000,
+          scale: 'linear',
+          windowFunc: 'hann',
+          colorMap,
+        });
+
+        ws.registerPlugin(specPlugin);
+        setTimeout(() => {
+          specPlugin.render();
+        }, 50);
+      },
+    });
+
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: ws,
       spectrogramHeight,
-      colorMap,
+      colorMap: [], // 將由 brightnessControl 更新 colorMap
       onPluginReplaced: (newPlugin) => {
         specPlugin = newPlugin;
         setTimeout(() => {
@@ -137,7 +142,7 @@
       const html = [];
       for (let t = 0; t < duration * 1000; t += step) {
         const left = (t / 1000) * pxPerSec;
-        let label = step >= 1000 ? `${(t / 1000)}s` : `${t}`;
+        const label = step >= 1000 ? `${(t / 1000)}s` : `${t}`;
         html.push(`<span style="position:absolute;left:${left}px;">${label}</span>`);
       }
       timeAxis.innerHTML = html.join('');
@@ -174,57 +179,10 @@
       }
     }
 
-    function applyCustomColorMap(newBrightness, newGain) {
-      brightness = newBrightness;
-      gain = newGain;
-      const newColorMap = Array.from({ length: 256 }, (_, i) => {
-        const t = Math.pow(i / 255, gain);
-        let v = 1 - t + brightness;
-        v = Math.max(0, Math.min(1, v));
-        return [v, v, v, 1];
-      });
-
-      if (specPlugin?.destroy) specPlugin.destroy();
-
-      specPlugin = Spectrogram.create({
-        labels: false,
-        height: spectrogramHeight,
-        fftSamples: 1024,
-        frequencyMin: 0,
-        frequencyMax: 128000,
-        scale: 'linear',
-        windowFunc: 'hann',
-        colorMap: newColorMap,
-      });
-
-      ws.registerPlugin(specPlugin);
-      setTimeout(() => {
-        specPlugin.render();
-      }, 50);
-    }
-
-    brightnessSlider.addEventListener('input', (e) => {
-      applyCustomColorMap(parseFloat(e.target.value), parseFloat(gainSlider.value));
-      brightnessVal.textContent = e.target.value;
-    });
-
-    gainSlider.addEventListener('input', (e) => {
-      applyCustomColorMap(parseFloat(brightnessSlider.value), parseFloat(e.target.value));
-      gainVal.textContent = e.target.value;
-    });
-
-    document.getElementById('resetButton').addEventListener('click', () => {
-      brightnessSlider.value = 0;
-      gainSlider.value = 1;
-      brightnessVal.textContent = '0';
-      gainVal.textContent = '1';
-      applyCustomColorMap(0, 1);
-    });
-
     ws.on('ready', () => {
       duration = ws.getDuration();
       zoomControl.applyZoom();
-      specPlugin.render();
+      specPlugin?.render();
     });
 
     ws.on('decode', () => {
