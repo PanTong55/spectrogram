@@ -76,7 +76,7 @@
         const dbScaled = Math.pow(i / 255, 2);
         const v = Math.round(255 * (1 - dbScaled));
         return [v, v, v, 255];
-      });
+      })
     });
 
     ws.registerPlugin(specPlugin);
