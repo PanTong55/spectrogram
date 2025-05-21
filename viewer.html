@@ -73,9 +73,10 @@
       scale: 'linear',
       windowFunc: 'hann',
       colorMap: Array.from({ length: 256 }, (_, i) => {
-        const v = 255 - i;
+        const dbScaled = Math.pow(i / 255, 2);
+        const v = Math.round(255 * (1 - dbScaled));
         return [v, v, v, 255];
-      })  
+      });
     });
 
     ws.registerPlugin(specPlugin);
