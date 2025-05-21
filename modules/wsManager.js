@@ -46,6 +46,10 @@ export function replacePlugin(colorMap, height = 900) {
   plugin = createSpectrogramPlugin({ colorMap, height });
   ws.registerPlugin(plugin);
 
+  if (typeof ws.getDuration === 'function') {
+    ws.zoom(currentZoomLevel);
+  }  
+  
   setTimeout(() => {
     plugin.render();
   }, 50);
