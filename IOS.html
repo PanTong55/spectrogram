@@ -1,60 +1,168 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>iOS Error Trace Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Bat Spectrogram Local Viewer</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h2>iOS AudioContext + WAV 載入錯誤追蹤</h2>
-  <button id="startBtn">▶ 點我測試 WAV 載入與播放</button>
-  <div id="waveform" style="height: 100px; margin-top: 20px;"></div>
-  <pre id="log" style="background:#f4f4f4; padding:10px; margin-top:10px; white-space:pre-wrap;"></pre>
+  <h2>Bat Spectrogram Local Viewer</h2>
+  <div style="margin-bottom: 12px;">
+    <label>Load WAV file:
+      <input type="file" id="fileInput" accept=".wav" />
+    </label>
+  </div>
+
+  <div class="viewer-row">
+    <div id="freq-labels"></div>
+    <div id="viewer-wrapper" style="position: relative;">
+      <div id="viewer-container">
+        <div id="spectrogram-only"></div>
+        <canvas id="freq-grid"></canvas>
+      </div>
+      <div id="fixed-overlay">
+        <div id="hover-line"></div>
+        <div id="freq-label">-</div>
+        <div id="zoom-controls">
+          <button class="zoom-button" id="zoom-in">+</button>
+          <button class="zoom-button" id="zoom-out">−</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="time-axis-wrapper">
+    <div id="time-axis"></div>
+  </div>
+  <div id="time-label">Time (ms)</div>
+
+  <div style="margin-top: 10px;">
+    <button id="resetButton" title="Reset to default" class="flat-icon-button">↺</button>
+    
+    <label class="slider-label">Brightness:
+      <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
+      <span class="slider-value" id="brightnessVal">0</span>
+    </label>
+  
+    <label class="slider-label">Contrast:
+      <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="1">
+      <span class="slider-value" id="gainVal">1</span>
+    </label>
+  </div>
 
   <script type="module">
-    import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
+    import {
+      initWavesurfer,
+      getWavesurfer,
+      getPlugin,
+      replacePlugin,
+    } from './modules/wsManager.js';
 
-    const log = (msg) => {
-      const el = document.getElementById("log");
-      el.textContent += msg + "\n";
+    import { initZoomControls } from './modules/zoomControl.js';
+    import { initFileLoader } from './modules/fileLoader.js';
+    import { initBrightnessControl } from './modules/brightnessControl.js';
+    import { initFrequencyHover } from './modules/frequencyHover.js';
+    import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
+    import { initScrollSync } from './modules/scrollSync.js';
+
+    const container = document.getElementById('spectrogram-only');
+    const viewer = document.getElementById('viewer-container');
+    const timeAxis = document.getElementById('time-axis');
+    const timeWrapper = document.getElementById('time-axis-wrapper');
+    const timeLabel = document.getElementById('time-label');
+    const freqGrid = document.getElementById('freq-grid');
+    const freqLabelContainer = document.getElementById('freq-labels');
+    const spectrogramHeight = 900;
+    let duration = 0;
+    const getDuration = () => duration;
+
+    // Initialize WaveSurfer
+    initWavesurfer({
+      container,
+      url: 'https://wavesurfer.xyz/wavesurfer-code/examples/audio/demo.wav',
+      sampleRate: 256000,
+    });
+
+    const renderAxes = () => {
+      drawTimeAxis({
+        containerWidth: container.scrollWidth,
+        duration,
+        zoomLevel: zoomControl.getZoomLevel(),
+        axisElement: timeAxis,
+        labelElement: timeLabel,
+      });
+
+      drawFrequencyGrid({
+        gridCanvas: freqGrid,
+        labelContainer: freqLabelContainer,
+        containerElement: container,
+        spectrogramHeight,
+        maxFrequency: 128,
+      });
     };
 
-    document.getElementById("startBtn").addEventListener("click", async () => {
-      log("🔄 嘗試啟動 AudioContext...");
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        await ctx.resume();
-        log("✅ AudioContext 狀態：" + ctx.state);
-      } catch (e) {
-        log("❌ AudioContext 啟動失敗：" + e.name + " - " + e.message);
-        return;
-      }
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
 
-      log("🔄 嘗試建立 WaveSurfer 並載入遠端音檔...");
-
-      try {
-        const ws = WaveSurfer.create({
-          container: '#waveform',
-          waveColor: '#8ecae6',
-          progressColor: '#219ebc',
-          height: 100,
-          url: 'https://wavesurfer.xyz/wavesurfer-code/examples/audio/demo.wav', // ⚠️ 高機率被 CORS 阻擋
-        });
-
-        ws.on('ready', () => {
-          log("✅ 音檔已成功載入，嘗試播放...");
-          ws.play();
-        });
-
-        ws.on('error', (e) => {
-          log("❌ WaveSurfer 錯誤：" + (e?.message || e));
-          console.error("WaveSurfer error:", e);
-        });
-      } catch (err) {
-        log("❌ 初始化 WaveSurfer 失敗：" + err.name + " - " + err.message);
-        console.error(err);
-      }
+    initBrightnessControl({
+      brightnessSliderId: 'brightnessSlider',
+      gainSliderId: 'gainSlider',
+      brightnessValId: 'brightnessVal',
+      gainValId: 'gainVal',
+      resetBtnId: 'resetButton',
+      onColorMapUpdated: (colorMap) => {
+        replacePlugin(colorMap, spectrogramHeight);
+        setTimeout(() => {
+            zoomControl.applyZoom();
+          }, 20);        
+      },
     });
+
+    initFileLoader({
+      fileInputId: 'fileInput',
+      wavesurfer: getWavesurfer(),
+      spectrogramHeight,
+      colorMap: [],
+      onPluginReplaced: () => {
+        setTimeout(() => {
+          duration = getWavesurfer().getDuration();
+          getPlugin()?.render();
+          zoomControl.applyZoom();
+        }, 100);
+      },
+    });
+
+    initFrequencyHover({
+      viewerId: 'viewer-container',
+      wrapperId: 'viewer-wrapper',
+      hoverLineId: 'hover-line',
+      freqLabelId: 'freq-label',
+      spectrogramHeight,
+      maxFrequency: 128,
+    });
+
+    initScrollSync({
+      scrollSourceId: 'viewer-container',
+      scrollTargetId: 'time-axis-wrapper',
+    });
+
+    // Wavesurfer lifecycle events
+    getWavesurfer().on('ready', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      getPlugin()?.render();
+    });
+
+    getWavesurfer().on('decode', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+    });
+
+    document.body.addEventListener('touchstart', () => {
+      if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
+        getWavesurfer().backend.ac.resume();
+      }
+    }, { once: true });
   </script>
 </body>
 </html>
