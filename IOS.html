@@ -3,39 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>iOS AudioContext Test</title>
+  <title>iOS Error Trace Test</title>
 </head>
 <body>
-  <h2>iOS AudioContext 啟動測試</h2>
-  <button id="startBtn">▶ Click to Load & Play</button>
+  <h2>iOS AudioContext + WAV 載入錯誤追蹤</h2>
+  <button id="startBtn">▶ 點我測試 WAV 載入與播放</button>
   <div id="waveform" style="height: 100px; margin-top: 20px;"></div>
+  <pre id="log" style="background:#f4f4f4; padding:10px; margin-top:10px; white-space:pre-wrap;"></pre>
 
   <script type="module">
     import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
-  
-    let ws = null;
-  
-    document.getElementById('startBtn').addEventListener('click', () => {
-      if (ws) {
-        ws.playPause();
+
+    const log = (msg) => {
+      const el = document.getElementById("log");
+      el.textContent += msg + "\n";
+    };
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      log("🔄 嘗試啟動 AudioContext...");
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        await ctx.resume();
+        log("✅ AudioContext 狀態：" + ctx.state);
+      } catch (e) {
+        log("❌ AudioContext 啟動失敗：" + e.name + " - " + e.message);
         return;
       }
-  
-      ws = WaveSurfer.create({
-        container: '#waveform',
-        waveColor: '#a0c4ff',
-        progressColor: '#4361ee',
-        height: 100,
-        url: 'https://www.avisoft.com/batcalls/europe/playback/Eptesicus_serotinus_1_o.wav',
-      });
-  
-      ws.on('ready', () => {
-        ws.play();
-      });
-  
-      ws.on('error', (e) => {
-        console.error('WaveSurfer error:', e);
-      });
+
+      log("🔄 嘗試建立 WaveSurfer 並載入遠端音檔...");
+
+      try {
+        const ws = WaveSurfer.create({
+          container: '#waveform',
+          waveColor: '#8ecae6',
+          progressColor: '#219ebc',
+          height: 100,
+          url: 'https://www.avisoft.com/batcalls/europe/playback/Eptesicus_serotinus_1_o.wav', // ⚠️ 高機率被 CORS 阻擋
+        });
+
+        ws.on('ready', () => {
+          log("✅ 音檔已成功載入，嘗試播放...");
+          ws.play();
+        });
+
+        ws.on('error', (e) => {
+          log("❌ WaveSurfer 錯誤：" + (e?.message || e));
+          console.error("WaveSurfer error:", e);
+        });
+      } catch (err) {
+        log("❌ 初始化 WaveSurfer 失敗：" + err.name + " - " + err.message);
+        console.error(err);
+      }
     });
   </script>
 </body>
