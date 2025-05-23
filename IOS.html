@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iOS AudioContext Test</title>
+</head>
+<body>
+  <h2>iOS AudioContext 啟動測試</h2>
+  <button onclick="start()">▶ Click to Load & Play</button>
+  <div id="waveform" style="height: 100px; margin-top: 20px;"></div>
+
+  <script type="module">
+    import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
+
+    let ws = null;
+
+    function start() {
+      if (ws) {
+        ws.playPause();
+        return;
+      }
+
+      ws = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: '#a0c4ff',
+        progressColor: '#4361ee',
+        height: 100,
+        url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
+      });
+
+      ws.on('ready', () => {
+        ws.play();
+        console.log('WaveSurfer is ready and playing.');
+      });
+
+      ws.on('error', (e) => {
+        console.error('WaveSurfer error:', e);
+      });
+    }
+  </script>
+</body>
+</html>
