@@ -22,6 +22,7 @@ body {
   position: relative;
   box-sizing: border-box;
   white-space: nowrap;
+  display: flex;
 }
 #spectrogram-only {
   position: relative;
