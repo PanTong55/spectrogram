@@ -14,13 +14,13 @@ export function initZoomControls(ws, container, duration, applyZoomCallback) {
   }
 
   function updateZoomButtons() {
-    zoomInBtn.disabled = zoomLevel >= 2000;
+    zoomInBtn.disabled = zoomLevel >= 4000;
     zoomOutBtn.disabled = zoomLevel <= 250;
   }
 
   zoomInBtn.onclick = () => {
-    if (zoomLevel < 2000) {
-      zoomLevel = Math.min(zoomLevel + 250, 2000);
+    if (zoomLevel < 4000) {
+      zoomLevel = Math.min(zoomLevel + 500, 4000);
       applyZoom();
     }
     updateZoomButtons();
@@ -28,7 +28,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback) {
 
   zoomOutBtn.onclick = () => {
     if (zoomLevel > 250) {
-      zoomLevel = Math.max(zoomLevel - 250, 250);
+      zoomLevel = Math.max(zoomLevel - 500, 250);
       applyZoom();
     }
     updateZoomButtons();
