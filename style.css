@@ -15,13 +15,15 @@ body {
 }
 #viewer-container {
   width: 100%;
+  height: 920px;
   overflow-x: auto;
   overflow-y: hidden;
-  height: 920px;
   border: 1px solid #ccc;
-  white-space: nowrap;
   position: relative;
   box-sizing: border-box;
+  white-space: nowrap;
+  display: flex;
+  align-items: flex-start;
 }
 #spectrogram-only {
   position: relative;
