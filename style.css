@@ -50,6 +50,7 @@ body {
   z-index: 12;
 }
 #time-axis-wrapper {
+  overflow-x: auto;
   overflow: hidden;
   margin-left: 60px;
 }
