@@ -27,13 +27,15 @@ export function initWavesurfer({
 export function createSpectrogramPlugin({
   colorMap,
   height = 900,
+  frequencyMin = 0,
+  frequencyMax = 128000,
 }) {
   return Spectrogram.create({
     labels: false,
     height,
     fftSamples: 1024,
-    frequencyMin: 0,
-    frequencyMax: 128000,
+    frequencyMin: frequencyMin * 1000, // ✅ 改成可變參數
+    frequencyMax: frequencyMax * 1000,
     scale: 'linear',
     windowFunc: 'hann',
     colorMap,
