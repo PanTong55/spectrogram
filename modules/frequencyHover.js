@@ -2,7 +2,7 @@ export function initFrequencyHover({
   viewerId,
   hoverLineId,
   freqLabelId,
-  spectrogramHeight = 900,
+  spectrogramHeight = 800,
   maxFrequency = 128,
   minFrequency = 0,
   wrapperId = 'viewer-wrapper',
