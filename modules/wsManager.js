@@ -5,6 +5,7 @@ import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrog
 
 let ws = null;
 let plugin = null;
+let currentColorMap = null;
 
 export function initWavesurfer({
   container,
@@ -43,6 +44,8 @@ export function replacePlugin(colorMap, height = 900) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   if (plugin?.destroy) plugin.destroy();
 
+  currentColorMap = colorMap;  // ⬅️ 保存目前 colorMap
+
   plugin = createSpectrogramPlugin({ colorMap, height });
   ws.registerPlugin(plugin);
 
@@ -57,4 +60,8 @@ export function getWavesurfer() {
 
 export function getPlugin() {
   return plugin;
+}
+
+export function getCurrentColorMap() {
+  return currentColorMap;
 }
