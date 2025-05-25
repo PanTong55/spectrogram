@@ -18,37 +18,38 @@
     document.getElementById('fileInput').addEventListener('change', async function(event) {
       const file = event.target.files[0];
       if (!file) return;
-
+  
       const buffer = await file.arrayBuffer();
       const view = new DataView(buffer);
       const textDecoder = new TextDecoder("utf-8");
       let pos = 12; // Skip RIFF header
-
-      let guanoData = null;
-
+  
+      let foundGuano = null;
+  
       while (pos < view.byteLength) {
         const chunkId = String.fromCharCode(
           view.getUint8(pos),
-          view.getUint8(pos+1),
-          view.getUint8(pos+2),
-          view.getUint8(pos+3)
+          view.getUint8(pos + 1),
+          view.getUint8(pos + 2),
+          view.getUint8(pos + 3)
         );
-
+  
         const chunkSize = view.getUint32(pos + 4, true);
-
-        if (chunkId === 'GUAN') {
-          const guanoRaw = new Uint8Array(buffer, pos + 8, chunkSize);
-          guanoData = textDecoder.decode(guanoRaw);
+        const chunkData = new Uint8Array(buffer, pos + 8, chunkSize);
+        const chunkText = textDecoder.decode(chunkData);
+  
+        // 檢查文字中是否包含 GUANO| 開頭
+        if (chunkText.includes("GUANO|Version:")) {
+          foundGuano = chunkText;
           break;
         }
-
+  
         pos += 8 + chunkSize;
-        // Padding for even boundary
-        if (chunkSize % 2 === 1) pos += 1;
+        if (chunkSize % 2 === 1) pos += 1; // word-alignment
       }
-
+  
       const output = document.getElementById('output');
-      output.textContent = guanoData || '(No GUANO metadata found in file)';
+      output.textContent = foundGuano || '(No GUANO metadata found in file)';
     });
   </script>
 </body>
