@@ -26,7 +26,7 @@ export function initWavesurfer({
 
 export function createSpectrogramPlugin({
   colorMap,
-  height = 900,
+  height = 800,
   frequencyMin = 0,
   frequencyMax = 128000,
 }) {
@@ -42,7 +42,7 @@ export function createSpectrogramPlugin({
   });
 }
 
-export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequencyMax = 128) {
+export function replacePlugin(colorMap, height = 800, frequencyMin = 0, frequencyMax = 128) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
 
   const container = document.getElementById("spectrogram-only");
