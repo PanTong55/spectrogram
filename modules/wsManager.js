@@ -66,6 +66,12 @@ function waitUntilCanvasReadyFromDOM(container, maxRetries = 15, delay = 100) {
 
 export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequencyMax = 128000) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
+
+  // ✅ 清除舊 plugin 的 DOM（避免重複 canvas）
+  const container = document.getElementById("spectrogram-only");
+  const oldCanvas = container.querySelector("canvas");
+  if (oldCanvas) oldCanvas.remove();
+
   if (plugin?.destroy) plugin.destroy();
 
   currentColorMap = colorMap;
@@ -73,8 +79,7 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
   plugin = createSpectrogramPlugin({ colorMap, height, frequencyMin, frequencyMax });
   ws.registerPlugin(plugin);
 
-  const container = document.getElementById("spectrogram-only");
-
+  // 等 plugin 真正 mount 完成才 render
   waitUntilCanvasReadyFromDOM(container)
     .then(() => {
       plugin.render();
@@ -83,7 +88,6 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
       console.warn('⚠️ Spectrogram render failed (DOM not ready):', err);
     });
 }
-
 
 export function getWavesurfer() {
   return ws;
