@@ -193,44 +193,37 @@
       updateFrequencyRange(min, max);
     });    
 
-function updateFrequencyRange(freqMin, freqMax) {
-  const colorMap = getCurrentColorMap();
-
-  const newPlugin = createSpectrogramPlugin({
-    colorMap,
-    height: spectrogramHeight,
-    frequencyMin: freqMin,     // ✅ 正確：來自參數
-    frequencyMax: freqMax,
-  });
-
-  getWavesurfer().registerPlugin(newPlugin);
-
-  setTimeout(() => {
-    duration = getWavesurfer().getDuration();
-    zoomControl.applyZoom();
-
-    drawFrequencyGrid({
-      gridCanvas: freqGrid,
-      labelContainer: freqLabelContainer,
-      containerElement: container,
-      spectrogramHeight,
-      maxFrequency: freqMax - freqMin,
-      offsetKHz: freqMin,
-    });
-
-    initFrequencyHover({
-      viewerId: 'viewer-container',
-      wrapperId: 'viewer-wrapper',
-      hoverLineId: 'hover-line',
-      freqLabelId: 'freq-label',
-      spectrogramHeight,
-      maxFrequency: freqMax,
-      minFrequency: freqMin,
-    });
-
-    newPlugin.render();
-  }, 100);
-}
+    function updateFrequencyRange(freqMin, freqMax) {
+      const colorMap = getCurrentColorMap();
+    
+      replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
+    
+      setTimeout(() => {
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+    
+        drawFrequencyGrid({
+          gridCanvas: freqGrid,
+          labelContainer: freqLabelContainer,
+          containerElement: container,
+          spectrogramHeight,
+          maxFrequency: freqMax - freqMin,
+          offsetKHz: freqMin,
+        });
+    
+        initFrequencyHover({
+          viewerId: 'viewer-container',
+          wrapperId: 'viewer-wrapper',
+          hoverLineId: 'hover-line',
+          freqLabelId: 'freq-label',
+          spectrogramHeight,
+          maxFrequency: freqMax,
+          minFrequency: freqMin,
+        });
+    
+        getPlugin()?.render();  // ✅ 渲染最新的 plugin
+      }, 100);
+    }
     
   </script>
 </body>
