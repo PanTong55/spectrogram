@@ -176,6 +176,8 @@
       }
     }, { once: true });
 
+    let currentFreqMin = 0;
+    let currentFreqMax = 128;
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
@@ -195,7 +197,9 @@
 
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
-    
+      currentFreqMin = freqMin;
+      currentFreqMax = freqMax;
+  
       replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
     
       setTimeout(() => {
