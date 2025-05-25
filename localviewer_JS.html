@@ -87,6 +87,8 @@
     const freqLabelContainer = document.getElementById('freq-labels');
     const spectrogramHeight = 900;
     let duration = 0;
+    let currentFreqMin = 0;
+    let currentFreqMax = 128;
     const getDuration = () => duration;
 
     // Initialize WaveSurfer
@@ -110,7 +112,8 @@
         labelContainer: freqLabelContainer,
         containerElement: container,
         spectrogramHeight,
-        maxFrequency: 128,
+        maxFrequency: currentFreqMax - currentFreqMin,
+        offsetKHz: currentFreqMin,
       });
     };
 
@@ -150,7 +153,8 @@
       hoverLineId: 'hover-line',
       freqLabelId: 'freq-label',
       spectrogramHeight,
-      maxFrequency: 128,
+      maxFrequency: currentFreqMax,
+      minFrequency: currentFreqMin,
     });
 
     initScrollSync({
@@ -176,8 +180,6 @@
       }
     }, { once: true });
 
-    let currentFreqMin = 0;
-    let currentFreqMax = 128;
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
