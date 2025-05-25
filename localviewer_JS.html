@@ -199,6 +199,12 @@
       replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
     
       setTimeout(() => {
+        const containerHeight = container.clientHeight;
+        if (containerHeight === 0) {
+          console.warn("❌ Container height is 0. Skipping update.");
+          return;
+        }
+    
         duration = getWavesurfer().getDuration();
         zoomControl.applyZoom();
     
@@ -221,8 +227,8 @@
           minFrequency: freqMin,
         });
     
-        getPlugin()?.render();  // ✅ 渲染最新的 plugin
-      }, 100);
+        getPlugin()?.render();
+      }, 150);  // ⏳ 可加長延遲以等待 layout 完成
     }
     
   </script>
