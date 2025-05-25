@@ -42,20 +42,21 @@ export function createSpectrogramPlugin({
   });
 }
 
-// 🆕 更穩定的 render 條件檢查：等 plugin.canvas 有高度
-function waitUntilCanvasReady(plugin, maxRetries = 10, delay = 50) {
+function waitUntilCanvasReadyFromDOM(container, maxRetries = 15, delay = 100) {
   return new Promise((resolve, reject) => {
     let retries = 0;
 
     function check() {
-      const canvas = plugin?.renderer?.canvas;
-      if (canvas && canvas.height > 0) {
+      const canvas = container.querySelector("canvas");
+      const h = canvas?.clientHeight || 0;
+
+      if (canvas && h > 0) {
         resolve();
       } else if (retries < maxRetries) {
         retries++;
         setTimeout(check, delay);
       } else {
-        reject(new Error('Plugin canvas height still 0 after retries'));
+        reject(new Error('Canvas element still missing or height = 0 after retries'));
       }
     }
 
@@ -72,14 +73,17 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
   plugin = createSpectrogramPlugin({ colorMap, height, frequencyMin, frequencyMax });
   ws.registerPlugin(plugin);
 
-  waitUntilCanvasReady(plugin)
+  const container = document.getElementById("spectrogram-only");
+
+  waitUntilCanvasReadyFromDOM(container)
     .then(() => {
-      plugin.render();  // ✅ 真正 canvas 高度準備好才 render
+      plugin.render();
     })
     .catch((err) => {
-      console.warn('⚠️ Spectrogram render failed due to canvas not ready:', err);
+      console.warn('⚠️ Spectrogram render failed (DOM not ready):', err);
     });
 }
+
 
 export function getWavesurfer() {
   return ws;
