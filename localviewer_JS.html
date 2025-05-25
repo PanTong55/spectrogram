@@ -106,7 +106,7 @@
         axisElement: timeAxis,
         labelElement: timeLabel,
       });
-
+    
       drawFrequencyGrid({
         gridCanvas: freqGrid,
         labelContainer: freqLabelContainer,
@@ -114,6 +114,16 @@
         spectrogramHeight,
         maxFrequency: currentFreqMax - currentFreqMin,
         offsetKHz: currentFreqMin,
+      });
+    
+      initFrequencyHover({
+        viewerId: 'viewer-container',
+        wrapperId: 'viewer-wrapper',
+        hoverLineId: 'hover-line',
+        freqLabelId: 'freq-label',
+        spectrogramHeight,
+        maxFrequency: currentFreqMax,
+        minFrequency: currentFreqMin,
       });
     };
 
