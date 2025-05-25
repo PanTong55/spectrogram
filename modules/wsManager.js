@@ -42,19 +42,20 @@ export function createSpectrogramPlugin({
   });
 }
 
-export function replacePlugin(colorMap, height = 900) {
+export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequencyMax = 128000) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   if (plugin?.destroy) plugin.destroy();
 
-  currentColorMap = colorMap;  // ⬅️ 保存目前 colorMap
+  currentColorMap = colorMap;
 
-  plugin = createSpectrogramPlugin({ colorMap, height });
+  plugin = createSpectrogramPlugin({ colorMap, height, frequencyMin, frequencyMax });
   ws.registerPlugin(plugin);
 
   setTimeout(() => {
     plugin.render();
   }, 50);
 }
+
 
 export function getWavesurfer() {
   return ws;
