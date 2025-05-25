@@ -193,14 +193,21 @@
       updateFrequencyRange(min, max);
     });    
 
-function updateFrequencyRange(freqMin, freqMax) {
-  const colorMap = getCurrentColorMap();
+async function updateFrequencyRange(freqMin, freqMax) {
+  const audioBuffer = getWavesurfer().backend.buffer;
+  const wavBlob = bufferToWavBlob(audioBuffer);
+  const blobUrl = URL.createObjectURL(wavBlob);
 
+  // 重新載入音訊
+  await getWavesurfer().load(blobUrl);
+
+  // 重建 plugin 並註冊
+  const colorMap = getCurrentColorMap();
   const newPlugin = createSpectrogramPlugin({
     colorMap,
     height: spectrogramHeight,
-    frequencyMin: freqMin,     // ✅ 正確：來自參數
-    frequencyMax: freqMax,
+    frequencyMin: freqMin * 1000,
+    frequencyMax: freqMax * 1000,
   });
 
   getWavesurfer().registerPlugin(newPlugin);
@@ -230,6 +237,68 @@ function updateFrequencyRange(freqMin, freqMax) {
 
     newPlugin.render();
   }, 100);
+}
+
+function bufferToWavBlob(buffer) {
+  const numOfChan = buffer.numberOfChannels;
+  const length = buffer.length * numOfChan * 2 + 44;
+  const bufferArray = new ArrayBuffer(length);
+  const view = new DataView(bufferArray);
+  let offset = 0;
+  let pos = 0;
+
+  function writeString(s) {
+    for (let i = 0; i < s.length; i++) {
+      view.setUint8(pos++, s.charCodeAt(i));
+    }
+  }
+
+  function writeUint16(data) {
+    view.setUint16(pos, data, true);
+    pos += 2;
+  }
+
+  function writeUint32(data) {
+    view.setUint32(pos, data, true);
+    pos += 4;
+  }
+
+  // RIFF header
+  writeString('RIFF');
+  writeUint32(length - 8);
+  writeString('WAVE');
+
+  // Format chunk
+  writeString('fmt ');
+  writeUint32(16);
+  writeUint16(1);
+  writeUint16(numOfChan);
+  writeUint32(buffer.sampleRate);
+  writeUint32(buffer.sampleRate * 2 * numOfChan);
+  writeUint16(numOfChan * 2);
+  writeUint16(16);
+
+  // Data chunk
+  writeString('data');
+  writeUint32(length - pos - 4);
+
+  // Write interleaved PCM samples
+  const channels = [];
+  for (let i = 0; i < numOfChan; i++) {
+    channels.push(buffer.getChannelData(i));
+  }
+
+  const sampleCount = buffer.length;
+  for (let i = 0; i < sampleCount; i++) {
+    for (let chan = 0; chan < numOfChan; chan++) {
+      let sample = Math.max(-1, Math.min(1, channels[chan][i]));
+      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+      view.setInt16(pos, sample, true);
+      pos += 2;
+    }
+  }
+
+  return new Blob([bufferArray], { type: 'audio/wav' });
 }
     
   </script>
