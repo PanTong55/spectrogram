@@ -12,11 +12,9 @@ export function initWavesurfer({
   url,
   sampleRate = 256000,
 }) {
-  const height = container?.clientHeight || 900;
-
   ws = WaveSurfer.create({
     container,
-    height,  // 不是真的給 waveform，用來避免 render crash
+    height: 1,  // ✅ 設 1 而不是 0，讓 container 有效存在，但不顯示 waveform
     interact: false,
     cursorWidth: 0,
     url,
