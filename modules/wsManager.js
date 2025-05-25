@@ -14,7 +14,7 @@ export function initWavesurfer({
 }) {
   ws = WaveSurfer.create({
     container,
-    height: 0,
+    height: 900,
     interact: false,
     cursorWidth: 0,
     url,
