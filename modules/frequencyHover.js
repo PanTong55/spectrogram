@@ -4,7 +4,8 @@ export function initFrequencyHover({
   freqLabelId,
   spectrogramHeight = 900,
   maxFrequency = 128,
-  wrapperId = 'viewer-wrapper', // 加入 wrapperId，外層元素判定滑出
+  minFrequency = 0,
+  wrapperId = 'viewer-wrapper',
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -23,7 +24,7 @@ export function initFrequencyHover({
     }
 
     const y = e.offsetY;
-    const freq = Math.max(0, Math.min(maxFrequency, (1 - y / spectrogramHeight) * maxFrequency));
+    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
