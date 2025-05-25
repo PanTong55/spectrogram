@@ -68,6 +68,7 @@
       getPlugin,
       replacePlugin,
       createSpectrogramPlugin,
+      getCurrentColorMap,
     } from './modules/wsManager.js';
 
     import { initZoomControls } from './modules/zoomControl.js';
@@ -193,7 +194,7 @@
     });    
 
     function updateFrequencyRange(freqMin, freqMax) {
-      const colorMap = []; // Empty will trigger default from brightnessControl
+      const colorMap = getCurrentColorMap();
       const plugin = getPlugin();
     
       if (plugin?.destroy) plugin.destroy();
