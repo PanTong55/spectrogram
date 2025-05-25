@@ -7,7 +7,7 @@ export function initBrightnessControl({
   gainValId,
   resetBtnId,
   defaultBrightness = 0,
-  defaultGain = 1,
+  defaultGain = 2,
   onColorMapUpdated,
 }) {
   const brightnessSlider = document.getElementById(brightnessSliderId);
