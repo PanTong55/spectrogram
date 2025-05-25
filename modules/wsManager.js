@@ -32,7 +32,7 @@ export function createSpectrogramPlugin({
 }) {
   return Spectrogram.create({
     labels: false,
-    height,
+    height: 900,
     fftSamples: 1024,
     frequencyMin,
     frequencyMax,
