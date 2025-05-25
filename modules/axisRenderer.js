@@ -31,7 +31,7 @@ export function drawFrequencyGrid({
   gridCanvas,
   labelContainer,
   containerElement,
-  spectrogramHeight = 900,
+  spectrogramHeight = 800,
   maxFrequency = 128,
   offsetKHz = 0,
 }) {
