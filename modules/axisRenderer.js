@@ -30,11 +30,12 @@ export function drawTimeAxis({
 export function drawFrequencyGrid({
   gridCanvas,
   labelContainer,
-  containerElement, // <== ✅ 新增：用來抓正確 scrollWidth
+  containerElement,
   spectrogramHeight = 900,
   maxFrequency = 128,
+  offsetKHz = 0,
 }) {
-  const width = containerElement.scrollWidth;  // ✅ 抓 spectrogram container 的 scrollWidth
+  const width = containerElement.scrollWidth;
   gridCanvas.width = width;
   gridCanvas.height = spectrogramHeight;
   gridCanvas.style.width = width + 'px';
@@ -45,8 +46,10 @@ export function drawFrequencyGrid({
   ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 1;
 
-  for (let f = 0; f <= maxFrequency; f += 10) {
-    const y = (1 - f / maxFrequency) * spectrogramHeight;
+  const step = 10;
+  const range = maxFrequency;
+  for (let f = 0; f <= range; f += step) {
+    const y = (1 - f / range) * spectrogramHeight;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
@@ -54,12 +57,12 @@ export function drawFrequencyGrid({
   }
 
   labelContainer.innerHTML = '';
-  for (let f = 0; f <= maxFrequency; f += 10) {
-    const y = (1 - f / maxFrequency) * spectrogramHeight;
+  for (let f = 0; f <= range; f += step) {
+    const y = (1 - f / range) * spectrogramHeight;
     const label = document.createElement('div');
     label.className = 'freq-label-static';
     label.style.top = `${y - 6}px`;
-    label.textContent = `${f}kHz`;
+    label.textContent = `${f + offsetKHz}kHz`;
     labelContainer.appendChild(label);
   }
 }
