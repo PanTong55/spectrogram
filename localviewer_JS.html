@@ -190,6 +190,47 @@
       // 更新全域 frequency 範圍
       updateFrequencyRange(min, max);
     });    
+
+    function updateFrequencyRange(freqMin, freqMax) {
+      const colorMap = []; // Empty will trigger default from brightnessControl
+      const plugin = getPlugin();
+    
+      if (plugin?.destroy) plugin.destroy();
+    
+      const newPlugin = createSpectrogramPlugin({
+        colorMap,
+        height: spectrogramHeight,
+        frequencyMin: freqMin * 1000,
+        frequencyMax: freqMax * 1000,
+      });
+    
+      getWavesurfer().registerPlugin(newPlugin);
+    
+      setTimeout(() => {
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+    
+        // redraw frequency axis & grid
+        drawFrequencyGrid({
+          gridCanvas: freqGrid,
+          labelContainer: freqLabelContainer,
+          containerElement: container,
+          spectrogramHeight,
+          maxFrequency: freqMax - freqMin,
+          offsetKHz: freqMin,
+        });
+    
+        initFrequencyHover({
+          viewerId: 'viewer-container',
+          wrapperId: 'viewer-wrapper',
+          hoverLineId: 'hover-line',
+          freqLabelId: 'freq-label',
+          spectrogramHeight,
+          maxFrequency: freqMax,
+          minFrequency: freqMin,
+        });
+      }, 100);
+    }
     
   </script>
 </body>
