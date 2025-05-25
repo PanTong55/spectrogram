@@ -34,7 +34,7 @@ export function createSpectrogramPlugin({
     labels: false,
     height,
     fftSamples: 1024,
-    frequencyMin: frequencyMin * 1000,
+    frequencyMin: frequencyMin * 1000,     // ✅ 正確轉為 Hz
     frequencyMax: frequencyMax * 1000,
     scale: 'linear',
     windowFunc: 'hann',
@@ -42,34 +42,12 @@ export function createSpectrogramPlugin({
   });
 }
 
-function waitUntilCanvasReadyFromDOM(container, maxRetries = 15, delay = 100) {
-  return new Promise((resolve, reject) => {
-    let retries = 0;
-
-    function check() {
-      const canvas = container.querySelector("canvas");
-      const h = canvas?.clientHeight || 0;
-
-      if (canvas && h > 0) {
-        resolve();
-      } else if (retries < maxRetries) {
-        retries++;
-        setTimeout(check, delay);
-      } else {
-        reject(new Error('Canvas element still missing or height = 0 after retries'));
-      }
-    }
-
-    check();
-  });
-}
-
-export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequencyMax = 128000) {
+export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequencyMax = 128) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
 
   const container = document.getElementById("spectrogram-only");
 
-  // ✅ 清除舊 canvas
+  // ✅ 移除舊 canvas 避免殘留
   const oldCanvas = container.querySelector("canvas");
   if (oldCanvas) oldCanvas.remove();
 
@@ -81,23 +59,17 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
     colorMap,
     height,
     frequencyMin,
-    frequencyMax
+    frequencyMax,
   });
 
   ws.registerPlugin(plugin);
 
-  // ✅ 延後 render 到 browser 完成 plugin canvas 插入後
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      try {
-        plugin.render();
-      } catch (err) {
-        console.warn('⚠️ Spectrogram render failed (delayed render):', err);
-      }
-    }, 100); // 可依機器調整（較慢機可能需 150ms）
-  });
+  try {
+    plugin.render();  // ✅ 直接 render，已知參數正確無需延遲
+  } catch (err) {
+    console.warn('⚠️ Spectrogram render failed:', err);
+  }
 }
-
 
 export function getWavesurfer() {
   return ws;
