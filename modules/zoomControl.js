@@ -8,7 +8,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback) {
 
   function applyZoom() {
     ws.zoom(zoomLevel);
-    const width = Math.min(duration() * zoomLevel, 10000);
+    const width = duration() * zoomLevel;
     container.style.width = `${width}px`;
     applyZoomCallback(); 
   }
