@@ -173,6 +173,24 @@
         getWavesurfer().backend.ac.resume();
       }
     }, { once: true });
+
+    const freqMinInput = document.getElementById('freqMinInput');
+    const freqMaxInput = document.getElementById('freqMaxInput');
+    const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
+    
+    applyFreqRangeBtn.addEventListener('click', () => {
+      const min = Math.max(0, parseFloat(freqMinInput.value));
+      const max = Math.min(128, parseFloat(freqMaxInput.value));
+    
+      if (isNaN(min) || isNaN(max) || min >= max) {
+        alert('Please enter valid frequency values. Min must be less than Max.');
+        return;
+      }
+    
+      // 更新全域 frequency 範圍
+      updateFrequencyRange(min, max);
+    });    
+    
   </script>
 </body>
 </html>
