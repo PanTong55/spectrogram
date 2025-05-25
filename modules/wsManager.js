@@ -34,8 +34,8 @@ export function createSpectrogramPlugin({
     labels: false,
     height,
     fftSamples: 1024,
-    frequencyMin: frequencyMin * 1000, // ✅ 改成可變參數
-    frequencyMax: frequencyMax * 1000,
+    frequencyMin,
+    frequencyMax,
     scale: 'linear',
     windowFunc: 'hann',
     colorMap,
