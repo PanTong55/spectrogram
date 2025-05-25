@@ -14,7 +14,7 @@ export function initWavesurfer({
 }) {
   ws = WaveSurfer.create({
     container,
-    height: 1,  // ✅ 設 1 而不是 0，讓 container 有效存在，但不顯示 waveform
+    height: 0,
     interact: false,
     cursorWidth: 0,
     url,
@@ -49,7 +49,7 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
   if (height <= 0) {
     console.warn('❌ Spectrogram height is 0. Abort plugin replacement.');
     return;
-  }  
+  }
 
   currentColorMap = colorMap;
 
@@ -57,7 +57,9 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
   ws.registerPlugin(plugin);
 
   setTimeout(() => {
-    plugin.render();
+    if (plugin && height > 0) {
+      plugin.render();
+    }
   }, 50);
 }
 
