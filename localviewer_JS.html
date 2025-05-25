@@ -193,7 +193,6 @@
         return;
       }
     
-      // 更新全域 frequency 範圍
       updateFrequencyRange(min, max);
     });    
 
@@ -201,35 +200,14 @@
       const colorMap = getCurrentColorMap();
       currentFreqMin = freqMin;
       currentFreqMax = freqMax;
-  
+    
       replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
     
       setTimeout(() => {
         duration = getWavesurfer().getDuration();
         zoomControl.applyZoom();
-    
-        drawFrequencyGrid({
-          gridCanvas: freqGrid,
-          labelContainer: freqLabelContainer,
-          containerElement: container,
-          spectrogramHeight,
-          maxFrequency: freqMax - freqMin,
-          offsetKHz: freqMin,
-        });
-    
-        initFrequencyHover({
-          viewerId: 'viewer-container',
-          wrapperId: 'viewer-wrapper',
-          hoverLineId: 'hover-line',
-          freqLabelId: 'freq-label',
-          spectrogramHeight,
-          maxFrequency: freqMax,
-          minFrequency: freqMin,
-        });
-    
       }, 100);
     }
-    
   </script>
 </body>
 </html>
