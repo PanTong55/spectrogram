@@ -46,6 +46,11 @@ export function replacePlugin(colorMap, height = 900, frequencyMin = 0, frequenc
   if (!ws) throw new Error('Wavesurfer not initialized.');
   if (plugin?.destroy) plugin.destroy();
 
+  if (height <= 0) {
+    console.warn('❌ Spectrogram height is 0. Abort plugin replacement.');
+    return;
+  }  
+
   currentColorMap = colorMap;
 
   plugin = createSpectrogramPlugin({ colorMap, height, frequencyMin, frequencyMax });
