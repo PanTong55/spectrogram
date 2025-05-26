@@ -135,6 +135,15 @@
 
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
 
+    function safeApplyZoom() {
+      const ws = getWavesurfer();
+      if (!ws || !ws.backend || !ws.backend.buffer) {
+        console.warn('Zoom skipped: audio not yet loaded.');
+        return;
+      }
+      zoomControl.applyZoom();
+    }
+    
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
       gainSliderId: 'gainSlider',
@@ -144,7 +153,7 @@
       onColorMapUpdated: (colorMap) => {
         replacePlugin(colorMap, spectrogramHeight);
         setTimeout(() => {
-          zoomControl.applyZoom();
+          safeApplyZoom();
         }, 20);
       },
     });
@@ -158,7 +167,7 @@
         setTimeout(() => {
           duration = getWavesurfer().getDuration();
           getPlugin()?.render();
-          zoomControl.applyZoom();
+          safeApplyZoom();
         }, 100);
       },
     });
@@ -170,13 +179,13 @@
 
     getWavesurfer().on('ready', () => {
       duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
+      safeApplyZoom();
       getPlugin()?.render();
     });
 
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
+      safeApplyZoom();
     });
 
     document.body.addEventListener('touchstart', () => {
@@ -209,7 +218,7 @@
       replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
     
       duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
+      safeApplyZoom();
     
       renderAxes();
     }
