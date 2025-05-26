@@ -1,6 +1,7 @@
 // modules/fileLoader.js
 
 import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
+import { extractGuanoMetadata } from './guanoReader.js';
 
 let fileList = [];
 let currentIndex = -1;
@@ -20,6 +21,15 @@ export function initFileLoader({
 
   async function loadFile(file) {
     if (!file) return;
+    
+    const guanoOutput = document.getElementById('guano-output');
+    try {
+      const result = await extractGuanoMetadata(file);
+      guanoOutput.textContent = result || '(No GUANO metadata found)';
+    } catch (err) {
+      guanoOutput.textContent = '(Error reading GUANO metadata)';
+    }
+    
     const fileUrl = URL.createObjectURL(file);
     if (currentPlugin?.destroy) currentPlugin.destroy();
     if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
