@@ -24,7 +24,7 @@ export function initFrequencyRangeControl({
     currentFreqMax = freqMax;
 
     replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-
+    renderAxes();
     setTimeout(() => {
       const ws = getWavesurfer();
       if (ws) {
