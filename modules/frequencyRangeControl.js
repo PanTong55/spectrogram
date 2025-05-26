@@ -24,14 +24,13 @@ export function initFrequencyRangeControl({
     currentFreqMax = freqMax;
 
     replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-    renderAxes();
     setTimeout(() => {
       const ws = getWavesurfer();
       if (ws) {
         zoomControl.applyZoom();
       }
       onRangeUpdated(freqMin, freqMax);
-    }, 100);
+    }, 20);
   }
 
   applyBtn.addEventListener('click', () => {
