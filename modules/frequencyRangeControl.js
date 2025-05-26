@@ -9,7 +9,6 @@ export function initFrequencyRangeControl({
   replacePlugin,
   getWavesurfer,
   zoomControl,
-  renderAxes,
   onRangeUpdated = () => {},
 }) {
   const freqMinInput = document.getElementById(freqMinInputId);
@@ -21,14 +20,17 @@ export function initFrequencyRangeControl({
 
   function updateFrequencyRange(freqMin, freqMax) {
     const colorMap = getCurrentColorMap();
-  
+    currentFreqMin = freqMin;
+    currentFreqMax = freqMax;
+
     replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-    renderAxes(freqMin, freqMax); // ✅ 用當前這次的設定去 render
-  
+    renderAxes();
     setTimeout(() => {
       const ws = getWavesurfer();
-      if (ws) zoomControl.applyZoom();
-      onRangeUpdated(freqMin, freqMax); // 這時候才更新 state
+      if (ws) {
+        zoomControl.applyZoom();
+      }
+      onRangeUpdated(freqMin, freqMax);
     }, 100);
   }
 
