@@ -56,14 +56,13 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
 
   expandBtn.onclick = () => {
     isExpandMode = !isExpandMode;
+    computeMinZoomLevel();
     if (isExpandMode) {
-      computeMinZoomLevel();
       zoomLevel = minZoomLevel;
-      applyZoom();
     } else {
       zoomLevel = Math.max(minZoomLevel, 500);
-      applyZoom();
     }
+    applyZoom();
     updateZoomButtons();
   };
 
@@ -78,8 +77,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     },
     isExpandMode: () => isExpandMode,
     forceExpandMode: () => {
+      computeMinZoomLevel();
       if (isExpandMode) {
-        computeMinZoomLevel();
         zoomLevel = minZoomLevel;
         applyZoom();
       }
