@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Bat Spectrogram Local Viewer</title>
   <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK&display=swap" rel="stylesheet">
 </head>
 <body>
   <h2>Bat Spectrogram Local Viewer</h2>
+
   <div style="margin-bottom: 12px;">
     <label>Load WAV file:
       <input type="file" id="fileInput" accept=".wav" />
@@ -39,26 +39,28 @@
   <div id="time-label">Time (ms)</div>
 
   <div style="margin-top: 10px;">
-    <label class="slider-label">F.min (kHz):
-      <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 60px;">
-    </label>
-    <label class="slider-label" style="margin-left: 10px;">F.max (kHz):
-      <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 60px;">
-    </label>
-    <button id="applyFreqRangeBtn" class="flat-icon-button" style="margin-left: 10px;">Set</button>
-    <label class="slider-label" style="margin-left: 10px;">Brightness:
+    <button id="resetButton" title="Reset to default" class="flat-icon-button">↺</button>
+    
+    <label class="slider-label">Brightness:
       <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
       <span class="slider-value" id="brightnessVal">0</span>
     </label>
-    <label class="slider-label" style="margin-left: 10px;">Contrast:
+  
+    <label class="slider-label">Contrast:
       <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="2">
       <span class="slider-value" id="gainVal">2</span>
     </label>
-    <button id="resetButton" title="Reset to default" class="flat-icon-button" style="margin-left: 10px;">↺</button>
   </div>
 
-  <h3 style="margin-top: 20px;">GUANO Metadata:</h3>
-  <pre id="guano-output">(no file selected)</pre>
+  <div style="margin-top: 12px;">
+    <label>Freq Min (kHz):
+      <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 60px;">
+    </label>
+    <label style="margin-left: 10px;">Freq Max (kHz):
+      <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 60px;">
+    </label>
+    <button id="applyFreqRangeBtn" class="flat-icon-button" style="margin-left: 10px;">Set</button>
+  </div>  
 
   <script type="module">
     import {
@@ -76,6 +78,7 @@
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
+    import { createFrequencyRangeUpdater } from './modules/frequencyRangeUpdater.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -89,47 +92,6 @@
     let currentFreqMin = 0;
     let currentFreqMax = 128;
     const getDuration = () => duration;
-
-    const guanoOutput = document.getElementById('guano-output');
-    document.getElementById('fileInput').addEventListener('change', async function(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const buffer = await file.arrayBuffer();
-      const view = new DataView(buffer);
-      const textDecoder = new TextDecoder("utf-8");
-      let pos = 12;
-      let foundGuano = null;
-
-      while (pos < view.byteLength) {
-        const chunkId = String.fromCharCode(
-          view.getUint8(pos),
-          view.getUint8(pos + 1),
-          view.getUint8(pos + 2),
-          view.getUint8(pos + 3)
-        );
-
-        const chunkSize = view.getUint32(pos + 4, true);
-        const chunkData = new Uint8Array(buffer, pos + 8, chunkSize);
-        const chunkText = textDecoder.decode(chunkData);
-
-        if (chunkText.includes("GUANO|Version:")) {
-          foundGuano = chunkText;
-          break;
-        }
-
-        pos += 8 + chunkSize;
-        if (chunkSize % 2 === 1) pos += 1;
-      }
-
-      guanoOutput.textContent = foundGuano || '(No GUANO metadata found in file)';
-    });
-
-    initWavesurfer({
-      container,
-      url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
-      sampleRate: 256000,
-    });
 
     const renderAxes = () => {
       drawTimeAxis({
@@ -162,6 +124,19 @@
 
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
 
+    const freqRangeUpdater = createFrequencyRangeUpdater({
+      getCurrentColorMap,
+      replacePlugin,
+      getWavesurfer,
+      spectrogramHeight,
+      zoomControl,
+      renderAxes,
+      onUpdate: (min, max) => {
+        currentFreqMin = min;
+        currentFreqMax = max;
+      }
+    });
+
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
       gainSliderId: 'gainSlider',
@@ -169,10 +144,9 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        replacePlugin(colorMap, spectrogramHeight);
-        setTimeout(() => {
-          zoomControl.applyZoom();
-        }, 20);
+        replacePlugin(colorMap, spectrogramHeight, currentFreqMin, currentFreqMax);
+        zoomControl.applyZoom();
+        renderAxes();
       },
     });
 
@@ -182,11 +156,10 @@
       spectrogramHeight,
       colorMap: [],
       onPluginReplaced: () => {
-        setTimeout(() => {
-          duration = getWavesurfer().getDuration();
-          getPlugin()?.render();
-          zoomControl.applyZoom();
-        }, 100);
+        duration = getWavesurfer().getDuration();
+        getPlugin()?.render();
+        zoomControl.applyZoom();
+        renderAxes();
       },
     });
 
@@ -199,11 +172,13 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       getPlugin()?.render();
+      renderAxes();
     });
 
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
+      renderAxes();
     });
 
     document.body.addEventListener('touchstart', () => {
@@ -225,21 +200,8 @@
         return;
       }
 
-      updateFrequencyRange(min, max);
+      freqRangeUpdater.updateFrequencyRange(min, max);
     });
-
-    function updateFrequencyRange(freqMin, freqMax) {
-      const colorMap = getCurrentColorMap();
-      currentFreqMin = freqMin;
-      currentFreqMax = freqMax;
-    
-      replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-    
-      renderAxes();
-    }
   </script>
 </body>
 </html>
