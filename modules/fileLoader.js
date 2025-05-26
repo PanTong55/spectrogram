@@ -50,22 +50,25 @@ export function initFileLoader({
     const selectedFile = event.target.files[0];
     if (!selectedFile) return;
   
-    fileList = files.sort((a, b) =>
-      a.webkitRelativePath.localeCompare(b.webkitRelativePath)
-    );
+    // ✅ 判斷是否是單檔（沒有 webkitRelativePath）還是來自資料夾選取
+    const isFromDirectory = files.some(f => f.webkitRelativePath && f.webkitRelativePath.length > 0);
   
-    currentIndex = fileList.findIndex(f =>
-      f.webkitRelativePath === selectedFile.webkitRelativePath
-    );
+    if (isFromDirectory) {
+      // 來自資料夾，使用 webkitRelativePath 排序
+      fileList = files.sort((a, b) =>
+        a.webkitRelativePath.localeCompare(b.webkitRelativePath)
+      );
+      currentIndex = fileList.findIndex(f =>
+        f.webkitRelativePath === selectedFile.webkitRelativePath
+      );
+    } else {
+      // 只選了一個檔案
+      fileList = [selectedFile];
+      currentIndex = 0;
+    }
   
     await loadFile(fileList[currentIndex]);
-  });
-
-  nextBtn.addEventListener('click', () => {
-    if (currentIndex < fileList.length - 1) {
-      currentIndex++;
-      loadFile(fileList[currentIndex]);
-    }
+    updateButtonStates();
   });
 
   document.addEventListener('keydown', (e) => {
