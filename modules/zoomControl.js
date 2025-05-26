@@ -1,21 +1,36 @@
 // zoomControl.js
 
-export function initZoomControls(ws, container, duration, applyZoomCallback) {
+export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
 
   let zoomLevel = 500;
+  let minZoomLevel = 250;
+
+  function computeMinZoomLevel() {
+    const visibleWidth = wrapperElement.clientWidth;
+    const dur = duration();
+    if (dur > 0) {
+      minZoomLevel = Math.ceil(visibleWidth / dur);
+    }
+  }
 
   function applyZoom() {
+    computeMinZoomLevel();
+    zoomLevel = Math.max(zoomLevel, minZoomLevel);
+
     ws.zoom(zoomLevel);
     const width = duration() * zoomLevel;
     container.style.width = `${width}px`;
-    applyZoomCallback(); 
+
+    applyZoomCallback();
+    updateZoomButtons();
   }
 
   function updateZoomButtons() {
+    computeMinZoomLevel();
     zoomInBtn.disabled = zoomLevel >= 2000;
-    zoomOutBtn.disabled = zoomLevel <= 250;
+    zoomOutBtn.disabled = zoomLevel <= minZoomLevel;
   }
 
   zoomInBtn.onclick = () => {
@@ -23,15 +38,14 @@ export function initZoomControls(ws, container, duration, applyZoomCallback) {
       zoomLevel = Math.min(zoomLevel + 250, 2000);
       applyZoom();
     }
-    updateZoomButtons();
   };
 
   zoomOutBtn.onclick = () => {
-    if (zoomLevel > 250) {
-      zoomLevel = Math.max(zoomLevel - 250, 250);
+    computeMinZoomLevel();
+    if (zoomLevel > minZoomLevel) {
+      zoomLevel = Math.max(zoomLevel - 250, minZoomLevel);
       applyZoom();
     }
-    updateZoomButtons();
   };
 
   return {
@@ -39,9 +53,9 @@ export function initZoomControls(ws, container, duration, applyZoomCallback) {
     updateZoomButtons,
     getZoomLevel: () => zoomLevel,
     setZoomLevel: (newZoom) => {
-      zoomLevel = newZoom;
+      computeMinZoomLevel();
+      zoomLevel = Math.max(newZoom, minZoomLevel);
       applyZoom();
-      updateZoomButtons();
     }
   };
 }
