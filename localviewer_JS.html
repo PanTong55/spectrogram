@@ -167,7 +167,12 @@
         setTimeout(() => {
           duration = getWavesurfer().getDuration();
           getPlugin()?.render();
-          zoomControl.forceExpandMode();
+      
+          if (zoomControl.isExpandMode()) {
+            zoomControl.forceExpandMode();
+          } else {
+            zoomControl.applyZoom();
+          }
         }, 100);
       },
     });
