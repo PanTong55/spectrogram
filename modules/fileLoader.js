@@ -4,78 +4,75 @@ import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrog
 
 let fileList = [];
 let currentIndex = -1;
-let lastObjectUrl = null;
 let currentPlugin = null;
+let lastObjectUrl = null;
 
-export function initFileLoader({
-  fileInputId,
-  wavesurfer,
-  spectrogramHeight,
-  colorMap,
-  onPluginReplaced,
-}) {
-  const fileInput = document.getElementById(fileInputId);
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
+async function loadFile(file, wavesurfer, spectrogramHeight, colorMap, onPluginReplaced) {
+  const fileUrl = URL.createObjectURL(file);
+  if (currentPlugin?.destroy) currentPlugin.destroy();
+  if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+  lastObjectUrl = fileUrl;
 
-  async function loadFile(file) {
-    if (!file) return;
-    const fileUrl = URL.createObjectURL(file);
-    if (currentPlugin?.destroy) currentPlugin.destroy();
-    if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
-    lastObjectUrl = fileUrl;
+  await wavesurfer.load(fileUrl);
 
-    await wavesurfer.load(fileUrl);
+  currentPlugin = Spectrogram.create({
+    labels: false,
+    height: spectrogramHeight,
+    fftSamples: 1024,
+    frequencyMin: 0,
+    frequencyMax: 128000,
+    scale: 'linear',
+    windowFunc: 'hann',
+    colorMap,
+  });
 
-    currentPlugin = Spectrogram.create({
-      labels: false,
-      height: spectrogramHeight,
-      fftSamples: 1024,
-      frequencyMin: 0,
-      frequencyMax: 128000,
-      scale: 'linear',
-      windowFunc: 'hann',
-      colorMap,
-    });
-
-    wavesurfer.registerPlugin(currentPlugin);
-
-    if (typeof onPluginReplaced === 'function') {
-      onPluginReplaced(currentPlugin);
-    }
+  wavesurfer.registerPlugin(currentPlugin);
+  if (typeof onPluginReplaced === 'function') {
+    onPluginReplaced(currentPlugin);
   }
+  updateButtons();
+}
 
-  fileInput.addEventListener('change', async (event) => {
-    const files = Array.from(event.target.files).filter(f => f.name.endsWith('.wav'));
-    const selectedFile = event.target.files[0];
-    if (!selectedFile) return;
-  
-    // ✅ 判斷是否是單檔（沒有 webkitRelativePath）還是來自資料夾選取
-    const isFromDirectory = files.some(f => f.webkitRelativePath && f.webkitRelativePath.length > 0);
-  
-    if (isFromDirectory) {
-      // 來自資料夾，使用 webkitRelativePath 排序
-      fileList = files.sort((a, b) =>
-        a.webkitRelativePath.localeCompare(b.webkitRelativePath)
-      );
-      currentIndex = fileList.findIndex(f =>
-        f.webkitRelativePath === selectedFile.webkitRelativePath
-      );
-    } else {
-      // 只選了一個檔案
-      fileList = [selectedFile];
-      currentIndex = 0;
+function updateButtons() {
+  document.getElementById('prevBtn').disabled = (currentIndex <= 0);
+  document.getElementById('nextBtn').disabled = (currentIndex >= fileList.length - 1);
+}
+
+export function initFileLoader({ wavesurfer, spectrogramHeight, colorMap, onPluginReplaced }) {
+  document.getElementById('fileInputSingle').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    fileList = [file];
+    currentIndex = 0;
+    await loadFile(file, wavesurfer, spectrogramHeight, colorMap, onPluginReplaced);
+  });
+
+  document.getElementById('fileInputFolder').addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files).filter(f => f.name.endsWith('.wav'));
+    fileList = files.sort((a, b) =>
+      a.webkitRelativePath.localeCompare(b.webkitRelativePath)
+    );
+    currentIndex = 0;
+    await loadFile(fileList[currentIndex], wavesurfer, spectrogramHeight, colorMap, onPluginReplaced);
+  });
+
+  document.getElementById('prevBtn').addEventListener('click', async () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      await loadFile(fileList[currentIndex], wavesurfer, spectrogramHeight, colorMap, onPluginReplaced);
     }
-  
-    await loadFile(fileList[currentIndex]);
-    updateButtonStates();
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', async () => {
+    if (currentIndex < fileList.length - 1) {
+      currentIndex++;
+      await loadFile(fileList[currentIndex], wavesurfer, spectrogramHeight, colorMap, onPluginReplaced);
+    }
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') {
-      prevBtn.click();
-    } else if (e.key === 'ArrowRight') {
-      nextBtn.click();
-    }
+    if (e.key === 'ArrowLeft') document.getElementById('prevBtn').click();
+    if (e.key === 'ArrowRight') document.getElementById('nextBtn').click();
   });
 }
+
