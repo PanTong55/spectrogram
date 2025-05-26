@@ -9,6 +9,7 @@
 </head>
 <body>
   <h2>Bat Spectrogram Local Viewer</h2>
+
   <div style="margin-bottom: 12px;">
     <label>Load WAV file:
       <input type="file" id="fileInput" accept=".wav" />
@@ -46,6 +47,7 @@
       <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 60px;">
     </label>
     <button id="applyFreqRangeBtn" class="flat-icon-button" style="margin-left: 10px;">Set</button>
+
     <label class="slider-label" style="margin-left: 10px;">Brightness:
       <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
       <span class="slider-value" id="brightnessVal">0</span>
@@ -66,7 +68,6 @@
       getWavesurfer,
       getPlugin,
       replacePlugin,
-      createSpectrogramPlugin,
       getCurrentColorMap,
     } from './modules/wsManager.js';
 
@@ -76,6 +77,7 @@
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
+    import { initFrequencyRangeControl } from './modules/frequencyRangeControl.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -85,11 +87,107 @@
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
     const spectrogramHeight = 800;
+
     let duration = 0;
-    let currentFreqMin = 0;
-    let currentFreqMax = 128;
     const getDuration = () => duration;
 
+    const renderAxes = () => {
+      drawTimeAxis({
+        containerWidth: container.scrollWidth,
+        duration,
+        zoomLevel: zoomControl.getZoomLevel(),
+        axisElement: timeAxis,
+        labelElement: timeLabel,
+      });
+
+      drawFrequencyGrid({
+        gridCanvas: freqGrid,
+        labelContainer: freqLabelContainer,
+        containerElement: container,
+        spectrogramHeight,
+        maxFrequency: frequencyControl.getCurrentFreqMax() - frequencyControl.getCurrentFreqMin(),
+        offsetKHz: frequencyControl.getCurrentFreqMin(),
+      });
+
+      initFrequencyHover({
+        viewerId: 'viewer-container',
+        wrapperId: 'viewer-wrapper',
+        hoverLineId: 'hover-line',
+        freqLabelId: 'freq-label',
+        spectrogramHeight,
+        maxFrequency: frequencyControl.getCurrentFreqMax(),
+        minFrequency: frequencyControl.getCurrentFreqMin(),
+      });
+    };
+
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
+
+    const frequencyControl = initFrequencyRangeControl({
+      freqMinInputId: 'freqMinInput',
+      freqMaxInputId: 'freqMaxInput',
+      applyBtnId: 'applyFreqRangeBtn',
+      spectrogramHeight,
+      getCurrentColorMap,
+      replacePlugin,
+      getWavesurfer,
+      zoomControl,
+      renderAxes,  // ✅ 傳入 renderAxes 以強制更新 UI
+    });
+
+    initBrightnessControl({
+      brightnessSliderId: 'brightnessSlider',
+      gainSliderId: 'gainSlider',
+      brightnessValId: 'brightnessVal',
+      gainValId: 'gainVal',
+      resetBtnId: 'resetButton',
+      onColorMapUpdated: (colorMap) => {
+        replacePlugin(colorMap, spectrogramHeight, frequencyControl.getCurrentFreqMin(), frequencyControl.getCurrentFreqMax());
+        setTimeout(() => {
+          zoomControl.applyZoom();
+          renderAxes();  // ✅ 同步重繪
+        }, 100);
+      },
+    });
+
+    initFileLoader({
+      fileInputId: 'fileInput',
+      wavesurfer: getWavesurfer(),
+      spectrogramHeight,
+      colorMap: [],
+      onPluginReplaced: () => {
+        setTimeout(() => {
+          duration = getWavesurfer().getDuration();
+          getPlugin()?.render();
+          zoomControl.applyZoom();
+          renderAxes();
+        }, 100);
+      },
+    });
+
+    initScrollSync({
+      scrollSourceId: 'viewer-container',
+      scrollTargetId: 'time-axis-wrapper',
+    });
+
+    getWavesurfer().on('ready', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      getPlugin()?.render();
+      renderAxes();
+    });
+
+    getWavesurfer().on('decode', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+    });
+
+    document.body.addEventListener('touchstart', () => {
+      if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
+        getWavesurfer().backend.ac.resume();
+      }
+    }, { once: true });
+
+    // GUANO metadata preview
     const guanoOutput = document.getElementById('guano-output');
     document.getElementById('fileInput').addEventListener('change', async function(event) {
       const file = event.target.files[0];
@@ -125,121 +223,12 @@
       guanoOutput.textContent = foundGuano || '(No GUANO metadata found in file)';
     });
 
+    // Init with demo WAV
     initWavesurfer({
       container,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
-
-    const renderAxes = () => {
-      drawTimeAxis({
-        containerWidth: container.scrollWidth,
-        duration,
-        zoomLevel: zoomControl.getZoomLevel(),
-        axisElement: timeAxis,
-        labelElement: timeLabel,
-      });
-
-      drawFrequencyGrid({
-        gridCanvas: freqGrid,
-        labelContainer: freqLabelContainer,
-        containerElement: container,
-        spectrogramHeight,
-        maxFrequency: currentFreqMax - currentFreqMin,
-        offsetKHz: currentFreqMin,
-      });
-
-      initFrequencyHover({
-        viewerId: 'viewer-container',
-        wrapperId: 'viewer-wrapper',
-        hoverLineId: 'hover-line',
-        freqLabelId: 'freq-label',
-        spectrogramHeight,
-        maxFrequency: currentFreqMax,
-        minFrequency: currentFreqMin,
-      });
-    };
-
-    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
-
-    initBrightnessControl({
-      brightnessSliderId: 'brightnessSlider',
-      gainSliderId: 'gainSlider',
-      brightnessValId: 'brightnessVal',
-      gainValId: 'gainVal',
-      resetBtnId: 'resetButton',
-      onColorMapUpdated: (colorMap) => {
-        replacePlugin(colorMap, spectrogramHeight);
-        setTimeout(() => {
-          zoomControl.applyZoom();
-        }, 20);
-      },
-    });
-
-    initFileLoader({
-      fileInputId: 'fileInput',
-      wavesurfer: getWavesurfer(),
-      spectrogramHeight,
-      colorMap: [],
-      onPluginReplaced: () => {
-        setTimeout(() => {
-          duration = getWavesurfer().getDuration();
-          getPlugin()?.render();
-          zoomControl.applyZoom();
-        }, 100);
-      },
-    });
-
-    initScrollSync({
-      scrollSourceId: 'viewer-container',
-      scrollTargetId: 'time-axis-wrapper',
-    });
-
-    getWavesurfer().on('ready', () => {
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      getPlugin()?.render();
-    });
-
-    getWavesurfer().on('decode', () => {
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-    });
-
-    document.body.addEventListener('touchstart', () => {
-      if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
-        getWavesurfer().backend.ac.resume();
-      }
-    }, { once: true });
-
-    const freqMinInput = document.getElementById('freqMinInput');
-    const freqMaxInput = document.getElementById('freqMaxInput');
-    const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
-
-    applyFreqRangeBtn.addEventListener('click', () => {
-      const min = Math.max(0, parseFloat(freqMinInput.value));
-      const max = Math.min(128, parseFloat(freqMaxInput.value));
-
-      if (isNaN(min) || isNaN(max) || min >= max) {
-        alert('Please enter valid frequency values. Min must be less than Max.');
-        return;
-      }
-
-      updateFrequencyRange(min, max);
-    });
-
-    function updateFrequencyRange(freqMin, freqMax) {
-      const colorMap = getCurrentColorMap();
-      currentFreqMin = freqMin;
-      currentFreqMax = freqMax;
-
-      replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-
-      setTimeout(() => {
-        duration = getWavesurfer().getDuration();
-        zoomControl.applyZoom();
-      }, 100);
-    }
   </script>
 </body>
 </html>
