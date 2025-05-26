@@ -76,7 +76,6 @@
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
-    import { createFrequencyRangeUpdater } from './modules/frequencyRangeUpdater.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -177,20 +176,6 @@
       },
     });
 
-     const freqRangeUpdater = createFrequencyRangeUpdater({
-      getCurrentColorMap,
-      replacePlugin,
-      getPlugin,
-      getWavesurfer,
-      spectrogramHeight,
-      zoomControl,
-      renderAxes,
-      onUpdate: (min, max) => {
-        currentFreqMin = min;
-        currentFreqMax = max;
-      }
-    });   
-
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: getWavesurfer(),
@@ -226,7 +211,7 @@
         getWavesurfer().backend.ac.resume();
       }
     }, { once: true });
-    
+
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
@@ -240,9 +225,21 @@
         return;
       }
 
-      freqRangeUpdater.updateFrequencyRange(min, max);
+      updateFrequencyRange(min, max);
     });
 
+    function updateFrequencyRange(freqMin, freqMax) {
+      const colorMap = getCurrentColorMap();
+      currentFreqMin = freqMin;
+      currentFreqMax = freqMax;
+    
+      replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
+    
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+    
+      renderAxes();
+    }
   </script>
 </body>
 </html>
