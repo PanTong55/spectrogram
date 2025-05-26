@@ -69,15 +69,14 @@
       createSpectrogramPlugin,
       getCurrentColorMap,
     } from './modules/wsManager.js';
-  
+
     import { initZoomControls } from './modules/zoomControl.js';
     import { initFileLoader } from './modules/fileLoader.js';
     import { initBrightnessControl } from './modules/brightnessControl.js';
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
-    import { initFrequencyRangeControl } from './modules/frequencyRangeControl.js';
-  
+
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
     const timeAxis = document.getElementById('time-axis');
@@ -87,19 +86,21 @@
     const freqLabelContainer = document.getElementById('freq-labels');
     const spectrogramHeight = 800;
     let duration = 0;
+    let currentFreqMin = 0;
+    let currentFreqMax = 128;
     const getDuration = () => duration;
-  
+
     const guanoOutput = document.getElementById('guano-output');
     document.getElementById('fileInput').addEventListener('change', async function(event) {
       const file = event.target.files[0];
       if (!file) return;
-  
+
       const buffer = await file.arrayBuffer();
       const view = new DataView(buffer);
       const textDecoder = new TextDecoder("utf-8");
       let pos = 12;
       let foundGuano = null;
-  
+
       while (pos < view.byteLength) {
         const chunkId = String.fromCharCode(
           view.getUint8(pos),
@@ -107,31 +108,28 @@
           view.getUint8(pos + 2),
           view.getUint8(pos + 3)
         );
-  
+
         const chunkSize = view.getUint32(pos + 4, true);
         const chunkData = new Uint8Array(buffer, pos + 8, chunkSize);
         const chunkText = textDecoder.decode(chunkData);
-  
+
         if (chunkText.includes("GUANO|Version:")) {
           foundGuano = chunkText;
           break;
         }
-  
+
         pos += 8 + chunkSize;
         if (chunkSize % 2 === 1) pos += 1;
       }
-  
+
       guanoOutput.textContent = foundGuano || '(No GUANO metadata found in file)';
     });
-  
+
     initWavesurfer({
       container,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
-  
-    let currentFreqMin = 0;
-    let currentFreqMax = 128;
 
     const renderAxes = () => {
       drawTimeAxis({
@@ -141,7 +139,7 @@
         axisElement: timeAxis,
         labelElement: timeLabel,
       });
-  
+
       drawFrequencyGrid({
         gridCanvas: freqGrid,
         labelContainer: freqLabelContainer,
@@ -150,7 +148,7 @@
         maxFrequency: currentFreqMax - currentFreqMin,
         offsetKHz: currentFreqMin,
       });
-  
+
       initFrequencyHover({
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
@@ -160,26 +158,10 @@
         maxFrequency: currentFreqMax,
         minFrequency: currentFreqMin,
       });
-    };    
-  
+    };
+
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
-  
-    const freqControl = initFrequencyRangeControl({
-      freqMinInputId: 'freqMinInput',
-      freqMaxInputId: 'freqMaxInput',
-      applyBtnId: 'applyFreqRangeBtn',
-      spectrogramHeight,
-      getCurrentColorMap,
-      replacePlugin,
-      getWavesurfer,
-      zoomControl,
-      onRangeUpdated: (min, max) => {
-        currentFreqMin = min;
-        currentFreqMax = max;
-        renderAxes();
-      }
-    });
-  
+
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
       gainSliderId: 'gainSlider',
@@ -187,11 +169,13 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        replacePlugin(colorMap, spectrogramHeight, currentFreqMin, currentFreqMax);
-        setTimeout(() => zoomControl.applyZoom(), 20);
+        replacePlugin(colorMap, spectrogramHeight);
+        setTimeout(() => {
+          zoomControl.applyZoom();
+        }, 20);
       },
     });
-  
+
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: getWavesurfer(),
@@ -205,28 +189,57 @@
         }, 100);
       },
     });
-  
+
     initScrollSync({
       scrollSourceId: 'viewer-container',
       scrollTargetId: 'time-axis-wrapper',
     });
-  
+
     getWavesurfer().on('ready', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       getPlugin()?.render();
     });
-  
+
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
     });
-  
+
     document.body.addEventListener('touchstart', () => {
       if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
         getWavesurfer().backend.ac.resume();
       }
     }, { once: true });
+
+    const freqMinInput = document.getElementById('freqMinInput');
+    const freqMaxInput = document.getElementById('freqMaxInput');
+    const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
+
+    applyFreqRangeBtn.addEventListener('click', () => {
+      const min = Math.max(0, parseFloat(freqMinInput.value));
+      const max = Math.min(128, parseFloat(freqMaxInput.value));
+
+      if (isNaN(min) || isNaN(max) || min >= max) {
+        alert('Please enter valid frequency values. Min must be less than Max.');
+        return;
+      }
+
+      updateFrequencyRange(min, max);
+    });
+
+    function updateFrequencyRange(freqMin, freqMax) {
+      const colorMap = getCurrentColorMap();
+      currentFreqMin = freqMin;
+      currentFreqMax = freqMax;
+
+      replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
+
+      setTimeout(() => {
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+      }, 100);
+    }
   </script>
 </body>
 </html>
