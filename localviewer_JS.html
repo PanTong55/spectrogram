@@ -135,7 +135,8 @@
       });
     };
 
-    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
+    const wrapper = document.getElementById('viewer-wrapper');
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
     
     function safeApplyZoom() {
       const ws = getWavesurfer();
