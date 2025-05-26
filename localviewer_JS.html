@@ -168,11 +168,13 @@
           duration = getWavesurfer().getDuration();
           getPlugin()?.render();
       
-          if (zoomControl.isExpandMode()) {
-            zoomControl.forceExpandMode();
-          } else {
-            zoomControl.applyZoom();
-          }
+          setTimeout(() => {
+            if (zoomControl.isExpandMode()) {
+              zoomControl.forceExpandMode(); // ✅ 確保 duration() 已正確取得新檔長度
+            } else {
+              zoomControl.applyZoom();
+            }
+          }, 30); // 小延遲，確保 duration() 正確
         }, 100);
       },
     });
