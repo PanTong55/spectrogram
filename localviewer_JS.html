@@ -137,19 +137,6 @@
       }
     });
 
-    initBrightnessControl({
-      brightnessSliderId: 'brightnessSlider',
-      gainSliderId: 'gainSlider',
-      brightnessValId: 'brightnessVal',
-      gainValId: 'gainVal',
-      resetBtnId: 'resetButton',
-      onColorMapUpdated: (colorMap) => {
-        replacePlugin(colorMap, spectrogramHeight, currentFreqMin, currentFreqMax);
-        zoomControl.applyZoom();
-        renderAxes();
-      },
-    });
-
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: getWavesurfer(),
@@ -173,6 +160,19 @@
       zoomControl.applyZoom();
       getPlugin()?.render();
       renderAxes();
+
+       initBrightnessControl({
+        brightnessSliderId: 'brightnessSlider',
+        gainSliderId: 'gainSlider',
+        brightnessValId: 'brightnessVal',
+        gainValId: 'gainVal',
+        resetBtnId: 'resetButton',
+        onColorMapUpdated: (colorMap) => {
+          replacePlugin(colorMap, spectrogramHeight, currentFreqMin, currentFreqMax);
+          zoomControl.applyZoom();
+          renderAxes();
+        },
+      });     
     });
 
     getWavesurfer().on('decode', () => {
