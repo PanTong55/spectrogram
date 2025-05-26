@@ -1,5 +1,3 @@
-// modules/frequencyRangeUpdater.js
-
 export function createFrequencyRangeUpdater({
   getCurrentColorMap,
   replacePlugin,
@@ -7,31 +5,22 @@ export function createFrequencyRangeUpdater({
   spectrogramHeight,
   zoomControl,
   renderAxes,
-  onUpdate = () => {},
+  onUpdate = () => {}
 }) {
-  let currentFreqMin = 0;
-  let currentFreqMax = 128;
-
-  function updateFrequencyRange(freqMin, freqMax) {
-    const colorMap = getCurrentColorMap();
-    currentFreqMin = freqMin;
-    currentFreqMax = freqMax;
-
-    replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-
-    const ws = getWavesurfer();
-    if (ws) {
-      zoomControl.applyZoom();
-    }
-
-    renderAxes();
-
-    onUpdate(freqMin, freqMax);
-  }
-
   return {
-    updateFrequencyRange,
-    getCurrentFreqMin: () => currentFreqMin,
-    getCurrentFreqMax: () => currentFreqMax,
+    updateFrequencyRange(min, max) {
+      const colorMap = getCurrentColorMap();
+      onUpdate(min, max); // 更新外部 state，例如 currentFreqMin
+
+      replacePlugin(colorMap, spectrogramHeight, min, max);
+
+      setTimeout(() => {
+        const plugin = getPlugin();
+        plugin?.render();
+        const duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+        renderAxes();
+      }, 50);
+    }
   };
 }
