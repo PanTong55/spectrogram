@@ -3,9 +3,11 @@
 export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
+  const expandBtn = document.getElementById('expand-btn');
 
   let zoomLevel = 500;
   let minZoomLevel = 250;
+  let isExpandMode = false;
 
   function computeMinZoomLevel() {
     const visibleWidth = wrapperElement.clientWidth;
@@ -29,23 +31,40 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
 
   function updateZoomButtons() {
     computeMinZoomLevel();
-    zoomInBtn.disabled = zoomLevel >= 2000;
-    zoomOutBtn.disabled = zoomLevel <= minZoomLevel;
+    const disabled = isExpandMode;
+    zoomInBtn.disabled = disabled || zoomLevel >= 2000;
+    zoomOutBtn.disabled = disabled || zoomLevel <= minZoomLevel;
+    expandBtn.classList.toggle('active', isExpandMode);
   }
 
   zoomInBtn.onclick = () => {
-    if (zoomLevel < 2000) {
+    if (!isExpandMode && zoomLevel < 2000) {
       zoomLevel = Math.min(zoomLevel + 250, 2000);
       applyZoom();
     }
   };
 
   zoomOutBtn.onclick = () => {
-    computeMinZoomLevel();
-    if (zoomLevel > minZoomLevel) {
-      zoomLevel = Math.max(zoomLevel - 250, minZoomLevel);
+    if (!isExpandMode) {
+      computeMinZoomLevel();
+      if (zoomLevel > minZoomLevel) {
+        zoomLevel = Math.max(zoomLevel - 250, minZoomLevel);
+        applyZoom();
+      }
+    }
+  };
+
+  expandBtn.onclick = () => {
+    isExpandMode = !isExpandMode;
+    if (isExpandMode) {
+      computeMinZoomLevel();
+      zoomLevel = minZoomLevel;
+      applyZoom();
+    } else {
+      zoomLevel = Math.max(minZoomLevel, 500);
       applyZoom();
     }
+    updateZoomButtons();
   };
 
   return {
@@ -56,6 +75,13 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
       computeMinZoomLevel();
       zoomLevel = Math.max(newZoom, minZoomLevel);
       applyZoom();
+    },
+    forceExpandMode: () => {
+      if (isExpandMode) {
+        computeMinZoomLevel();
+        zoomLevel = minZoomLevel;
+        applyZoom();
+      }
     }
   };
 }
