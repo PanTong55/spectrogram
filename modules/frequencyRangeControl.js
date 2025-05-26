@@ -9,6 +9,7 @@ export function initFrequencyRangeControl({
   replacePlugin,
   getWavesurfer,
   zoomControl,
+  renderAxes,
   onRangeUpdated = () => {},
 }) {
   const freqMinInput = document.getElementById(freqMinInputId);
@@ -24,13 +25,13 @@ export function initFrequencyRangeControl({
     currentFreqMax = freqMax;
 
     replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
+
     setTimeout(() => {
       const ws = getWavesurfer();
-      if (ws) {
-        zoomControl.applyZoom();
-      }
+      if (ws) zoomControl.applyZoom();
+      renderAxes();
       onRangeUpdated(freqMin, freqMax);
-    }, 20);
+    }, 100);
   }
 
   applyBtn.addEventListener('click', () => {
