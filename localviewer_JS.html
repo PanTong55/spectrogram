@@ -132,24 +132,7 @@
   
     let currentFreqMin = 0;
     let currentFreqMax = 128;
-  
-    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
-  
-    const freqControl = initFrequencyRangeControl({
-      freqMinInputId: 'freqMinInput',
-      freqMaxInputId: 'freqMaxInput',
-      applyBtnId: 'applyFreqRangeBtn',
-      spectrogramHeight,
-      getCurrentColorMap,
-      replacePlugin,
-      getWavesurfer,
-      zoomControl,
-      onRangeUpdated: (min, max) => {
-        currentFreqMin = min;
-        currentFreqMax = max;
-      }
-    });
-  
+
     const renderAxes = () => {
       drawTimeAxis({
         containerWidth: container.scrollWidth,
@@ -177,7 +160,24 @@
         maxFrequency: currentFreqMax,
         minFrequency: currentFreqMin,
       });
-    };
+    };    
+  
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
+  
+    const freqControl = initFrequencyRangeControl({
+      freqMinInputId: 'freqMinInput',
+      freqMaxInputId: 'freqMaxInput',
+      applyBtnId: 'applyFreqRangeBtn',
+      spectrogramHeight,
+      getCurrentColorMap,
+      replacePlugin,
+      getWavesurfer,
+      zoomControl,
+      onRangeUpdated: (min, max) => {
+        currentFreqMin = min;
+        currentFreqMax = max;
+      }
+    });
   
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
