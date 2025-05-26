@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Bat Spectrogram Local Viewer</title>
   <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK&display=swap" rel="stylesheet">
 </head>
 <body>
   <h2>Bat Spectrogram Local Viewer</h2>
-
   <div style="margin-bottom: 12px;">
     <label>Load WAV file:
       <input type="file" id="fileInput" accept=".wav" />
@@ -39,34 +39,34 @@
   <div id="time-label">Time (ms)</div>
 
   <div style="margin-top: 10px;">
-    <button id="resetButton" title="Reset to default" class="flat-icon-button">↺</button>
-
-    <label class="slider-label">Brightness:
-      <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
-      <span class="slider-value" id="brightnessVal">0</span>
-    </label>
-
-    <label class="slider-label">Contrast:
-      <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="2">
-      <span class="slider-value" id="gainVal">2</span>
-    </label>
-  </div>
-
-  <div style="margin-top: 12px;">
-    <label>Freq Min (kHz):
+    <label class="slider-label">F.min (kHz):
       <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 60px;">
     </label>
-    <label style="margin-left: 10px;">Freq Max (kHz):
+    <label class="slider-label" style="margin-left: 10px;">F.max (kHz):
       <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 60px;">
     </label>
     <button id="applyFreqRangeBtn" class="flat-icon-button" style="margin-left: 10px;">Set</button>
+    <label class="slider-label" style="margin-left: 10px;">Brightness:
+      <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
+      <span class="slider-value" id="brightnessVal">0</span>
+    </label>
+    <label class="slider-label" style="margin-left: 10px;">Contrast:
+      <input type="range" id="gainSlider" min="1" max="5" step="0.1" value="2">
+      <span class="slider-value" id="gainVal">2</span>
+    </label>
+    <button id="resetButton" title="Reset to default" class="flat-icon-button" style="margin-left: 10px;">↺</button>
   </div>
+
+  <h3 style="margin-top: 20px;">GUANO Metadata:</h3>
+  <pre id="guano-output">(no file selected)</pre>
 
   <script type="module">
     import {
       initWavesurfer,
+      getWavesurfer,
       getPlugin,
       replacePlugin,
+      createSpectrogramPlugin,
       getCurrentColorMap,
     } from './modules/wsManager.js';
 
@@ -81,6 +81,7 @@
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
     const timeAxis = document.getElementById('time-axis');
+    const timeWrapper = document.getElementById('time-axis-wrapper');
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
@@ -88,8 +89,48 @@
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
-
     const getDuration = () => duration;
+
+    const guanoOutput = document.getElementById('guano-output');
+    document.getElementById('fileInput').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const buffer = await file.arrayBuffer();
+      const view = new DataView(buffer);
+      const textDecoder = new TextDecoder("utf-8");
+      let pos = 12;
+      let foundGuano = null;
+
+      while (pos < view.byteLength) {
+        const chunkId = String.fromCharCode(
+          view.getUint8(pos),
+          view.getUint8(pos + 1),
+          view.getUint8(pos + 2),
+          view.getUint8(pos + 3)
+        );
+
+        const chunkSize = view.getUint32(pos + 4, true);
+        const chunkData = new Uint8Array(buffer, pos + 8, chunkSize);
+        const chunkText = textDecoder.decode(chunkData);
+
+        if (chunkText.includes("GUANO|Version:")) {
+          foundGuano = chunkText;
+          break;
+        }
+
+        pos += 8 + chunkSize;
+        if (chunkSize % 2 === 1) pos += 1;
+      }
+
+      guanoOutput.textContent = foundGuano || '(No GUANO metadata found in file)';
+    });
+
+    initWavesurfer({
+      container,
+      url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
+      sampleRate: 256000,
+    });
 
     const renderAxes = () => {
       drawTimeAxis({
@@ -120,18 +161,62 @@
       });
     };
 
-    const ws = initWavesurfer({
-      container,
-      url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
-      sampleRate: 256000,
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
+
+    initBrightnessControl({
+      brightnessSliderId: 'brightnessSlider',
+      gainSliderId: 'gainSlider',
+      brightnessValId: 'brightnessVal',
+      gainValId: 'gainVal',
+      resetBtnId: 'resetButton',
+      onColorMapUpdated: (colorMap) => {
+        replacePlugin(colorMap, spectrogramHeight);
+        setTimeout(() => {
+          zoomControl.applyZoom();
+        }, 20);
+      },
     });
 
-    const zoomControl = initZoomControls(ws, container, getDuration, renderAxes);
+    initFileLoader({
+      fileInputId: 'fileInput',
+      wavesurfer: getWavesurfer(),
+      spectrogramHeight,
+      colorMap: [],
+      onPluginReplaced: () => {
+        setTimeout(() => {
+          duration = getWavesurfer().getDuration();
+          getPlugin()?.render();
+          zoomControl.applyZoom();
+        }, 100);
+      },
+    });
 
+    initScrollSync({
+      scrollSourceId: 'viewer-container',
+      scrollTargetId: 'time-axis-wrapper',
+    });
+
+    getWavesurfer().on('ready', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      getPlugin()?.render();
+    });
+
+    getWavesurfer().on('decode', () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+    });
+
+    document.body.addEventListener('touchstart', () => {
+      if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
+        getWavesurfer().backend.ac.resume();
+      }
+    }, { once: true });
+    
     const freqRangeUpdater = createFrequencyRangeUpdater({
       getCurrentColorMap,
       replacePlugin,
-      getWavesurfer: () => ws,
+      getWavesurfer,
       spectrogramHeight,
       zoomControl,
       renderAxes,
@@ -140,50 +225,6 @@
         currentFreqMax = max;
       }
     });
-
-    ws.on('ready', () => {
-      duration = ws.getDuration();
-      zoomControl.applyZoom();
-      getPlugin()?.render();
-      renderAxes();
-
-      initBrightnessControl({
-        brightnessSliderId: 'brightnessSlider',
-        gainSliderId: 'gainSlider',
-        brightnessValId: 'brightnessVal',
-        gainValId: 'gainVal',
-        resetBtnId: 'resetButton',
-        onColorMapUpdated: (colorMap) => {
-          replacePlugin(colorMap, spectrogramHeight, currentFreqMin, currentFreqMax);
-          zoomControl.applyZoom();
-          renderAxes();
-        },
-      });
-
-      initFileLoader({
-        fileInputId: 'fileInput',
-        wavesurfer: ws,
-        spectrogramHeight,
-        colorMap: [],
-        onPluginReplaced: () => {
-          duration = ws.getDuration();
-          getPlugin()?.render();
-          zoomControl.applyZoom();
-          renderAxes();
-        },
-      });
-    });
-
-    initScrollSync({
-      scrollSourceId: 'viewer-container',
-      scrollTargetId: 'time-axis-wrapper',
-    });
-
-    document.body.addEventListener('touchstart', () => {
-      if (ws?.backend?.ac?.state === 'suspended') {
-        ws.backend.ac.resume();
-      }
-    }, { once: true });
 
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
@@ -200,6 +241,7 @@
 
       freqRangeUpdater.updateFrequencyRange(min, max);
     });
+
   </script>
 </body>
 </html>
