@@ -36,10 +36,10 @@
 
   <div style="margin-top: 10px;">
     <label class="slider-label">F.min (kHz):
-      <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 60px;">
+      <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 40px;">
     </label>
     <label class="slider-label" style="margin-left: 10px;">F.max (kHz):
-      <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 60px;">
+      <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 40px;">
     </label>
     <button id="applyFreqRangeBtn" class="flat-icon-button" style="margin-left: 10px;">Set</button>
     <label class="slider-label" style="margin-left: 10px;">Brightness:
@@ -51,7 +51,7 @@
       <span class="slider-value" id="gainVal">2</span>
     </label>
     <button id="resetButton" title="Reset to default" class="flat-icon-button" style="margin-left: 10px;"><i class="fas fa-rotate-left"></i></button>
-    <label for="fileInput">Load WAV file:</label>
+    <label for="fileInput" style="margin-left: 10px;">Load file(s):</label>
     <input type="file" id="fileInput" accept=".wav" multiple />
     <button id="prevBtn" title="Previous file" class="flat-icon-button"><i class="fas fa-arrow-left"></i></button>
     <button id="nextBtn" title="Next file" class="flat-icon-button"><i class="fas fa-arrow-right"></i></button>
