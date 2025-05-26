@@ -9,6 +9,7 @@ export function initFrequencyRangeControl({
   replacePlugin,
   getWavesurfer,
   zoomControl,
+  renderAxes,
   onRangeUpdated = () => {},
 }) {
   const freqMinInput = document.getElementById(freqMinInputId);
