@@ -133,7 +133,7 @@
     let currentFreqMin = 0;
     let currentFreqMax = 128;
 
-    const renderAxes = () => {
+    const renderAxes = (min = currentFreqMin, max = currentFreqMax) => {
       drawTimeAxis({
         containerWidth: container.scrollWidth,
         duration,
@@ -141,26 +141,26 @@
         axisElement: timeAxis,
         labelElement: timeLabel,
       });
-  
+    
       drawFrequencyGrid({
         gridCanvas: freqGrid,
         labelContainer: freqLabelContainer,
         containerElement: container,
         spectrogramHeight,
-        maxFrequency: currentFreqMax - currentFreqMin,
-        offsetKHz: currentFreqMin,
+        maxFrequency: max - min,
+        offsetKHz: min,
       });
-  
+    
       initFrequencyHover({
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
         hoverLineId: 'hover-line',
         freqLabelId: 'freq-label',
         spectrogramHeight,
-        maxFrequency: currentFreqMax,
-        minFrequency: currentFreqMin,
+        maxFrequency: max,
+        minFrequency: min,
       });
-    };    
+    };
   
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes);
   
