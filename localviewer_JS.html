@@ -76,6 +76,7 @@
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
+    import { extractGuanoMetadata } from './modules/guanoReader.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -93,36 +94,8 @@
     const guanoOutput = document.getElementById('guano-output');
     document.getElementById('fileInput').addEventListener('change', async function(event) {
       const file = event.target.files[0];
-      if (!file) return;
-
-      const buffer = await file.arrayBuffer();
-      const view = new DataView(buffer);
-      const textDecoder = new TextDecoder("utf-8");
-      let pos = 12;
-      let foundGuano = null;
-
-      while (pos < view.byteLength) {
-        const chunkId = String.fromCharCode(
-          view.getUint8(pos),
-          view.getUint8(pos + 1),
-          view.getUint8(pos + 2),
-          view.getUint8(pos + 3)
-        );
-
-        const chunkSize = view.getUint32(pos + 4, true);
-        const chunkData = new Uint8Array(buffer, pos + 8, chunkSize);
-        const chunkText = textDecoder.decode(chunkData);
-
-        if (chunkText.includes("GUANO|Version:")) {
-          foundGuano = chunkText;
-          break;
-        }
-
-        pos += 8 + chunkSize;
-        if (chunkSize % 2 === 1) pos += 1;
-      }
-
-      guanoOutput.textContent = foundGuano || '(No GUANO metadata found in file)';
+      const result = await extractGuanoMetadata(file);
+      guanoOutput.textContent = result;
     });
 
     initWavesurfer({
