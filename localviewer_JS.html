@@ -232,13 +232,13 @@
       const colorMap = getCurrentColorMap();
       currentFreqMin = freqMin;
       currentFreqMax = freqMax;
-
+    
       replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
-
-      setTimeout(() => {
-        duration = getWavesurfer().getDuration();
-        zoomControl.applyZoom();
-      }, 100);
+    
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+    
+      renderAxes();
     }
   </script>
 </body>
