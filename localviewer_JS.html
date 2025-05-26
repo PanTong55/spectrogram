@@ -177,6 +177,19 @@
       },
     });
 
+     const freqRangeUpdater = createFrequencyRangeUpdater({
+      getCurrentColorMap,
+      replacePlugin,
+      getWavesurfer,
+      spectrogramHeight,
+      zoomControl,
+      renderAxes,
+      onUpdate: (min, max) => {
+        currentFreqMin = min;
+        currentFreqMax = max;
+      }
+    });   
+
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: getWavesurfer(),
@@ -213,19 +226,6 @@
       }
     }, { once: true });
     
-    const freqRangeUpdater = createFrequencyRangeUpdater({
-      getCurrentColorMap,
-      replacePlugin,
-      getWavesurfer,
-      spectrogramHeight,
-      zoomControl,
-      renderAxes,
-      onUpdate: (min, max) => {
-        currentFreqMin = min;
-        currentFreqMax = max;
-      }
-    });
-
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
