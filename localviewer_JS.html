@@ -133,7 +133,10 @@
     let currentFreqMin = 0;
     let currentFreqMax = 128;
 
-    const renderAxes = (min = currentFreqMin, max = currentFreqMax) => {
+    const renderAxes = () => {
+      const min = freqControl.getCurrentFreqMin();
+      const max = freqControl.getCurrentFreqMax();
+    
       drawTimeAxis({
         containerWidth: container.scrollWidth,
         duration,
