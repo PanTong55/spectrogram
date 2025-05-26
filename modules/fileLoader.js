@@ -46,22 +46,19 @@ export function initFileLoader({
   }
 
   fileInput.addEventListener('change', async (event) => {
-    const files = Array.from(event.target.files);
-    const selectedFile = files[0];
+    const files = Array.from(event.target.files).filter(f => f.name.endsWith('.wav'));
+    const selectedFile = event.target.files[0];
     if (!selectedFile) return;
-
-    const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
-    fileList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
-    currentIndex = fileList.findIndex(f => f.name === selectedFile.name);
-
-    await loadFile(selectedFile);
-  });
-
-  prevBtn.addEventListener('click', () => {
-    if (currentIndex > 0) {
-      currentIndex--;
-      loadFile(fileList[currentIndex]);
-    }
+  
+    fileList = files.sort((a, b) =>
+      a.webkitRelativePath.localeCompare(b.webkitRelativePath)
+    );
+  
+    currentIndex = fileList.findIndex(f =>
+      f.webkitRelativePath === selectedFile.webkitRelativePath
+    );
+  
+    await loadFile(fileList[currentIndex]);
   });
 
   nextBtn.addEventListener('click', () => {
