@@ -90,6 +90,7 @@ body {
   left: 0;
   height: 100%;
   z-index: 11;
+  pointer-events: none;
   overflow: visible;
 }
 #fixed-overlay > * {
