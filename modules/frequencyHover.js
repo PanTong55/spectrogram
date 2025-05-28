@@ -26,45 +26,50 @@ export function initFrequencyHover({
     freqLabel.style.display = 'none';
   };
 
-  const updateHoverDisplay = (e) => {
-    if (suppressHover) return;
-  
-    const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left; // 滑鼠在 viewer 中的 x 座標（不加 scrollLeft）
-    const y = e.clientY - rect.top;
-  
-    if (y > (viewer.clientHeight - scrollbarThickness)) {
-      hideAll();
-      return;
-    }
-  
-    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const time = ((x + viewer.scrollLeft) / spectrogramWidth) * totalDuration;
-  
-    // 顯示水平線
-    hoverLine.style.top = `${y}px`;
-    hoverLine.style.display = 'block';
-  
-    // 顯示垂直線
-    hoverLineV.style.left = `${x}px`;
-    hoverLineV.style.display = 'block';
-  
-    // 設定 freq label 位置：動態在左或右
-    const rightBoundary = viewer.clientWidth;
-    const labelOffset = 8;
-  
-    let labelLeft;
-    if (x + 120 > rightBoundary) { // 如果太靠右（可視區剩餘寬度 < 120px）
-      freqLabel.style.transform = 'translate(-100%, -50%)'; // 向左偏移
-      labelLeft = `${x - labelOffset}px`;
-    } else {
-      freqLabel.style.transform = 'translate(0, -50%)'; // 原本偏右
-      labelLeft = `${x + labelOffset}px`;
-    }
-  
-    freqLabel.style.top = `${y}px`;
-    freqLabel.style.left = labelLeft;
-    freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
-  };
+const updateHoverDisplay = (e) => {
+  if (suppressHover) return;
+
+  const rect = viewer.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  if (y > (viewer.clientHeight - scrollbarThickness)) {
+    hideAll();
+    return;
+  }
+
+  // 如果 viewer.scrollLeft 不存在，預設為 0
+  const scrollLeft = viewer.scrollLeft || 0;
+
+  const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+  const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
+
+  // 顯示橫線
+  hoverLine.style.top = `${y}px`;
+  hoverLine.style.display = 'block';
+
+  // 顯示直線
+  hoverLineV.style.left = `${x}px`;
+  hoverLineV.style.display = 'block';
+
+  // 動態決定 freqLabel 的 left/right 顯示
+  const viewerWidth = viewer.clientWidth;
+  const labelOffset = 8;
+  let labelLeft;
+
+  if ((viewerWidth - x) < 120) {
+    // 靠近右邊 => 顯示在左邊
+    freqLabel.style.transform = 'translate(-100%, -50%)';
+    labelLeft = `${x - labelOffset}px`;
+  } else {
+    // 正常在右側
+    freqLabel.style.transform = 'translate(0, -50%)';
+    labelLeft = `${x + labelOffset}px`;
+  }
+
+  freqLabel.style.top = `${y}px`;
+  freqLabel.style.left = labelLeft;
+  freqLabel.style.display = 'block';
+  freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+};
 }
