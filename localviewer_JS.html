@@ -34,6 +34,14 @@
   <div id="time-label">Time (ms)</div>
 
   <div style="margin-top: 10px;">
+    <label class="slider-label" style="margin-left: 10px;">Overlap:
+      <select id="overlapInput" style="width: 60px;">
+        <option value="auto" selected>Auto</option>
+        <option value="25">25%</option>
+        <option value="50">50%</option>
+        <option value="75">75%</option>
+      </select>
+    </label>    
     <label class="slider-label">F.Range (kHz):
       <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 40px;">
     </label>
@@ -151,7 +159,13 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        replacePlugin(colorMap, spectrogramHeight);
+        replacePlugin(
+          colorMap,
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent()  // ✅ 加入 overlapPercent
+        );
         setTimeout(() => {
           safeApplyZoom();
         }, 100);
@@ -196,6 +210,14 @@
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
+    function getOverlapPercent() {
+      const select = document.getElementById('overlapInput');
+      const val = select.value;
+      if (val === 'auto') return null;
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? null : parsed;
+    }
+    
     applyFreqRangeBtn.addEventListener('click', () => {
       const min = Math.max(0, parseFloat(freqMinInput.value));
       const max = Math.min(128, parseFloat(freqMaxInput.value));
@@ -213,11 +235,16 @@
       currentFreqMin = freqMin;
       currentFreqMax = freqMax;
     
-      replacePlugin(colorMap, spectrogramHeight, freqMin, freqMax);
+      replacePlugin(
+        colorMap,
+        spectrogramHeight,
+        freqMin,
+        freqMax,
+        getOverlapPercent()
+      );
     
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
-    
       renderAxes();
     }
   </script>
