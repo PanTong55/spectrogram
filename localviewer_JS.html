@@ -60,6 +60,12 @@
       <span class="slider-value" id="gainVal">2</span>
     </label>
     <button id="resetButton" title="Reset to default" class="flat-icon-button" style="margin-left: 10px;"><i class="fas fa-rotate-left"></i></button>
+    <label class="slider-label" style="margin-left: 10px;">Grid:
+      <label class="switch">
+        <input type="checkbox" id="toggleGridSwitch">
+        <span class="slider round"></span>
+      </label>
+    </label>    
     <label for="fileInput" class="slider-label" style="margin-left: 10px;">Load file(s):</label>
     <input type="file" id="fileInput" accept=".wav" multiple />
     <button id="prevBtn" title="Previous file" class="flat-icon-button"><i class="fas fa-arrow-left"></i></button>
@@ -113,6 +119,16 @@
       sampleRate: 256000,
     });
 
+    const freqGrid = document.getElementById('freq-grid');
+    const toggleGridSwitch = document.getElementById('toggleGridSwitch');
+    
+    freqGrid.style.display = 'none';
+    toggleGridSwitch.checked = false;
+    
+    toggleGridSwitch.addEventListener('change', () => {
+      freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
+    });
+    
     const renderAxes = () => {
       drawTimeAxis({
         containerWidth: container.scrollWidth,
