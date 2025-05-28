@@ -54,7 +54,8 @@ export function replacePlugin(
   height = 800,
   frequencyMin = 0,
   frequencyMax = 128,
-  overlapPercent = null // ✅ nullable，null 表示 Auto
+  overlapPercent = null,
+  onRendered = null  // ✅ 傳入 callback
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
@@ -69,23 +70,29 @@ export function replacePlugin(
   const fftSamples = 1024;
   const noverlap = overlapPercent !== null
     ? Math.floor(fftSamples * (overlapPercent / 100))
-    : null;
+    : Math.floor(fftSamples * 0.5); // Auto 預設安全值
 
   plugin = createSpectrogramPlugin({
     colorMap,
     height,
     frequencyMin,
     frequencyMax,
-    noverlap, // ✅ 傳入或為 null
+    noverlap,
   });
 
   ws.registerPlugin(plugin);
+
   try {
     plugin.render();
+    // ✅ 等待下一幀再執行 callback，確保 render 完成
+    requestAnimationFrame(() => {
+      if (typeof onRendered === 'function') onRendered();
+    });
   } catch (err) {
     console.warn('⚠️ Spectrogram render failed:', err);
   }
 }
+
 
 export function getWavesurfer() {
   return ws;
