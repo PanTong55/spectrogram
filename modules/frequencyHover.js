@@ -72,4 +72,23 @@ const updateHoverDisplay = (e) => {
   freqLabel.style.display = 'block';
   freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
 };
+
+  viewer.addEventListener('mousemove', updateHoverDisplay);
+
+  wrapper.addEventListener('mouseleave', () => {
+    hideAll();
+  });
+
+  // ✅ 進入 zoom-control 區時，暫停 hover 顯示
+  if (zoomControls) {
+    zoomControls.addEventListener('mouseenter', () => {
+      suppressHover = true;
+      hideAll();
+    });
+
+    // ✅ 離開 zoom-control 時恢復 hover 功能
+    zoomControls.addEventListener('mouseleave', () => {
+      suppressHover = false;
+    });
+  }
 }
