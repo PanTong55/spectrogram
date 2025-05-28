@@ -143,8 +143,27 @@
     };
 
     const wrapper = document.getElementById('viewer-wrapper');
-    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
-    
+    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper, autoReplaceIfOverlapIsAuto);
+
+    function autoReplaceIfOverlapIsAuto() {
+      const overlapMode = document.getElementById('overlapInput').value;
+      if (overlapMode === 'auto') {
+        const colorMap = getCurrentColorMap();
+        replacePlugin(
+          colorMap,
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          null, // overlapPercent = null = Auto 模式
+          () => {
+            duration = getWavesurfer().getDuration();
+            zoomControl.applyZoom();   // 再同步 zoom
+            renderAxes();              // 重畫軸線
+          }
+        );
+      }
+    }
+        
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
       gainSliderId: 'gainSlider',
