@@ -16,10 +16,20 @@ export function initBrightnessControl({
   const gainVal = document.getElementById(gainValId);
   const resetBtn = document.getElementById(resetBtnId);
 
+  // 👉 滑動中只更新顯示文字，不更新圖
+  function updateSliderValues() {
+    const brightness = parseFloat(brightnessSlider.value);
+    const gain = parseFloat(gainSlider.value);
+    brightnessVal.textContent = brightness.toFixed(2);
+    gainVal.textContent = gain.toFixed(2);
+  }
+
+  // 👉 真正重新生成 colorMap 並觸發外部 callback
   function updateColorMap() {
     const brightness = parseFloat(brightnessSlider.value);
     const gain = parseFloat(gainSlider.value);
 
+    // 同步更新 UI
     brightnessVal.textContent = brightness.toFixed(2);
     gainVal.textContent = gain.toFixed(2);
 
@@ -35,6 +45,10 @@ export function initBrightnessControl({
     }
   }
 
+  // 事件綁定
+  brightnessSlider.addEventListener('input', updateSliderValues);
+  gainSlider.addEventListener('input', updateSliderValues);
+
   brightnessSlider.addEventListener('change', updateColorMap);
   gainSlider.addEventListener('change', updateColorMap);
 
@@ -44,5 +58,6 @@ export function initBrightnessControl({
     updateColorMap();
   });
 
+  // 初次初始化
   updateColorMap();
 }
