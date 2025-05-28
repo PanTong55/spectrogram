@@ -145,15 +145,6 @@
     const wrapper = document.getElementById('viewer-wrapper');
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
     
-    function safeApplyZoom() {
-      const ws = getWavesurfer();
-      if (ws && ws.isReady) {
-        zoomControl.applyZoom();
-      } else {
-        console.warn('Wavesurfer not ready. Skipped zoom.');
-      }
-    }
-    
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
       gainSliderId: 'gainSlider',
@@ -166,11 +157,12 @@
           spectrogramHeight,
           currentFreqMin,
           currentFreqMax,
-          getOverlapPercent()  // ✅ 加入 overlapPercent
+          getOverlapPercent()
         );
-        setTimeout(() => {
-          safeApplyZoom();
-        }, 100);
+      
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+        renderAxes();
       },
     });
 
