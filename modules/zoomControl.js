@@ -1,6 +1,6 @@
 // zoomControl.js
 
-export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement) {
+export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement, autoReplaceIfOverlapIsAuto)
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
   const expandBtn = document.getElementById('expand-btn');
@@ -41,6 +41,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     if (!isExpandMode && zoomLevel < 2000) {
       zoomLevel = Math.min(zoomLevel + 250, 2000);
       applyZoom();
+      autoReplaceIfOverlapIsAuto?.();
     }
   };
 
@@ -50,6 +51,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
       if (zoomLevel > minZoomLevel) {
         zoomLevel = Math.max(zoomLevel - 250, minZoomLevel);
         applyZoom();
+        autoReplaceIfOverlapIsAuto?.();
       }
     }
   };
