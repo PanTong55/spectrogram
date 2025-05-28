@@ -44,7 +44,7 @@ export function drawFrequencyGrid({
   const ctx = gridCanvas.getContext('2d');
   ctx.clearRect(0, 0, width, spectrogramHeight);
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 0.4;
 
   const step = 10;
   const range = maxFrequency;
