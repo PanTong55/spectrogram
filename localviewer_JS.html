@@ -157,12 +157,13 @@
           spectrogramHeight,
           currentFreqMin,
           currentFreqMax,
-          getOverlapPercent()
+          getOverlapPercent(),
+          () => {
+            duration = getWavesurfer().getDuration();
+            zoomControl.applyZoom();
+            renderAxes(); // ✅ 等 plugin render 完成才畫
+          }
         );
-      
-        duration = getWavesurfer().getDuration();
-        zoomControl.applyZoom();
-        renderAxes();
       },
     });
 
@@ -186,8 +187,11 @@
       } else {
         zoomControl.applyZoom();
       }
-      getPlugin()?.render();
-      renderAxes();
+    
+      plugin?.render();
+      requestAnimationFrame(() => {
+        renderAxes();
+      });
     });
 
     getWavesurfer().on('decode', () => {
