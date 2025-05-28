@@ -28,27 +28,30 @@ export function initFrequencyHover({
 
   const updateHoverDisplay = (e) => {
     if (suppressHover) return;
-
+  
     const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left + viewer.scrollLeft;
-    const y = e.clientY - rect.top;
-
+    const scrollLeft = viewer.scrollLeft;
+    const scrollTop = viewer.scrollTop;
+  
+    const x = e.clientX - rect.left + scrollLeft;
+    const y = e.clientY - rect.top + scrollTop;
+  
     if (y > (viewer.clientHeight - scrollbarThickness)) {
       hideAll();
       return;
     }
-
+  
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const time = (x / spectrogramWidth) * totalDuration;
-
+  
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
-
+  
     hoverLineV.style.left = `${x}px`;
     hoverLineV.style.display = 'block';
-
+  
     freqLabel.style.top = `${y - 16}px`;
-    freqLabel.style.left = `${x + 8}px`;
+    freqLabel.style.left = `${Math.min(x + 8, viewer.scrollWidth - 100)}px`;
     freqLabel.style.display = 'block';
     freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
   };
