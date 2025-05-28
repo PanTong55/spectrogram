@@ -18,7 +18,7 @@ export function initFrequencyHover({
 
   viewer.addEventListener('mousemove', (e) => {
     const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    const x = e.clientX - rect.left + viewer.scrollLeft; // ✅ 加上 scrollLeft 補償
     const y = e.clientY - rect.top;
 
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
