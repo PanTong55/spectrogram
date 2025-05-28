@@ -29,25 +29,36 @@ export function createSpectrogramPlugin({
   height = 800,
   frequencyMin = 0,
   frequencyMax = 128000,
+  noverlap = null,
 }) {
-  return Spectrogram.create({
+  const baseOptions = {
     labels: false,
     height,
     fftSamples: 1024,
-    frequencyMin: frequencyMin * 1000,     // ✅ 正確轉為 Hz
+    frequencyMin: frequencyMin * 1000,
     frequencyMax: frequencyMax * 1000,
     scale: 'linear',
     windowFunc: 'hann',
     colorMap,
-  });
+  };
+
+  if (noverlap !== null) {
+    baseOptions.noverlap = noverlap;
+  }
+
+  return Spectrogram.create(baseOptions);
 }
 
-export function replacePlugin(colorMap, height = 800, frequencyMin = 0, frequencyMax = 128) {
+export function replacePlugin(
+  colorMap,
+  height = 800,
+  frequencyMin = 0,
+  frequencyMax = 128,
+  overlapPercent = null // ✅ nullable，null 表示 Auto
+) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
-
   const container = document.getElementById("spectrogram-only");
 
-  // ✅ 移除舊 canvas 避免殘留
   const oldCanvas = container.querySelector("canvas");
   if (oldCanvas) oldCanvas.remove();
 
@@ -55,17 +66,22 @@ export function replacePlugin(colorMap, height = 800, frequencyMin = 0, frequenc
 
   currentColorMap = colorMap;
 
+  const fftSamples = 1024;
+  const noverlap = overlapPercent !== null
+    ? Math.floor(fftSamples * (overlapPercent / 100))
+    : null;
+
   plugin = createSpectrogramPlugin({
     colorMap,
     height,
     frequencyMin,
     frequencyMax,
+    noverlap, // ✅ 傳入或為 null
   });
 
   ws.registerPlugin(plugin);
-
   try {
-    plugin.render();  // ✅ 直接 render，已知參數正確無需延遲
+    plugin.render();
   } catch (err) {
     console.warn('⚠️ Spectrogram render failed:', err);
   }
