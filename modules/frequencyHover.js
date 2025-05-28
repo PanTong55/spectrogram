@@ -1,20 +1,20 @@
 export function initFrequencyHover({
   viewerId,
   wrapperId = 'viewer-wrapper',
-  hoverLineHId,
+  hoverLineId,
   hoverLineVId,
-  hoverLabelId,
+  freqLabelId,
   spectrogramHeight = 800,
   spectrogramWidth = 1024,
   maxFrequency = 128,
   minFrequency = 0,
-  totalDuration = 1000, // in ms
+  totalDuration = 1000,
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
-  const hoverLineH = document.getElementById(hoverLineHId);
+  const hoverLine = document.getElementById(hoverLineId);
   const hoverLineV = document.getElementById(hoverLineVId);
-  const hoverLabel = document.getElementById(hoverLabelId);
+  const freqLabel = document.getElementById(freqLabelId);
 
   viewer.addEventListener('mousemove', (e) => {
     const rect = viewer.getBoundingClientRect();
@@ -24,24 +24,21 @@ export function initFrequencyHover({
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const time = (x / spectrogramWidth) * totalDuration;
 
-    // 顯示水平線
-    hoverLineH.style.top = `${y}px`;
-    hoverLineH.style.display = 'block';
+    hoverLine.style.top = `${y}px`;
+    hoverLine.style.display = 'block';
 
-    // 顯示垂直線
     hoverLineV.style.left = `${x}px`;
     hoverLineV.style.display = 'block';
 
-    // 顯示座標文字
-    hoverLabel.style.top = `${y - 16}px`;
-    hoverLabel.style.left = `${x + 8}px`;
-    hoverLabel.style.display = 'block';
-    hoverLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+    freqLabel.style.top = `${y - 16}px`;
+    freqLabel.style.left = `${x + 8}px`;
+    freqLabel.style.display = 'block';
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
   });
 
   wrapper.addEventListener('mouseleave', () => {
-    hoverLineH.style.display = 'none';
+    hoverLine.style.display = 'none';
     hoverLineV.style.display = 'none';
-    hoverLabel.style.display = 'none';
+    freqLabel.style.display = 'none';
   });
 }
