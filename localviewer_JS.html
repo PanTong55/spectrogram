@@ -230,6 +230,21 @@
       updateFrequencyRange(min, max);
     });
 
+    document.getElementById('overlapInput').addEventListener('change', () => {
+      const colorMap = getCurrentColorMap();
+      replacePlugin(
+        colorMap,
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent()
+      );
+    
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+    });
+    
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
       currentFreqMin = freqMin;
