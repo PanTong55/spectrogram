@@ -139,7 +139,7 @@ body {
 /* === Range Slider === */
 input[type="range"] {
   -webkit-appearance: none;
-  width: 150px;
+  width: 100px;
   height: 6px;
   background: #ddd;
   border-radius: 3px;
