@@ -101,7 +101,7 @@ body {
 /* === 時間軸 === */
 #time-axis-wrapper {
   overflow: hidden;
-  margin-left: 60px;
+  margin-left: 45px;
 }
 #time-axis {
   height: 20px;
