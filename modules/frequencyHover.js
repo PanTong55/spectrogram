@@ -33,19 +33,33 @@ export function initFrequencyHover({
     freqLabel.style.display = 'block';
     freqLabel.textContent = `${freq.toFixed(1)} kHz`;
   
-    // 🧠 動態反轉色彩：讀 canvas 背景像素
     const canvas = viewer.querySelector('canvas');
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      const pixel = ctx.getImageData(10, y, 1, 1).data; // 抓 (x=10, y=y) 一個像素
-      const r = pixel[0], g = pixel[1], b = pixel[2];
+      const canvasWidth = canvas.width;
   
-      // 亮度算法：Y = 0.299R + 0.587G + 0.114B
-      const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+      try {
+        const imageData = ctx.getImageData(0, y, canvasWidth, 1); // 整條橫線像素
+        const data = imageData.data;
   
-      hoverLine.style.backgroundColor = luminance < 128 ? 'white' : 'black';
-      freqLabel.style.color = luminance < 128 ? 'white' : 'black';
-      freqLabel.style.backgroundColor = luminance < 128 ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.4)';
+        // 對每個 pixel 做反色
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 255 - data[i];     // R
+          data[i + 1] = 255 - data[i + 1]; // G
+          data[i + 2] = 255 - data[i + 2]; // B
+          // alpha 保留 data[i + 3]
+        }
+  
+        // 放入新的 canvas 再轉為 data URL
+        const lineCanvas = document.createElement('canvas');
+        lineCanvas.width = canvasWidth;
+        lineCanvas.height = 1;
+        const lineCtx = lineCanvas.getContext('2d');
+        lineCtx.putImageData(imageData, 0, 0);
+        hoverLine.style.background = `url(${lineCanvas.toDataURL()})`;
+      } catch (err) {
+        console.warn('⚠️ Failed to generate hoverLine pattern:', err);
+      }
     }
   });
 
