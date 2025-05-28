@@ -17,7 +17,7 @@ export function initFrequencyHover({
   const freqLabel = document.getElementById(freqLabelId);
   const zoomControls = document.getElementById('zoom-controls');
 
-  const scrollbarThickness = 1;
+  const scrollbarThickness = 2;
   let suppressHover = false; // 🔧 控制是否暫時停用 hover 顯示
 
   const hideAll = () => {
