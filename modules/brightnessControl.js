@@ -39,7 +39,6 @@ export function initBrightnessControl({
   
   function throttledUpdateColorMap() {
     if (animationFrameId) return;
-  
     animationFrameId = requestAnimationFrame(() => {
       updateColorMap();
       animationFrameId = null;
@@ -48,6 +47,9 @@ export function initBrightnessControl({
   
   brightnessSlider.addEventListener('input', throttledUpdateColorMap);
   gainSlider.addEventListener('input', throttledUpdateColorMap);
+  
+  brightnessSlider.addEventListener('change', updateColorMap);
+  gainSlider.addEventListener('change', updateColorMap);
 
   resetBtn.addEventListener('click', () => {
     brightnessSlider.value = defaultBrightness;
