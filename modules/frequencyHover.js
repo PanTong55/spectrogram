@@ -47,7 +47,7 @@ const updateHoverDisplay = (e) => {
   hoverLineV.style.left = `${x}px`;
   hoverLineV.style.display = 'block';
 
-  freqLabel.style.top = `${y - 16}px`;
+  freqLabel.style.top = `${y}px`;
   freqLabel.style.left = `${x + 8}px`;
   freqLabel.style.display = 'block';
   freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
