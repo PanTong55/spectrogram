@@ -70,7 +70,7 @@ export function replacePlugin(
   const fftSamples = 1024;
   const noverlap = overlapPercent !== null
     ? Math.floor(fftSamples * (overlapPercent / 100))
-    : Math.floor(fftSamples * 0.75); // Auto 預設安全值
+    : null; // Auto 預設安全值
 
   plugin = createSpectrogramPlugin({
     colorMap,
