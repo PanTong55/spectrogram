@@ -1,6 +1,6 @@
 // zoomControl.js
 
-export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement, autoReplaceIfOverlapIsAuto)
+export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement, autoReplaceIfOverlapIsAuto) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
   const expandBtn = document.getElementById('expand-btn');
