@@ -187,11 +187,13 @@
         zoomControl.applyZoom();
       }
       getPlugin()?.render();
+      renderAxes();
     });
 
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
+      renderAxes();
     });
 
     document.body.addEventListener('touchstart', () => {
