@@ -6,63 +6,54 @@ export function initBrightnessControl({
   brightnessValId,
   gainValId,
   resetBtnId,
-  onColorMapUpdated,
   defaultBrightness = 0,
   defaultGain = 2,
+  onColorMapUpdated,
 }) {
   const brightnessSlider = document.getElementById(brightnessSliderId);
   const gainSlider = document.getElementById(gainSliderId);
   const brightnessVal = document.getElementById(brightnessValId);
   const gainVal = document.getElementById(gainValId);
-  const resetButton = document.getElementById(resetBtnId);
+  const resetBtn = document.getElementById(resetBtnId);
 
-  function updateVisualValues() {
-    brightnessVal.textContent = parseFloat(brightnessSlider.value).toFixed(2);
-    gainVal.textContent = parseFloat(gainSlider.value).toFixed(2);
-  }
+  function updateColorMap() {
+    const brightness = parseFloat(brightnessSlider.value);
+    const gain = parseFloat(gainSlider.value);
 
-  function generateColorMap(brightness, gain) {
-    const colorMap = [];
-    for (let i = 0; i < 256; i++) {
-      let value = i / 255;
-      value = Math.pow(value, gain) * brightness;
-      value = Math.max(0, Math.min(1, value));
+    brightnessVal.textContent = brightness.toFixed(2);
+    gainVal.textContent = gain.toFixed(2);
 
-      const rgb = Math.floor(value * 255);
-      colorMap.push([rgb, rgb, rgb, 255]);
-    }
-    return colorMap;
-  }
+    const colorMap = Array.from({ length: 256 }, (_, i) => {
+      const t = Math.pow(i / 255, gain);
+      let v = 1 - t + brightness;
+      v = Math.max(0, Math.min(1, v));
+      return [v, v, v, 1];
+    });
 
-  let updateTimeout = null;
-  function scheduleColorMapUpdate() {
-    updateVisualValues();
-
-    if (updateTimeout) clearTimeout(updateTimeout);
-    updateTimeout = setTimeout(() => {
-      const brightness = parseFloat(brightnessSlider.value);
-      const gain = parseFloat(gainSlider.value);
-      const colorMap = generateColorMap(brightness, gain);
+    if (typeof onColorMapUpdated === 'function') {
       onColorMapUpdated(colorMap);
-    }, 120);
+    }
   }
 
-  brightnessSlider.addEventListener('input', scheduleColorMapUpdate);
-  gainSlider.addEventListener('input', scheduleColorMapUpdate);
+  let animationFrameId = null;
+  
+  function throttledUpdateColorMap() {
+    if (animationFrameId) return;
+  
+    animationFrameId = requestAnimationFrame(() => {
+      updateColorMap();
+      animationFrameId = null;
+    });
+  }
+  
+  brightnessSlider.addEventListener('input', throttledUpdateColorMap);
+  gainSlider.addEventListener('input', throttledUpdateColorMap);
 
-  resetButton.addEventListener('click', () => {
+  resetBtn.addEventListener('click', () => {
     brightnessSlider.value = defaultBrightness;
     gainSlider.value = defaultGain;
-    updateVisualValues();
-
-    const colorMap = generateColorMap(defaultBrightness, defaultGain);
-    onColorMapUpdated(colorMap);
+    updateColorMap();
   });
 
-  // ✅ 初始化 slider value 與 colorMap
-  brightnessSlider.value = defaultBrightness;
-  gainSlider.value = defaultGain;
-  updateVisualValues();
-  const initialColorMap = generateColorMap(defaultBrightness, defaultGain);
-  onColorMapUpdated(initialColorMap);
+  updateColorMap();
 }
