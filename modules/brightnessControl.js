@@ -35,19 +35,6 @@ export function initBrightnessControl({
     }
   }
 
-  let animationFrameId = null;
-  
-  function throttledUpdateColorMap() {
-    if (animationFrameId) return;
-    animationFrameId = requestAnimationFrame(() => {
-      updateColorMap();
-      animationFrameId = null;
-    });
-  }
-  
-  brightnessSlider.addEventListener('input', throttledUpdateColorMap);
-  gainSlider.addEventListener('input', throttledUpdateColorMap);
-  
   brightnessSlider.addEventListener('change', updateColorMap);
   gainSlider.addEventListener('change', updateColorMap);
 
