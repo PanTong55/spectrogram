@@ -68,9 +68,26 @@ export function replacePlugin(
   currentColorMap = colorMap;
 
   const fftSamples = 1024;
-  const noverlap = overlapPercent !== null
-    ? Math.floor(fftSamples * (overlapPercent / 100))
-    : Math.floor(fftSamples * 0.5); // Auto 預設安全值
+  let noverlap;
+  
+  if (overlapPercent !== null) {
+    // 使用者指定 % overlap
+    noverlap = Math.floor(fftSamples * (overlapPercent / 100));
+  } else {
+    // Auto 模式下：根據 canvas width 與 duration 自動推算合理的 step / overlap
+    const durationSec = ws.getDuration(); // 單位為秒
+    const sampleRate = ws.options.sampleRate ?? 256000;
+    const totalSamples = durationSec * sampleRate;
+  
+    const canvas = document.getElementById("spectrogram-only");
+    const desiredSteps = canvas.clientWidth;
+  
+    // 假設我們希望 totalSteps ≧ canvas width：
+    const minStep = Math.floor((totalSamples - fftSamples) / desiredSteps);
+    const safeStep = Math.max(1, Math.min(minStep, fftSamples - 1)); // 限制 step 範圍在合理值
+  
+    noverlap = fftSamples - safeStep;
+  }
 
   plugin = createSpectrogramPlugin({
     colorMap,
