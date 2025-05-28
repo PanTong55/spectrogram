@@ -95,7 +95,7 @@ body {
   overflow: hidden;
 }
 #fixed-overlay > * {
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 /* === 時間軸 === */
@@ -129,6 +129,7 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 12;
   overflow: hidden;
+  pointer-events: auto;
 }
 .zoom-button {
   width: 40px;
