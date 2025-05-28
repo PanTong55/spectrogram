@@ -88,10 +88,11 @@ body {
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;
   height: 100%;
-  z-index: 11;
   pointer-events: none;
-  overflow: visible;
+  z-index: 11;
+  overflow: hidden;
 }
 #fixed-overlay > * {
   pointer-events: none;
@@ -331,4 +332,3 @@ input[type="file"]:hover {
 .switch input:checked + .slider.round:before {
   transform: translateX(20px);
 }
-
