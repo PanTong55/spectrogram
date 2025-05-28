@@ -289,6 +289,12 @@ input[type="file"]:hover {
   height: 0;
 }
 
+.slider-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .slider.round {
   position: absolute;
   cursor: pointer;
