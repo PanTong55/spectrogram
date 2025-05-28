@@ -181,7 +181,6 @@ input[type="range"]::-moz-range-thumb {
   min-width: 80px;
 }
 .slider-value {
-  width: 40px;
   font-size: 13px;
   font-weight: bold;
   text-align: right;
