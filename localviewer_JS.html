@@ -17,8 +17,9 @@
         <canvas id="freq-grid"></canvas>
       </div>
       <div id="fixed-overlay">
-        <div id="hover-line"></div>
-        <div id="freq-label">-</div>
+      <div id="hover-line" class="hover-line-horizontal"></div>
+      <div id="hover-line-vertical" class="hover-line-vertical"></div>
+      <div id="hover-label">-</div>
         <div id="zoom-controls">
           <button class="zoom-button" id="zoom-in">+</button>
           <button class="zoom-button" id="zoom-out">−</button>
@@ -150,10 +151,13 @@
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
         hoverLineId: 'hover-line',
-        freqLabelId: 'freq-label',
+        hoverLineVId: 'hover-line-vertical',
+        freqLabelId: 'hover-label',
         spectrogramHeight,
+        spectrogramWidth: container.scrollWidth,
         maxFrequency: currentFreqMax,
         minFrequency: currentFreqMin,
+        totalDuration: duration * 1000,
       });
     };
 
