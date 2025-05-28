@@ -15,20 +15,24 @@ export function initFrequencyHover({
   const hoverLine = document.getElementById(hoverLineId);
   const hoverLineV = document.getElementById(hoverLineVId);
   const freqLabel = document.getElementById(freqLabelId);
+  const zoomControls = document.getElementById('zoom-controls');
 
-  const scrollbarThickness = 1; // ✅ 滑到底部時避免干擾
+  const scrollbarThickness = 1;
+  let suppressHover = false; // 🔧 控制是否暫時停用 hover 顯示
+
   const hideAll = () => {
     hoverLine.style.display = 'none';
     hoverLineV.style.display = 'none';
     freqLabel.style.display = 'none';
   };
 
-  viewer.addEventListener('mousemove', (e) => {
+  const updateHoverDisplay = (e) => {
+    if (suppressHover) return;
+
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left + viewer.scrollLeft;
     const y = e.clientY - rect.top;
 
-    // ✅ 如果滑鼠在 scrollbar 區域，隱藏
     if (y > (viewer.clientHeight - scrollbarThickness)) {
       hideAll();
       return;
@@ -47,10 +51,24 @@ export function initFrequencyHover({
     freqLabel.style.left = `${x + 8}px`;
     freqLabel.style.display = 'block';
     freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
-  });
+  };
 
-  // ✅ 滑出 wrapper 時也隱藏，避免閃爍
+  viewer.addEventListener('mousemove', updateHoverDisplay);
+
   wrapper.addEventListener('mouseleave', () => {
     hideAll();
   });
+
+  // ✅ 進入 zoom-control 區時，暫停 hover 顯示
+  if (zoomControls) {
+    zoomControls.addEventListener('mouseenter', () => {
+      suppressHover = true;
+      hideAll();
+    });
+
+    // ✅ 離開 zoom-control 時恢復 hover 功能
+    zoomControls.addEventListener('mouseleave', () => {
+      suppressHover = false;
+    });
+  }
 }
