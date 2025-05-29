@@ -113,7 +113,6 @@
     let currentFreqMin = 0;
     let currentFreqMax = 128;
     const getDuration = () => duration;
-    let lastUsedOverlapPercent = null;
 
     const guanoOutput = document.getElementById('guano-output');
     document.getElementById('fileInput').addEventListener('change', async function(event) {
@@ -180,7 +179,7 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        lastUsedOverlapPercent = replacePlugin(
+        replacePlugin(
           colorMap,
           spectrogramHeight,
           currentFreqMin,
@@ -189,11 +188,10 @@
           () => {
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
-            renderAxes();
-            updateSpectrogramSettingsText(); // 更新顯示
+            renderAxes(); // ✅ 等 plugin render 完成才畫
           }
         );
-      }
+      },
     });
 
     initFileLoader({
@@ -201,14 +199,7 @@
       wavesurfer: getWavesurfer(),
       spectrogramHeight,
       colorMap: [],
-      onPluginReplaced: (plugin) => {
-        const fftSize = 1024;
-        const overlapSamples = plugin.noverlap;
-        if (overlapSamples != null) {
-          lastUsedOverlapPercent = Math.round((overlapSamples / fftSize) * 1000) / 10;
-        }
-        updateSpectrogramSettingsText();
-      },
+      onPluginReplaced: () => {},
     });
 
     initScrollSync({
@@ -226,17 +217,7 @@
     
       plugin?.render();
       requestAnimationFrame(() => {
-        // 🔹 更新座標軸
         renderAxes();
-    
-        // 🔹 更新實際 overlap 百分比
-        const overlapSamples = plugin?.noverlap;
-        if (overlapSamples != null) {
-          lastUsedOverlapPercent = Math.round((overlapSamples / 1024) * 1000) / 10;
-        } else {
-          lastUsedOverlapPercent = null;
-        }
-        updateSpectrogramSettingsText(); // 🔹 更新左上角設定文字
       });
     });
 
@@ -260,25 +241,13 @@
       const settingBox = document.getElementById('spectrogram-settings');
       const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
       const fftSize = 1024;
-      const windowType = 'Hanning';
-      
-      const overlapSelect = document.getElementById('overlapInput');
-      const isAuto = overlapSelect.value === 'auto';
-      
-      let overlapText;
-      if (isAuto) {
-        overlapText = lastUsedOverlapPercent !== null 
-          ? `Auto (${lastUsedOverlapPercent}%)` 
-          : 'Auto';
-      } else {
-        overlapText = lastUsedOverlapPercent !== null 
-          ? `${lastUsedOverlapPercent}%` 
-          : 'N/A';
-      }
-      
+      const overlap = getOverlapPercent();
+      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+    
+      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }  
+    }    
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -302,22 +271,13 @@
 
     document.getElementById('overlapInput').addEventListener('change', () => {
       const colorMap = getCurrentColorMap();
-      const plugin = replacePlugin(
+      replacePlugin(
         colorMap,
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
         getOverlapPercent()
       );
-    
-      // ✅ 補這段，實際取得 noverlap
-      const fftSize = 1024;
-      const overlapSamples = plugin?.noverlap;
-      if (overlapSamples != null) {
-        lastUsedOverlapPercent = Math.round((overlapSamples / fftSize) * 1000) / 10;
-      } else {
-        lastUsedOverlapPercent = null;
-      }
     
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
@@ -330,7 +290,7 @@
       currentFreqMin = freqMin;
       currentFreqMax = freqMax;
     
-      lastUsedOverlapPercent = replacePlugin(
+      replacePlugin(
         colorMap,
         spectrogramHeight,
         freqMin,
@@ -341,7 +301,6 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
-      updateSpectrogramSettingsText();
     }
   </script>
 </body>
