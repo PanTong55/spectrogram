@@ -54,7 +54,7 @@ const updateHoverDisplay = (e) => {
 
   // 動態決定 freqLabel 的 left/right 顯示
   const viewerWidth = viewer.clientWidth;
-  const labelOffset = 8;
+  const labelOffset = 12;
   let labelLeft;
 
   if ((viewerWidth - x) < 120) {
