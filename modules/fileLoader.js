@@ -81,6 +81,26 @@ export function initFileLoader({
     if (typeof onPluginReplaced === 'function') {
       onPluginReplaced(currentPlugin);
     }
+    
+    // 🔄 確保 plugin render 並重繪軸線
+    try {
+      currentPlugin.render();
+      requestAnimationFrame(() => {
+        const ws = newWs;
+        if (ws) {
+          const duration = ws.getDuration();
+    
+          // 手動觸發 zoomControl 和 axis render，如果你有外部函式可用
+          // 🔁 你應在 onPluginReplaced 裡觸發這類 render 函式
+          const event = new CustomEvent('wsPluginReady', {
+            detail: { wavesurfer: ws, plugin: currentPlugin, duration }
+          });
+          document.dispatchEvent(event);
+        }
+      });
+    } catch (err) {
+      console.warn('⚠️ Spectrogram render failed:', err);
+    }
   }
 
   fileInput.addEventListener('change', async (event) => {
