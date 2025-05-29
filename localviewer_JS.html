@@ -189,7 +189,9 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
-            updateSpectrogramSettingsText();// ✅ 等 plugin render 完成才畫
+            setTimeout(() => {
+                updateSpectrogramSettingsText();
+              }, 100);
           }
         );
       },
@@ -237,19 +239,22 @@
     function estimateAutoOverlapPercent() {
       const ws = getWavesurfer();
       const plugin = getPlugin();
-      if (!ws || !plugin || !plugin.renderedData || plugin.renderedData.length === 0) return null;
+      if (!ws || !plugin || !plugin.renderedData || plugin.renderedData.length === 0) {
+        console.warn("⛔ plugin.renderedData 尚未準備好");
+        return null;
+      }
     
       const duration = ws.getDuration(); // seconds
       const fftSize = 1024;
       const sampleRate = ws.options.sampleRate || 256000;
       const frameCount = plugin.renderedData.length;
     
-      const hopLength = (duration * sampleRate - fftSize) / (frameCount - 1); // estimated hop length
+      const hopLength = (duration * sampleRate - fftSize) / (frameCount - 1);
       const noverlap = fftSize - hopLength;
       const percent = (noverlap / fftSize) * 100;
     
-      return Math.round(percent * 10) / 10; // round to 1 decimal place
-    }    
+      return Math.round(percent * 10) / 10;
+    }
     
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
@@ -306,7 +311,9 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText(); // ✅ 改放到這裡
+          setTimeout(() => {
+              updateSpectrogramSettingsText();
+            }, 100);
         }
       );
     });
@@ -326,7 +333,9 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText(); // ✅
+          setTimeout(() => {
+              updateSpectrogramSettingsText();
+            }, 100); // ✅
         }
       );
     }
