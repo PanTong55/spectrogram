@@ -92,6 +92,14 @@ export function replacePlugin(
   }
 }
 
+export function getActualOverlapPercent() {
+  const fftSamples = 1024;
+  if (!plugin || !plugin.noverlap) return null;
+
+  const percent = (plugin.noverlap / fftSamples) * 100;
+  return Math.round(percent * 10) / 10; // 取一位小數
+}
+
 export function getWavesurfer() {
   return ws;
 }
