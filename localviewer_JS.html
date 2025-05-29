@@ -179,7 +179,7 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        replacePlugin(
+        lastUsedOverlapPercent = replacePlugin(
           colorMap,
           spectrogramHeight,
           currentFreqMin,
@@ -188,10 +188,11 @@
           () => {
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
-            renderAxes(); // ✅ 等 plugin render 完成才畫
+            renderAxes();
+            updateSpectrogramSettingsText(); // 更新顯示
           }
         );
-      },
+      }
     });
 
     initFileLoader({
@@ -244,7 +245,10 @@
       const overlap = getOverlapPercent();
       const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
     
-      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+      const overlapText = lastUsedOverlapPercent != null
+        ? `${lastUsedOverlapPercent}%`
+        : 'Auto';
+      
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
     }    
@@ -271,7 +275,7 @@
 
     document.getElementById('overlapInput').addEventListener('change', () => {
       const colorMap = getCurrentColorMap();
-      replacePlugin(
+      lastUsedOverlapPercent = replacePlugin(
         colorMap,
         spectrogramHeight,
         currentFreqMin,
@@ -290,7 +294,7 @@
       currentFreqMin = freqMin;
       currentFreqMax = freqMax;
     
-      replacePlugin(
+      lastUsedOverlapPercent = replacePlugin(
         colorMap,
         spectrogramHeight,
         freqMin,
@@ -301,6 +305,7 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
+      updateSpectrogramSettingsText();
     }
   </script>
 </body>
