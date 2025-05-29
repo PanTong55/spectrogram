@@ -189,9 +189,7 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
-            setTimeout(() => {
-                updateSpectrogramSettingsText();
-              }, 100);
+            waitForRenderedDataThenUpdateText();
           }
         );
       },
@@ -255,6 +253,21 @@
     
       return Math.round(percent * 10) / 10;
     }
+
+    function waitForRenderedDataThenUpdateText(retries = 10, interval = 100) {
+      const plugin = getPlugin();
+      if (!plugin || !plugin.renderedData || plugin.renderedData.length === 0) {
+        if (retries > 0) {
+          setTimeout(() => {
+            waitForRenderedDataThenUpdateText(retries - 1, interval);
+          }, interval);
+        } else {
+          console.warn("⚠️ 無法獲取 plugin.renderedData，放棄更新 overlap 顯示");
+        }
+      } else {
+        updateSpectrogramSettingsText();
+      }
+    }
     
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
@@ -311,9 +324,7 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          setTimeout(() => {
-              updateSpectrogramSettingsText();
-            }, 100);
+          waitForRenderedDataThenUpdateText();
         }
       );
     });
@@ -333,9 +344,7 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          setTimeout(() => {
-              updateSpectrogramSettingsText();
-            }, 100); // ✅
+          waitForRenderedDataThenUpdateText();
         }
       );
     }
