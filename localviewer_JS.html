@@ -12,15 +12,15 @@
   <div id="spectrogram-settings" style="
     position: absolute;
     top: 8px;
-    left: 10px;
-    background-color: rgba(255, 255, 255, 0.85);
-    padding: 4px 8px;
+    left: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 6px 10px;
     font-size: 13px;
     font-family: 'Noto Sans HK', sans-serif;
-    border-radius: 4px;
-    box-shadow: 0 0 4px rgba(0,0,0,0.2);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     z-index: 10;
-  "></div>  
+  "></div>
   <div class="viewer-row">
     <div id="freq-labels"></div>
     <div id="viewer-wrapper" style="position: relative;">
@@ -131,6 +131,7 @@
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
+    updateSpectrogramSettingsText();
 
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
@@ -241,6 +242,18 @@
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
+    function updateSpectrogramSettingsText() {
+      const settingBox = document.getElementById('spectrogram-settings');
+      const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
+      const fftSize = 1024;
+      const overlap = getOverlapPercent();
+      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+    
+      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+      settingBox.textContent =
+        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
+    }    
+    
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
       const val = select.value;
@@ -274,6 +287,7 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
+      updateSpectrogramSettingsText();
     });
     
     function updateFrequencyRange(freqMin, freqMax) {
