@@ -291,21 +291,24 @@
       updateFrequencyRange(min, max);
     });
 
-    document.getElementById('overlapInput').addEventListener('change', () => {
-      const colorMap = getCurrentColorMap();
-      lastUsedOverlapPercent = replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent()
-      );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-      updateSpectrogramSettingsText();
-    });
+document.getElementById('overlapInput').addEventListener('change', () => {
+  const colorMap = getCurrentColorMap();
+  const actualOverlapPercent = replacePlugin(
+    colorMap,
+    spectrogramHeight,
+    currentFreqMin,
+    currentFreqMax,
+    getOverlapPercent()
+  );
+
+  // ✅ 寫入正確的實際值
+  lastUsedOverlapPercent = actualOverlapPercent;
+
+  duration = getWavesurfer().getDuration();
+  zoomControl.applyZoom();
+  renderAxes();
+  updateSpectrogramSettingsText();
+});
     
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
