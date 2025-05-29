@@ -100,6 +100,7 @@
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
+    import { getActualOverlapPercent } from './modules/wsManager.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -241,13 +242,17 @@
       const settingBox = document.getElementById('spectrogram-settings');
       const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
       const fftSize = 1024;
-      const overlap = getOverlapPercent();
-      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+      const selectedOverlap = getOverlapPercent();
+      const actualOverlap = selectedOverlap !== null ? selectedOverlap : getActualOverlapPercent();
+      const windowType = 'Hanning';
     
-      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+      const overlapText = selectedOverlap !== null
+        ? `${selectedOverlap}%`
+        : `Auto (${actualOverlap !== null ? actualOverlap + '%' : '...'} )`;
+    
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }    
+    }  
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -276,13 +281,14 @@
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
-        getOverlapPercent()
+        getOverlapPercent(),
+        () => {
+          duration = getWavesurfer().getDuration();
+          zoomControl.applyZoom();
+          renderAxes();
+          updateSpectrogramSettingsText();  // ✅ render 後更新文字
+        }
       );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-      updateSpectrogramSettingsText();
     });
     
     function updateFrequencyRange(freqMin, freqMax) {
