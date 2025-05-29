@@ -6,6 +6,7 @@ import Spectrogram from 'https://unpkg.com/wavesurfer.js@7.9.5/dist/plugins/spec
 let ws = null;
 let plugin = null;
 let currentColorMap = null;
+let lastUsedNoverlap = null; // ✅ 追蹤實際使用的 noverlap
 
 export function initWavesurfer({
   container,
@@ -44,6 +45,9 @@ export function createSpectrogramPlugin({
 
   if (noverlap !== null) {
     baseOptions.noverlap = noverlap;
+    lastUsedNoverlap = noverlap; // ✅ 記錄實際使用
+  } else {
+    lastUsedNoverlap = null;
   }
 
   return Spectrogram.create(baseOptions);
@@ -55,7 +59,7 @@ export function replacePlugin(
   frequencyMin = 0,
   frequencyMax = 128,
   overlapPercent = null,
-  onRendered = null  // ✅ 傳入 callback
+  onRendered = null
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
@@ -70,7 +74,7 @@ export function replacePlugin(
   const fftSamples = 1024;
   const noverlap = overlapPercent !== null
     ? Math.floor(fftSamples * (overlapPercent / 100))
-    : null; // Auto 預設安全值
+    : null;
 
   plugin = createSpectrogramPlugin({
     colorMap,
@@ -92,14 +96,6 @@ export function replacePlugin(
   }
 }
 
-export function getActualOverlapPercent() {
-  const fftSamples = 1024;
-  if (!plugin || plugin.noverlap === undefined || plugin.noverlap === null) return null;
-
-  const percent = (plugin.noverlap / fftSamples) * 100;
-  return Math.round(percent * 10) / 10;
-}
-
 export function getWavesurfer() {
   return ws;
 }
@@ -110,4 +106,13 @@ export function getPlugin() {
 
 export function getCurrentColorMap() {
   return currentColorMap;
+}
+
+// ✅ 提供外部存取實際使用的 noverlap（以百分比形式回傳）
+export function getActualOverlapPercent() {
+  const fftSamples = 1024;
+  if (lastUsedNoverlap === null) return null;
+
+  const percent = (lastUsedNoverlap / fftSamples) * 100;
+  return Math.round(percent * 10) / 10;
 }
