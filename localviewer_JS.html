@@ -239,14 +239,21 @@
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
     function estimateAutoOverlapPercent() {
-      const plugin = getPlugin();
-      if (!plugin || typeof plugin.noverlap !== 'number') {
-        console.warn("⚠️ plugin.noverlap 不存在");
+      const ws = getWavesurfer();
+      const canvas = document.querySelector("#spectrogram-only canvas");
+      if (!ws || !ws.backend || !ws.backend.buffer || !canvas) {
+        console.warn("❌ 無法取得 FFT canvas 或 audio buffer");
         return null;
       }
     
-      const fftSize = 1024;
-      const percent = (plugin.noverlap / fftSize) * 100;
+      const buffer = ws.backend.buffer;
+      const fftSamples = 1024;
+      const width = canvas.width;
+    
+      const uniqueSamplesPerPx = buffer.length / width;
+      const noverlap = Math.max(0, Math.round(fftSamples - uniqueSamplesPerPx));
+      const percent = (noverlap / fftSamples) * 100;
+    
       return Math.round(percent * 10) / 10;
     }
     
