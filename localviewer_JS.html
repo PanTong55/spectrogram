@@ -260,16 +260,25 @@
       const settingBox = document.getElementById('spectrogram-settings');
       const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
       const fftSize = 1024;
-      const overlap = getOverlapPercent();
-      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
-    
-      const overlapText = lastUsedOverlapPercent != null
-        ? `${lastUsedOverlapPercent}%`
-        : 'Auto';
+      const windowType = 'Hanning';
+      
+      const overlapSelect = document.getElementById('overlapInput');
+      const isAuto = overlapSelect.value === 'auto';
+      
+      let overlapText;
+      if (isAuto) {
+        overlapText = lastUsedOverlapPercent !== null 
+          ? `Auto (${lastUsedOverlapPercent}%)` 
+          : 'Auto';
+      } else {
+        overlapText = lastUsedOverlapPercent !== null 
+          ? `${lastUsedOverlapPercent}%` 
+          : 'N/A';
+      }
       
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }    
+    }  
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -291,24 +300,30 @@
       updateFrequencyRange(min, max);
     });
 
-document.getElementById('overlapInput').addEventListener('change', () => {
-  const colorMap = getCurrentColorMap();
-  const actualOverlapPercent = replacePlugin(
-    colorMap,
-    spectrogramHeight,
-    currentFreqMin,
-    currentFreqMax,
-    getOverlapPercent()
-  );
-
-  // ✅ 寫入正確的實際值
-  lastUsedOverlapPercent = actualOverlapPercent;
-
-  duration = getWavesurfer().getDuration();
-  zoomControl.applyZoom();
-  renderAxes();
-  updateSpectrogramSettingsText();
-});
+    document.getElementById('overlapInput').addEventListener('change', () => {
+      const colorMap = getCurrentColorMap();
+      const plugin = replacePlugin(
+        colorMap,
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent()
+      );
+    
+      // ✅ 補這段，實際取得 noverlap
+      const fftSize = 1024;
+      const overlapSamples = plugin?.noverlap;
+      if (overlapSamples != null) {
+        lastUsedOverlapPercent = Math.round((overlapSamples / fftSize) * 1000) / 10;
+      } else {
+        lastUsedOverlapPercent = null;
+      }
+    
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+      updateSpectrogramSettingsText();
+    });
     
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
