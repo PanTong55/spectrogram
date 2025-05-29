@@ -128,6 +128,21 @@
       sampleRate: 256000,
     });
 
+    const colorMap = [];
+    replacePlugin(
+      colorMap,
+      spectrogramHeight,
+      currentFreqMin,
+      currentFreqMax,
+      getOverlapPercent(),
+      () => {
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+        renderAxes();
+        updateSpectrogramSettingsText();
+      }
+    );    
+
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
     freqGrid.style.display = 'none';
