@@ -37,25 +37,6 @@ export function initFileLoader({
 
     await wavesurfer.load(fileUrl);
 
-    wavesurfer.once('ready', () => {
-      setTimeout(() => {
-        const spectrogramSettings = document.getElementById('spectrogram-settings');
-        const fftSize = 1024;
-        const overlapInput = document.getElementById('overlapInput');
-        const overlapVal = overlapInput.value === 'auto' ? 'auto' : `${overlapInput.value}%`;
-        const windowFunc = 'Hanning';
-    
-        const audioContext = wavesurfer.backend?.ac;
-        const sampleRate = audioContext?.sampleRate || 256000;
-    
-        spectrogramSettings.textContent =
-          `Sampling rate: ${Math.round(sampleRate / 1000)}kHz, ` +
-          `FFT size: ${fftSize}, ` +
-          `Overlap size: ${overlapVal}, ` +
-          `${windowFunc} window`;
-      }, 300); // ← 延遲確保 backend 初始化完成
-    });
-    
     currentPlugin = Spectrogram.create({
       labels: false,
       height: spectrogramHeight,
@@ -72,6 +53,10 @@ export function initFileLoader({
     if (typeof onPluginReplaced === 'function') {
       onPluginReplaced(currentPlugin);
     }
+
+    const sampleRate = wavesurfer?.options?.sampleRate || 256000;
+    document.getElementById('spectrogram-settings').textContent =
+      `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;    
   }
 
   fileInput.addEventListener('change', async (event) => {
