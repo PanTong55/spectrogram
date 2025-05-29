@@ -78,7 +78,16 @@ const updateHoverDisplay = (e) => {
   wrapper.addEventListener('mouseleave', () => {
     hideAll();
   });
-
+  
+  // ✅ 進入 spectrogram canvas 區隱藏Cursor
+  viewer.addEventListener('mouseenter', () => {
+    viewer.classList.add('hide-cursor');
+  });
+  
+  viewer.addEventListener('mouseleave', () => {
+    viewer.classList.remove('hide-cursor');
+  });
+  
   // ✅ 進入 zoom-control 區時，暫停 hover 顯示
   if (zoomControls) {
     zoomControls.addEventListener('mouseenter', () => {
