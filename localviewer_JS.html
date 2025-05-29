@@ -126,7 +126,7 @@
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
-    updateSpectrogramSettingsText();
+    waitForOverlapReadyThenUpdateText();
 
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
@@ -189,7 +189,7 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
-            updateSpectrogramSettingsText(); // ✅
+            waitForOverlapReadyThenUpdateText(); // ✅
           }
         );
       },
@@ -238,6 +238,27 @@
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
+    function waitForOverlapReadyThenUpdateText(tryCount = 10, delay = 100) {
+      const ws = getWavesurfer();
+      const canvas = document.querySelector("#spectrogram-only canvas");
+    
+      const bufferReady = ws?.backend?.buffer && ws.backend.buffer.length > 0;
+      const canvasReady = canvas && canvas.width > 0;
+    
+      if (!bufferReady || !canvasReady) {
+        if (tryCount <= 0) {
+          console.warn("❌ FFT canvas 或 audio buffer 仍未準備好，放棄估算 overlap");
+          updateSpectrogramSettingsText(); // fallback: 只顯示 Auto
+          return;
+        }
+        setTimeout(() => {
+          waitForOverlapReadyThenUpdateText(tryCount - 1, delay);
+        }, delay);
+      } else {
+        updateSpectrogramSettingsText(); // ✅ buffer 和 canvas 都 OK，再估算 Auto (xx.x%)
+      }
+    }
+    
     function estimateAutoOverlapPercent() {
       const ws = getWavesurfer();
       const canvas = document.querySelector("#spectrogram-only canvas");
@@ -308,7 +329,7 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText(); // ✅ 顯示 Auto (xx.x%) 重點更新
+          waitForOverlapReadyThenUpdateText(); // ✅ 顯示 Auto (xx.x%) 重點更新
         }
       );
     });
@@ -328,7 +349,7 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText(); // ✅
+          waitForOverlapReadyThenUpdateText(); // ✅
         }
       );
     }
