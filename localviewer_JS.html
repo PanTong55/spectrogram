@@ -226,7 +226,17 @@
     
       plugin?.render();
       requestAnimationFrame(() => {
+        // 🔹 更新座標軸
         renderAxes();
+    
+        // 🔹 更新實際 overlap 百分比
+        const overlapSamples = plugin?.noverlap;
+        if (overlapSamples != null) {
+          lastUsedOverlapPercent = Math.round((overlapSamples / 1024) * 1000) / 10;
+        } else {
+          lastUsedOverlapPercent = null;
+        }
+        updateSpectrogramSettingsText(); // 🔹 更新左上角設定文字
       });
     });
 
