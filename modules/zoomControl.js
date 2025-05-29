@@ -32,14 +32,14 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   function updateZoomButtons() {
     computeMinZoomLevel();
     const disabled = isExpandMode;
-    zoomInBtn.disabled = disabled || zoomLevel >= 2000;
+    zoomInBtn.disabled = disabled || zoomLevel >= 2500;
     zoomOutBtn.disabled = disabled || zoomLevel <= minZoomLevel;
     expandBtn.classList.toggle('active', isExpandMode);
   }
 
   zoomInBtn.onclick = () => {
-    if (!isExpandMode && zoomLevel < 2000) {
-      zoomLevel = Math.min(zoomLevel + 250, 2000);
+    if (!isExpandMode && zoomLevel < 2500) {
+      zoomLevel = Math.min(zoomLevel + 500, 2500);
       applyZoom();
     }
   };
@@ -48,7 +48,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     if (!isExpandMode) {
       computeMinZoomLevel();
       if (zoomLevel > minZoomLevel) {
-        zoomLevel = Math.max(zoomLevel - 250, minZoomLevel);
+        zoomLevel = Math.max(zoomLevel - 500, minZoomLevel);
         applyZoom();
       }
     }
