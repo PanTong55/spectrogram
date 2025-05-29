@@ -37,6 +37,21 @@ export function initFileLoader({
 
     await wavesurfer.load(fileUrl);
 
+    const spectrogramSettings = document.getElementById('spectrogram-settings');
+    const fftSize = 1024;
+    const overlapInput = document.getElementById('overlapInput');
+    const overlapVal = overlapInput.value === 'auto' ? 'auto' : `${overlapInput.value}%`;
+    const windowFunc = 'Hanning';
+    
+    const audioContext = wavesurfer.backend.ac;
+    const sampleRate = audioContext?.sampleRate || 256000; // fallback to default if unavailable
+    
+    spectrogramSettings.textContent =
+      `Sampling rate: ${Math.round(sampleRate / 1000)}kHz, ` +
+      `FFT size: ${fftSize}, ` +
+      `Overlap size: ${overlapVal}, ` +
+      `${windowFunc} window`;
+    
     currentPlugin = Spectrogram.create({
       labels: false,
       height: spectrogramHeight,
