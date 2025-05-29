@@ -1,31 +1,16 @@
 // modules/fileLoader.js
 
-import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
 import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
 import { extractGuanoMetadata } from './guanoReader.js';
-import { setWavesurfer } from './wsManager.js';
 
 let fileList = [];
 let currentIndex = -1;
 let lastObjectUrl = null;
 let currentPlugin = null;
 
-function getWavSampleRate(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      const buffer = event.target.result;
-      const dataView = new DataView(buffer);
-      const sampleRate = dataView.getUint32(24, true); // little-endian
-      resolve(sampleRate);
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file.slice(0, 44));
-  });
-}
-
 export function initFileLoader({
   fileInputId,
+  wavesurfer,
   spectrogramHeight,
   colorMap,
   onPluginReplaced,
@@ -36,7 +21,7 @@ export function initFileLoader({
 
   async function loadFile(file) {
     if (!file) return;
-
+    
     const guanoOutput = document.getElementById('guano-output');
     try {
       const result = await extractGuanoMetadata(file);
@@ -44,26 +29,13 @@ export function initFileLoader({
     } catch (err) {
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }
-
-    const sampleRate = await getWavSampleRate(file);
+    
     const fileUrl = URL.createObjectURL(file);
     if (currentPlugin?.destroy) currentPlugin.destroy();
     if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
     lastObjectUrl = fileUrl;
 
-    // 🔄 建立新的 WaveSurfer 實例
-    const newWs = WaveSurfer.create({
-      container: document.getElementById('spectrogram-only'),
-      height: 0,
-      interact: false,
-      cursorWidth: 0,
-      url: fileUrl,
-      sampleRate,
-    });
-
-    setWavesurfer(newWs); // ✅ 更新全域 wavesurfer 實例
-
-    await newWs.load(fileUrl);
+    await wavesurfer.load(fileUrl);
 
     currentPlugin = Spectrogram.create({
       labels: false,
@@ -76,30 +48,10 @@ export function initFileLoader({
       colorMap,
     });
 
-    newWs.registerPlugin(currentPlugin);
+    wavesurfer.registerPlugin(currentPlugin);
 
     if (typeof onPluginReplaced === 'function') {
       onPluginReplaced(currentPlugin);
-    }
-    
-    // 🔄 確保 plugin render 並重繪軸線
-    try {
-      currentPlugin.render();
-      requestAnimationFrame(() => {
-        const ws = newWs;
-        if (ws) {
-          const duration = ws.getDuration();
-    
-          // 手動觸發 zoomControl 和 axis render，如果你有外部函式可用
-          // 🔁 你應在 onPluginReplaced 裡觸發這類 render 函式
-          const event = new CustomEvent('wsPluginReady', {
-            detail: { wavesurfer: ws, plugin: currentPlugin, duration }
-          });
-          document.dispatchEvent(event);
-        }
-      });
-    } catch (err) {
-      console.warn('⚠️ Spectrogram render failed:', err);
     }
   }
 
