@@ -113,6 +113,7 @@
     let currentFreqMin = 0;
     let currentFreqMax = 128;
     const getDuration = () => duration;
+    let lastUsedOverlapPercent = null;
 
     const guanoOutput = document.getElementById('guano-output');
     document.getElementById('fileInput').addEventListener('change', async function(event) {
@@ -200,7 +201,14 @@
       wavesurfer: getWavesurfer(),
       spectrogramHeight,
       colorMap: [],
-      onPluginReplaced: () => {},
+      onPluginReplaced: (plugin) => {
+        const fftSize = 1024;
+        const overlapSamples = plugin.noverlap;
+        if (overlapSamples != null) {
+          lastUsedOverlapPercent = Math.round((overlapSamples / fftSize) * 1000) / 10;
+        }
+        updateSpectrogramSettingsText();
+      },
     });
 
     initScrollSync({
