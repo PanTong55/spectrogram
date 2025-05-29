@@ -293,13 +293,22 @@
 
     document.getElementById('overlapInput').addEventListener('change', () => {
       const colorMap = getCurrentColorMap();
-      lastUsedOverlapPercent = replacePlugin(
+      const plugin = replacePlugin(
         colorMap,
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
         getOverlapPercent()
       );
+    
+      // ✅ 補這段，實際取得 noverlap
+      const fftSize = 1024;
+      const overlapSamples = plugin?.noverlap;
+      if (overlapSamples != null) {
+        lastUsedOverlapPercent = Math.round((overlapSamples / fftSize) * 1000) / 10;
+      } else {
+        lastUsedOverlapPercent = null;
+      }
     
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
