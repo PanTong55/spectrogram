@@ -90,6 +90,14 @@ export function replacePlugin(
   } catch (err) {
     console.warn('⚠️ Spectrogram render failed:', err);
   }
+
+  // 🔥 抓實際使用的 overlap %
+  const actualOverlap = plugin.noverlap;
+  const actualPercent = actualOverlap != null
+    ? Math.round((actualOverlap / fftSamples) * 1000) / 10
+    : null;
+
+  return actualPercent;
 }
 
 export function getWavesurfer() {
