@@ -98,7 +98,9 @@ body {
 #fixed-overlay > * {
   pointer-events: none;
 }
-
+.hide-cursor {
+  cursor: none !important;
+}
 /* === 時間軸 === */
 #time-axis-wrapper {
   overflow: hidden;
