@@ -213,6 +213,20 @@
       });
     });
 
+    document.addEventListener('wsPluginReady', (e) => {
+      const { wavesurfer, duration } = e.detail;
+    
+      if (zoomControl.isExpandMode()) {
+        zoomControl.forceExpandMode();
+      } else {
+        zoomControl.applyZoom();
+      }
+    
+      requestAnimationFrame(() => {
+        renderAxes(); // ✅ 重繪頻率軸與時間軸
+      });
+    });
+    
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
