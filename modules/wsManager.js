@@ -100,6 +100,10 @@ export function getPlugin() {
   return plugin;
 }
 
+export function setWavesurfer(wsInstance) {
+  ws = wsInstance;
+}
+
 export function getCurrentColorMap() {
   return currentColorMap;
 }
