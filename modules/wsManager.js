@@ -1,307 +1,105 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Bat Spectrogram Viewer</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-</head>
-<body>
-  <div id="spectrogram-settings" style="
-    padding: 0 0 2px;
-    margin-left: 45px;
-    font-size: 12px;
-    font-family: 'Noto Sans HK', sans-serif;
-    z-index: 10;
-  "></div>
-  <div class="viewer-row">
-    <div id="freq-labels"></div>
-    <div id="viewer-wrapper" style="position: relative;">
-      <div id="viewer-container">
-        <div id="spectrogram-only" style="height: 800px;"></div>
-        <canvas id="freq-grid"></canvas>
-      </div>
-      <div id="fixed-overlay">
-      <div id="hover-line" class="hover-line-horizontal"></div>
-      <div id="hover-line-vertical" class="hover-line-vertical"></div>
-      <div id="hover-label">-</div>
-        <div id="zoom-controls">
-          <button class="zoom-button" id="zoom-in">+</button>
-          <button class="zoom-button" id="zoom-out">−</button>
-          <button id="expand-btn" class="zoom-button" title="Expand view"><i class="fas fa-expand"></i></button>
-        </div>
-      </div>
-    </div>
-  </div>
+// modules/wsManager.js
 
-  <div id="time-axis-wrapper">
-    <div id="time-axis"></div>
-  </div>
-  <div id="time-label">Time (ms)</div>
+import WaveSurfer from 'https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.esm.js';
+import Spectrogram from 'https://unpkg.com/wavesurfer.js@7.9.5/dist/plugins/spectrogram.esm.js';
 
-  <div style="margin-top: 10px;">
-    <label class="slider-label" style="margin-left: 10px;">Overlap:
-      <select id="overlapInput" class="styled-select">
-        <option value="auto" selected>Auto</option>
-        <option value="25">25%</option>
-        <option value="50">50%</option>
-        <option value="75">75%</option>
-        <option value="90">90%</option>
-        <option value="95">95%</option>
-      </select>
-    </label>    
-    <label class="slider-label" style="margin-left: 10px;">F.Range (kHz):
-      <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 40px;">
-    </label>
-    <label class="slider-label">-
-      <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 40px;">
-    </label>
-    <button id="applyFreqRangeBtn" class="flat-icon-button">Set</button>
-    <label class="slider-label" style="margin-left: 12px;">Brightness:
-      <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
-      <span class="slider-value" id="brightnessVal">0</span>
-    </label>
-    <label class="slider-label" style="margin-left: 12px;">Contrast:
-      <input type="range" id="gainSlider" min="1" max="4" step="0.1" value="2">
-      <span class="slider-value" id="gainVal">2</span>
-    </label>
-    <button id="resetButton" title="Reset to default" class="flat-icon-button" style="margin-left: 10px;"><i class="fas fa-rotate-left"></i></button>
-    <label class="slider-label" style="margin-left: 10px;">Grid:
-      <label class="switch">
-        <input type="checkbox" id="toggleGridSwitch">
-        <span class="slider round"></span>
-      </label>
-    </label>    
-    <label for="fileInput" class="slider-label" style="margin-left: 10px;">Load file(s):</label>
-    <input type="file" id="fileInput" accept=".wav" multiple />
-    <button id="prevBtn" title="Previous file" class="flat-icon-button"><i class="fas fa-arrow-left"></i></button>
-    <button id="nextBtn" title="Next file" class="flat-icon-button"><i class="fas fa-arrow-right"></i></button>
-  </div>
+let ws = null;
+let plugin = null;
+let currentColorMap = null;
 
-  <h3 style="margin-top: 20px;">GUANO Metadata:</h3>
-  <pre id="guano-output">(no file selected)</pre>
+export function initWavesurfer({
+  container,
+  url,
+  sampleRate = 256000,
+}) {
+  ws = WaveSurfer.create({
+    container,
+    height: 0,
+    interact: false,
+    cursorWidth: 0,
+    url,
+    sampleRate,
+  });
 
-  <script type="module">
-    import {
-      initWavesurfer,
-      getWavesurfer,
-      getPlugin,
-      replacePlugin,
-      createSpectrogramPlugin,
-      getCurrentColorMap,
-    } from './modules/wsManager.js';
+  return ws;
+}
 
-    import { initZoomControls } from './modules/zoomControl.js';
-    import { initFileLoader } from './modules/fileLoader.js';
-    import { initBrightnessControl } from './modules/brightnessControl.js';
-    import { initFrequencyHover } from './modules/frequencyHover.js';
-    import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
-    import { initScrollSync } from './modules/scrollSync.js';
-    import { extractGuanoMetadata } from './modules/guanoReader.js';
+export function createSpectrogramPlugin({
+  colorMap,
+  height = 800,
+  frequencyMin = 0,
+  frequencyMax = 128000,
+  noverlap = null,
+}) {
+  const baseOptions = {
+    labels: false,
+    height,
+    fftSamples: 1024,
+    frequencyMin: frequencyMin * 1000,
+    frequencyMax: frequencyMax * 1000,
+    scale: 'linear',
+    windowFunc: 'hann',
+    colorMap,
+  };
 
-    const container = document.getElementById('spectrogram-only');
-    const viewer = document.getElementById('viewer-container');
-    const timeAxis = document.getElementById('time-axis');
-    const timeWrapper = document.getElementById('time-axis-wrapper');
-    const timeLabel = document.getElementById('time-label');
-    const freqGrid = document.getElementById('freq-grid');
-    const freqLabelContainer = document.getElementById('freq-labels');
-    const spectrogramHeight = 800;
-    let duration = 0;
-    let currentFreqMin = 0;
-    let currentFreqMax = 128;
-    const getDuration = () => duration;
+  if (noverlap !== null) {
+    baseOptions.noverlap = noverlap;
+  }
 
-    const guanoOutput = document.getElementById('guano-output');
-    document.getElementById('fileInput').addEventListener('change', async function(event) {
-      const file = event.target.files[0];
-      const result = await extractGuanoMetadata(file);
-      guanoOutput.textContent = result;
+  return Spectrogram.create(baseOptions);
+}
+
+export function replacePlugin(
+  colorMap,
+  height = 800,
+  frequencyMin = 0,
+  frequencyMax = 128,
+  overlapPercent = null,
+  onRendered = null  // ✅ 傳入 callback
+) {
+  if (!ws) throw new Error('Wavesurfer not initialized.');
+  const container = document.getElementById("spectrogram-only");
+
+  const oldCanvas = container.querySelector("canvas");
+  if (oldCanvas) oldCanvas.remove();
+
+  if (plugin?.destroy) plugin.destroy();
+
+  currentColorMap = colorMap;
+
+  const fftSamples = 1024;
+  const noverlap = overlapPercent !== null
+    ? Math.floor(fftSamples * (overlapPercent / 100))
+    : null; // Auto 預設安全值
+
+  plugin = createSpectrogramPlugin({
+    colorMap,
+    height,
+    frequencyMin,
+    frequencyMax,
+    noverlap,
+  });
+
+  ws.registerPlugin(plugin);
+
+  try {
+    plugin.render();
+    requestAnimationFrame(() => {
+      if (typeof onRendered === 'function') onRendered();
     });
+  } catch (err) {
+    console.warn('⚠️ Spectrogram render failed:', err);
+  }
+}
 
-    initWavesurfer({
-      container,
-      url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
-      sampleRate: 256000,
-    });
-    updateSpectrogramSettingsText();
+export function getWavesurfer() {
+  return ws;
+}
 
-    const toggleGridSwitch = document.getElementById('toggleGridSwitch');
-    
-    freqGrid.style.display = 'none';
-    toggleGridSwitch.checked = false;
-    
-    toggleGridSwitch.addEventListener('change', () => {
-      freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
-    });
-    
-    const renderAxes = () => {
-      drawTimeAxis({
-        containerWidth: container.scrollWidth,
-        duration,
-        zoomLevel: zoomControl.getZoomLevel(),
-        axisElement: timeAxis,
-        labelElement: timeLabel,
-      });
+export function getPlugin() {
+  return plugin;
+}
 
-      drawFrequencyGrid({
-        gridCanvas: freqGrid,
-        labelContainer: freqLabelContainer,
-        containerElement: container,
-        spectrogramHeight,
-        maxFrequency: currentFreqMax - currentFreqMin,
-        offsetKHz: currentFreqMin,
-      });
-
-      initFrequencyHover({
-        viewerId: 'viewer-container',
-        wrapperId: 'viewer-wrapper',
-        hoverLineId: 'hover-line',
-        hoverLineVId: 'hover-line-vertical',
-        freqLabelId: 'hover-label',
-        spectrogramHeight,
-        spectrogramWidth: container.scrollWidth,
-        maxFrequency: currentFreqMax,
-        minFrequency: currentFreqMin,
-        totalDuration: duration * 1000,
-      });
-    };
-
-    const wrapper = document.getElementById('viewer-wrapper');
-    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
-    
-    initBrightnessControl({
-      brightnessSliderId: 'brightnessSlider',
-      gainSliderId: 'gainSlider',
-      brightnessValId: 'brightnessVal',
-      gainValId: 'gainVal',
-      resetBtnId: 'resetButton',
-      onColorMapUpdated: (colorMap) => {
-        replacePlugin(
-          colorMap,
-          spectrogramHeight,
-          currentFreqMin,
-          currentFreqMax,
-          getOverlapPercent(),
-          () => {
-            duration = getWavesurfer().getDuration();
-            zoomControl.applyZoom();
-            renderAxes(); // ✅ 等 plugin render 完成才畫
-          }
-        );
-      },
-    });
-
-    initFileLoader({
-      fileInputId: 'fileInput',
-      wavesurfer: getWavesurfer(),
-      spectrogramHeight,
-      colorMap: [],
-      onPluginReplaced: () => {},
-    });
-
-    initScrollSync({
-      scrollSourceId: 'viewer-container',
-      scrollTargetId: 'time-axis-wrapper',
-    });
-
-    getWavesurfer().on('ready', () => {
-      duration = getWavesurfer().getDuration();
-      if (zoomControl.isExpandMode()) {
-        zoomControl.forceExpandMode();
-      } else {
-        zoomControl.applyZoom();
-      }
-    
-      plugin?.render();
-      requestAnimationFrame(() => {
-        renderAxes();
-      });
-    });
-
-    getWavesurfer().on('decode', () => {
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-    });
-
-    document.body.addEventListener('touchstart', () => {
-      if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
-        getWavesurfer().backend.ac.resume();
-      }
-    }, { once: true });
-
-    const freqMinInput = document.getElementById('freqMinInput');
-    const freqMaxInput = document.getElementById('freqMaxInput');
-    const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
-
-    function updateSpectrogramSettingsText() {
-      const settingBox = document.getElementById('spectrogram-settings');
-      const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
-      const fftSize = 1024;
-      const overlap = getOverlapPercent();
-      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
-    
-      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
-      settingBox.textContent =
-        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }    
-    
-    function getOverlapPercent() {
-      const select = document.getElementById('overlapInput');
-      const val = select.value;
-      if (val === 'auto') return null;
-      const parsed = parseInt(val, 10);
-      return isNaN(parsed) ? null : parsed;
-    }
-    
-    applyFreqRangeBtn.addEventListener('click', () => {
-      const min = Math.max(0, parseFloat(freqMinInput.value));
-      const max = Math.min(128, parseFloat(freqMaxInput.value));
-
-      if (isNaN(min) || isNaN(max) || min >= max) {
-        alert('Please enter valid frequency values. Min must be less than Max.');
-        return;
-      }
-
-      updateFrequencyRange(min, max);
-    });
-
-    document.getElementById('overlapInput').addEventListener('change', () => {
-      const colorMap = getCurrentColorMap();
-      replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent()
-      );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-      updateSpectrogramSettingsText();
-    });
-    
-    function updateFrequencyRange(freqMin, freqMax) {
-      const colorMap = getCurrentColorMap();
-      currentFreqMin = freqMin;
-      currentFreqMax = freqMax;
-    
-      replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        freqMin,
-        freqMax,
-        getOverlapPercent()
-      );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-    }
-  </script>
-</body>
-</html>
+export function getCurrentColorMap() {
+  return currentColorMap;
+}
