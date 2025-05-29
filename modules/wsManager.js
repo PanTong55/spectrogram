@@ -94,10 +94,10 @@ export function replacePlugin(
 
 export function getActualOverlapPercent() {
   const fftSamples = 1024;
-  if (!plugin || !plugin.noverlap) return null;
+  if (!plugin || plugin.noverlap === undefined || plugin.noverlap === null) return null;
 
   const percent = (plugin.noverlap / fftSamples) * 100;
-  return Math.round(percent * 10) / 10; // 取一位小數
+  return Math.round(percent * 10) / 10;
 }
 
 export function getWavesurfer() {
