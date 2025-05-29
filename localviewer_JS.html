@@ -188,7 +188,8 @@
           () => {
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
-            renderAxes(); // ✅ 等 plugin render 完成才畫
+            renderAxes();
+            updateSpectrogramSettingsText();// ✅ 等 plugin render 完成才畫
           }
         );
       },
@@ -233,6 +234,23 @@
       }
     }, { once: true });
 
+    function estimateAutoOverlapPercent() {
+      const ws = getWavesurfer();
+      const plugin = getPlugin();
+      if (!ws || !plugin || !plugin.renderedData || plugin.renderedData.length === 0) return null;
+    
+      const duration = ws.getDuration(); // seconds
+      const fftSize = 1024;
+      const sampleRate = ws.options.sampleRate || 256000;
+      const frameCount = plugin.renderedData.length;
+    
+      const hopLength = (duration * sampleRate - fftSize) / (frameCount - 1); // estimated hop length
+      const noverlap = fftSize - hopLength;
+      const percent = (noverlap / fftSize) * 100;
+    
+      return Math.round(percent * 10) / 10; // round to 1 decimal place
+    }    
+    
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
@@ -242,12 +260,19 @@
       const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
       const fftSize = 1024;
       const overlap = getOverlapPercent();
-      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+      const windowType = 'Hanning';
     
-      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+      let overlapText = '';
+      if (overlap !== null) {
+        overlapText = `${overlap}%`;
+      } else {
+        const estimated = estimateAutoOverlapPercent();
+        overlapText = estimated !== null ? `Auto (${estimated}%)` : 'Auto';
+      }
+    
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }    
+    }
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -276,13 +301,14 @@
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
-        getOverlapPercent()
+        getOverlapPercent(),
+        () => {
+          duration = getWavesurfer().getDuration();
+          zoomControl.applyZoom();
+          renderAxes();
+          updateSpectrogramSettingsText(); // ✅ 改放到這裡
+        }
       );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-      updateSpectrogramSettingsText();
     });
     
     function updateFrequencyRange(freqMin, freqMax) {
@@ -295,12 +321,14 @@
         spectrogramHeight,
         freqMin,
         freqMax,
-        getOverlapPercent()
+        getOverlapPercent(),
+        () => {
+          duration = getWavesurfer().getDuration();
+          zoomControl.applyZoom();
+          renderAxes();
+          updateSpectrogramSettingsText(); // ✅
+        }
       );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
     }
   </script>
 </body>
