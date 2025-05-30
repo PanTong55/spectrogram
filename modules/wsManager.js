@@ -84,10 +84,12 @@ export function replacePlugin(
 
   try {
     plugin.render();
-
-    const waitUntilReady = setInterval(() => {
-      if (plugin.noverlap !== undefined && plugin.noverlap !== null) {
-        clearInterval(waitUntilReady);
+    
+    const canvas = container.querySelector("canvas");
+    
+    const waitUntilCanvasReady = setInterval(() => {
+      if (canvas && canvas.width > 0) {
+        clearInterval(waitUntilCanvasReady);
         if (typeof onRendered === 'function') onRendered();
       }
     }, 50);
