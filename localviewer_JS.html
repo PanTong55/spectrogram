@@ -136,8 +136,6 @@
     toggleGridSwitch.addEventListener('change', () => {
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
-
-    let frequencyHoverController = null;
     
     const renderAxes = () => {
       drawTimeAxis({
@@ -147,7 +145,7 @@
         axisElement: timeAxis,
         labelElement: timeLabel,
       });
-    
+
       drawFrequencyGrid({
         gridCanvas: freqGrid,
         labelContainer: freqLabelContainer,
@@ -156,8 +154,8 @@
         maxFrequency: currentFreqMax - currentFreqMin,
         offsetKHz: currentFreqMin,
       });
-    
-      const controller = initFrequencyHover({
+
+      initFrequencyHover({
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
         hoverLineId: 'hover-line',
@@ -169,9 +167,6 @@
         minFrequency: currentFreqMin,
         totalDuration: duration * 1000,
       });
-    
-      controller.deactivate();
-      return controller;
     };
 
     const wrapper = document.getElementById('viewer-wrapper');
@@ -221,10 +216,8 @@
       }
     
       plugin?.render();
-    
       requestAnimationFrame(() => {
-        frequencyHoverController = renderAxes();
-        frequencyHoverController.activate();
+        renderAxes();
       });
     });
 
