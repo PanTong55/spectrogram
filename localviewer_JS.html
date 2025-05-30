@@ -147,7 +147,7 @@
         axisElement: timeAxis,
         labelElement: timeLabel,
       });
-
+    
       drawFrequencyGrid({
         gridCanvas: freqGrid,
         labelContainer: freqLabelContainer,
@@ -156,8 +156,8 @@
         maxFrequency: currentFreqMax - currentFreqMin,
         offsetKHz: currentFreqMin,
       });
-
-      initFrequencyHover({
+    
+      frequencyHoverController = initFrequencyHover({
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
         hoverLineId: 'hover-line',
@@ -169,6 +169,8 @@
         minFrequency: currentFreqMin,
         totalDuration: duration * 1000,
       });
+    
+      frequencyHoverController.deactivate(); // <== 預設關閉
     };
 
     const wrapper = document.getElementById('viewer-wrapper');
@@ -210,6 +212,8 @@
     });
 
     getWavesurfer().on('ready', () => {
+      if (frequencyHoverController) frequencyHoverController.deactivate();
+    
       duration = getWavesurfer().getDuration();
       if (zoomControl.isExpandMode()) {
         zoomControl.forceExpandMode();
@@ -218,9 +222,11 @@
       }
     
       plugin?.render();
+    
       requestAnimationFrame(() => {
         renderAxes();
-        if (frequencyHoverController) frequencyHoverController.setHoverEnabled(true);
+    
+        if (frequencyHoverController) frequencyHoverController.activate();
       });
     });
 
