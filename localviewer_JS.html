@@ -91,7 +91,6 @@
       replacePlugin,
       createSpectrogramPlugin,
       getCurrentColorMap,
-      getActualNoverlap,
     } from './modules/wsManager.js';
 
     import { initZoomControls } from './modules/zoomControl.js';
@@ -173,6 +172,28 @@
     const wrapper = document.getElementById('viewer-wrapper');
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
     
+    initBrightnessControl({
+      brightnessSliderId: 'brightnessSlider',
+      gainSliderId: 'gainSlider',
+      brightnessValId: 'brightnessVal',
+      gainValId: 'gainVal',
+      resetBtnId: 'resetButton',
+      onColorMapUpdated: (colorMap) => {
+        replacePlugin(
+          colorMap,
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent(),
+          () => {
+            duration = getWavesurfer().getDuration();
+            zoomControl.applyZoom();
+            renderAxes(); // ✅ 等 plugin render 完成才畫
+          }
+        );
+      },
+    });
+
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: getWavesurfer(),
@@ -206,29 +227,6 @@
       renderAxes();
     });
 
-    initBrightnessControl({
-      brightnessSliderId: 'brightnessSlider',
-      gainSliderId: 'gainSlider',
-      brightnessValId: 'brightnessVal',
-      gainValId: 'gainVal',
-      resetBtnId: 'resetButton',
-      onColorMapUpdated: (colorMap) => {
-        replacePlugin(
-          colorMap,
-          spectrogramHeight,
-          currentFreqMin,
-          currentFreqMax,
-          getOverlapPercent(),
-          () => {
-            duration = getWavesurfer().getDuration();
-            zoomControl.applyZoom();
-            renderAxes();
-            updateSpectrogramSettingsText(); // ✅
-          }
-        );
-      },
-    });
-
     document.body.addEventListener('touchstart', () => {
       if (getWavesurfer()?.backend?.ac?.state === 'suspended') {
         getWavesurfer().backend.ac.resume();
@@ -239,17 +237,17 @@
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
-    function calculateActualOverlapPercent() {
-      const actualNoverlap = getActualNoverlap();
-      
-      if (typeof actualNoverlap !== 'number') {
-        return null;
-      }
-      
+    function updateSpectrogramSettingsText() {
+      const settingBox = document.getElementById('spectrogram-settings');
+      const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
       const fftSize = 1024;
-      const percent = (actualNoverlap / fftSize) * 100;
-      return Math.round(percent * 10) / 10; // 保留一位小数
-    }
+      const overlap = getOverlapPercent();
+      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+    
+      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+      settingBox.textContent =
+        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
+    }    
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -257,31 +255,6 @@
       if (val === 'auto') return null;
       const parsed = parseInt(val, 10);
       return isNaN(parsed) ? null : parsed;
-    }
-    
-    function updateSpectrogramSettingsText() {
-      const settingBox = document.getElementById('spectrogram-settings');
-      const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
-      const fftSize = 1024;
-      const overlap = getOverlapPercent();
-      const windowType = 'Hanning';
-    
-      let overlapText = '';
-      if (overlap !== null) {
-        // 用户选择了具体的百分比
-        overlapText = `${overlap}%`;
-      } else {
-        // Auto 模式 - 尝试显示检测到的实际值
-        const actualPercent = calculateActualOverlapPercent();
-        if (actualPercent !== null) {
-          overlapText = `Auto (${actualPercent}%)`;
-        } else {
-          overlapText = 'Auto (detecting...)';
-        }
-      }
-    
-      settingBox.textContent =
-        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
     }
     
     applyFreqRangeBtn.addEventListener('click', () => {
@@ -303,20 +276,15 @@
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          duration = getWavesurfer().getDuration();
-          zoomControl.applyZoom();
-          renderAxes();
-          
-          // ✅ 延迟更新以确保检测完成
-          setTimeout(() => {
-            updateSpectrogramSettingsText();
-          }, 100);
-        }
+        getOverlapPercent()
       );
+    
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+      updateSpectrogramSettingsText();
     });
-        
+    
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
       currentFreqMin = freqMin;
@@ -327,18 +295,12 @@
         spectrogramHeight,
         freqMin,
         freqMax,
-        getOverlapPercent(),
-        () => {
-          duration = getWavesurfer().getDuration();
-          zoomControl.applyZoom();
-          renderAxes();
-          
-          // ✅ 延迟更新
-          setTimeout(() => {
-            updateSpectrogramSettingsText();
-          }, 100);
-        }
+        getOverlapPercent()
       );
+    
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
     }
   </script>
 </body>
