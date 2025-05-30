@@ -1,4 +1,8 @@
-let previousMouseMoveHandler = null;
+let suppressHoverExternal = false;
+
+export function setSuppressHover(value) {
+  suppressHoverExternal = value;
+}
 
 export function initFrequencyHover({
   viewerId,
@@ -29,7 +33,7 @@ export function initFrequencyHover({
   };
 
   const updateHoverDisplay = (e) => {
-    if (suppressHover) return;
+    if (suppressHover || suppressHoverExternal) return;
 
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -68,15 +72,7 @@ export function initFrequencyHover({
     freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
   };
 
-  // 先移除舊的
-  if (previousMouseMoveHandler) {
-    viewer.removeEventListener('mousemove', previousMouseMoveHandler);
-  }
-
-  // 再綁定新的
-  previousMouseMoveHandler = updateHoverDisplay;
   viewer.addEventListener('mousemove', updateHoverDisplay);
-
   wrapper.addEventListener('mouseleave', hideAll);
   viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
   viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
@@ -91,14 +87,3 @@ export function initFrequencyHover({
     });
   }
 }
-
-let suppressHoverExternal = false;
-
-export function setSuppressHover(value) {
-  suppressHoverExternal = value;
-}
-
-const updateHoverDisplay = (e) => {
-  if (suppressHover || suppressHoverExternal) return;
-  ...
-};
