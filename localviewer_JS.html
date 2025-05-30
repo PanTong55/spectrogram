@@ -96,7 +96,7 @@
     import { initZoomControls } from './modules/zoomControl.js';
     import { initFileLoader } from './modules/fileLoader.js';
     import { initBrightnessControl } from './modules/brightnessControl.js';
-    import { initFrequencyHover, setSuppressHover } from './modules/frequencyHover.js';
+    import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
@@ -188,9 +188,7 @@
           () => {
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
-            setSuppressHover(true);
             renderAxes();
-            setSuppressHover(false); // ✅ 等 plugin render 完成才畫
           }
         );
       },
@@ -219,18 +217,14 @@
     
       plugin?.render();
       requestAnimationFrame(() => {
-      setSuppressHover(true);
       renderAxes();
-      setSuppressHover(false);
       });
     });
 
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
-      setSuppressHover(true);
       renderAxes();
-      setSuppressHover(false);
     });
 
     document.body.addEventListener('touchstart', () => {
@@ -287,9 +281,7 @@
     
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
-      setSuppressHover(true);
       renderAxes();
-      setSuppressHover(false);
       updateSpectrogramSettingsText();
     });
     
@@ -308,9 +300,7 @@
     
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
-      setSuppressHover(true);
       renderAxes();
-      setSuppressHover(false);
     }
   </script>
 </body>
