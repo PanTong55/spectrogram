@@ -91,6 +91,7 @@
       replacePlugin,
       createSpectrogramPlugin,
       getCurrentColorMap,
+      getActualNoverlap,
     } from './modules/wsManager.js';
 
     import { initZoomControls } from './modules/zoomControl.js';
@@ -238,16 +239,24 @@
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
-    function estimateAutoOverlapPercent() {
-      const plugin = getPlugin();
-      if (!plugin || typeof plugin.noverlap !== 'number') {
-        console.warn("⚠️ plugin.noverlap 不存在");
+    function calculateActualOverlapPercent() {
+      const actualNoverlap = getActualNoverlap();
+      
+      if (typeof actualNoverlap !== 'number') {
         return null;
       }
-    
+      
       const fftSize = 1024;
-      const percent = (plugin.noverlap / fftSize) * 100;
-      return Math.round(percent * 10) / 10;
+      const percent = (actualNoverlap / fftSize) * 100;
+      return Math.round(percent * 10) / 10; // 保留一位小数
+    }
+    
+    function getOverlapPercent() {
+      const select = document.getElementById('overlapInput');
+      const val = select.value;
+      if (val === 'auto') return null;
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? null : parsed;
     }
     
     function updateSpectrogramSettingsText() {
@@ -259,22 +268,20 @@
     
       let overlapText = '';
       if (overlap !== null) {
+        // 用户选择了具体的百分比
         overlapText = `${overlap}%`;
       } else {
-        const estimated = estimateAutoOverlapPercent();
-        overlapText = estimated !== null ? `Auto (${estimated}%)` : 'Auto';
+        // Auto 模式 - 尝试显示检测到的实际值
+        const actualPercent = calculateActualOverlapPercent();
+        if (actualPercent !== null) {
+          overlapText = `Auto (${actualPercent}%)`;
+        } else {
+          overlapText = 'Auto (detecting...)';
+        }
       }
     
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }
-    
-    function getOverlapPercent() {
-      const select = document.getElementById('overlapInput');
-      const val = select.value;
-      if (val === 'auto') return null;
-      const parsed = parseInt(val, 10);
-      return isNaN(parsed) ? null : parsed;
     }
     
     applyFreqRangeBtn.addEventListener('click', () => {
@@ -301,11 +308,15 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText(); // ✅ 顯示 Auto (xx.x%) 重點更新
+          
+          // ✅ 延迟更新以确保检测完成
+          setTimeout(() => {
+            updateSpectrogramSettingsText();
+          }, 100);
         }
       );
     });
-    
+        
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
       currentFreqMin = freqMin;
@@ -321,7 +332,11 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText(); // ✅
+          
+          // ✅ 延迟更新
+          setTimeout(() => {
+            updateSpectrogramSettingsText();
+          }, 100);
         }
       );
     }
