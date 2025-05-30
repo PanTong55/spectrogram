@@ -126,8 +126,23 @@
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
-    
 
+    const colorMap = getCurrentColorMap();  // 你有 colorMap 管理邏輯
+    
+    replacePlugin(
+      colorMap,
+      spectrogramHeight,
+      currentFreqMin,
+      currentFreqMax,
+      getOverlapPercent(),
+      () => {
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+        renderAxes();
+        updateSpectrogramSettingsText();  // ✅ 此時 plugin 已存在，noverlap 已計好
+      }
+    );    
+    
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
     freqGrid.style.display = 'none';
@@ -219,7 +234,6 @@
       plugin?.render();
       requestAnimationFrame(() => {
         renderAxes();
-        updateSpectrogramSettingsText();
       });
     });
 
