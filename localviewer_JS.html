@@ -231,10 +231,21 @@
         zoomControl.applyZoom();
       }
     
-      plugin?.render();
-      requestAnimationFrame(() => {
-        renderAxes();
-      });
+      const colorMap = getCurrentColorMap();
+    
+      replacePlugin(
+        colorMap,
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent(),
+        () => {
+          duration = getWavesurfer().getDuration();
+          zoomControl.applyZoom();
+          renderAxes();
+          updateSpectrogramSettingsText();
+        }
+      );
     });
 
     getWavesurfer().on('decode', () => {
