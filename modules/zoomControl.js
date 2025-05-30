@@ -1,4 +1,4 @@
-// zoomControl.js
+// zoomControl.js (優化版，含修正)
 
 export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement) {
   const zoomInBtn = document.getElementById('zoom-in');
@@ -13,21 +13,23 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     const visibleWidth = wrapperElement.clientWidth;
     const dur = duration();
     if (dur > 0) {
-      minZoomLevel = Math.ceil(visibleWidth / dur);
+      minZoomLevel = visibleWidth / dur;  // ✅ 改成 float，不取整數
     }
   }
 
   function applyZoom() {
-      computeMinZoomLevel();
-      zoomLevel = Math.max(zoomLevel, minZoomLevel);
-  
-      ws.zoom(zoomLevel);
-      const width = duration() * zoomLevel;
-      container.style.width = `${width}px`;
-      wrapperElement.style.width = `${width}px`;
-  
-      applyZoomCallback();
-      updateZoomButtons();
+    computeMinZoomLevel();
+    zoomLevel = Math.max(zoomLevel, minZoomLevel);
+
+    ws.zoom(zoomLevel);
+    const width = duration() * zoomLevel;
+    container.style.width = `${width}px`;
+
+    // ✅ 方案二：同步 wrapper 寬度，解決 scroll bar 問題
+    wrapperElement.style.width = `${width}px`;
+
+    applyZoomCallback();
+    updateZoomButtons();
   }
 
   function updateZoomButtons() {
