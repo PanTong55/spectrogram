@@ -136,6 +136,8 @@
     toggleGridSwitch.addEventListener('change', () => {
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
+
+    let frequencyHoverController = null;
     
     const renderAxes = () => {
       drawTimeAxis({
@@ -218,6 +220,7 @@
       plugin?.render();
       requestAnimationFrame(() => {
         renderAxes();
+        if (frequencyHoverController) frequencyHoverController.setHoverEnabled(true);
       });
     });
 
