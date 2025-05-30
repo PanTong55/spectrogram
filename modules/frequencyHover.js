@@ -91,3 +91,14 @@ export function initFrequencyHover({
     });
   }
 }
+
+let suppressHoverExternal = false;
+
+export function setSuppressHover(value) {
+  suppressHoverExternal = value;
+}
+
+const updateHoverDisplay = (e) => {
+  if (suppressHover || suppressHoverExternal) return;
+  ...
+};
