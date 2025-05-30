@@ -85,12 +85,12 @@ export function replacePlugin(
   try {
     plugin.render();
 
-    // ✅ ✅ ✅ 核心：render() 後用 setTimeout 延遲 2 frame 等待真正 render 完成
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    const waitUntilReady = setInterval(() => {
+      if (plugin.noverlap !== undefined && plugin.noverlap !== null) {
+        clearInterval(waitUntilReady);
         if (typeof onRendered === 'function') onRendered();
-      });
-    });
+      }
+    }, 50);
 
   } catch (err) {
     console.warn('⚠️ Spectrogram render failed:', err);
