@@ -126,9 +126,8 @@
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
-    
-    document.getElementById('spectrogram-settings').textContent = 'Loading spectrogram...';
-    
+    updateSpectrogramSettingsText();
+
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
     freqGrid.style.display = 'none';
@@ -190,7 +189,7 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
-            updateSpectrogramSettingsText();
+            updateSpectrogramSettingsText(); // ✅
           }
         );
       },
@@ -217,21 +216,10 @@
         zoomControl.applyZoom();
       }
     
-      const colorMap = getCurrentColorMap();
-    
-      replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          duration = getWavesurfer().getDuration();
-          zoomControl.applyZoom();
-          renderAxes();
-          updateSpectrogramSettingsText();
-        }
-      );
+      plugin?.render();
+      requestAnimationFrame(() => {
+        renderAxes();
+      });
     });
 
     getWavesurfer().on('decode', () => {
@@ -249,16 +237,16 @@
     const freqMinInput = document.getElementById('freqMinInput');
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
-    
+
     function estimateAutoOverlapPercent() {
       const plugin = getPlugin();
       if (!plugin || typeof plugin.noverlap !== 'number') {
-        console.warn("⚠️ plugin.noverlap 尚未準備好");
+        console.warn("⚠️ plugin.noverlap 不存在");
         return null;
       }
     
-      const fftSamples = 1024;
-      const percent = (plugin.noverlap / fftSamples) * 100;
+      const fftSize = 1024;
+      const percent = (plugin.noverlap / fftSize) * 100;
       return Math.round(percent * 10) / 10;
     }
     
@@ -313,7 +301,7 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText();
+          updateSpectrogramSettingsText(); // ✅ 顯示 Auto (xx.x%) 重點更新
         }
       );
     });
@@ -333,7 +321,7 @@
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          updateSpectrogramSettingsText();
+          updateSpectrogramSettingsText(); // ✅
         }
       );
     }
