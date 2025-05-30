@@ -18,7 +18,8 @@ export function initFrequencyHover({
   const zoomControls = document.getElementById('zoom-controls');
 
   const scrollbarThickness = 2;
-  let suppressHover = false; // 🔧 控制是否暫時停用 hover 顯示
+  let suppressHover = false;
+  let hoverEnabled = true;  // <-- 🔥 新增控制 flag
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -26,78 +27,61 @@ export function initFrequencyHover({
     freqLabel.style.display = 'none';
   };
 
-const updateHoverDisplay = (e) => {
-  if (suppressHover) return;
+  const updateHoverDisplay = (e) => {
+    if (suppressHover || !hoverEnabled) return;
 
-  const rect = viewer.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+    const rect = viewer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-  if (y > (viewer.clientHeight - scrollbarThickness)) {
-    hideAll();
-    return;
-  }
+    if (y > (viewer.clientHeight - scrollbarThickness)) {
+      hideAll();
+      return;
+    }
 
-  // 如果 viewer.scrollLeft 不存在，預設為 0
-  const scrollLeft = viewer.scrollLeft || 0;
+    const scrollLeft = viewer.scrollLeft || 0;
+    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+    const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
 
-  const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-  const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
+    hoverLine.style.top = `${y}px`;
+    hoverLine.style.display = 'block';
 
-  // 顯示橫線
-  hoverLine.style.top = `${y}px`;
-  hoverLine.style.display = 'block';
+    hoverLineV.style.left = `${x}px`;
+    hoverLineV.style.display = 'block';
 
-  // 顯示直線
-  hoverLineV.style.left = `${x}px`;
-  hoverLineV.style.display = 'block';
+    const viewerWidth = viewer.clientWidth;
+    const labelOffset = 12;
+    let labelLeft;
 
-  // 動態決定 freqLabel 的 left/right 顯示
-  const viewerWidth = viewer.clientWidth;
-  const labelOffset = 12;
-  let labelLeft;
+    if ((viewerWidth - x) < 120) {
+      freqLabel.style.transform = 'translate(-100%, -50%)';
+      labelLeft = `${x - labelOffset}px`;
+    } else {
+      freqLabel.style.transform = 'translate(0, -50%)';
+      labelLeft = `${x + labelOffset}px`;
+    }
 
-  if ((viewerWidth - x) < 120) {
-    // 靠近右邊 => 顯示在左邊
-    freqLabel.style.transform = 'translate(-100%, -50%)';
-    labelLeft = `${x - labelOffset}px`;
-  } else {
-    // 正常在右側
-    freqLabel.style.transform = 'translate(0, -50%)';
-    labelLeft = `${x + labelOffset}px`;
-  }
-
-  freqLabel.style.top = `${y}px`;
-  freqLabel.style.left = labelLeft;
-  freqLabel.style.display = 'block';
-  freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
-};
+    freqLabel.style.top = `${y}px`;
+    freqLabel.style.left = labelLeft;
+    freqLabel.style.display = 'block';
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+  };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
+  wrapper.addEventListener('mouseleave', () => hideAll());
+  viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
+  viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
 
-  wrapper.addEventListener('mouseleave', () => {
-    hideAll();
-  });
-  
-  // ✅ 進入 spectrogram canvas 區隱藏Cursor
-  viewer.addEventListener('mouseenter', () => {
-    viewer.classList.add('hide-cursor');
-  });
-  
-  viewer.addEventListener('mouseleave', () => {
-    viewer.classList.remove('hide-cursor');
-  });
-  
-  // ✅ 進入 zoom-control 區時，暫停 hover 顯示
   if (zoomControls) {
-    zoomControls.addEventListener('mouseenter', () => {
-      suppressHover = true;
-      hideAll();
-    });
-
-    // ✅ 離開 zoom-control 時恢復 hover 功能
-    zoomControls.addEventListener('mouseleave', () => {
-      suppressHover = false;
-    });
+    zoomControls.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+    zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
   }
+
+  // 🔧 提供外部控制API
+  return {
+    setHoverEnabled: (enabled) => {
+      hoverEnabled = enabled;
+      if (!enabled) hideAll();
+    }
+  };
 }
