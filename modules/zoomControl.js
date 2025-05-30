@@ -1,6 +1,6 @@
 // zoomControl.js (優化版，含修正)
 
-export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement) {
+export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement, viewerContainer) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
   const expandBtn = document.getElementById('expand-btn');
@@ -24,8 +24,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     ws.zoom(zoomLevel);
     const width = duration() * zoomLevel;
     container.style.width = `${width}px`;
-
-    // ✅ 方案二：同步 wrapper 寬度，解決 scroll bar 問題
+    viewerContainer.style.width = `${width}px`;
     wrapperElement.style.width = `${width}px`;
 
     applyZoomCallback();
@@ -62,10 +61,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     computeMinZoomLevel();
     if (isExpandMode) {
       zoomLevel = minZoomLevel;
-      wrapperElement.style.overflowX = 'hidden';  // ✅ Expand mode 禁用 scroll bar
     } else {
       zoomLevel = Math.max(minZoomLevel, 500);
-      wrapperElement.style.overflowX = 'auto';    // ✅ 普通 mode 允許 scroll bar
     }
     applyZoom();
     updateZoomButtons();
@@ -85,7 +82,6 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
       computeMinZoomLevel();
       if (isExpandMode) {
         zoomLevel = minZoomLevel;
-        wrapperElement.style.overflowX = 'hidden';
         applyZoom();
       }
     }
