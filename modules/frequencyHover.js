@@ -31,45 +31,56 @@ export function initFrequencyHover({
     hoverLineV.style.display = 'none';
     freqLabel.style.display = 'none';
   };
-
+  
+  let pendingAnimationFrame = null;
+  
   const updateHoverDisplay = (e) => {
     if (suppressHover || suppressHoverExternal) return;
-
-    const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (y > (viewer.clientHeight - scrollbarThickness)) {
-      hideAll();
-      return;
+  
+    // 只保留最新一個 frame，避免大量 mousemove 累積
+    if (pendingAnimationFrame) {
+      cancelAnimationFrame(pendingAnimationFrame);
     }
-
-    const scrollLeft = viewer.scrollLeft || 0;
-    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
-
-    hoverLine.style.top = `${y}px`;
-    hoverLine.style.display = 'block';
-
-    hoverLineV.style.left = `${x}px`;
-    hoverLineV.style.display = 'block';
-
-    const viewerWidth = viewer.clientWidth;
-    const labelOffset = 12;
-    let labelLeft;
-
-    if ((viewerWidth - x) < 120) {
-      freqLabel.style.transform = 'translate(-100%, -50%)';
-      labelLeft = `${x - labelOffset}px`;
-    } else {
-      freqLabel.style.transform = 'translate(0, -50%)';
-      labelLeft = `${x + labelOffset}px`;
-    }
-
-    freqLabel.style.top = `${y}px`;
-    freqLabel.style.left = labelLeft;
-    freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+  
+    pendingAnimationFrame = requestAnimationFrame(() => {
+      const rect = viewer.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+  
+      if (y > (viewer.clientHeight - scrollbarThickness)) {
+        hideAll();
+        return;
+      }
+  
+      const scrollLeft = viewer.scrollLeft || 0;
+      const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+      const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
+  
+      hoverLine.style.top = `${y}px`;
+      hoverLine.style.display = 'block';
+  
+      hoverLineV.style.left = `${x}px`;
+      hoverLineV.style.display = 'block';
+  
+      const viewerWidth = viewer.clientWidth;
+      const labelOffset = 12;
+      let labelLeft;
+  
+      if ((viewerWidth - x) < 120) {
+        freqLabel.style.transform = 'translate(-100%, -50%)';
+        labelLeft = `${x - labelOffset}px`;
+      } else {
+        freqLabel.style.transform = 'translate(0, -50%)';
+        labelLeft = `${x + labelOffset}px`;
+      }
+  
+      freqLabel.style.top = `${y}px`;
+      freqLabel.style.left = labelLeft;
+      freqLabel.style.display = 'block';
+      freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+  
+      pendingAnimationFrame = null;  // 清掉 flag
+    });
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
