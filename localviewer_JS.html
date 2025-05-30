@@ -172,29 +172,6 @@
     const wrapper = document.getElementById('viewer-wrapper');
     const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
     
-    initBrightnessControl({
-      brightnessSliderId: 'brightnessSlider',
-      gainSliderId: 'gainSlider',
-      brightnessValId: 'brightnessVal',
-      gainValId: 'gainVal',
-      resetBtnId: 'resetButton',
-      onColorMapUpdated: (colorMap) => {
-        replacePlugin(
-          colorMap,
-          spectrogramHeight,
-          currentFreqMin,
-          currentFreqMax,
-          getOverlapPercent(),
-          () => {
-            duration = getWavesurfer().getDuration();
-            zoomControl.applyZoom();
-            renderAxes();
-            updateSpectrogramSettingsText(); // ✅
-          }
-        );
-      },
-    });
-
     initFileLoader({
       fileInputId: 'fileInput',
       wavesurfer: getWavesurfer(),
@@ -226,6 +203,29 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
+    });
+
+    initBrightnessControl({
+      brightnessSliderId: 'brightnessSlider',
+      gainSliderId: 'gainSlider',
+      brightnessValId: 'brightnessVal',
+      gainValId: 'gainVal',
+      resetBtnId: 'resetButton',
+      onColorMapUpdated: (colorMap) => {
+        replacePlugin(
+          colorMap,
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent(),
+          () => {
+            duration = getWavesurfer().getDuration();
+            zoomControl.applyZoom();
+            renderAxes();
+            updateSpectrogramSettingsText(); // ✅
+          }
+        );
+      },
     });
 
     document.body.addEventListener('touchstart', () => {
