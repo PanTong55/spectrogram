@@ -19,7 +19,7 @@ export function initFrequencyHover({
 
   const scrollbarThickness = 2;
   let suppressHover = false;
-  let hoverEnabled = true;  // <-- 🔥 新增控制 flag
+  let active = false;  // <== 新增 flag 控制是否啟動 listener
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -28,7 +28,7 @@ export function initFrequencyHover({
   };
 
   const updateHoverDisplay = (e) => {
-    if (suppressHover || !hoverEnabled) return;
+    if (suppressHover || !active) return;
 
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -45,7 +45,6 @@ export function initFrequencyHover({
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
-
     hoverLineV.style.left = `${x}px`;
     hoverLineV.style.display = 'block';
 
@@ -67,8 +66,10 @@ export function initFrequencyHover({
     freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
   };
 
-  viewer.addEventListener('mousemove', updateHoverDisplay);
-  wrapper.addEventListener('mouseleave', () => hideAll());
+  const mouseMoveListener = (e) => updateHoverDisplay(e);
+  const mouseLeaveListener = () => hideAll();
+
+  // 一開始先不加任何 listener
   viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
   viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
 
@@ -77,11 +78,19 @@ export function initFrequencyHover({
     zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
   }
 
-  // 🔧 提供外部控制API
   return {
-    setHoverEnabled: (enabled) => {
-      hoverEnabled = enabled;
-      if (!enabled) hideAll();
+    activate() {
+      if (active) return;
+      viewer.addEventListener('mousemove', mouseMoveListener);
+      wrapper.addEventListener('mouseleave', mouseLeaveListener);
+      active = true;
+    },
+    deactivate() {
+      if (!active) return;
+      viewer.removeEventListener('mousemove', mouseMoveListener);
+      wrapper.removeEventListener('mouseleave', mouseLeaveListener);
+      hideAll();
+      active = false;
     }
   };
 }
