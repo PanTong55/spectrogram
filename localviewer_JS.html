@@ -157,7 +157,7 @@
         offsetKHz: currentFreqMin,
       });
     
-      frequencyHoverController = initFrequencyHover({
+      const controller = initFrequencyHover({
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
         hoverLineId: 'hover-line',
@@ -170,7 +170,8 @@
         totalDuration: duration * 1000,
       });
     
-      frequencyHoverController.deactivate(); // <== 預設關閉
+      controller.deactivate();
+      return controller;
     };
 
     const wrapper = document.getElementById('viewer-wrapper');
@@ -212,8 +213,6 @@
     });
 
     getWavesurfer().on('ready', () => {
-      if (frequencyHoverController) frequencyHoverController.deactivate();
-    
       duration = getWavesurfer().getDuration();
       if (zoomControl.isExpandMode()) {
         zoomControl.forceExpandMode();
@@ -224,9 +223,8 @@
       plugin?.render();
     
       requestAnimationFrame(() => {
-        renderAxes();
-    
-        if (frequencyHoverController) frequencyHoverController.activate();
+        frequencyHoverController = renderAxes();
+        frequencyHoverController.activate();
       });
     });
 
