@@ -53,26 +53,32 @@ export function createSpectrogramPlugin({
 // ✅ 方案1: 通过反射获取插件内部属性
 function extractActualNoverlap(plugin) {
   try {
-    // 尝试多种可能的属性路径
-    const possiblePaths = [
-      'noverlap',
-      'options.noverlap', 
-      '_noverlap',
-      'params.noverlap',
-      'config.noverlap'
-    ];
-    
-    for (const path of possiblePaths) {
-      const value = getNestedProperty(plugin, path);
-      if (typeof value === 'number') {
-        console.log(`✅ 找到 noverlap 在: ${path} = ${value}`);
-        return value;
-      }
+    if (!plugin) {
+      console.warn('⚠️ plugin 不存在');
+      return null;
     }
     
-    // 尝试检查所有可枚举属性
-    console.log('🔍 插件的所有属性:', Object.keys(plugin));
-    console.log('🔍 插件原型属性:', Object.getOwnPropertyNames(Object.getPrototypeOf(plugin)));
+    // 直接访问 noverlap 属性（从你的输出可以看到它确实存在）
+    if (typeof plugin.noverlap === 'number') {
+      console.log(`✅ 找到 noverlap: ${plugin.noverlap}`);
+      return plugin.noverlap;
+    }
+    
+    // 如果 noverlap 存在但不是数字，打印其值和类型
+    if ('noverlap' in plugin) {
+      console.log(`🔍 noverlap 存在但类型为: ${typeof plugin.noverlap}, 值: ${plugin.noverlap}`);
+    }
+    
+    // 调试信息（只在第一次运行时显示）
+    if (!extractActualNoverlap._debugShown) {
+      console.log('🔍 插件的所有属性:', Object.keys(plugin));
+      console.log('🔍 noverlap 属性详情:', {
+        value: plugin.noverlap,
+        type: typeof plugin.noverlap,
+        exists: 'noverlap' in plugin
+      });
+      extractActualNoverlap._debugShown = true;
+    }
     
     return null;
   } catch (error) {
@@ -113,10 +119,10 @@ function estimateOverlapFromCanvas(plugin) {
   }
 }
 
-// ✅ 方案3: 创建测试插件来获取默认值（推荐）
+// ✅ 方案3: 创建测试插件来获取默认值（修复 colorMap 错误）
 async function getDefaultNoverlap() {
   try {
-    // 创建一个临时的 spectrogram 插件来获取默认配置
+    // 创建一个临时的 spectrogram 插件，使用有效的 colorMap
     const tempOptions = {
       labels: false,
       height: 100,
@@ -125,20 +131,21 @@ async function getDefaultNoverlap() {
       frequencyMax: 128000,
       scale: 'linear',
       windowFunc: 'hann',
-      colorMap: [],
+      colorMap: new Array(256).fill([0, 0, 0, 1]), // ✅ 创建有效的 256 色彩映射
     };
     
     const tempPlugin = Spectrogram.create(tempOptions);
     
-    // 尝试访问内部属性
-    const noverlap = extractActualNoverlap(tempPlugin);
+    // 获取默认的 noverlap 值
+    const noverlap = tempPlugin.noverlap;
+    console.log(`🔍 临时插件的 noverlap: ${noverlap} (类型: ${typeof noverlap})`);
     
     // 清理临时插件
     if (tempPlugin?.destroy) {
       tempPlugin.destroy();
     }
     
-    return noverlap;
+    return typeof noverlap === 'number' ? noverlap : null;
   } catch (error) {
     console.warn('⚠️ 获取默认 noverlap 失败:', error);
     return null;
@@ -187,25 +194,24 @@ export function replacePlugin(
     
     // ✅ 渲染完成后尝试获取实际的 noverlap 值
     requestAnimationFrame(async () => {
+      let detectedNoverlap = null;
+      
       if (overlapPercent === null) {
-        // 当设置为 Auto 时，尝试获取实际值
-        let detectedNoverlap = extractActualNoverlap(plugin);
+        // 当设置为 Auto 时，直接从插件获取 noverlap 值
+        detectedNoverlap = extractActualNoverlap(plugin);
         
         if (detectedNoverlap === null) {
-          // 如果直接获取失败，尝试获取默认值
+          // 如果主插件获取失败，尝试创建测试插件获取默认值
           detectedNoverlap = await getDefaultNoverlap();
+          console.log(`🔍 从测试插件获取的默认值: ${detectedNoverlap}`);
         }
-        
-        if (detectedNoverlap === null) {
-          // 最后尝试 Canvas 分析
-          detectedNoverlap = estimateOverlapFromCanvas(plugin);
-        }
-        
-        actualNoverlap = detectedNoverlap;
-        console.log(`🎯 检测到的 noverlap: ${actualNoverlap}`);
       } else {
-        actualNoverlap = noverlap;
+        // 用户设置了具体的 overlap 百分比
+        detectedNoverlap = noverlap;
       }
+      
+      actualNoverlap = detectedNoverlap;
+      console.log(`🎯 最终检测到的 noverlap: ${actualNoverlap}`);
       
       if (typeof onRendered === 'function') onRendered();
     });
