@@ -85,9 +85,9 @@ export function replacePlugin(
   try {
     plugin.render();
     
-    const canvas = container.querySelector("canvas");
-    
     const waitUntilCanvasReady = setInterval(() => {
+      const canvas = container.querySelector("canvas");  // ⭐ 每次重新 query canvas
+    
       if (canvas && canvas.width > 0) {
         clearInterval(waitUntilCanvasReady);
         if (typeof onRendered === 'function') onRendered();
