@@ -126,7 +126,9 @@
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
       sampleRate: 256000,
     });
-
+    
+    document.getElementById('spectrogram-settings').textContent = 'Loading spectrogram...';
+    
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
     freqGrid.style.display = 'none';
