@@ -13,20 +13,21 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     const visibleWidth = wrapperElement.clientWidth;
     const dur = duration();
     if (dur > 0) {
-      minZoomLevel = visibleWidth / dur;
+      minZoomLevel = Math.ceil(visibleWidth / dur);
     }
   }
 
   function applyZoom() {
-    computeMinZoomLevel();
-    zoomLevel = Math.max(zoomLevel, minZoomLevel);
-
-    ws.zoom(zoomLevel);
-    const width = duration() * zoomLevel;
-    container.style.width = `${width}px`;
-
-    applyZoomCallback();
-    updateZoomButtons();
+      computeMinZoomLevel();
+      zoomLevel = Math.max(zoomLevel, minZoomLevel);
+  
+      ws.zoom(zoomLevel);
+      const width = duration() * zoomLevel;
+      container.style.width = `${width}px`;
+      wrapperElement.style.width = `${width}px`;
+  
+      applyZoomCallback();
+      updateZoomButtons();
   }
 
   function updateZoomButtons() {
