@@ -62,8 +62,10 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     computeMinZoomLevel();
     if (isExpandMode) {
       zoomLevel = minZoomLevel;
+      wrapperElement.style.overflowX = 'hidden';  // ✅ Expand mode 禁用 scroll bar
     } else {
       zoomLevel = Math.max(minZoomLevel, 500);
+      wrapperElement.style.overflowX = 'auto';    // ✅ 普通 mode 允許 scroll bar
     }
     applyZoom();
     updateZoomButtons();
@@ -83,6 +85,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
       computeMinZoomLevel();
       if (isExpandMode) {
         zoomLevel = minZoomLevel;
+        wrapperElement.style.overflowX = 'hidden';
         applyZoom();
       }
     }
