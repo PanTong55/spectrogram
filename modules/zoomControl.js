@@ -10,10 +10,10 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   let isExpandMode = false;
 
   function computeMinZoomLevel() {
-    const visibleWidth = wrapperElement.clientWidth;
+    let visibleWidth = wrapperElement.clientWidth;
     const dur = duration();
     if (dur > 0) {
-      minZoomLevel = visibleWidth / dur;  // ✅ 改成 float，不取整數
+      minZoomLevel = Math.floor((visibleWidth - 1) / dur);
     }
   }
 
