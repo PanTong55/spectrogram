@@ -81,7 +81,7 @@ export function initDragDropLoader({
 
   dropArea.addEventListener('dragover', e => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'none';
+    e.dataTransfer.dropEffect = 'move';
     showOverlay();
   });
 
