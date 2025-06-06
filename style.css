@@ -23,13 +23,12 @@ body {
   white-space: nowrap;
   box-sizing: border-box;
   position: relative;
+  border: 1px solid black;
 }
 #spectrogram-only {
   position: relative;
   display: inline-block;
   min-width: 100%;
-  border: 1px solid black;
-  box-sizing: border-box;
 }
 .viewer-row {
   display: flex;
