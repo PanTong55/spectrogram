@@ -99,7 +99,7 @@ export function drawFrequencyGrid({
     label.className = 'freq-label-static';
     label.style.top = `${y}px`;
     label.style.transform = 'translateY(-50%)';
-    label.textContent = `${f + offsetKHz}kHz`;
+    label.textContent = `${f + offsetKHz}`;
     labelContainer.appendChild(label);
   }
 }
