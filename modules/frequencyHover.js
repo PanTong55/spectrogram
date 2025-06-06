@@ -103,7 +103,7 @@ export function initFrequencyHover({
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
   
     // 判斷是否已有同位置頻率線
-    const threshold = 0.5;  // 0.5 kHz 誤差範圍
+    const threshold = 1;  // 1 kHz 誤差範圍
     const existingIndex = persistentLines.findIndex(line =>
       Math.abs(line.freq - freq) < threshold
     );
