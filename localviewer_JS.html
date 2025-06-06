@@ -112,6 +112,7 @@
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
+    let freqHoverControl = null;
     const getDuration = () => duration;
 
     const guanoOutput = document.getElementById('guano-output');
@@ -155,7 +156,7 @@
         offsetKHz: currentFreqMin,
       });
 
-      initFrequencyHover({
+      freqHoverControl = initFrequencyHover({
         viewerId: 'viewer-container',
         wrapperId: 'viewer-wrapper',
         hoverLineId: 'hover-line',
@@ -301,6 +302,10 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
+      
+      if (freqHoverControl) {
+        freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+      }
     }
   </script>
 </body>
