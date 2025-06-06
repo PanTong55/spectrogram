@@ -28,6 +28,8 @@ body {
   position: relative;
   display: inline-block;
   min-width: 100%;
+  border: 1px solid black;
+  box-sizing: border-box;
 }
 .viewer-row {
   display: flex;
