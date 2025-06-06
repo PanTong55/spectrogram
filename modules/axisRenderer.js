@@ -98,7 +98,7 @@ export function drawFrequencyGrid({
     const label = document.createElement('div');
     label.className = 'freq-label-static';
     label.style.position = 'absolute';
-    label.style.left = '50px';  // <-- 比刻度線右移 10px，拉大距離
+    label.style.right = '8px';  // <-- 比刻度線右移 10px，拉大距離
     label.style.top = `${y - 1}px`;  // <-- 向上移動 1px
     label.style.transform = 'translateY(-50%)';
     label.textContent = `${f + offsetKHz}kHz`;
