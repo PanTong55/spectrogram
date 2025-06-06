@@ -10,6 +10,8 @@ export function drawTimeAxis({
   const pxPerSec = zoomLevel;
   const totalWidth = duration * pxPerSec;
 
+  const offsetX = 45; // ✅ 預留 freq label 寬度
+
   let step = 1000;
   if (pxPerSec >= 800) step = 100;
   else if (pxPerSec >= 500) step = 200;
