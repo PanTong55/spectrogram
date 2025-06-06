@@ -15,6 +15,7 @@ export function initFrequencyHover({
   const hoverLine = document.getElementById(hoverLineId);
   const hoverLineV = document.getElementById(hoverLineVId);
   const freqLabel = document.getElementById(freqLabelId);
+  const fixedOverlay = document.getElementById('fixed-overlay');
   const zoomControls = document.getElementById('zoom-controls');
 
   const scrollbarThickness = 2;
@@ -100,7 +101,7 @@ export function initFrequencyHover({
     const y = e.clientY - rect.top;
 
     // 檢查是否點在已存在的線附近 (誤差 3px)
-    const threshold = 3;
+    const threshold = 5;
     const existingIndex = persistentLines.findIndex(line =>
       Math.abs(line.y - y) < threshold
     );
@@ -120,8 +121,8 @@ export function initFrequencyHover({
       line.style.width = '100%';
       line.style.height = '1px';
       line.style.background = 'red';
-      line.style.zIndex = '5';
-      viewer.appendChild(line);
+      line.style.zIndex = '15';
+      fixedOverlay.appendChild(line);
 
       persistentLines.push({ y, div: line });
     }
