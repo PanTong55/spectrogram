@@ -19,6 +19,22 @@
   <div class="viewer-row">
     <div id="freq-labels"></div>
     <div id="viewer-wrapper" style="position: relative;">
+      <div id="drop-overlay" style="
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(255, 255, 255, 0.5);
+        border: 3px dashed #999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        pointer-events: none;
+      ">
+        <div style="text-align: center; font-family: 'Noto Sans HK', sans-serif; font-size: 24px; color: #333;">
+          <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
+          <div>Drop WAV file(s) here</div>
+        </div>
+      </div>      
       <div id="viewer-container">
         <div id="spectrogram-only" style="height: 800px;"></div>
         <canvas id="freq-grid"></canvas>
@@ -100,6 +116,7 @@
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
+    import { initDragDropLoader } from './modules/dragDropLoader.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -206,6 +223,14 @@
       colorMap: [],
       onPluginReplaced: () => {},
     });
+
+    initDragDropLoader({
+      targetElementId: 'viewer-wrapper',
+      wavesurfer: getWavesurfer(),
+      spectrogramHeight,
+      colorMap: [],
+      onPluginReplaced: () => {},
+    });    
 
     initScrollSync({
       scrollSourceId: 'viewer-container',
