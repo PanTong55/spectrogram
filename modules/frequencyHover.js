@@ -131,4 +131,20 @@ export function initFrequencyHover({
       persistentLines.push({ freq, div: line });
     }
   });
+
+  function updatePersistentLines() {
+    persistentLines.forEach(line => {
+      const yPos = (1 - (line.freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
+      line.div.style.top = `${yPos}px`;
+    });
+  }
+
+  return {
+    updatePersistentLines,
+    setFrequencyRange: (min, max) => {
+      minFrequency = min;
+      maxFrequency = max;
+      updatePersistentLines();
+    }
+  };  
 }
