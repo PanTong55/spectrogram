@@ -93,38 +93,42 @@ export function initFrequencyHover({
     });
   }
 
-  // ✅ 阻止預設右鍵選單
   viewer.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-
-    const rect = viewer.getBoundingClientRect();
+  
+    const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
-
-    // 檢查是否點在已存在的線附近 (誤差 3px)
-    const threshold = 5;
+  
+    // 反算出 frequency
+    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+  
+    // 判斷是否已有同位置頻率線
+    const threshold = 0.5;  // 0.5 kHz 誤差範圍
     const existingIndex = persistentLines.findIndex(line =>
-      Math.abs(line.y - y) < threshold
+      Math.abs(line.freq - freq) < threshold
     );
-
+  
     if (existingIndex !== -1) {
-      // 刪除該橫線
-      viewer.removeChild(persistentLines[existingIndex].div);
+      // 刪除該線
+      fixedOverlay.removeChild(persistentLines[existingIndex].div);
       persistentLines.splice(existingIndex, 1);
     } else {
-      // 新增橫線 (最多允許5條)
       if (persistentLines.length >= 5) return;
-
+  
+      // 正向計算應該插入的 y 位置 (頻率轉換公式)
+      const yPos = (1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
+  
       const line = document.createElement('div');
       line.style.position = 'absolute';
-      line.style.top = `${y}px`;
+      line.style.top = `${yPos}px`;
       line.style.left = '0';
       line.style.width = '100%';
       line.style.height = '1px';
       line.style.background = 'red';
       line.style.zIndex = '15';
       fixedOverlay.appendChild(line);
-
-      persistentLines.push({ y, div: line });
+  
+      persistentLines.push({ freq, div: line });
     }
   });
 }
