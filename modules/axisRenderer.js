@@ -23,10 +23,10 @@ export function drawTimeAxis({
     html.push(`
       <div style="
         position: absolute;
-        top: 0;
+        top: -1px;
         left: ${left}px;
         width: 1px;
-        height: 8px;
+        height: 5px;
         background: black;
         opacity: 0.7;
       "></div>
@@ -37,7 +37,7 @@ export function drawTimeAxis({
     html.push(`
       <span style="
         position: absolute;
-        top: 10px;
+        top: 1px;
         left: ${left}px;
         transform: translateX(-50%);
         font-size: 12px;
