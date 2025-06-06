@@ -93,3 +93,17 @@ export function initFileLoader({
     }
   });
 }
+
+export function setFileList(list, index = 0) {
+  fileList = list;
+  currentIndex = index;
+}
+
+export function getFileList() {
+  return fileList;
+}
+
+export function getCurrentIndex() {
+  return currentIndex;
+}
+
