@@ -19,25 +19,25 @@ export function drawTimeAxis({
   for (let t = 0; t < duration * 1000; t += step) {
     const left = (t / 1000) * pxPerSec;
 
-    // 刻度線 (細細的直線)
+    // 短刻度線
     html.push(`
       <div style="
         position: absolute;
         top: 0;
-        bottom: 0;
         left: ${left}px;
         width: 1px;
+        height: 8px;
         background: black;
         opacity: 0.7;
       "></div>
     `);
 
-    // 時間文字，置中於刻度線
+    // 置中數字
     const label = step >= 1000 ? `${(t / 1000)}s` : `${t}`;
     html.push(`
       <span style="
         position: absolute;
-        top: 2px;
+        top: 10px;
         left: ${left}px;
         transform: translateX(-50%);
         font-size: 12px;
