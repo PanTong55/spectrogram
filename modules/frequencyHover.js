@@ -18,7 +18,8 @@ export function initFrequencyHover({
   const zoomControls = document.getElementById('zoom-controls');
 
   const scrollbarThickness = 2;
-  let suppressHover = false; // 🔧 控制是否暫時停用 hover 顯示
+  let suppressHover = false;
+  const persistentLines = [];  // 儲存所有固定橫線
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -26,67 +27,60 @@ export function initFrequencyHover({
     freqLabel.style.display = 'none';
   };
 
-const updateHoverDisplay = (e) => {
-  if (suppressHover) return;
+  const updateHoverDisplay = (e) => {
+    if (suppressHover) return;
 
-  const rect = viewer.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+    const rect = viewer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
-  if (y > (viewer.clientHeight - scrollbarThickness)) {
-    hideAll();
-    return;
-  }
+    if (y > (viewer.clientHeight - scrollbarThickness)) {
+      hideAll();
+      return;
+    }
 
-  // 如果 viewer.scrollLeft 不存在，預設為 0
-  const scrollLeft = viewer.scrollLeft || 0;
+    const scrollLeft = viewer.scrollLeft || 0;
+    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+    const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
 
-  const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-  const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
+    hoverLine.style.top = `${y}px`;
+    hoverLine.style.display = 'block';
 
-  // 顯示橫線
-  hoverLine.style.top = `${y}px`;
-  hoverLine.style.display = 'block';
+    hoverLineV.style.left = `${x}px`;
+    hoverLineV.style.display = 'block';
 
-  // 顯示直線
-  hoverLineV.style.left = `${x}px`;
-  hoverLineV.style.display = 'block';
+    const viewerWidth = viewer.clientWidth;
+    const labelOffset = 12;
+    let labelLeft;
 
-  // 動態決定 freqLabel 的 left/right 顯示
-  const viewerWidth = viewer.clientWidth;
-  const labelOffset = 12;
-  let labelLeft;
+    if ((viewerWidth - x) < 120) {
+      freqLabel.style.transform = 'translate(-100%, -50%)';
+      labelLeft = `${x - labelOffset}px`;
+    } else {
+      freqLabel.style.transform = 'translate(0, -50%)';
+      labelLeft = `${x + labelOffset}px`;
+    }
 
-  if ((viewerWidth - x) < 120) {
-    // 靠近右邊 => 顯示在左邊
-    freqLabel.style.transform = 'translate(-100%, -50%)';
-    labelLeft = `${x - labelOffset}px`;
-  } else {
-    // 正常在右側
-    freqLabel.style.transform = 'translate(0, -50%)';
-    labelLeft = `${x + labelOffset}px`;
-  }
-
-  freqLabel.style.top = `${y}px`;
-  freqLabel.style.left = labelLeft;
-  freqLabel.style.display = 'block';
-  freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
-};
+    freqLabel.style.top = `${y}px`;
+    freqLabel.style.left = labelLeft;
+    freqLabel.style.display = 'block';
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+  };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
 
   wrapper.addEventListener('mouseleave', () => {
     hideAll();
   });
-  
+
   viewer.addEventListener('mouseenter', () => {
     viewer.classList.add('hide-cursor');
   });
-  
+
   viewer.addEventListener('mouseleave', () => {
     viewer.classList.remove('hide-cursor');
   });
-  
+
   if (zoomControls) {
     zoomControls.addEventListener('mouseenter', () => {
       suppressHover = true;
@@ -97,4 +91,39 @@ const updateHoverDisplay = (e) => {
       suppressHover = false;
     });
   }
+
+  // ✅ 阻止預設右鍵選單
+  viewer.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+
+    const rect = viewer.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+
+    // 檢查是否點在已存在的線附近 (誤差 3px)
+    const threshold = 3;
+    const existingIndex = persistentLines.findIndex(line =>
+      Math.abs(line.y - y) < threshold
+    );
+
+    if (existingIndex !== -1) {
+      // 刪除該橫線
+      viewer.removeChild(persistentLines[existingIndex].div);
+      persistentLines.splice(existingIndex, 1);
+    } else {
+      // 新增橫線 (最多允許5條)
+      if (persistentLines.length >= 5) return;
+
+      const line = document.createElement('div');
+      line.style.position = 'absolute';
+      line.style.top = `${y}px`;
+      line.style.left = '0';
+      line.style.width = '100%';
+      line.style.height = '1px';
+      line.style.background = 'red';
+      line.style.zIndex = '5';
+      viewer.appendChild(line);
+
+      persistentLines.push({ y, div: line });
+    }
+  });
 }
