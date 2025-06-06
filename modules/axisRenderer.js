@@ -82,22 +82,24 @@ export function drawFrequencyGrid({
   labelContainer.innerHTML = '';
   for (let f = 0; f <= range; f += step) {
     const y = (1 - f / range) * spectrogramHeight;
-
-    // ✅ 刻度線（黑色小短線）
+  
+    // ✅ 刻度線（5px寬, 向左緊貼）
     const tick = document.createElement('div');
     tick.style.position = 'absolute';
-    tick.style.left = '40px';  // 緊貼 freq-label 靠右
+    tick.style.left = '40px'; // 刻度線仍在這裡 (你可微調)
     tick.style.top = `${y}px`;
     tick.style.transform = 'translateY(-50%)';
     tick.style.width = '5px';
     tick.style.height = '1px';
     tick.style.background = 'black';
     labelContainer.appendChild(tick);
-
-    // ✅ 數字標籤（垂直置中）
+  
+    // ✅ 數字標籤（文字與刻度線加闊間距 + 向上移1px）
     const label = document.createElement('div');
     label.className = 'freq-label-static';
-    label.style.top = `${y}px`;
+    label.style.position = 'absolute';
+    label.style.left = '50px';  // <-- 比刻度線右移 10px，拉大距離
+    label.style.top = `${y - 1}px`;  // <-- 向上移動 1px
     label.style.transform = 'translateY(-50%)';
     label.textContent = `${f + offsetKHz}kHz`;
     labelContainer.appendChild(label);
