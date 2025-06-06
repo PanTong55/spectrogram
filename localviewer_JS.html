@@ -156,18 +156,22 @@
         offsetKHz: currentFreqMin,
       });
 
-      freqHoverControl = initFrequencyHover({
-        viewerId: 'viewer-container',
-        wrapperId: 'viewer-wrapper',
-        hoverLineId: 'hover-line',
-        hoverLineVId: 'hover-line-vertical',
-        freqLabelId: 'hover-label',
-        spectrogramHeight,
-        spectrogramWidth: container.scrollWidth,
-        maxFrequency: currentFreqMax,
-        minFrequency: currentFreqMin,
-        totalDuration: duration * 1000,
-      });
+      if (!freqHoverControl) {
+        freqHoverControl = initFrequencyHover({
+          viewerId: 'viewer-container',
+          wrapperId: 'viewer-wrapper',
+          hoverLineId: 'hover-line',
+          hoverLineVId: 'hover-line-vertical',
+          freqLabelId: 'hover-label',
+          spectrogramHeight,
+          spectrogramWidth: container.scrollWidth,
+          maxFrequency: currentFreqMax,
+          minFrequency: currentFreqMin,
+          totalDuration: duration * 1000,
+        });
+      } else {
+        freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+      }
     };
 
     const wrapper = document.getElementById('viewer-wrapper');
