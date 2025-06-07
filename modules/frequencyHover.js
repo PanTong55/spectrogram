@@ -105,7 +105,7 @@ export function initFrequencyHover({
     selectionRect = document.createElement('div');
     selectionRect.style.position = 'absolute';
     selectionRect.style.border = '1px solid black';
-    selectionRect.style.backgroundColor = 'rgba(0,0,0,0.1)';
+    selectionRect.style.backgroundColor = 'rgba(0,0,0,0.05)';
     selectionRect.style.zIndex = '20';
     viewer.appendChild(selectionRect);
   });
