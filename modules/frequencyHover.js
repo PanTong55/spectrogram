@@ -205,8 +205,6 @@ export function initFrequencyHover({
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Bandwidth = Fhigh - Flow;
-    const startTime = (left / spectrogramWidth) * totalDuration;
-    const endTime = ((left + width) / spectrogramWidth) * totalDuration;
     const actualWidth = getDuration() * getZoomLevel();
     const startTime = (left / actualWidth) * totalDuration;
     const endTime = ((left + width) / actualWidth) * totalDuration;
