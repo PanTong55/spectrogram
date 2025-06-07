@@ -10,7 +10,8 @@ export function initFrequencyHover({
   minFrequency = 0,
   totalDuration = 1000,
   getZoomLevel,
-  getDuration
+  getDuration,
+  plugin
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -147,6 +148,7 @@ export function initFrequencyHover({
     const startTime = (left / actualWidth) * getDuration();
     const endTime = ((left + width) / actualWidth) * getDuration();
     const Duration = endTime - startTime;
+    const Fmax = calculateFmax(plugin, startTime, endTime, Flow, Fhigh);
     createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
     selectionRect = null;
     suppressHover = false;
@@ -180,7 +182,35 @@ export function initFrequencyHover({
     }
   });
 
-  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
+  function calculateFmax(plugin, startTime, endTime, Flow, Fhigh) {
+    if (!plugin || !plugin.data) return null;
+
+    const data = plugin.data;
+    const totalTimeBins = data.length;
+    const totalFreqBins = data[0]?.length || 512;
+
+    const timeStart = Math.max(0, Math.floor(startTime / getDuration() * totalTimeBins));
+    const timeEnd = Math.min(totalTimeBins - 1, Math.ceil(endTime / getDuration() * totalTimeBins));
+    const freqStart = Math.max(0, Math.floor((Flow - minFrequency) / (maxFrequency - minFrequency) * totalFreqBins));
+    const freqEnd = Math.min(totalFreqBins - 1, Math.ceil((Fhigh - minFrequency) / (maxFrequency - minFrequency) * totalFreqBins));
+
+    let maxDb = -Infinity;
+    let maxFreqBin = freqStart;
+
+    for (let t = timeStart; t <= timeEnd; t++) {
+      for (let f = freqStart; f <= freqEnd; f++) {
+        if (data[t][f] > maxDb) {
+          maxDb = data[t][f];
+          maxFreqBin = f;
+        }
+      }
+    }
+
+    const freqRange = maxFrequency - minFrequency;
+    return minFrequency + (maxFreqBin / totalFreqBins) * freqRange;
+  }  
+
+  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime, Fmax) {
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip';
     tooltip.style.position = 'absolute';
@@ -199,15 +229,15 @@ export function initFrequencyHover({
       <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
       <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
       <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
+      <div><b>F.max:</b> <span class="fmax">${Fmax ? Fmax.toFixed(1) : '-'}</span> kHz</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
     viewer.appendChild(tooltip);
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip };
+    const selObj = { data: { startTime, endTime, Flow, Fhigh, Fmax }, rect: rectObj, tooltip };
     selections.push(selObj);
     enableDrag(tooltip);
-    enableResize(selObj);
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
       const index = selections.findIndex(sel => sel.tooltip === tooltip);
       if (index !== -1) {
