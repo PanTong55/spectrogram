@@ -23,6 +23,7 @@ export function initFrequencyHover({
   const persistentLines = [];
   const selections = [];
   const scrollbarThickness = 2;
+  const edgeThreshold = 5;
   
   let suppressHover = false;
   let isOverTooltip = false;
@@ -135,7 +136,89 @@ export function initFrequencyHover({
       sel.rect.style.top = `${top}px`;
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
+
+      updateTooltipValues(sel, left, top, width, height);
     });
+  }
+
+  function updateTooltipValues(sel, left, top, width, height) {
+    const { data, tooltip } = sel;
+    const Flow = data.Flow;
+    const Fhigh = data.Fhigh;
+    const Bandwidth = Fhigh - Flow;
+    const Duration = (data.endTime - data.startTime);
+    tooltip.innerHTML = `
+      <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
+      <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
+      <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
+      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
+      <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
+    `;
+  }
+
+  function enableResize(sel) {
+    const rect = sel.rect;
+    let resizing = false;
+    let startX, startY, startLeft, startTop, startWidth, startHeight;
+    let edge = null;
+
+    rect.addEventListener('mousemove', (e) => {
+      const rectBox = rect.getBoundingClientRect();
+      const offsetX = e.clientX - rectBox.left;
+      const offsetY = e.clientY - rectBox.top;
+      let cursor = 'default';
+      edge = null;
+
+      if (offsetX < edgeThreshold) {
+        edge = 'left'; cursor = 'ew-resize';
+      } else if (offsetX > rectBox.width - edgeThreshold) {
+        edge = 'right'; cursor = 'ew-resize';
+      } else if (offsetY < edgeThreshold) {
+        edge = 'top'; cursor = 'ns-resize';
+      } else if (offsetY > rectBox.height - edgeThreshold) {
+        edge = 'bottom'; cursor = 'ns-resize';
+      }
+
+      rect.style.cursor = cursor;
+    });
+
+    rect.addEventListener('mousedown', (e) => {
+      if (!edge) return;
+      resizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const box = rect.getBoundingClientRect();
+      startLeft = box.left;
+      startTop = box.top;
+      startWidth = box.width;
+      startHeight = box.height;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!resizing) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const viewerRect = viewer.getBoundingClientRect();
+      const actualWidth = getDuration() * getZoomLevel();
+      const freqRange = maxFrequency - minFrequency;
+
+      if (edge === 'left' || edge === 'right') {
+        const deltaTime = (dx / actualWidth) * getDuration();
+        if (edge === 'left') sel.data.startTime += deltaTime;
+        if (edge === 'right') sel.data.endTime += deltaTime;
+      }
+      if (edge === 'top' || edge === 'bottom') {
+        const deltaFreq = (dy / spectrogramHeight) * freqRange;
+        if (edge === 'top') sel.data.Fhigh -= deltaFreq;
+        if (edge === 'bottom') sel.data.Flow -= deltaFreq;
+      }
+      startX = e.clientX;
+      startY = e.clientY;
+      updateSelections();
+    });
+
+    window.addEventListener('mouseup', () => { resizing = false; });
   }
 
   let isDrawing = false;
@@ -223,12 +306,14 @@ export function initFrequencyHover({
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
     viewer.appendChild(tooltip);
-    selections.push({
+    const selObj = {
       data: { startTime, endTime, Flow, Fhigh },
       rect: rectObj,
       tooltip
-    });
+    };
+    selections.push(selObj);
     enableDrag(tooltip);
+    enableResize(selObj);
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
       const index = selections.findIndex(sel => sel.tooltip === tooltip);
       if (index !== -1) {
