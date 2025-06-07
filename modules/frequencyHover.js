@@ -203,6 +203,13 @@ export function initFrequencyHover({
     const width = rect.width;
     const height = rect.height;
   
+    const minThreshold = 3;
+    if (width <= minThreshold || height <= minThreshold) {
+      viewer.removeChild(selectionRect);
+      selectionRect = null;
+      return;
+    }
+  
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Bandwidth = Fhigh - Flow;
