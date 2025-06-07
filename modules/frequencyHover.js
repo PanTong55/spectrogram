@@ -221,7 +221,8 @@ export function initFrequencyHover({
     const rect = sel.rect;
     let resizing = false;
     let startX, startY, edge = null;
-
+    let initialData = null;
+  
     rect.addEventListener('mousemove', (e) => {
       if (isDrawing) return;
       const rectBox = rect.getBoundingClientRect();
@@ -229,7 +230,7 @@ export function initFrequencyHover({
       const offsetY = e.clientY - rectBox.top;
       let cursor = 'default';
       edge = null;
-
+  
       if (offsetX < edgeThreshold) {
         edge = 'left'; cursor = 'ew-resize';
       } else if (offsetX > rectBox.width - edgeThreshold) {
@@ -241,58 +242,86 @@ export function initFrequencyHover({
       }
       rect.style.cursor = cursor;
     });
-
+  
     rect.addEventListener('mousedown', (e) => {
       if (!edge) return;
       resizing = true;
       isResizing = true;
-      const initialStartX = e.clientX;
-      const initialStartY = e.clientY;
-      const initialData = { ...sel.data };  // 複製初始資料
+      startX = e.clientX;
+      startY = e.clientY;
+      initialData = { ...sel.data }; // 複製一份當前資料
       e.preventDefault();
-    
+  
       const moveHandler = (e) => {
         if (!resizing) return;
-        const dx = e.clientX - initialStartX;
-        const dy = e.clientY - initialStartY;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
-    
+  
+        let updated = false;
+  
         if (edge === 'left') {
-          sel.data.startTime = initialData.startTime + (dx / actualWidth) * getDuration();
-          sel.data.startTime = Math.min(sel.data.startTime, sel.data.endTime - 0.001);
+          let newStartTime = initialData.startTime + (dx / actualWidth) * getDuration();
+          newStartTime = Math.min(newStartTime, sel.data.endTime - 0.001);
+          if (newStartTime !== sel.data.startTime) {
+            sel.data.startTime = newStartTime;
+            startX = e.clientX; // reset 滑鼠位置
+            initialData.startTime = newStartTime;
+            updated = true;
+          }
         }
-    
+  
         if (edge === 'right') {
-          sel.data.endTime = initialData.endTime + (dx / actualWidth) * getDuration();
-          sel.data.endTime = Math.max(sel.data.endTime, sel.data.startTime + 0.001);
+          let newEndTime = initialData.endTime + (dx / actualWidth) * getDuration();
+          newEndTime = Math.max(newEndTime, sel.data.startTime + 0.001);
+          if (newEndTime !== sel.data.endTime) {
+            sel.data.endTime = newEndTime;
+            startX = e.clientX;
+            initialData.endTime = newEndTime;
+            updated = true;
+          }
         }
-    
+  
         if (edge === 'top') {
-          sel.data.Fhigh = initialData.Fhigh - (dy / spectrogramHeight) * freqRange;
-          sel.data.Fhigh = Math.max(sel.data.Fhigh, sel.data.Flow + 0.1);
+          let newFhigh = initialData.Fhigh - (dy / spectrogramHeight) * freqRange;
+          newFhigh = Math.max(newFhigh, sel.data.Flow + 0.1);
+          if (newFhigh !== sel.data.Fhigh) {
+            sel.data.Fhigh = newFhigh;
+            startY = e.clientY;
+            initialData.Fhigh = newFhigh;
+            updated = true;
+          }
         }
-    
+  
         if (edge === 'bottom') {
-          sel.data.Flow = initialData.Flow - (dy / spectrogramHeight) * freqRange;
-          sel.data.Flow = Math.min(sel.data.Flow, sel.data.Fhigh - 0.1);
+          let newFlow = initialData.Flow - (dy / spectrogramHeight) * freqRange;
+          newFlow = Math.min(newFlow, sel.data.Fhigh - 0.1);
+          if (newFlow !== sel.data.Flow) {
+            sel.data.Flow = newFlow;
+            startY = e.clientY;
+            initialData.Flow = newFlow;
+            updated = true;
+          }
         }
-    
-        updateSelections();
+  
+        if (updated) {
+          updateSelections();
+        }
       };
-    
+  
       const upHandler = () => {
         resizing = false;
         isResizing = false;
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
       };
-    
+  
       window.addEventListener('mousemove', moveHandler);
       window.addEventListener('mouseup', upHandler);
     });
   }
-
+  
   function updateTooltipValues(sel, left, top, width, height) {
     const { data, tooltip } = sel;
     const Flow = data.Flow;
