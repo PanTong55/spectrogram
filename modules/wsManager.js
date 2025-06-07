@@ -40,6 +40,7 @@ export function createSpectrogramPlugin({
     scale: 'linear',
     windowFunc: 'hann',
     colorMap,
+    storeData: true
   };
 
   if (noverlap !== null) {
