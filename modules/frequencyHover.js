@@ -256,29 +256,33 @@ export function initFrequencyHover({
         const dy = e.clientY - startY;
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
-
+      
         if (edge === 'left' || edge === 'right') {
           const deltaTime = (dx / actualWidth) * getDuration();
-          if (edge === 'left') sel.data.startTime += deltaTime;
-          if (edge === 'right') sel.data.endTime += deltaTime;
+      
+          if (edge === 'left') {
+            sel.data.startTime += deltaTime;
+            sel.data.startTime = Math.min(sel.data.startTime, sel.data.endTime - 0.001);
+          }
+          if (edge === 'right') {
+            sel.data.endTime += deltaTime;
+            sel.data.endTime = Math.max(sel.data.endTime, sel.data.startTime + 0.001);
+          }
         }
+      
         if (edge === 'top' || edge === 'bottom') {
           const deltaFreq = (dy / spectrogramHeight) * freqRange;
-          if (edge === 'top') sel.data.Fhigh -= deltaFreq;
-          if (edge === 'bottom') sel.data.Flow -= deltaFreq;
+      
+          if (edge === 'top') {
+            sel.data.Fhigh -= deltaFreq;
+            sel.data.Fhigh = Math.max(sel.data.Fhigh, sel.data.Flow + 0.1);
+          }
+          if (edge === 'bottom') {
+            sel.data.Flow -= deltaFreq;
+            sel.data.Flow = Math.min(sel.data.Flow, sel.data.Fhigh - 0.1);
+          }
         }
-
-        if (sel.data.startTime > sel.data.endTime) {
-          const temp = sel.data.startTime;
-          sel.data.startTime = sel.data.endTime;
-          sel.data.endTime = temp;
-        }
-        if (sel.data.Flow > sel.data.Fhigh) {
-          const temp = sel.data.Flow;
-          sel.data.Flow = sel.data.Fhigh;
-          sel.data.Fhigh = temp;
-        }
-        
+      
         startX = e.clientX;
         startY = e.clientY;
         updateSelections();
@@ -296,6 +300,21 @@ export function initFrequencyHover({
     });
   }
 
+  function updateTooltipValues(sel, left, top, width, height) {
+    const { data, tooltip } = sel;
+    const Flow = data.Flow;
+    const Fhigh = data.Fhigh;
+    const Bandwidth = Fhigh - Flow;
+    const Duration = (data.endTime - data.startTime);
+    tooltip.innerHTML = `
+      <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
+      <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
+      <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
+      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
+      <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
+    `;
+  }
+  
   function updateSelections() {
     const actualWidth = getDuration() * getZoomLevel();
     const freqRange = maxFrequency - minFrequency;
