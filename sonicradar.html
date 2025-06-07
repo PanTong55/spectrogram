@@ -190,6 +190,8 @@
           maxFrequency: currentFreqMax,
           minFrequency: currentFreqMin,
           totalDuration: duration * 1000,
+          getZoomLevel: () => zoomControl.getZoomLevel(),
+          getDuration: () => duration * 1000
         });
       } else {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
