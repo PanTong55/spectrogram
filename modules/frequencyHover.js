@@ -220,30 +220,51 @@ export function initFrequencyHover({
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
-    let edge = null;
+    let lockedEdge = null;
   
+    // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
-      if (isDrawing) return;
+      if (isDrawing || resizing) return;
+  
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
       let cursor = 'default';
-      edge = null;
   
       if (offsetX < edgeThreshold) {
-        edge = 'left'; cursor = 'ew-resize';
+        cursor = 'ew-resize';
       } else if (offsetX > rectBox.width - edgeThreshold) {
-        edge = 'right'; cursor = 'ew-resize';
+        cursor = 'ew-resize';
       } else if (offsetY < edgeThreshold) {
-        edge = 'top'; cursor = 'ns-resize';
+        cursor = 'ns-resize';
       } else if (offsetY > rectBox.height - edgeThreshold) {
-        edge = 'bottom'; cursor = 'ns-resize';
+        cursor = 'ns-resize';
       }
       rect.style.cursor = cursor;
     });
   
+    // mousedown 時一次性決定 edge
     rect.addEventListener('mousedown', (e) => {
-      if (!edge) return;
+      if (resizing) return;
+      const rectBox = rect.getBoundingClientRect();
+      const offsetX = e.clientX - rectBox.left;
+      const offsetY = e.clientY - rectBox.top;
+  
+      // 先決定是哪個 edge
+      if (offsetX < edgeThreshold) {
+        lockedEdge = 'left';
+      } else if (offsetX > rectBox.width - edgeThreshold) {
+        lockedEdge = 'right';
+      } else if (offsetY < edgeThreshold) {
+        lockedEdge = 'top';
+      } else if (offsetY > rectBox.height - edgeThreshold) {
+        lockedEdge = 'bottom';
+      } else {
+        lockedEdge = null;
+      }
+  
+      if (!lockedEdge) return;
+  
       resizing = true;
       isResizing = true;
       e.preventDefault();
@@ -259,25 +280,25 @@ export function initFrequencyHover({
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
   
-        if (edge === 'left') {
+        if (lockedEdge === 'left') {
           let newStartTime = (mouseX / actualWidth) * getDuration();
           newStartTime = Math.min(newStartTime, sel.data.endTime - 0.001);
           sel.data.startTime = newStartTime;
         }
   
-        if (edge === 'right') {
+        if (lockedEdge === 'right') {
           let newEndTime = (mouseX / actualWidth) * getDuration();
           newEndTime = Math.max(newEndTime, sel.data.startTime + 0.001);
           sel.data.endTime = newEndTime;
         }
   
-        if (edge === 'top') {
+        if (lockedEdge === 'top') {
           let newFhigh = (1 - mouseY / spectrogramHeight) * freqRange + minFrequency;
           newFhigh = Math.max(newFhigh, sel.data.Flow + 0.1);
           sel.data.Fhigh = newFhigh;
         }
   
-        if (edge === 'bottom') {
+        if (lockedEdge === 'bottom') {
           let newFlow = (1 - mouseY / spectrogramHeight) * freqRange + minFrequency;
           newFlow = Math.min(newFlow, sel.data.Fhigh - 0.1);
           sel.data.Flow = newFlow;
@@ -289,6 +310,7 @@ export function initFrequencyHover({
       const upHandler = () => {
         resizing = false;
         isResizing = false;
+        lockedEdge = null;
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
       };
