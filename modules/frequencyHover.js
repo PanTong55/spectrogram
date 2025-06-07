@@ -190,24 +190,25 @@ export function initFrequencyHover({
   viewer.addEventListener('mouseup', (e) => {
     if (!isDrawing) return;
     isDrawing = false;
-
+  
     const rect = selectionRect.getBoundingClientRect();
     const viewerRect = viewer.getBoundingClientRect();
-
+  
     const left = rect.left - viewerRect.left + viewer.scrollLeft;
     const top = rect.top - viewerRect.top;
     const width = rect.width;
     const height = rect.height;
-
-    // 計算四個數值
+  
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Bandwidth = Fhigh - Flow;
     const startTime = (left / spectrogramWidth) * totalDuration;
     const endTime = ((left + width) / spectrogramWidth) * totalDuration;
     const Duration = endTime - startTime;
-
-    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration);
+  
+    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect);
+  
+    selectionRect = null;
   });
   
   return {
@@ -219,7 +220,7 @@ export function initFrequencyHover({
     }
   };  
 
-  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration) {
+  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj) {
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip';
     tooltip.style.position = 'absolute';
@@ -249,12 +250,10 @@ export function initFrequencyHover({
     });
 
     viewer.appendChild(tooltip);
-    selections.push({ rect: selectionRect, tooltip });
+    selections.push({ rect: rectObj, tooltip });
 
-    // 加拖拉邏輯
     enableDrag(tooltip);
 
-    // 加 close 邏輯
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
       const index = selections.findIndex(sel => sel.tooltip === tooltip);
       if (index !== -1) {
