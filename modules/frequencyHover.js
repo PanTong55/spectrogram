@@ -11,24 +11,23 @@ export function initFrequencyHover({
   totalDuration = 1000,
 }) {
   const viewer = document.getElementById(viewerId);
-  const wrapper = document.getElementById(wrapperId);
+  const fixedOverlay = document.getElementById('fixed-overlay');
   const hoverLine = document.getElementById(hoverLineId);
   const hoverLineV = document.getElementById(hoverLineVId);
   const freqLabel = document.getElementById(freqLabelId);
-  const fixedOverlay = document.getElementById('fixed-overlay');
-  const zoomControls = document.getElementById('zoom-controls');
-
   const scrollbarThickness = 2;
-  let suppressHover = false;
-  const persistentLines = [];  // 儲存所有固定橫線
 
-  const hideAll = () => {
+  let suppressHover = false;
+  const persistentLines = [];
+  const selections = [];
+
+  function hideAll() {
     hoverLine.style.display = 'none';
     hoverLineV.style.display = 'none';
     freqLabel.style.display = 'none';
-  };
+  }
 
-  const updateHoverDisplay = (e) => {
+  function updateHoverDisplay(e) {
     if (suppressHover) return;
 
     const rect = viewer.getBoundingClientRect();
@@ -46,78 +45,42 @@ export function initFrequencyHover({
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
-
     hoverLineV.style.left = `${x}px`;
     hoverLineV.style.display = 'block';
 
     const viewerWidth = viewer.clientWidth;
     const labelOffset = 12;
-    let labelLeft;
-
-    if ((viewerWidth - x) < 120) {
-      freqLabel.style.transform = 'translate(-100%, -50%)';
-      labelLeft = `${x - labelOffset}px`;
-    } else {
-      freqLabel.style.transform = 'translate(0, -50%)';
-      labelLeft = `${x + labelOffset}px`;
-    }
+    let labelLeft = (viewerWidth - x) < 120 ? `${x - labelOffset}px` : `${x + labelOffset}px`;
+    freqLabel.style.transform = (viewerWidth - x) < 120 ? 'translate(-100%, -50%)' : 'translate(0, -50%)';
 
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
     freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
-  };
+  }
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
-
-  wrapper.addEventListener('mouseleave', () => {
-    hideAll();
-  });
-
-  viewer.addEventListener('mouseenter', () => {
-    viewer.classList.add('hide-cursor');
-  });
-
-  viewer.addEventListener('mouseleave', () => {
-    viewer.classList.remove('hide-cursor');
-  });
-
-  if (zoomControls) {
-    zoomControls.addEventListener('mouseenter', () => {
-      suppressHover = true;
-      hideAll();
-    });
-
-    zoomControls.addEventListener('mouseleave', () => {
-      suppressHover = false;
-    });
-  }
+  wrapper.addEventListener('mouseleave', hideAll);
 
   viewer.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-  
+
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
-  
-    // 反算出 frequency
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-  
-    // 判斷是否已有同位置頻率線
-    const threshold = 1;  // 1 kHz 誤差範圍
+
+    const threshold = 0.5;
     const existingIndex = persistentLines.findIndex(line =>
       Math.abs(line.freq - freq) < threshold
     );
-  
+
     if (existingIndex !== -1) {
-      // 刪除該線
       fixedOverlay.removeChild(persistentLines[existingIndex].div);
       persistentLines.splice(existingIndex, 1);
     } else {
       if (persistentLines.length >= 5) return;
-  
-      // 正向計算應該插入的 y 位置 (頻率轉換公式)
       const yPos = (1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
-  
+
       const line = document.createElement('div');
       line.style.position = 'absolute';
       line.style.top = `${yPos}px`;
@@ -127,42 +90,21 @@ export function initFrequencyHover({
       line.style.background = 'red';
       line.style.zIndex = '15';
       fixedOverlay.appendChild(line);
-  
+
       persistentLines.push({ freq, div: line });
     }
   });
 
-  function updatePersistentLines() {
-    persistentLines.forEach(line => {
-      const yPos = (1 - (line.freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
-      line.div.style.top = `${yPos}px`;
-    });
-  }
+  // 矩形拖拉功能
 
-  return {
-    updatePersistentLines,
-    setFrequencyRange: (min, max) => {
-      minFrequency = min;
-      maxFrequency = max;
-      updatePersistentLines();
-    }
-  };  
-
-    let isDrawing = false;
-  let startX = 0;
-  let startY = 0;
-  let selectionRect = null;
-  const selections = [];
+  let isDrawing = false, startX = 0, startY = 0, selectionRect = null;
 
   viewer.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return; // 只接受左鍵
-
+    if (e.button !== 0) return;
     const rect = viewer.getBoundingClientRect();
     startX = e.clientX - rect.left + viewer.scrollLeft;
     startY = e.clientY - rect.top;
-
     if (startY > (viewer.clientHeight - scrollbarThickness)) return;
-
     isDrawing = true;
 
     selectionRect = document.createElement('div');
@@ -177,20 +119,14 @@ export function initFrequencyHover({
 
   viewer.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
-
     const rect = viewer.getBoundingClientRect();
     const currentX = e.clientX - rect.left + viewer.scrollLeft;
     const currentY = e.clientY - rect.top;
-
     const x = Math.min(currentX, startX);
     const y = Math.min(currentY, startY);
     const width = Math.abs(currentX - startX);
     const height = Math.abs(currentY - startY);
-
-    selectionRect.style.left = `${x}px`;
-    selectionRect.style.top = `${y}px`;
-    selectionRect.style.width = `${width}px`;
-    selectionRect.style.height = `${height}px`;
+    Object.assign(selectionRect.style, { left: `${x}px`, top: `${y}px`, width: `${width}px`, height: `${height}px` });
   });
 
   viewer.addEventListener('mouseup', (e) => {
@@ -199,13 +135,11 @@ export function initFrequencyHover({
 
     const rect = selectionRect.getBoundingClientRect();
     const viewerRect = viewer.getBoundingClientRect();
-
     const left = rect.left - viewerRect.left + viewer.scrollLeft;
     const top = rect.top - viewerRect.top;
     const width = rect.width;
     const height = rect.height;
 
-    // 計算四個數值
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Bandwidth = Fhigh - Flow;
@@ -239,14 +173,10 @@ export function initFrequencyHover({
     `;
 
     viewer.appendChild(tooltip);
-    viewer.removeChild(selectionRect); // 確定後移除 selection
+    viewer.removeChild(selectionRect);
+    selections.push({ Fhigh, Flow, startTime, endTime, tooltip });
 
-    selections.push({ rect: selectionRect, tooltip });
-
-    // 加拖拉邏輯
     enableDrag(tooltip);
-
-    // 加 close 邏輯
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
       viewer.removeChild(tooltip);
     });
@@ -254,7 +184,6 @@ export function initFrequencyHover({
 
   function enableDrag(element) {
     let offsetX, offsetY, isDragging = false;
-
     element.addEventListener('mousedown', (e) => {
       if (e.target.classList.contains('close-btn')) return;
       isDragging = true;
@@ -268,12 +197,29 @@ export function initFrequencyHover({
       const viewerRect = viewer.getBoundingClientRect();
       const newX = e.clientX - viewerRect.left + viewer.scrollLeft - offsetX;
       const newY = e.clientY - viewerRect.top - offsetY;
-      element.style.left = `${newX}px`;
-      element.style.top = `${newY}px`;
+      Object.assign(element.style, { left: `${newX}px`, top: `${newY}px` });
     });
 
     window.addEventListener('mouseup', () => {
       isDragging = false;
     });
   }
+
+  function updatePersistentLines() {
+    persistentLines.forEach(line => {
+      const yPos = (1 - (line.freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
+      line.div.style.top = `${yPos}px`;
+    });
+  }
+
+  return {
+    updatePersistentLines,
+    setFrequencyRange: (min, max) => {
+      minFrequency = min;
+      maxFrequency = max;
+      updatePersistentLines();
+    },
+    setSpectrogramWidth: (newWidth) => { spectrogramWidth = newWidth; },
+    setTotalDuration: (newDuration) => { totalDuration = newDuration; }
+  };
 }
