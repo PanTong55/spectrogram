@@ -192,10 +192,10 @@ export function initFrequencyHover({
     tooltip.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
     tooltip.style.cursor = 'move';
     tooltip.innerHTML = `
-      <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
-      <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
-      <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
-      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
+      <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
+      <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
+      <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
+      <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
@@ -306,13 +306,11 @@ export function initFrequencyHover({
     const Fhigh = data.Fhigh;
     const Bandwidth = Fhigh - Flow;
     const Duration = (data.endTime - data.startTime);
-    tooltip.innerHTML = `
-      <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
-      <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
-      <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
-      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
-      <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
-    `;
+    
+    tooltip.querySelector('.fhigh').textContent = Fhigh.toFixed(1);
+    tooltip.querySelector('.flow').textContent = Flow.toFixed(1);
+    tooltip.querySelector('.bandwidth').textContent = Bandwidth.toFixed(1);
+    tooltip.querySelector('.duration').textContent = (Duration * 1000).toFixed(1);
   }
   
   function updateSelections() {
