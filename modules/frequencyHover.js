@@ -28,6 +28,9 @@ export function initFrequencyHover({
   let suppressHover = false;
   let isOverTooltip = false;
   let isResizing = false;
+  let isDrawing = false;
+  let startX = 0, startY = 0;
+  let selectionRect = null;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -105,164 +108,6 @@ export function initFrequencyHover({
     viewer.appendChild(selectionRect);
   });
 
-  viewer.addEventListener('contextmenu', (e) => {
-    if (isOverTooltip) return;
-    e.preventDefault();
-
-    const rect = fixedOverlay.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const threshold = 1;  
-    const existingIndex = persistentLines.findIndex(line => Math.abs(line.freq - freq) < threshold);
-
-    if (existingIndex !== -1) {
-      fixedOverlay.removeChild(persistentLines[existingIndex].div);
-      persistentLines.splice(existingIndex, 1);
-    } else {
-      if (persistentLines.length >= 5) return;
-      const yPos = (1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
-      const line = document.createElement('div');
-      line.style.position = 'absolute';
-      line.style.top = `${yPos}px`;
-      line.style.left = '0';
-      line.style.width = '100%';
-      line.style.height = '1px';
-      line.style.background = 'red';
-      line.style.zIndex = '15';
-      fixedOverlay.appendChild(line);
-      persistentLines.push({ freq, div: line });
-    }
-  });
-
-  function updatePersistentLines() {
-    persistentLines.forEach(line => {
-      const yPos = (1 - (line.freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
-      line.div.style.top = `${yPos}px`;
-    });
-  }
-
-  function updateSelections() {
-    const actualWidth = getDuration() * getZoomLevel();
-    const freqRange = maxFrequency - minFrequency;
-
-    selections.forEach(sel => {
-      const { startTime, endTime, Flow, Fhigh } = sel.data;
-      const left = (startTime / getDuration()) * actualWidth;
-      const width = ((endTime - startTime) / getDuration()) * actualWidth;
-      const top = (1 - (Fhigh - minFrequency) / freqRange) * spectrogramHeight;
-      const height = ((Fhigh - Flow) / freqRange) * spectrogramHeight;
-
-      sel.rect.style.left = `${left}px`;
-      sel.rect.style.top = `${top}px`;
-      sel.rect.style.width = `${width}px`;
-      sel.rect.style.height = `${height}px`;
-
-      updateTooltipValues(sel, left, top, width, height);
-    });
-  }
-
-  function updateTooltipValues(sel, left, top, width, height) {
-    const { data, tooltip } = sel;
-    const Flow = data.Flow;
-    const Fhigh = data.Fhigh;
-    const Bandwidth = Fhigh - Flow;
-    const Duration = (data.endTime - data.startTime);
-    tooltip.innerHTML = `
-      <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
-      <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
-      <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
-      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
-      <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
-    `;
-  }
-
-  function enableResize(sel) {
-    const rect = sel.rect;
-    let resizing = false;
-    let startX, startY, edge = null;
-  
-    rect.addEventListener('mousemove', (e) => {
-      if (isDrawing) return;  // <-- 防止畫圖狀態與 resize 衝突
-      const rectBox = rect.getBoundingClientRect();
-      const offsetX = e.clientX - rectBox.left;
-      const offsetY = e.clientY - rectBox.top;
-      let cursor = 'default';
-      edge = null;
-  
-      if (offsetX < edgeThreshold) {
-        edge = 'left'; cursor = 'ew-resize';
-      } else if (offsetX > rectBox.width - edgeThreshold) {
-        edge = 'right'; cursor = 'ew-resize';
-      } else if (offsetY < edgeThreshold) {
-        edge = 'top'; cursor = 'ns-resize';
-      } else if (offsetY > rectBox.height - edgeThreshold) {
-        edge = 'bottom'; cursor = 'ns-resize';
-      }
-  
-      rect.style.cursor = cursor;
-    });
-  
-    rect.addEventListener('mousedown', (e) => {
-      if (!edge) return;
-      resizing = true;
-      isResizing = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      e.preventDefault();
-    });
-  
-    const resizeMove = (e) => {
-      if (!resizing) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      const actualWidth = getDuration() * getZoomLevel();
-      const freqRange = maxFrequency - minFrequency;
-  
-      if (edge === 'left' || edge === 'right') {
-        const deltaTime = (dx / actualWidth) * getDuration();
-        if (edge === 'left') sel.data.startTime += deltaTime;
-        if (edge === 'right') sel.data.endTime += deltaTime;
-      }
-      if (edge === 'top' || edge === 'bottom') {
-        const deltaFreq = (dy / spectrogramHeight) * freqRange;
-        if (edge === 'top') sel.data.Fhigh -= deltaFreq;
-        if (edge === 'bottom') sel.data.Flow -= deltaFreq;
-      }
-      startX = e.clientX;
-      startY = e.clientY;
-      updateSelections();
-    };
-  
-    const resizeUp = () => {
-      if (!resizing) return;
-      resizing = false;
-      isResizing = false;
-    };
-  
-    window.addEventListener('mousemove', resizeMove);
-    window.addEventListener('mouseup', resizeUp);
-  }
-
-  let isDrawing = false;
-  let startX = 0, startY = 0;
-  let selectionRect = null;
-
-  viewer.addEventListener('mousedown', (e) => {
-    if (isOverTooltip) return;
-    if (e.button !== 0) return;
-    const rect = viewer.getBoundingClientRect();
-    startX = e.clientX - rect.left + viewer.scrollLeft;
-    startY = e.clientY - rect.top;
-    if (startY > (viewer.clientHeight - scrollbarThickness)) return;
-    isDrawing = true;
-    selectionRect = document.createElement('div');
-    selectionRect.style.position = 'absolute';
-    selectionRect.style.border = '1px solid black';
-    selectionRect.style.backgroundColor = 'rgba(0,0,0,0.1)';
-    selectionRect.style.zIndex = '20';
-    viewer.appendChild(selectionRect);
-  });
-
   viewer.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
     const rect = viewer.getBoundingClientRect();
@@ -304,6 +149,34 @@ export function initFrequencyHover({
     selectionRect = null;
   });
 
+  viewer.addEventListener('contextmenu', (e) => {
+    if (isOverTooltip) return;
+    e.preventDefault();
+    const rect = fixedOverlay.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+    const threshold = 1;
+    const existingIndex = persistentLines.findIndex(line => Math.abs(line.freq - freq) < threshold);
+
+    if (existingIndex !== -1) {
+      fixedOverlay.removeChild(persistentLines[existingIndex].div);
+      persistentLines.splice(existingIndex, 1);
+    } else {
+      if (persistentLines.length >= 5) return;
+      const yPos = (1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
+      const line = document.createElement('div');
+      line.style.position = 'absolute';
+      line.style.top = `${yPos}px`;
+      line.style.left = '0';
+      line.style.width = '100%';
+      line.style.height = '1px';
+      line.style.background = 'red';
+      line.style.zIndex = '15';
+      fixedOverlay.appendChild(line);
+      persistentLines.push({ freq, div: line });
+    }
+  });
+
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip';
@@ -328,11 +201,7 @@ export function initFrequencyHover({
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
     viewer.appendChild(tooltip);
-    const selObj = {
-      data: { startTime, endTime, Flow, Fhigh },
-      rect: rectObj,
-      tooltip
-    };
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip };
     selections.push(selObj);
     enableDrag(tooltip);
     enableResize(selObj);
@@ -345,6 +214,91 @@ export function initFrequencyHover({
       }
       isOverTooltip = false;
       suppressHover = false;
+    });
+  }
+
+  function enableResize(sel) {
+    const rect = sel.rect;
+    let resizing = false;
+    let startX, startY, edge = null;
+
+    rect.addEventListener('mousemove', (e) => {
+      if (isDrawing) return;
+      const rectBox = rect.getBoundingClientRect();
+      const offsetX = e.clientX - rectBox.left;
+      const offsetY = e.clientY - rectBox.top;
+      let cursor = 'default';
+      edge = null;
+
+      if (offsetX < edgeThreshold) {
+        edge = 'left'; cursor = 'ew-resize';
+      } else if (offsetX > rectBox.width - edgeThreshold) {
+        edge = 'right'; cursor = 'ew-resize';
+      } else if (offsetY < edgeThreshold) {
+        edge = 'top'; cursor = 'ns-resize';
+      } else if (offsetY > rectBox.height - edgeThreshold) {
+        edge = 'bottom'; cursor = 'ns-resize';
+      }
+      rect.style.cursor = cursor;
+    });
+
+    rect.addEventListener('mousedown', (e) => {
+      if (!edge) return;
+      resizing = true;
+      isResizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      e.preventDefault();
+
+      const moveHandler = (e) => {
+        if (!resizing) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        const actualWidth = getDuration() * getZoomLevel();
+        const freqRange = maxFrequency - minFrequency;
+
+        if (edge === 'left' || edge === 'right') {
+          const deltaTime = (dx / actualWidth) * getDuration();
+          if (edge === 'left') sel.data.startTime += deltaTime;
+          if (edge === 'right') sel.data.endTime += deltaTime;
+        }
+        if (edge === 'top' || edge === 'bottom') {
+          const deltaFreq = (dy / spectrogramHeight) * freqRange;
+          if (edge === 'top') sel.data.Fhigh -= deltaFreq;
+          if (edge === 'bottom') sel.data.Flow -= deltaFreq;
+        }
+        startX = e.clientX;
+        startY = e.clientY;
+        updateSelections();
+      };
+
+      const upHandler = () => {
+        resizing = false;
+        isResizing = false;
+        window.removeEventListener('mousemove', moveHandler);
+        window.removeEventListener('mouseup', upHandler);
+      };
+
+      window.addEventListener('mousemove', moveHandler);
+      window.addEventListener('mouseup', upHandler);
+    });
+  }
+
+  function updateSelections() {
+    const actualWidth = getDuration() * getZoomLevel();
+    const freqRange = maxFrequency - minFrequency;
+
+    selections.forEach(sel => {
+      const { startTime, endTime, Flow, Fhigh } = sel.data;
+      const left = (startTime / getDuration()) * actualWidth;
+      const width = ((endTime - startTime) / getDuration()) * actualWidth;
+      const top = (1 - (Fhigh - minFrequency) / freqRange) * spectrogramHeight;
+      const height = ((Fhigh - Flow) / freqRange) * spectrogramHeight;
+
+      sel.rect.style.left = `${left}px`;
+      sel.rect.style.top = `${top}px`;
+      sel.rect.style.width = `${width}px`;
+      sel.rect.style.height = `${height}px`;
     });
   }
 
@@ -369,12 +323,10 @@ export function initFrequencyHover({
   }
 
   return {
-    updatePersistentLines,
     updateSelections,
     setFrequencyRange: (min, max) => {
       minFrequency = min;
       maxFrequency = max;
-      updatePersistentLines();
       updateSelections();
     }
   };
