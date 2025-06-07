@@ -210,15 +210,6 @@ export function initFrequencyHover({
   
     selectionRect = null;
   });
-  
-  return {
-    updatePersistentLines,
-    setFrequencyRange: (min, max) => {
-      minFrequency = min;
-      maxFrequency = max;
-      updatePersistentLines();
-    }
-  };  
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj) {
     const tooltip = document.createElement('div');
@@ -287,5 +278,14 @@ export function initFrequencyHover({
     window.addEventListener('mouseup', () => {
       isDragging = false;
     });
-  }
+  }  
+  
+  return {
+    updatePersistentLines,
+    setFrequencyRange: (min, max) => {
+      minFrequency = min;
+      maxFrequency = max;
+      updatePersistentLines();
+    }
+  }; 
 }
