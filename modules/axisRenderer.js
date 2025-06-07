@@ -77,69 +77,57 @@ export function drawFrequencyGrid({
   offsetKHz = 0,
 }) {
   const width = containerElement.scrollWidth;
-  gridCanvas.width = width;
-  gridCanvas.height = spectrogramHeight;
+
+  // 高 DPI 裝置支援
+  const dpr = window.devicePixelRatio || 1;
+  gridCanvas.width = width * dpr;
+  gridCanvas.height = spectrogramHeight * dpr;
   gridCanvas.style.width = width + 'px';
   gridCanvas.style.height = spectrogramHeight + 'px';
 
   const ctx = gridCanvas.getContext('2d');
+  ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, spectrogramHeight);
+
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.lineWidth = 0.4;
+  ctx.lineWidth = 1;
 
   const majorStep = 10;
   const minorStep = 5;
   const range = maxFrequency;
 
+  // 主刻度線
   for (let f = 0; f <= range; f += majorStep) {
-    const y = (1 - f / range) * spectrogramHeight;
+    const y = Math.round((1 - f / range) * spectrogramHeight) + 0.5;  // 核心穩定 trick: 加 0.5 讓線畫在物理像素正中央
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
   }
 
+  // 次刻度線
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+  for (let f = 0; f <= range; f += minorStep) {
+    if (f % majorStep === 0) continue;
+    const y = Math.round((1 - f / range) * spectrogramHeight) + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  // 清理舊 label，並重新加上文字標籤
   labelContainer.innerHTML = '';
 
   for (let f = 0; f <= range; f += majorStep) {
     const y = Math.round((1 - f / range) * spectrogramHeight);
-
-    // 主刻度線
-    const tick = document.createElement('div');
-    tick.style.position = 'absolute';
-    tick.style.left = '40px';
-    tick.style.top = `${y}px`;
-    tick.style.transform = 'translateY(-50%)';
-    tick.style.width = '5px';
-    tick.style.height = '1px';
-    tick.style.background = 'black';
-    labelContainer.appendChild(tick);
-
-    // 文字
     const label = document.createElement('div');
     label.className = 'freq-label-static';
     label.style.position = 'absolute';
     label.style.right = '8px';
-    label.style.top = `${y - 1}px`;
+    label.style.top = `${y}px`;
     label.style.transform = 'translateY(-50%)';
     label.textContent = `${f + offsetKHz}kHz`;
     labelContainer.appendChild(label);
-  }
-
-  // 新增次刻度 (minor tick)
-  for (let f = 0; f <= range; f += minorStep) {
-    if (f % majorStep === 0) continue;
-
-    const y = Math.round((1 - f / range) * spectrogramHeight);
-
-    const minorTick = document.createElement('div');
-    minorTick.style.position = 'absolute';
-    minorTick.style.left = '42px';
-    minorTick.style.top = `${y}px`;
-    minorTick.style.transform = 'translateY(-50%)';
-    minorTick.style.width = '3px';
-    minorTick.style.height = '1px';
-    minorTick.style.background = 'black';
-    labelContainer.appendChild(minorTick);
   }
 }
