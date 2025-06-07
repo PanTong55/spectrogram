@@ -334,3 +334,12 @@ input[type="file"]:hover {
 .switch input:checked + .slider.round:before {
   transform: translateX(20px);
 }
+
+.draggable-tooltip {
+  border-radius: 5px;
+  transition: box-shadow 0.2s ease;
+}
+
+.draggable-tooltip:hover {
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
+}
