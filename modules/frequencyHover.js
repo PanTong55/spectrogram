@@ -21,6 +21,7 @@ export function initFrequencyHover({
   const zoomControls = document.getElementById('zoom-controls');
   const container = document.getElementById('spectrogram-only');
   const persistentLines = [];
+  const selections = [];
   const scrollbarThickness = 2;
   
   let suppressHover = false;
@@ -70,60 +71,35 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${Math.round(time * 1000)} ms`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
-
-  wrapper.addEventListener('mouseleave', () => {
-    hideAll();
-  });
-
-  viewer.addEventListener('mouseenter', () => {
-    viewer.classList.add('hide-cursor');
-  });
-
-  viewer.addEventListener('mouseleave', () => {
-    viewer.classList.remove('hide-cursor');
-  });
+  wrapper.addEventListener('mouseleave', hideAll);
+  viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
+  viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
 
   if (zoomControls) {
-    zoomControls.addEventListener('mouseenter', () => {
-      suppressHover = true;
-      hideAll();
-    });
-
-    zoomControls.addEventListener('mouseleave', () => {
-      suppressHover = false;
-    });
+    zoomControls.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+    zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
   }
 
   viewer.addEventListener('contextmenu', (e) => {
     if (isOverTooltip) return;
     e.preventDefault();
-  
+
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
-  
-    // 反算出 frequency
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-  
-    // 判斷是否已有同位置頻率線
-    const threshold = 1;  // 1 kHz 誤差範圍
-    const existingIndex = persistentLines.findIndex(line =>
-      Math.abs(line.freq - freq) < threshold
-    );
-  
+    const threshold = 1;  
+    const existingIndex = persistentLines.findIndex(line => Math.abs(line.freq - freq) < threshold);
+
     if (existingIndex !== -1) {
-      // 刪除該線
       fixedOverlay.removeChild(persistentLines[existingIndex].div);
       persistentLines.splice(existingIndex, 1);
     } else {
       if (persistentLines.length >= 5) return;
-  
-      // 正向計算應該插入的 y 位置 (頻率轉換公式)
       const yPos = (1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
-  
       const line = document.createElement('div');
       line.style.position = 'absolute';
       line.style.top = `${yPos}px`;
@@ -133,7 +109,6 @@ export function initFrequencyHover({
       line.style.background = 'red';
       line.style.zIndex = '15';
       fixedOverlay.appendChild(line);
-  
       persistentLines.push({ freq, div: line });
     }
   });
@@ -145,46 +120,53 @@ export function initFrequencyHover({
     });
   }
 
+  function updateSelections() {
+    const actualWidth = getDuration() * getZoomLevel();
+    const freqRange = maxFrequency - minFrequency;
+
+    selections.forEach(sel => {
+      const { startTime, endTime, Flow, Fhigh } = sel.data;
+      const left = (startTime / getDuration()) * actualWidth;
+      const width = ((endTime - startTime) / getDuration()) * actualWidth;
+      const top = (1 - (Fhigh - minFrequency) / freqRange) * spectrogramHeight;
+      const height = ((Fhigh - Flow) / freqRange) * spectrogramHeight;
+
+      sel.rect.style.left = `${left}px`;
+      sel.rect.style.top = `${top}px`;
+      sel.rect.style.width = `${width}px`;
+      sel.rect.style.height = `${height}px`;
+    });
+  }
+
   let isDrawing = false;
-  let startX = 0;
-  let startY = 0;
+  let startX = 0, startY = 0;
   let selectionRect = null;
-  const selections = [];
 
   viewer.addEventListener('mousedown', (e) => {
     if (isOverTooltip) return;
-    if (e.button !== 0) return; // 只接受左鍵
-
+    if (e.button !== 0) return;
     const rect = viewer.getBoundingClientRect();
     startX = e.clientX - rect.left + viewer.scrollLeft;
     startY = e.clientY - rect.top;
-
     if (startY > (viewer.clientHeight - scrollbarThickness)) return;
-
     isDrawing = true;
-
     selectionRect = document.createElement('div');
     selectionRect.style.position = 'absolute';
     selectionRect.style.border = '1px solid black';
     selectionRect.style.backgroundColor = 'rgba(0,0,0,0.1)';
-    selectionRect.style.left = `${startX}px`;
-    selectionRect.style.top = `${startY}px`;
     selectionRect.style.zIndex = '20';
     viewer.appendChild(selectionRect);
   });
 
   viewer.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
-
     const rect = viewer.getBoundingClientRect();
     const currentX = e.clientX - rect.left + viewer.scrollLeft;
     const currentY = e.clientY - rect.top;
-
     const x = Math.min(currentX, startX);
     const y = Math.min(currentY, startY);
     const width = Math.abs(currentX - startX);
     const height = Math.abs(currentY - startY);
-
     selectionRect.style.left = `${x}px`;
     selectionRect.style.top = `${y}px`;
     selectionRect.style.width = `${width}px`;
@@ -194,22 +176,18 @@ export function initFrequencyHover({
   viewer.addEventListener('mouseup', (e) => {
     if (!isDrawing) return;
     isDrawing = false;
-  
     const rect = selectionRect.getBoundingClientRect();
     const viewerRect = viewer.getBoundingClientRect();
-  
     const left = rect.left - viewerRect.left + viewer.scrollLeft;
     const top = rect.top - viewerRect.top;
     const width = rect.width;
     const height = rect.height;
-  
     const minThreshold = 3;
     if (width <= minThreshold || height <= minThreshold) {
       viewer.removeChild(selectionRect);
       selectionRect = null;
       return;
     }
-  
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Bandwidth = Fhigh - Flow;
@@ -217,13 +195,11 @@ export function initFrequencyHover({
     const startTime = (left / actualWidth) * getDuration();
     const endTime = ((left + width) / actualWidth) * getDuration();
     const Duration = endTime - startTime;
-  
-    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect);
-  
+    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
     selectionRect = null;
   });
 
-  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj) {
+  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip';
     tooltip.style.position = 'absolute';
@@ -244,22 +220,15 @@ export function initFrequencyHover({
       <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
-    tooltip.addEventListener('mouseenter', () => {
-      isOverTooltip = true;
-      suppressHover = true;
-      hideAll();
-    });
-    
-    tooltip.addEventListener('mouseleave', () => {
-      isOverTooltip = false;
-      suppressHover = false;
-    });
-
+    tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
+    tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
     viewer.appendChild(tooltip);
-    selections.push({ rect: rectObj, tooltip });
-
+    selections.push({
+      data: { startTime, endTime, Flow, Fhigh },
+      rect: rectObj,
+      tooltip
+    });
     enableDrag(tooltip);
-
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
       const index = selections.findIndex(sel => sel.tooltip === tooltip);
       if (index !== -1) {
@@ -274,7 +243,6 @@ export function initFrequencyHover({
 
   function enableDrag(element) {
     let offsetX, offsetY, isDragging = false;
-
     element.addEventListener('mousedown', (e) => {
       if (e.target.classList.contains('close-btn')) return;
       isDragging = true;
@@ -282,7 +250,6 @@ export function initFrequencyHover({
       offsetX = e.clientX - rect.left;
       offsetY = e.clientY - rect.top;
     });
-
     window.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       const viewerRect = viewer.getBoundingClientRect();
@@ -291,18 +258,17 @@ export function initFrequencyHover({
       element.style.left = `${newX}px`;
       element.style.top = `${newY}px`;
     });
+    window.addEventListener('mouseup', () => { isDragging = false; });
+  }
 
-    window.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
-  }  
-  
   return {
     updatePersistentLines,
+    updateSelections,
     setFrequencyRange: (min, max) => {
       minFrequency = min;
       maxFrequency = max;
       updatePersistentLines();
+      updateSelections();
     }
-  }; 
+  };
 }
