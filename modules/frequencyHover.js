@@ -183,6 +183,9 @@ export function initFrequencyHover({
   });
 
   function calculateFmax(plugin, startTime, endTime, Flow, Fhigh) {
+    console.log("=== Enter calculateFmax ===");
+    console.log("plugin = ", plugin);
+    console.log("plugin.data = ", plugin?.data);
     if (!plugin || !plugin.data) return null;
 
     const data = plugin.data;
