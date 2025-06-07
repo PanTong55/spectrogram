@@ -27,6 +27,7 @@ export function initFrequencyHover({
   
   let suppressHover = false;
   let isOverTooltip = false;
+  let isResizing = false;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -35,7 +36,10 @@ export function initFrequencyHover({
   };
 
   const updateHoverDisplay = (e) => {
-    if (suppressHover) return;
+    if (suppressHover || isResizing) {
+      hideAll();
+      return;
+    }
     
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -84,6 +88,22 @@ export function initFrequencyHover({
     zoomControls.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
     zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
   }
+
+  viewer.addEventListener('mousedown', (e) => {
+    if (isOverTooltip || isResizing) return;
+    if (e.button !== 0) return;
+    const rect = viewer.getBoundingClientRect();
+    startX = e.clientX - rect.left + viewer.scrollLeft;
+    startY = e.clientY - rect.top;
+    if (startY > (viewer.clientHeight - scrollbarThickness)) return;
+    isDrawing = true;
+    selectionRect = document.createElement('div');
+    selectionRect.style.position = 'absolute';
+    selectionRect.style.border = '1px solid black';
+    selectionRect.style.backgroundColor = 'rgba(0,0,0,0.1)';
+    selectionRect.style.zIndex = '20';
+    viewer.appendChild(selectionRect);
+  });
 
   viewer.addEventListener('contextmenu', (e) => {
     if (isOverTooltip) return;
@@ -159,8 +179,7 @@ export function initFrequencyHover({
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
-    let startX, startY, startLeft, startTop, startWidth, startHeight;
-    let edge = null;
+    let startX, startY, edge = null;
 
     rect.addEventListener('mousemove', (e) => {
       const rectBox = rect.getBoundingClientRect();
@@ -185,13 +204,9 @@ export function initFrequencyHover({
     rect.addEventListener('mousedown', (e) => {
       if (!edge) return;
       resizing = true;
+      isResizing = true;
       startX = e.clientX;
       startY = e.clientY;
-      const box = rect.getBoundingClientRect();
-      startLeft = box.left;
-      startTop = box.top;
-      startWidth = box.width;
-      startHeight = box.height;
       e.preventDefault();
     });
 
@@ -199,7 +214,6 @@ export function initFrequencyHover({
       if (!resizing) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      const viewerRect = viewer.getBoundingClientRect();
       const actualWidth = getDuration() * getZoomLevel();
       const freqRange = maxFrequency - minFrequency;
 
@@ -218,7 +232,10 @@ export function initFrequencyHover({
       updateSelections();
     });
 
-    window.addEventListener('mouseup', () => { resizing = false; });
+    window.addEventListener('mouseup', () => {
+      resizing = false;
+      isResizing = false;
+    });
   }
 
   let isDrawing = false;
