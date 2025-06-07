@@ -189,9 +189,9 @@
           spectrogramWidth: container.scrollWidth,
           maxFrequency: currentFreqMax,
           minFrequency: currentFreqMin,
-          totalDuration: duration * 1000,
+          totalDuration: duration,
           getZoomLevel: () => zoomControl.getZoomLevel(),
-          getDuration: () => duration * 1000
+          getDuration: () => duration
         });
       } else {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
