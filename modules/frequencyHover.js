@@ -180,14 +180,15 @@ export function initFrequencyHover({
     const rect = sel.rect;
     let resizing = false;
     let startX, startY, edge = null;
-
+  
     rect.addEventListener('mousemove', (e) => {
+      if (isDrawing) return;  // <-- 防止畫圖狀態與 resize 衝突
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
       let cursor = 'default';
       edge = null;
-
+  
       if (offsetX < edgeThreshold) {
         edge = 'left'; cursor = 'ew-resize';
       } else if (offsetX > rectBox.width - edgeThreshold) {
@@ -197,10 +198,10 @@ export function initFrequencyHover({
       } else if (offsetY > rectBox.height - edgeThreshold) {
         edge = 'bottom'; cursor = 'ns-resize';
       }
-
+  
       rect.style.cursor = cursor;
     });
-
+  
     rect.addEventListener('mousedown', (e) => {
       if (!edge) return;
       resizing = true;
@@ -209,14 +210,14 @@ export function initFrequencyHover({
       startY = e.clientY;
       e.preventDefault();
     });
-
-    window.addEventListener('mousemove', (e) => {
+  
+    const resizeMove = (e) => {
       if (!resizing) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       const actualWidth = getDuration() * getZoomLevel();
       const freqRange = maxFrequency - minFrequency;
-
+  
       if (edge === 'left' || edge === 'right') {
         const deltaTime = (dx / actualWidth) * getDuration();
         if (edge === 'left') sel.data.startTime += deltaTime;
@@ -230,12 +231,16 @@ export function initFrequencyHover({
       startX = e.clientX;
       startY = e.clientY;
       updateSelections();
-    });
-
-    window.addEventListener('mouseup', () => {
+    };
+  
+    const resizeUp = () => {
+      if (!resizing) return;
       resizing = false;
       isResizing = false;
-    });
+    };
+  
+    window.addEventListener('mousemove', resizeMove);
+    window.addEventListener('mouseup', resizeUp);
   }
 
   let isDrawing = false;
