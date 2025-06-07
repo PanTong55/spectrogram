@@ -45,8 +45,8 @@ export function initFrequencyHover({
 
     const scrollLeft = viewer.scrollLeft || 0;
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const actualWidth = getDuration() * getZoomLevel();
-    const time = ((x + scrollLeft) / actualWidth) * getDuration();
+    const actualWidth = getDuration() * 1000 * getZoomLevel();
+    const timeMs = ((x + scrollLeft) / actualWidth) * getDuration() * 1000;
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
@@ -69,7 +69,7 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${timeMs.toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
