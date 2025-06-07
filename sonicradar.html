@@ -122,6 +122,7 @@
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
+    import { getPlugin } from './wsManager.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -191,7 +192,8 @@
           minFrequency: currentFreqMin,
           totalDuration: duration,
           getZoomLevel: () => zoomControl.getZoomLevel(),
-          getDuration: () => duration
+          getDuration: () => duration,
+          plugin: getPlugin()
         });
       } else {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
