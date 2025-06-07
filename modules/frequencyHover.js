@@ -100,6 +100,8 @@ export function initFrequencyHover({
     startY = e.clientY - rect.top;
     if (startY > (viewer.clientHeight - scrollbarThickness)) return;
     isDrawing = true;
+    suppressHover = true;
+    hideAll();
     selectionRect = document.createElement('div');
     selectionRect.style.position = 'absolute';
     selectionRect.style.border = '1px solid black';
@@ -147,6 +149,7 @@ export function initFrequencyHover({
     const Duration = endTime - startTime;
     createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
     selectionRect = null;
+    suppressHover = false;
   });
 
   viewer.addEventListener('contextmenu', (e) => {
