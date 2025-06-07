@@ -45,9 +45,9 @@ export function initFrequencyHover({
 
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
 
-    const actualWidth = getDuration() * 1000 * getZoomLevel(); // 實際上完整寬度 (ms)
-    const pxPerMs = actualWidth / (getDuration() * 1000);
-    const timeMs = x / pxPerMs;
+    const actualWidth = getDuration() * getZoomLevel();
+    const time = (x / actualWidth) * getDuration();
+    const timeMs = time * 1000;
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
