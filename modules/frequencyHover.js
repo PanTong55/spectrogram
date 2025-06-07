@@ -20,7 +20,7 @@ export function initFrequencyHover({
   const fixedOverlay = document.getElementById('fixed-overlay');
   const zoomControls = document.getElementById('zoom-controls');
   const container = document.getElementById('spectrogram-only');
-  const persistentLines = [];  // 儲存所有固定橫線
+  const persistentLines = [];
   const scrollbarThickness = 2;
   
   let suppressHover = false;
@@ -70,7 +70,7 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${Math.round(time * 1000)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
