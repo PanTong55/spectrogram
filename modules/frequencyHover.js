@@ -19,6 +19,7 @@ export function initFrequencyHover({
   const freqLabel = document.getElementById(freqLabelId);
   const fixedOverlay = document.getElementById('fixed-overlay');
   const zoomControls = document.getElementById('zoom-controls');
+  const container = document.getElementById('spectrogram-only');
   const persistentLines = [];  // 儲存所有固定橫線
   const scrollbarThickness = 2;
   
@@ -33,7 +34,7 @@ export function initFrequencyHover({
 
   const updateHoverDisplay = (e) => {
     if (suppressHover) return;
-
+    
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -45,7 +46,7 @@ export function initFrequencyHover({
 
     const scrollLeft = viewer.scrollLeft || 0;
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const actualWidth = getDuration() * getZoomLevel();
+    const actualWidth = container.scrollWidth;
     const time = ((x + scrollLeft) / actualWidth) * getDuration();
 
     hoverLine.style.top = `${y}px`;
