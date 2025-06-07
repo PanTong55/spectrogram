@@ -33,43 +33,42 @@ export function initFrequencyHover({
 
   const updateHoverDisplay = (e) => {
     if (suppressHover) return;
-
+  
     const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
+    const x = e.offsetX + (viewer.scrollLeft || 0);
+    const y = e.offsetY;
+  
     if (y > (viewer.clientHeight - scrollbarThickness)) {
       hideAll();
       return;
     }
-
-    const scrollLeft = viewer.scrollLeft || 0;
+  
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const actualWidth = getDuration() * 1000 * getZoomLevel();
-    const timeMs = ((x + scrollLeft) / actualWidth) * getDuration() * 1000;
-
+    const actualWidth = getDuration() * getZoomLevel();
+    const time = (x / actualWidth) * getDuration();
+  
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
-
-    hoverLineV.style.left = `${x}px`;
+  
+    hoverLineV.style.left = `${x - (viewer.scrollLeft || 0)}px`;
     hoverLineV.style.display = 'block';
-
+  
     const viewerWidth = viewer.clientWidth;
     const labelOffset = 12;
     let labelLeft;
-
-    if ((viewerWidth - x) < 120) {
+  
+    if ((viewerWidth - (x - (viewer.scrollLeft || 0))) < 120) {
       freqLabel.style.transform = 'translate(-100%, -50%)';
-      labelLeft = `${x - labelOffset}px`;
+      labelLeft = `${(x - (viewer.scrollLeft || 0)) - labelOffset}px`;
     } else {
       freqLabel.style.transform = 'translate(0, -50%)';
-      labelLeft = `${x + labelOffset}px`;
+      labelLeft = `${(x - (viewer.scrollLeft || 0)) + labelOffset}px`;
     }
-
+  
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${timeMs.toFixed(1)} ms`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
