@@ -69,7 +69,7 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
@@ -233,7 +233,7 @@ export function initFrequencyHover({
       <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
       <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
       <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
-      <div><b>Duration:</b> ${Duration.toFixed(1)}ms</div>
+      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => {
