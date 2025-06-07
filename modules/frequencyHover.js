@@ -163,7 +163,7 @@ export function initFrequencyHover({
       persistentLines.splice(existingIndex, 1);
     } else {
       if (persistentLines.length >= 5) return;
-      const yPos = (1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight;
+      const yPos = Math.round((1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight);
       const line = document.createElement('div');
       line.style.position = 'absolute';
       line.style.top = `${yPos}px`;
