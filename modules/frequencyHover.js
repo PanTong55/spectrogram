@@ -239,10 +239,13 @@ export function initFrequencyHover({
     `;
     tooltip.addEventListener('mouseenter', () => {
       isOverTooltip = true;
+      suppressHover = true;
+      hideAll();
     });
     
     tooltip.addEventListener('mouseleave', () => {
       isOverTooltip = false;
+      suppressHover = false;
     });
 
     viewer.appendChild(tooltip);
