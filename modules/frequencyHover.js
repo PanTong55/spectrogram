@@ -22,7 +22,6 @@ export function initFrequencyHover({
   
   let suppressHover = false;
   let isOverTooltip = false;
-  let isSelectionLocked = false;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -96,7 +95,7 @@ export function initFrequencyHover({
   }
 
   viewer.addEventListener('contextmenu', (e) => {
-    if (isOverTooltip || isSelectionLocked) return;
+    if (isOverTooltip) return;
     e.preventDefault();
   
     const rect = fixedOverlay.getBoundingClientRect();
@@ -149,7 +148,7 @@ export function initFrequencyHover({
   const selections = [];
 
   viewer.addEventListener('mousedown', (e) => {
-    if (isOverTooltip || isSelectionLocked) return;
+    if (isOverTooltip) return;
     if (e.button !== 0) return; // 只接受左鍵
 
     const rect = viewer.getBoundingClientRect();
@@ -257,15 +256,12 @@ export function initFrequencyHover({
 
     // 加 close 邏輯
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
-      // 找出對應的 selection
       const index = selections.findIndex(sel => sel.tooltip === tooltip);
       if (index !== -1) {
         viewer.removeChild(selections[index].rect);
         viewer.removeChild(selections[index].tooltip);
         selections.splice(index, 1);
       }
-      // ✅ 關閉後鎖定禁止再畫
-      isSelectionLocked = true;
     });
   }
 
