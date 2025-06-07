@@ -9,6 +9,8 @@ export function initFrequencyHover({
   maxFrequency = 128,
   minFrequency = 0,
   totalDuration = 1000,
+  getZoomLevel,
+  getDuration
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -43,7 +45,8 @@ export function initFrequencyHover({
 
     const scrollLeft = viewer.scrollLeft || 0;
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
+    const actualWidth = getDuration() * getZoomLevel();
+    const time = ((x + scrollLeft) / actualWidth) * getDuration();
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
@@ -66,7 +69,7 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${time.toFixed(1)} ms`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
@@ -202,8 +205,9 @@ export function initFrequencyHover({
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const Bandwidth = Fhigh - Flow;
-    const startTime = (left / spectrogramWidth) * totalDuration;
-    const endTime = ((left + width) / spectrogramWidth) * totalDuration;
+    const actualWidth = getDuration() * getZoomLevel();
+    const startTime = (left / actualWidth) * getDuration();
+    const endTime = ((left + width) / actualWidth) * getDuration();
     const Duration = endTime - startTime;
   
     createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect);
@@ -229,7 +233,7 @@ export function initFrequencyHover({
       <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
       <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
       <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
-      <div><b>Duration:</b> ${Duration.toFixed(1)}ms</div>
+      <div><b>Duration:</b> ${(Duration * 1000).toFixed(1)}ms</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => {
