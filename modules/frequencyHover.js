@@ -267,6 +267,18 @@ export function initFrequencyHover({
           if (edge === 'top') sel.data.Fhigh -= deltaFreq;
           if (edge === 'bottom') sel.data.Flow -= deltaFreq;
         }
+
+        if (sel.data.startTime > sel.data.endTime) {
+          const temp = sel.data.startTime;
+          sel.data.startTime = sel.data.endTime;
+          sel.data.endTime = temp;
+        }
+        if (sel.data.Flow > sel.data.Fhigh) {
+          const temp = sel.data.Flow;
+          sel.data.Flow = sel.data.Fhigh;
+          sel.data.Fhigh = temp;
+        }
+        
         startX = e.clientX;
         startY = e.clientY;
         updateSelections();
@@ -299,6 +311,8 @@ export function initFrequencyHover({
       sel.rect.style.top = `${top}px`;
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
+
+      updateTooltipValues(sel, left, top, width, height);
     });
   }
 
