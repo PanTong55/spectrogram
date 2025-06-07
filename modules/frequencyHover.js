@@ -268,6 +268,7 @@ export function initFrequencyHover({
         selections.splice(index, 1);
       }
       isOverTooltip = false;
+      suppressHover = false;
     });
   }
 
