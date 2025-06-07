@@ -336,19 +336,23 @@ export function initFrequencyHover({
   function updateSelections() {
     const actualWidth = getDuration() * getZoomLevel();
     const freqRange = maxFrequency - minFrequency;
-
+  
     selections.forEach(sel => {
       const { startTime, endTime, Flow, Fhigh } = sel.data;
       const left = (startTime / getDuration()) * actualWidth;
       const width = ((endTime - startTime) / getDuration()) * actualWidth;
       const top = (1 - (Fhigh - minFrequency) / freqRange) * spectrogramHeight;
       const height = ((Fhigh - Flow) / freqRange) * spectrogramHeight;
-
+  
       sel.rect.style.left = `${left}px`;
       sel.rect.style.top = `${top}px`;
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
-
+  
+      const tooltipLeft = left + width + 10;
+      sel.tooltip.style.left = `${tooltipLeft}px`;
+      sel.tooltip.style.top = `${top}px`;
+  
       updateTooltipValues(sel, left, top, width, height);
     });
   }
