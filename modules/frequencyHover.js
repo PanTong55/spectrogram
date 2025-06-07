@@ -220,8 +220,7 @@ export function initFrequencyHover({
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
-    let startX, startY, edge = null;
-    let initialData = null;
+    let edge = null;
   
     rect.addEventListener('mousemove', (e) => {
       if (isDrawing) return;
@@ -247,67 +246,44 @@ export function initFrequencyHover({
       if (!edge) return;
       resizing = true;
       isResizing = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      initialData = { ...sel.data }; // 複製一份當前資料
       e.preventDefault();
   
       const moveHandler = (e) => {
         if (!resizing) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+  
+        const viewerRect = viewer.getBoundingClientRect();
+        const scrollLeft = viewer.scrollLeft || 0;
+        const mouseX = e.clientX - viewerRect.left + scrollLeft;
+        const mouseY = e.clientY - viewerRect.top;
+  
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
   
-        let updated = false;
-  
         if (edge === 'left') {
-          let newStartTime = initialData.startTime + (dx / actualWidth) * getDuration();
+          let newStartTime = (mouseX / actualWidth) * getDuration();
           newStartTime = Math.min(newStartTime, sel.data.endTime - 0.001);
-          if (newStartTime !== sel.data.startTime) {
-            sel.data.startTime = newStartTime;
-            startX = e.clientX; // reset 滑鼠位置
-            initialData.startTime = newStartTime;
-            updated = true;
-          }
+          sel.data.startTime = newStartTime;
         }
   
         if (edge === 'right') {
-          let newEndTime = initialData.endTime + (dx / actualWidth) * getDuration();
+          let newEndTime = (mouseX / actualWidth) * getDuration();
           newEndTime = Math.max(newEndTime, sel.data.startTime + 0.001);
-          if (newEndTime !== sel.data.endTime) {
-            sel.data.endTime = newEndTime;
-            startX = e.clientX;
-            initialData.endTime = newEndTime;
-            updated = true;
-          }
+          sel.data.endTime = newEndTime;
         }
   
         if (edge === 'top') {
-          let newFhigh = initialData.Fhigh - (dy / spectrogramHeight) * freqRange;
+          let newFhigh = (1 - mouseY / spectrogramHeight) * freqRange + minFrequency;
           newFhigh = Math.max(newFhigh, sel.data.Flow + 0.1);
-          if (newFhigh !== sel.data.Fhigh) {
-            sel.data.Fhigh = newFhigh;
-            startY = e.clientY;
-            initialData.Fhigh = newFhigh;
-            updated = true;
-          }
+          sel.data.Fhigh = newFhigh;
         }
   
         if (edge === 'bottom') {
-          let newFlow = initialData.Flow - (dy / spectrogramHeight) * freqRange;
+          let newFlow = (1 - mouseY / spectrogramHeight) * freqRange + minFrequency;
           newFlow = Math.min(newFlow, sel.data.Fhigh - 0.1);
-          if (newFlow !== sel.data.Flow) {
-            sel.data.Flow = newFlow;
-            startY = e.clientY;
-            initialData.Flow = newFlow;
-            updated = true;
-          }
+          sel.data.Flow = newFlow;
         }
   
-        if (updated) {
-          updateSelections();
-        }
+        updateSelections();
       };
   
       const upHandler = () => {
