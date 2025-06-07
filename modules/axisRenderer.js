@@ -102,7 +102,7 @@ export function drawFrequencyGrid({
   labelContainer.innerHTML = '';
 
   for (let f = 0; f <= range; f += majorStep) {
-    const y = (1 - f / range) * spectrogramHeight;
+    const y = Math.round((1 - f / range) * spectrogramHeight);
 
     // 主刻度線
     const tick = document.createElement('div');
@@ -128,14 +128,13 @@ export function drawFrequencyGrid({
 
   // 新增次刻度 (minor tick)
   for (let f = 0; f <= range; f += minorStep) {
-    // 跳過已經畫過的主刻度線
     if (f % majorStep === 0) continue;
 
-    const y = (1 - f / range) * spectrogramHeight;
+    const y = Math.round((1 - f / range) * spectrogramHeight);
 
     const minorTick = document.createElement('div');
     minorTick.style.position = 'absolute';
-    minorTick.style.left = '42px';  // 稍微內縮
+    minorTick.style.left = '42px';
     minorTick.style.top = `${y}px`;
     minorTick.style.transform = 'translateY(-50%)';
     minorTick.style.width = '3px';
