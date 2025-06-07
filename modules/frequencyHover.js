@@ -252,6 +252,7 @@ export function initFrequencyHover({
         viewer.removeChild(selections[index].tooltip);
         selections.splice(index, 1);
       }
+      isOverTooltip = false;
     });
   }
 
