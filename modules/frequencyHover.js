@@ -246,73 +246,48 @@ export function initFrequencyHover({
       if (!edge) return;
       resizing = true;
       isResizing = true;
-      startX = e.clientX;
-      startY = e.clientY;
+      const initialStartX = e.clientX;
+      const initialStartY = e.clientY;
+      const initialData = { ...sel.data };  // 複製初始資料
       e.preventDefault();
-
+    
       const moveHandler = (e) => {
         if (!resizing) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
+        const dx = e.clientX - initialStartX;
+        const dy = e.clientY - initialStartY;
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
-      
-        let updateX = false;
-        let updateY = false;
-      
+    
         if (edge === 'left') {
-          const before = sel.data.startTime;
-          const deltaTime = (dx / actualWidth) * getDuration();
-          sel.data.startTime += deltaTime;
+          sel.data.startTime = initialData.startTime + (dx / actualWidth) * getDuration();
           sel.data.startTime = Math.min(sel.data.startTime, sel.data.endTime - 0.001);
-          if (sel.data.startTime !== before) {
-            updateX = true;
-          }
         }
-      
+    
         if (edge === 'right') {
-          const before = sel.data.endTime;
-          const deltaTime = (dx / actualWidth) * getDuration();
-          sel.data.endTime += deltaTime;
+          sel.data.endTime = initialData.endTime + (dx / actualWidth) * getDuration();
           sel.data.endTime = Math.max(sel.data.endTime, sel.data.startTime + 0.001);
-          if (sel.data.endTime !== before) {
-            updateX = true;
-          }
         }
-      
+    
         if (edge === 'top') {
-          const before = sel.data.Fhigh;
-          const deltaFreq = (dy / spectrogramHeight) * freqRange;
-          sel.data.Fhigh -= deltaFreq;
+          sel.data.Fhigh = initialData.Fhigh - (dy / spectrogramHeight) * freqRange;
           sel.data.Fhigh = Math.max(sel.data.Fhigh, sel.data.Flow + 0.1);
-          if (sel.data.Fhigh !== before) {
-            updateY = true;
-          }
         }
-      
+    
         if (edge === 'bottom') {
-          const before = sel.data.Flow;
-          const deltaFreq = (dy / spectrogramHeight) * freqRange;
-          sel.data.Flow -= deltaFreq;
+          sel.data.Flow = initialData.Flow - (dy / spectrogramHeight) * freqRange;
           sel.data.Flow = Math.min(sel.data.Flow, sel.data.Fhigh - 0.1);
-          if (sel.data.Flow !== before) {
-            updateY = true;
-          }
         }
-      
-        if (updateX) startX = e.clientX;
-        if (updateY) startY = e.clientY;
-      
+    
         updateSelections();
       };
-
+    
       const upHandler = () => {
         resizing = false;
         isResizing = false;
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
       };
-
+    
       window.addEventListener('mousemove', moveHandler);
       window.addEventListener('mouseup', upHandler);
     });
