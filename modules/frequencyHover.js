@@ -9,6 +9,8 @@ export function initFrequencyHover({
   maxFrequency = 128,
   minFrequency = 0,
   totalDuration = 1000,
+  getZoomLevel,
+  getDuration
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -43,7 +45,8 @@ export function initFrequencyHover({
 
     const scrollLeft = viewer.scrollLeft || 0;
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const time = ((x + scrollLeft) / spectrogramWidth) * totalDuration;
+    const actualWidth = getDuration() * getZoomLevel();
+    const time = ((x + scrollLeft) / actualWidth) * totalDuration;
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
@@ -204,6 +207,9 @@ export function initFrequencyHover({
     const Bandwidth = Fhigh - Flow;
     const startTime = (left / spectrogramWidth) * totalDuration;
     const endTime = ((left + width) / spectrogramWidth) * totalDuration;
+    const actualWidth = getDuration() * getZoomLevel();
+    const startTime = (left / actualWidth) * totalDuration;
+    const endTime = ((left + width) / actualWidth) * totalDuration;
     const Duration = endTime - startTime;
   
     createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect);
