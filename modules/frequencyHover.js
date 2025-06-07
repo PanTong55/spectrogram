@@ -139,16 +139,7 @@ export function initFrequencyHover({
     });
   }
 
-  return {
-    updatePersistentLines,
-    setFrequencyRange: (min, max) => {
-      minFrequency = min;
-      maxFrequency = max;
-      updatePersistentLines();
-    }
-  };  
-
-    let isDrawing = false;
+  let isDrawing = false;
   let startX = 0;
   let startY = 0;
   let selectionRect = null;
@@ -215,6 +206,15 @@ export function initFrequencyHover({
 
     createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration);
   });
+  
+  return {
+    updatePersistentLines,
+    setFrequencyRange: (min, max) => {
+      minFrequency = min;
+      maxFrequency = max;
+      updatePersistentLines();
+    }
+  };  
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration) {
     const tooltip = document.createElement('div');
