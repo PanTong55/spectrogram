@@ -17,10 +17,11 @@ export function initFrequencyHover({
   const freqLabel = document.getElementById(freqLabelId);
   const fixedOverlay = document.getElementById('fixed-overlay');
   const zoomControls = document.getElementById('zoom-controls');
-
-  const scrollbarThickness = 2;
-  let suppressHover = false;
   const persistentLines = [];  // 儲存所有固定橫線
+  const scrollbarThickness = 2;
+  
+  let suppressHover = false;
+  let isOverTooltip = false;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -94,6 +95,7 @@ export function initFrequencyHover({
   }
 
   viewer.addEventListener('contextmenu', (e) => {
+    if (isOverTooltip) return;
     e.preventDefault();
   
     const rect = fixedOverlay.getBoundingClientRect();
@@ -146,6 +148,7 @@ export function initFrequencyHover({
   const selections = [];
 
   viewer.addEventListener('mousedown', (e) => {
+    if (isOverTooltip) return;
     if (e.button !== 0) return; // 只接受左鍵
 
     const rect = viewer.getBoundingClientRect();
@@ -237,10 +240,15 @@ export function initFrequencyHover({
       <div><b>Duration:</b> ${Duration.toFixed(1)}ms</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
+    tooltip.addEventListener('mouseenter', () => {
+      isOverTooltip = true;
+    });
+    
+    tooltip.addEventListener('mouseleave', () => {
+      isOverTooltip = false;
+    });
 
     viewer.appendChild(tooltip);
-    viewer.removeChild(selectionRect); // 確定後移除 selection
-
     selections.push({ rect: selectionRect, tooltip });
 
     // 加拖拉邏輯
