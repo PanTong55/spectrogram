@@ -226,8 +226,8 @@ export function initFrequencyHover({
     tooltip.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
     tooltip.style.cursor = 'move';
     tooltip.innerHTML = `
-      <div>F.high: ${Fhigh.toFixed(1)}kHz</div>
-      <div>F.Low: ${Flow.toFixed(1)}kHz</div>
+      <div><b>F.high:</b> ${Fhigh.toFixed(1)}kHz</div>
+      <div><b>F.Low:</b> ${Flow.toFixed(1)}kHz</div>
       <div><b>Bandwidth:</b> ${Bandwidth.toFixed(1)}kHz</div>
       <div><b>Duration:</b> ${Duration.toFixed(1)}ms</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
