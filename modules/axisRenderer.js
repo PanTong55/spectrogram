@@ -76,8 +76,8 @@ export function drawFrequencyGrid({
   maxFrequency = 128,
   offsetKHz = 0,
 }) {
-  const width = containerElement.scrollWidth;
-
+  const width = containerElement.clientWidth;
+  
   // 高 DPI 裝置支援
   const dpr = window.devicePixelRatio || 1;
   gridCanvas.width = width * dpr;
