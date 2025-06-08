@@ -13,7 +13,6 @@ export function initSidebar() {
   toggleBtn.addEventListener('click', () => {
     const isVisible = sidebar.style.display === 'block';
     sidebar.style.display = isVisible ? 'none' : 'block';
-    sidebarIcon.src = isVisible ? 'icons/sidebar_open.svg' : 'icons/sidebar_close.svg';
     sidebarTooltip.textContent = isVisible ? 'Open File List' : 'Collapse File List';
   });
 
