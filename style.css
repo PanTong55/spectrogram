@@ -343,3 +343,10 @@ input[type="file"]:hover {
 .draggable-tooltip:hover {
   box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
 }
+
+#searchInput {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
