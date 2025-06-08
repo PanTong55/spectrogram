@@ -156,7 +156,9 @@
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
-
+    import { initSidebar } from './modules/sidebar.js';
+    
+    const sidebarControl = initSidebar();
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
     const timeAxis = document.getElementById('time-axis');
@@ -263,6 +265,9 @@
       spectrogramHeight,
       colorMap: [],
       onPluginReplaced: () => {},
+      onFileLoaded: (file) => {
+        sidebarControl.refresh(file.name);
+      }
     });
 
     initDragDropLoader({
@@ -271,6 +276,9 @@
       spectrogramHeight,
       colorMap: [],
       onPluginReplaced: () => {},
+      onFileLoaded: (file) => {
+        sidebarControl.refresh(file.name);
+      }
     });    
 
     initScrollSync({
