@@ -9,6 +9,25 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
+
+  <div style="display: flex; flex-direction: row; height: calc(100vh - 50px);">
+    <!-- Sidebar -->
+  <div id="sidebar" style="
+      width: 260px;
+      border-right: 1px solid #ccc;
+      padding: 10px;
+      font-family: 'Noto Sans HK', sans-serif;
+      font-size: 13px;
+      display: none;
+      flex-shrink: 0;
+      ">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+       <span>File List</span>
+      <button id="hideSidebarBtn">×</button>
+    </div>
+      <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
+      <ul id="fileList" style="list-style:none; padding:0; margin:0;"></ul>
+  </div>
     <!-- Top Bar -->
   <div id="top-bar" style="
       display: flex;
@@ -21,26 +40,6 @@
     <button id="toggleSidebarBtn" style="margin-right:10px;">☰</button>
     <span id="currentFilePath">(no file loaded)</span>
   </div>
-
-  <div style="display: flex; flex-direction: row; height: calc(100vh - 50px);">
-    <!-- Sidebar -->
-    <div id="sidebar" style="
-        width: 260px;
-        border-right: 1px solid #ccc;
-        padding: 10px;
-        font-family: 'Noto Sans HK', sans-serif;
-        font-size: 13px;
-        display: none;
-        flex-shrink: 0;
-      ">
-      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-        <span>File List</span>
-        <button id="hideSidebarBtn">×</button>
-      </div>
-      <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
-      <ul id="fileList" style="list-style:none; padding:0; margin:0;"></ul>
-    </div>
-
   <div style="flex-grow: 1; overflow: hidden;">  
     <div id="spectrogram-settings" style="
       padding: 0 0 2px;
