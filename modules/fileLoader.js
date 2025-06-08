@@ -2,7 +2,6 @@
 
 import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
 import { extractGuanoMetadata } from './guanoReader.js';
-import { setFileList } from './fileLoader.js';
 
 let fileList = [];
 let currentIndex = -1;
