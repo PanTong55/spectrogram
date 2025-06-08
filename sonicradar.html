@@ -35,6 +35,9 @@
         <span class="tooltiptext" id="sidebarTooltip">Toggle File List</span>
       </button>
       <span id="currentFilePath" class="file-path-display">(Drag and drop the wav files below.)</span>
+      <input type="file" id="fileInput" accept=".wav" multiple />
+      <button id="prevBtn" title="Previous file" class="sidebar-button"><i class="fas fa-arrow-left"></i></button>
+      <button id="nextBtn" title="Next file" class="sidebar-button"><i class="fas fa-arrow-right"></i></button>
     </div>
         
     <div id="spectrogram-settings" style="
@@ -123,10 +126,6 @@
           <span class="slider round"></span>
         </label>
       </label>    
-      <label for="fileInput" class="slider-label" style="margin-left: 10px;">Load file(s):</label>
-      <input type="file" id="fileInput" accept=".wav" multiple />
-      <button id="prevBtn" title="Previous file" class="flat-icon-button"><i class="fas fa-arrow-left"></i></button>
-      <button id="nextBtn" title="Next file" class="flat-icon-button"><i class="fas fa-arrow-right"></i></button>
     </div>
   
     <h3 style="margin-top: 20px;">GUANO Metadata:</h3>
