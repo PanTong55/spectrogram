@@ -68,6 +68,25 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     updateZoomButtons();
   };
 
+  document.addEventListener('keydown', (e) => {
+    if (!e.ctrlKey) return;  // 只監聽 Ctrl + *
+
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        zoomInBtn.click();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        zoomOutBtn.click();
+        break;
+      case '0':
+        e.preventDefault();
+        expandBtn.click();
+        break;
+    }
+  });  
+
   return {
     applyZoom,
     updateZoomButtons,
