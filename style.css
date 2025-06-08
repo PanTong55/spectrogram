@@ -370,22 +370,18 @@ input[type="file"]:hover {
   padding: 5px;
   position: relative;
   display: inline-block;
+  color: #000;
+  transition: color 0.2s;
 }
+
+#toggleSidebarBtn:hover {
+  color: #555;
+}
+
 #toggleSidebarBtn:focus,
 #toggleSidebarBtn:active {
   outline: none;
   box-shadow: none;
-}
-
-/* icon預設為黑色 */
-#sidebarIcon {
-  filter: brightness(0) saturate(100%);
-  transition: filter 0.2s;
-}
-
-/* hover時轉深灰色 */
-#toggleSidebarBtn:hover #sidebarIcon {
-  filter: brightness(0.6) saturate(100%);
 }
 
 /* tooltip基本樣式 */
