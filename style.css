@@ -409,13 +409,22 @@ input[type="file"]:hover {
 }
 
 #tool-bar {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.4s ease;
   display: flex;
   align-items: center;
   gap: 10px;
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 13px;
-  flex-wrap: nowrap; /* 不換行 */
+  flex-wrap: nowrap;
   min-height: 50px;
+}
+
+#tool-bar.open {
+  max-height: 50px; /* 你實際toolbar高度，可微調 */
+  opacity: 1;
 }
 
 /* Sidebar Button 樣式 */
