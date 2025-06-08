@@ -28,6 +28,10 @@ export function initDragDropLoader({
   async function loadFile(file) {
     if (!file) return;
 
+    if (typeof onFileLoaded === 'function') {
+      onFileLoaded(file);
+    }    
+
     const filePathElem = document.getElementById('currentFilePath');
     if (filePathElem) {
       filePathElem.textContent = file.name;
@@ -68,10 +72,6 @@ export function initDragDropLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     document.getElementById('spectrogram-settings').textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
-
-    if (typeof onFileLoaded === 'function') {
-      onFileLoaded(file);
-    }
   }
 
   async function handleFiles(files) {
