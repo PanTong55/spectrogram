@@ -371,7 +371,15 @@ input[type="file"]:hover {
   list-style: none;
   padding: 0;
   margin: 0;
-  max-height: calc(100vh - 120px);
+  max-height: calc(100% - 400px);
+  overflow-y: auto;
+}
+
+#Metadata{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 400px;
   overflow-y: auto;
 }
 
