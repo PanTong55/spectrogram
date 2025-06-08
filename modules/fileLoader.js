@@ -109,4 +109,14 @@ export function initFileLoader({
       nextBtn.click();
     }
   });
+
+  return {
+    loadFileAtIndex: async (index) => {
+      const files = getFileList();
+      if (index >= 0 && index < files.length) {
+        setCurrentIndex(index);
+        await loadFile(files[index]);
+      }
+    }
+  };  
 }
