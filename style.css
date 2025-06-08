@@ -374,7 +374,7 @@ input[type="file"]:hover {
 #Metadata {
   padding: 8px;
   margin: 0;
-  height: 350px
+  height: 350px;
   max-width: 100%;
   background-color: #f5f5f5;
   border-radius: 8px;
