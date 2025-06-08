@@ -1,6 +1,6 @@
 // modules/sidebar.js
 
-import { getFileList, getCurrentIndex } from './fileLoader.js';
+import { getFileList, getCurrentIndex } from './fileState.js';
 
 export function initSidebar() {
   const sidebar = document.getElementById('sidebar');
