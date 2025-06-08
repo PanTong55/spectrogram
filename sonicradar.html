@@ -157,6 +157,7 @@
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
 
+    const spectrogramHeight = 800;
     let sidebarControl;
     const fileLoaderControl = initFileLoader({
       fileInputId: 'fileInput',
@@ -180,7 +181,6 @@
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
-    const spectrogramHeight = 800;
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
