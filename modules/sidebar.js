@@ -33,18 +33,14 @@ export function initSidebar({ onFileSelected } = {}) {
       li.style.padding = '3px 0';
       li.style.cursor = 'pointer';
   
-      // 先處理副檔名
       const nameWithoutExt = file.name.replace(/\.wav$/i, '');
   
-      // 建立 icon
       const icon = document.createElement('i');
       icon.className = 'fa-regular fa-file-audio';
       icon.style.marginRight = '6px';
   
-      // 建立文字節點
       const text = document.createTextNode(nameWithoutExt);
   
-      // 插入 icon 和文字
       li.appendChild(icon);
       li.appendChild(text);
   
@@ -57,6 +53,7 @@ export function initSidebar({ onFileSelected } = {}) {
       if (index === currentIndex) {
         li.style.fontWeight = 'bold';
         li.style.color = '#007bff';
+        li.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
   
       fileListUl.appendChild(li);
