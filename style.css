@@ -350,3 +350,12 @@ input[type="file"]:hover {
   margin-bottom: 8px;
 }
 
+#sidebar {
+  width: 320px;
+  border-right: 1px solid #ccc;
+  padding: 10px;
+  font-size: 13px;
+  display: none;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
