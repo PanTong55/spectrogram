@@ -2,7 +2,7 @@
 
 import { getFileList, getCurrentIndex } from './fileState.js';
 
-export function initSidebar() {
+export function initSidebar({ onFileSelected } = {}) {
   const sidebar = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('toggleSidebarBtn');
   const sidebarIcon = document.getElementById('sidebarIcon');
@@ -26,18 +26,23 @@ export function initSidebar() {
 
     fileListUl.innerHTML = '';
 
-    list.forEach((file, index) => {
-      if (filter && !file.name.toLowerCase().includes(filter)) return;
+      list.forEach((file, index) => {
+        if (filter && !file.name.toLowerCase().includes(filter)) return;
 
-      const li = document.createElement('li');
-      li.textContent = file.name;
-      li.style.padding = '3px 0';
-      li.style.cursor = 'default';
-      if (index === currentIndex) {
-        li.style.fontWeight = 'bold';
-        li.style.color = '#007bff';
-      }
-      fileListUl.appendChild(li);
+        const li = document.createElement('li');
+        li.textContent = file.name;
+        li.style.padding = '3px 0';
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => {
+          if (typeof onFileSelected === 'function') {
+            onFileSelected(index);
+          }
+        });
+        if (index === currentIndex) {
+          li.style.fontWeight = 'bold';
+          li.style.color = '#007bff';
+        }
+        fileListUl.appendChild(li);
     });
   }
 
