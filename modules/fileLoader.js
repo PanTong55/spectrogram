@@ -2,6 +2,7 @@
 
 import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
 import { extractGuanoMetadata } from './guanoReader.js';
+import { setFileList } from './fileLoader.js';
 
 let fileList = [];
 let currentIndex = -1;
@@ -70,7 +71,9 @@ export function initFileLoader({
     if (!selectedFile) return;
 
     const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
+    
     fileList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
+    setFileList(fileList, 0);  // <== 補上這行同步給 sidebar.js
     currentIndex = fileList.findIndex(f => f.name === selectedFile.name);
 
     await loadFile(selectedFile);
