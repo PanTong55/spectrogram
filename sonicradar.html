@@ -159,21 +159,7 @@
 
     const spectrogramHeight = 800;
     let sidebarControl;
-    const fileLoaderControl = initFileLoader({
-      fileInputId: 'fileInput',
-      wavesurfer: getWavesurfer(),
-      spectrogramHeight,
-      colorMap: [],
-      onPluginReplaced: () => {},
-      onFileLoaded: (file) => {
-        sidebarControl.refresh(file.name);
-      }
-    });
-    sidebarControl = initSidebar({
-      onFileSelected: (index) => {
-        fileLoaderControl.loadFileAtIndex(index);
-      }
-    });
+    let fileLoaderControl;
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
     const timeAxis = document.getElementById('time-axis');
@@ -196,6 +182,22 @@
     });
     updateSpectrogramSettingsText();
 
+    fileLoaderControl = initFileLoader({
+      fileInputId: 'fileInput',
+      wavesurfer: getWavesurfer(),
+      spectrogramHeight,
+      colorMap: [],
+      onPluginReplaced: () => {},
+      onFileLoaded: (file) => {
+        sidebarControl.refresh(file.name);
+      }
+    });
+    sidebarControl = initSidebar({
+      onFileSelected: (index) => {
+        fileLoaderControl.loadFileAtIndex(index);
+      }
+    });
+    
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
     
     freqGrid.style.display = 'none';
