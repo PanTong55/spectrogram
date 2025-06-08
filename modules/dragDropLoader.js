@@ -2,7 +2,7 @@
 
 import { extractGuanoMetadata } from './guanoReader.js';
 import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
-import { setFileList } from './fileLoader.js';  // ✅ 讀取 fileLoader 的 setter
+import { setFileList } from './fileState.js';
 
 export function initDragDropLoader({
   targetElementId,
@@ -63,28 +63,22 @@ export function initDragDropLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     document.getElementById('spectrogram-settings').textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
-    
+
     if (typeof onFileLoaded === 'function') {
       onFileLoaded(file);
-    }    
+    }
   }
 
   async function handleFiles(files) {
     const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
-
     if (validFiles.length === 0) {
       alert('Only .wav files are supported.');
       return;
     }
 
-    // ✅ 更新全局 fileList & index
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
     setFileList(sortedList, 0);
-
     await loadFile(sortedList[0]);
-    if (typeof onFileLoaded === 'function') {
-      onFileLoaded(sortedList[0]);
-    }
   }
 
   dropArea.addEventListener('dragover', e => {
