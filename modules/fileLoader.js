@@ -2,9 +2,8 @@
 
 import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
 import { extractGuanoMetadata } from './guanoReader.js';
+import { setFileList, getFileList, getCurrentIndex, setCurrentIndex } from './fileState.js';
 
-let fileList = [];
-let currentIndex = -1;
 let lastObjectUrl = null;
 let currentPlugin = null;
 
@@ -22,7 +21,7 @@ export function initFileLoader({
 
   async function loadFile(file) {
     if (!file) return;
-    
+
     const guanoOutput = document.getElementById('guano-output');
     try {
       const result = await extractGuanoMetadata(file);
@@ -30,7 +29,7 @@ export function initFileLoader({
     } catch (err) {
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }
-    
+
     const fileUrl = URL.createObjectURL(file);
     if (currentPlugin?.destroy) currentPlugin.destroy();
     if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
@@ -58,7 +57,7 @@ export function initFileLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     document.getElementById('spectrogram-settings').textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
-    
+
     if (typeof onFileLoaded === 'function') {
       onFileLoaded(file);
     }
@@ -70,33 +69,33 @@ export function initFileLoader({
     if (!selectedFile) return;
 
     const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
-    
-    fileList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
-    setFileList(fileList, 0);  // <== 補上這行同步給 sidebar.js
-    currentIndex = fileList.findIndex(f => f.name === selectedFile.name);
 
+    const sortedList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
+    const index = sortedList.findIndex(f => f.name === selectedFile.name);
+
+    setFileList(sortedList, index);
     await loadFile(selectedFile);
   });
 
   prevBtn.addEventListener('click', () => {
-    if (currentIndex > 0) {
-      currentIndex--;
-      loadFile(fileList[currentIndex]);  // 改成：
-      loadFile(fileList[currentIndex]).then(() => {
-        if (typeof onFileLoaded === 'function') {
-          onFileLoaded(fileList[currentIndex]);
-        }
+    const index = getCurrentIndex();
+    if (index > 0) {
+      setCurrentIndex(index - 1);
+      const file = getFileList()[index - 1];
+      loadFile(file).then(() => {
+        if (typeof onFileLoaded === 'function') onFileLoaded(file);
       });
     }
   });
-  
+
   nextBtn.addEventListener('click', () => {
-    if (currentIndex < fileList.length - 1) {
-      currentIndex++;
-      loadFile(fileList[currentIndex]).then(() => {
-        if (typeof onFileLoaded === 'function') {
-          onFileLoaded(fileList[currentIndex]);
-        }
+    const index = getCurrentIndex();
+    const files = getFileList();
+    if (index < files.length - 1) {
+      setCurrentIndex(index + 1);
+      const file = files[index + 1];
+      loadFile(file).then(() => {
+        if (typeof onFileLoaded === 'function') onFileLoaded(file);
       });
     }
   });
@@ -109,17 +108,3 @@ export function initFileLoader({
     }
   });
 }
-
-export function setFileList(list, index = 0) {
-  fileList = list;
-  currentIndex = index;
-}
-
-export function getFileList() {
-  return fileList;
-}
-
-export function getCurrentIndex() {
-  return currentIndex;
-}
-
