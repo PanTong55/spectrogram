@@ -81,14 +81,23 @@ export function initFileLoader({
   prevBtn.addEventListener('click', () => {
     if (currentIndex > 0) {
       currentIndex--;
-      loadFile(fileList[currentIndex]);
+      loadFile(fileList[currentIndex]);  // 改成：
+      loadFile(fileList[currentIndex]).then(() => {
+        if (typeof onFileLoaded === 'function') {
+          onFileLoaded(fileList[currentIndex]);
+        }
+      });
     }
   });
-
+  
   nextBtn.addEventListener('click', () => {
     if (currentIndex < fileList.length - 1) {
       currentIndex++;
-      loadFile(fileList[currentIndex]);
+      loadFile(fileList[currentIndex]).then(() => {
+        if (typeof onFileLoaded === 'function') {
+          onFileLoaded(fileList[currentIndex]);
+        }
+      });
     }
   });
 
