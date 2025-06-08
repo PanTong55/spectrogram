@@ -360,33 +360,42 @@ input[type="file"]:hover {
   box-sizing: border-box;
 }
 
-/* SideBar 按鈕樣式 */
-#toggleSidebarBtn i {
-  font-size: 26px;
-  color: #555;
-  transition: color 0.2s;
+/* Sidebar Button 樣式 */
+.sidebar-button {
+  width: 40px;
+  height: 40px;
+  background-color: #555;  /* 預設深灰色 */
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-right: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-#toggleSidebarBtn:hover i {
-  color: #333;
+.sidebar-button:hover {
+  background-color: #222;  /* Hover時更深灰 */
 }
 
-#toggleSidebarBtn:focus,
-#toggleSidebarBtn:active {
-  outline: none;
-  box-shadow: none;
+.sidebar-button i {
+  color: white;  /* icon 白色 */
+  font-size: 20px;
 }
 
+/* File Path Display 樣式 */
 .file-path-display {
   display: inline-block;
   background-color: #f5f5f5;
-  padding: 4px 12px;
-  border-radius: 6px;
-  margin-left: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
   max-width: 400px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px;
 }
 
 /* tooltip基本樣式 */
