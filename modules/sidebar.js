@@ -48,8 +48,11 @@ export function initSidebar() {
   }
 
   return {
-    refresh: (filePath) => {
+    refresh: (filePath, resetSearch = true) => {
       updateCurrentPath(filePath);
+      if (resetSearch) {
+        searchInput.value = '';
+      }
       renderFileList(searchInput.value.trim().toLowerCase());
     }
   };
