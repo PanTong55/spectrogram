@@ -139,6 +139,7 @@ export function initFrequencyHover({
       viewer.removeChild(selectionRect);
       selectionRect = null;
       suppressHover = false;
+      updateHoverDisplay(e);
       return;
     }
     const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
