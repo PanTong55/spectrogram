@@ -41,6 +41,41 @@
       <button id="nextBtn" title="Next file (>)" class="sidebar-button"><i class="fas fa-arrow-right"></i></button>
       <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
     </div>
+    <!-- Tool Bar -->    
+    <div id="tool-bar">
+      <label class="slider-label">Overlap:
+        <select id="overlapInput" class="styled-select">
+          <option value="auto" selected>Auto</option>
+          <option value="25">25%</option>
+          <option value="50">50%</option>
+          <option value="75">75%</option>
+          <option value="90">90%</option>
+          <option value="95">95%</option>
+        </select>
+      </label>    
+      <label class="slider-label">F.Range (kHz):
+        <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 40px;">
+      </label>
+      <label class="slider-label">-
+        <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 40px;">
+      </label>
+      <button id="applyFreqRangeBtn" title="Apply" class="sidebar-button"><i class="fa-solid fa-check"></i></button>
+      <label class="slider-label">Brightness:
+        <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
+        <span class="slider-value" id="brightnessVal">0</span>
+      </label>
+      <label class="slider-label">Contrast:
+        <input type="range" id="gainSlider" min="1" max="4" step="0.1" value="2">
+        <span class="slider-value" id="gainVal">2</span>
+      </label>
+      <button id="resetButton" title="Reset to default" class="sidebar-button"><i class="fas fa-rotate-left"></i></button>
+      <label class="slider-label">Grid:
+        <label class="switch">
+          <input type="checkbox" id="toggleGridSwitch">
+          <span class="slider round"></span>
+        </label>
+      </label>    
+    </div>    
         
     <div id="spectrogram-settings" style="
       padding: 0 0 2px;
@@ -94,41 +129,6 @@
       <div id="time-axis"></div>
     </div>
     <div id="time-label">Time (ms)</div>
-  
-    <div id="tool-bar">
-      <label class="slider-label">Overlap:
-        <select id="overlapInput" class="styled-select">
-          <option value="auto" selected>Auto</option>
-          <option value="25">25%</option>
-          <option value="50">50%</option>
-          <option value="75">75%</option>
-          <option value="90">90%</option>
-          <option value="95">95%</option>
-        </select>
-      </label>    
-      <label class="slider-label">F.Range (kHz):
-        <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 40px;">
-      </label>
-      <label class="slider-label">-
-        <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 40px;">
-      </label>
-      <button id="applyFreqRangeBtn" title="Apply" class="sidebar-button"><i class="fa-solid fa-check"></i></button>
-      <label class="slider-label">Brightness:
-        <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
-        <span class="slider-value" id="brightnessVal">0</span>
-      </label>
-      <label class="slider-label">Contrast:
-        <input type="range" id="gainSlider" min="1" max="4" step="0.1" value="2">
-        <span class="slider-value" id="gainVal">2</span>
-      </label>
-      <button id="resetButton" title="Reset to default" class="sidebar-button"><i class="fas fa-rotate-left"></i></button>
-      <label class="slider-label">Grid:
-        <label class="switch">
-          <input type="checkbox" id="toggleGridSwitch">
-          <span class="slider round"></span>
-        </label>
-      </label>    
-    </div>
     </div>
   </div>   
   <script type="module">
