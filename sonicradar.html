@@ -178,6 +178,11 @@
     });
     
     const renderAxes = () => {
+
+      const containerWidth = container.scrollWidth;
+      timeAxis.style.width = containerWidth + "px";
+      timeWrapper.style.width = containerWidth + "px";  
+          
       drawTimeAxis({
         containerWidth: container.scrollWidth,
         duration,
