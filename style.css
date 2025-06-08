@@ -360,6 +360,18 @@ input[type="file"]:hover {
   box-sizing: border-box;
 }
 
+#top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  background: #f0f0f0;
+  font-family: 'Noto Sans HK', sans-serif;
+  font-size: 13px;
+  flex-wrap: nowrap; /* 不換行 */
+  min-height: 50px;
+}
+
 /* Sidebar Button 樣式 */
 .sidebar-button {
   width: 40px;
@@ -391,7 +403,8 @@ input[type="file"]:hover {
   background-color: #f5f5f5;
   padding: 8px 16px;
   border-radius: 8px;
-  max-width: 400px;
+  max-width: 100%;
+  flex-shrink: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
