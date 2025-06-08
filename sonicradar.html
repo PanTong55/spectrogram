@@ -174,11 +174,6 @@
     const getDuration = () => duration;
 
     const guanoOutput = document.getElementById('guano-output');
-    document.getElementById('fileInput').addEventListener('change', async function(event) {
-      const file = event.target.files[0];
-      const result = await extractGuanoMetadata(file);
-      guanoOutput.textContent = result;
-    });
 
     initWavesurfer({
       container,
