@@ -22,6 +22,11 @@ export function initFileLoader({
   async function loadFile(file) {
     if (!file) return;
 
+    const filePathElem = document.getElementById('currentFilePath');
+    if (filePathElem) {
+      filePathElem.textContent = file.name;
+    }   
+
     const guanoOutput = document.getElementById('guano-output');
     try {
       const result = await extractGuanoMetadata(file);
