@@ -22,6 +22,10 @@ export function initFileLoader({
   async function loadFile(file) {
     if (!file) return;
 
+    if (typeof onFileLoaded === 'function') {
+      onFileLoaded(file);
+    }
+    
     const filePathElem = document.getElementById('currentFilePath');
     if (filePathElem) {
       filePathElem.textContent = file.name;
@@ -62,10 +66,7 @@ export function initFileLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     document.getElementById('spectrogram-settings').textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
-
-    if (typeof onFileLoaded === 'function') {
-      onFileLoaded(file);
-    }
+    
   }
 
   fileInput.addEventListener('change', async (event) => {
@@ -87,9 +88,7 @@ export function initFileLoader({
     if (index > 0) {
       setCurrentIndex(index - 1);
       const file = getFileList()[index - 1];
-      loadFile(file).then(() => {
-        if (typeof onFileLoaded === 'function') onFileLoaded(file);
-      });
+      loadFile(file);
     }
   });
 
@@ -99,9 +98,7 @@ export function initFileLoader({
     if (index < files.length - 1) {
       setCurrentIndex(index + 1);
       const file = files[index + 1];
-      loadFile(file).then(() => {
-        if (typeof onFileLoaded === 'function') onFileLoaded(file);
-      });
+      loadFile(file);
     }
   });
 
