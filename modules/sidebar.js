@@ -5,17 +5,17 @@ import { getFileList, getCurrentIndex } from './fileState.js';
 export function initSidebar() {
   const sidebar = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('toggleSidebarBtn');
-  const hideBtn = document.getElementById('hideSidebarBtn');
+  const sidebarIcon = document.getElementById('sidebarIcon');
   const fileListUl = document.getElementById('fileList');
   const searchInput = document.getElementById('searchInput');
   const filePathSpan = document.getElementById('currentFilePath');
 
   toggleBtn.addEventListener('click', () => {
-    sidebar.style.display = 'block';
-  });
-
-  hideBtn.addEventListener('click', () => {
-    sidebar.style.display = 'none';
+    const isVisible = sidebar.style.display === 'block';
+    sidebar.style.display = isVisible ? 'none' : 'block';
+    sidebarIcon.classList.toggle('fa-bars', isVisible);
+    sidebarIcon.classList.toggle('fa-xmark', !isVisible);
+    toggleBtn.style.color = isVisible ? '#000' : '#007bff';
   });
 
   searchInput.addEventListener('input', () => {
