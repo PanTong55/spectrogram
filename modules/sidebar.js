@@ -43,12 +43,7 @@ export function initSidebar() {
 
   function updateCurrentPath(filePath) {
     const fileNameText = document.getElementById('fileNameText');
-  
-    if (filePath) {
-      fileNameText.textContent = filePath;
-    } else {
-      fileNameText.textContent = 'Upload wav file(s)';
-    }
+    fileNameText.textContent = filePath ? filePath : 'Upload wav file(s)';
   }
 
   return {
