@@ -23,26 +23,43 @@ export function initSidebar({ onFileSelected } = {}) {
   function renderFileList(filter = '') {
     const list = getFileList();
     const currentIndex = getCurrentIndex();
-
+  
     fileListUl.innerHTML = '';
-
-      list.forEach((file, index) => {
-        if (filter && !file.name.toLowerCase().includes(filter)) return;
-
-        const li = document.createElement('li');
-        li.textContent = file.name;
-        li.style.padding = '3px 0';
-        li.style.cursor = 'pointer';
-        li.addEventListener('click', () => {
-          if (typeof onFileSelected === 'function') {
-            onFileSelected(index);
-          }
-        });
-        if (index === currentIndex) {
-          li.style.fontWeight = 'bold';
-          li.style.color = '#007bff';
+  
+    list.forEach((file, index) => {
+      if (filter && !file.name.toLowerCase().includes(filter)) return;
+  
+      const li = document.createElement('li');
+      li.style.padding = '3px 0';
+      li.style.cursor = 'pointer';
+  
+      // 先處理副檔名
+      const nameWithoutExt = file.name.replace(/\.wav$/i, '');
+  
+      // 建立 icon
+      const icon = document.createElement('i');
+      icon.className = 'fa-regular fa-file-audio';
+      icon.style.marginRight = '6px';
+  
+      // 建立文字節點
+      const text = document.createTextNode(nameWithoutExt);
+  
+      // 插入 icon 和文字
+      li.appendChild(icon);
+      li.appendChild(text);
+  
+      li.addEventListener('click', () => {
+        if (typeof onFileSelected === 'function') {
+          onFileSelected(index);
         }
-        fileListUl.appendChild(li);
+      });
+  
+      if (index === currentIndex) {
+        li.style.fontWeight = 'bold';
+        li.style.color = '#007bff';
+      }
+  
+      fileListUl.appendChild(li);
     });
   }
 
