@@ -383,6 +383,7 @@ input[type="file"]:hover {
   padding: 0;
   cursor: pointer;
   transition: background-color 0.2s;
+  position: relative;
 }
 
 .sidebar-button:hover {
