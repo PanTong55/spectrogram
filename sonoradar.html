@@ -383,6 +383,13 @@
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
       }
     }
+
+    const settingBtn = document.getElementById('setting');
+    const toolBar = document.getElementById('tool-bar');
+    
+    settingBtn.addEventListener('click', () => {
+      toolBar.classList.toggle('open');
+    });    
   </script>
 </body>
 </html>
