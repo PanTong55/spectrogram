@@ -401,7 +401,7 @@ input[type="file"]:hover {
 #control-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 13px;
   margin-bottom: 8px;
@@ -410,13 +410,13 @@ input[type="file"]:hover {
 #top-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 
 #tool-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
   white-space: nowrap;
   overflow: hidden;
   width: 0;
@@ -425,7 +425,7 @@ input[type="file"]:hover {
 }
 
 #tool-bar.open {
-  width: 800px;
+  width: 850px;
   opacity: 1;
 }
 
