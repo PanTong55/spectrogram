@@ -21,8 +21,8 @@
       <ul id="fileList" style="list-style:none; padding:0; margin:0;"></ul>
     </div>
   
-    <div style="flex-grow: 1; display: flex; justify-content: center;">
-      <div style="display: flex; flex-direction: column; width: 100%; max-width: 100%;">
+    <div style="flex-grow: 1; display: flex; justify-content: center; overflow: hidden;">
+      <div style="display: flex; flex-direction: column; width: 100%; max-width: 1400px;">
         <!-- Top Bar -->
         <div id="top-bar" style="
             display: flex;
@@ -70,12 +70,11 @@
               </div>
             </div>
           </div>
-          <!-- Time Axis -->
-          <div id="time-axis-wrapper"><div id="time-axis"></div></div>
-          <div id="time-label">Time (ms)</div>
         </div>
     
-
+        <!-- Time Axis -->
+        <div id="time-axis-wrapper"><div id="time-axis"></div></div>
+        <div id="time-label">Time (ms)</div>
     
         <!-- Control Panel (照原來放控制器) -->
         <div style="margin-top: 10px;">
