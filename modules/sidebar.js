@@ -11,9 +11,9 @@ export function initSidebar({ onFileSelected } = {}) {
   const filePathSpan = document.getElementById('currentFilePath');
 
   toggleBtn.addEventListener('click', () => {
-    const isVisible = sidebar.style.display === 'block';
-    sidebar.style.display = isVisible ? 'none' : 'block';
-    toggleBtn.title = isVisible ? 'Open File List' : 'Collapse File List';
+    sidebar.classList.toggle('collapsed');
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    toggleBtn.title = isCollapsed ? 'Open File List' : 'Collapse File List';
   });
 
   searchInput.addEventListener('input', () => {
