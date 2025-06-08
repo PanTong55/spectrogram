@@ -397,14 +397,24 @@ input[type="file"]:hover {
 
 /* File Path Display 樣式 */
 .file-path-display {
-  display: inline-block;
+  display: flex;
+  align-items: center;
   background-color: #f5f5f5;
   padding: 8px 16px;
   border-radius: 8px;
   max-width: 100%;
-  flex-shrink: 1;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.file-path-display i {
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.file-path-display span {
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
+  flex-shrink: 1;
 }
