@@ -122,6 +122,7 @@
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
+    import { SpectrogramAnalyzer } from './modules/spectrogramAnalyzer.js';
 
     const container = document.getElementById('spectrogram-only');
     const viewer = document.getElementById('viewer-container');
@@ -191,7 +192,8 @@
           minFrequency: currentFreqMin,
           totalDuration: duration,
           getZoomLevel: () => zoomControl.getZoomLevel(),
-          getDuration: () => duration
+          getDuration: () => duration,
+          analyzer: analyzer
         });
       } else {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
@@ -244,8 +246,20 @@
       scrollTargetId: 'time-axis-wrapper',
     });
 
+    let analyzer = null;
+    
     getWavesurfer().on('ready', () => {
       duration = getWavesurfer().getDuration();
+      const buffer = getWavesurfer().backend.getDecodedData();
+    
+      analyzer = new SpectrogramAnalyzer({
+        audioBuffer: buffer,
+        fftSamples: 1024,
+        overlap: 0.75,
+        frequencyMin: 0,  // 你可以改成你目前的 freqMinInput.value
+        frequencyMax: 128
+      });
+      
       if (zoomControl.isExpandMode()) {
         zoomControl.forceExpandMode();
       } else {
