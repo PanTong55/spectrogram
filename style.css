@@ -103,7 +103,8 @@ body {
 }
 /* === 時間軸 === */
 #time-axis-wrapper {
-  overflow: hidden;
+  overflow-x: auto;
+  width: 100%;
   margin-left: 45px;
 }
 #time-axis {
