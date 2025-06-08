@@ -23,7 +23,6 @@
       ">
     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
        <span>File List</span>
-      <button id="hideSidebarBtn">×</button>
     </div>
       <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
       <ul id="fileList" style="list-style:none; padding:0; margin:0;"></ul>
@@ -38,9 +37,12 @@
         font-family: 'Noto Sans HK', sans-serif;
         font-size: 13px;
       ">
-      <button id="toggleSidebarBtn" style="margin-right:10px;">☰</button>
+      <button id="toggleSidebarBtn" class="flat-icon-button">
+        <i id="sidebarIcon" class="fas fa-bars"></i>
+      </button>
       <span id="currentFilePath">(no file loaded)</span>
     </div>
+    
     <div id="spectrogram-settings" style="
       padding: 0 0 2px;
       margin-left: 45px;
