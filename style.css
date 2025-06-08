@@ -360,14 +360,50 @@ input[type="file"]:hover {
   box-sizing: border-box;
 }
 
+/* SideBar 按鈕樣式 */
 #toggleSidebarBtn {
   background: none;
   border: none;
   cursor: pointer;
   padding: 5px;
+  position: relative;
+  display: inline-block;
+}
+
+/* icon預設為黑色 */
+#sidebarIcon {
+  filter: brightness(0) saturate(100%);
   transition: filter 0.2s;
 }
 
-#toggleSidebarBtn:hover {
-  filter: brightness(0.8);
+/* hover時轉深灰色 */
+#toggleSidebarBtn:hover #sidebarIcon {
+  filter: brightness(0.3) saturate(100%);
+}
+
+/* tooltip基本樣式 */
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: max-content;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 1;
+  top: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0px 2px 5px rgba(0,0,0,0.3);
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+
+/* tooltip hover顯示 */
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
 }
