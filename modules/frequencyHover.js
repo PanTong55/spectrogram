@@ -10,8 +10,7 @@ export function initFrequencyHover({
   minFrequency = 0,
   totalDuration = 1000,
   getZoomLevel,
-  getDuration,
-  analyzer
+  getDuration
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -148,15 +147,7 @@ export function initFrequencyHover({
     const startTime = (left / actualWidth) * getDuration();
     const endTime = ((left + width) / actualWidth) * getDuration();
     const Duration = endTime - startTime;
-
-    let Fmax = null;
-    if (analyzer) {
-      Fmax = analyzer.getFmaxFromSelection({
-        startTime, endTime, Flow, Fhigh, totalDuration: getDuration()
-      });
-    }    
-    
-    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime, Fmax);
+    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
     selectionRect = null;
     suppressHover = false;
   });
@@ -189,7 +180,7 @@ export function initFrequencyHover({
     }
   });
 
-  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime, Fmax) {
+  function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip';
     tooltip.style.position = 'absolute';
@@ -205,19 +196,18 @@ export function initFrequencyHover({
     tooltip.style.cursor = 'move';
     tooltip.innerHTML = `
       <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
-      <div><b>F.low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
+      <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
       <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
       <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
-      <div><b>F.max:</b> <span class="fmax">${Fmax ? Fmax.toFixed(1) : '-'}</span> kHz</div>
       <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
     viewer.appendChild(tooltip);
-
-    const selObj = { data: { startTime, endTime, Flow, Fhigh, Fmax }, rect: rectObj, tooltip };
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip };
     selections.push(selObj);
     enableDrag(tooltip);
+    enableResize(selObj);
     tooltip.querySelector('.close-btn').addEventListener('click', () => {
       const index = selections.findIndex(sel => sel.tooltip === tooltip);
       if (index !== -1) {
