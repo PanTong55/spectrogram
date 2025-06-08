@@ -23,6 +23,7 @@ export function initSidebar({ onFileSelected } = {}) {
   function renderFileList(filter = '') {
     const list = getFileList();
     const currentIndex = getCurrentIndex();
+    let activeItem = null;  // <-- 記錄目前 active 的 li
   
     fileListUl.innerHTML = '';
   
@@ -53,11 +54,18 @@ export function initSidebar({ onFileSelected } = {}) {
       if (index === currentIndex) {
         li.style.fontWeight = 'bold';
         li.style.color = '#007bff';
-        li.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        activeItem = li;  // <-- 把需要 scroll 的 item 記錄下來
       }
   
       fileListUl.appendChild(li);
     });
+  
+    // 等待瀏覽器渲染完成後執行 scroll
+    if (activeItem) {
+      requestAnimationFrame(() => {
+        activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    }
   }
 
   function updateCurrentPath(filePath) {
