@@ -385,6 +385,16 @@ input[type="file"]:hover {
   min-height: 50px;
 }
 
+#tool-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Noto Sans HK', sans-serif;
+  font-size: 13px;
+  flex-wrap: nowrap; /* 不換行 */
+  min-height: 50px;
+}
+
 /* Sidebar Button 樣式 */
 .sidebar-button {
   width: 35px;
