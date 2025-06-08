@@ -419,7 +419,6 @@ input[type="file"]:hover {
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 13px;
   flex-wrap: nowrap;
-  min-height: 50px;
 }
 
 #tool-bar.open {
