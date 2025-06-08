@@ -81,7 +81,10 @@ export function initDragDropLoader({
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
     setFileList(sortedList, 0);
 
-    await loadFile(sortedList[0]); // 預設先 load 第一個
+    await loadFile(sortedList[0]);
+    if (typeof onFileLoaded === 'function') {
+      onFileLoaded(sortedList[0]);
+    }
   }
 
   dropArea.addEventListener('dragover', e => {
