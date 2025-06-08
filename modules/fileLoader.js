@@ -26,10 +26,10 @@ export function initFileLoader({
       onFileLoaded(file);
     }
     
-    const filePathElem = document.getElementById('currentFilePath');
-    if (filePathElem) {
-      filePathElem.textContent = file.name;
-    }   
+    const fileNameElem = document.getElementById('fileNameText');
+    if (fileNameElem) {
+      fileNameElem.textContent = file.name;
+    }  
 
     const guanoOutput = document.getElementById('guano-output');
     try {
