@@ -355,7 +355,6 @@ input[type="file"]:hover {
   border-right: 1px solid #ccc;
   padding: 10px;
   font-size: 13px;
-  display: none;
   flex-shrink: 0;
   box-sizing: border-box;
   transition: width 0.3s ease, opacity 0.3s ease;
