@@ -42,7 +42,11 @@ export function initSidebar() {
   }
 
   function updateCurrentPath(filePath) {
-    filePathSpan.textContent = filePath || '(no file loaded)';
+    if (filePath) {
+      filePathSpan.innerHTML = `<i class="fa-regular fa-file-audio" style="margin-right: 6px;"></i>${filePath}`;
+    } else {
+      filePathSpan.innerHTML = '(no file loaded)';
+    }
   }
 
   return {
