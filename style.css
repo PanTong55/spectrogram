@@ -246,13 +246,6 @@ input[type="file"]:hover {
   pointer-events: none;
 }
 
-#guano-output {
-  font-family: 'Noto Sans HK', sans-serif;
-  font-size: 12px;
-  margin: 0;
-  padding: 0;
-}
-
 /* 黑白風格下拉選單樣式 */
 .styled-select {
   appearance: none;
@@ -374,19 +367,35 @@ input[type="file"]:hover {
   padding: 0;
   margin: 0;
   height: 100%;
-  max-height: calc(100% - 420px);
+  max-height: calc(100% - 410px);
   overflow-y: auto;
 }
 
-#Metadata{
-  list-style: none;
-  padding: 0;
+#Metadata {
+  padding: 8px;
   margin: 0;
   max-height: 400px;
   max-width: 100%;
-  overflow-x: auto;
   background-color: #f5f5f5;
   border-radius: 8px;
+  box-sizing: border-box;
+}
+
+#Metadata .section-title {
+  font-weight: bold;
+  font-size: 14px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+#guano-output {
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Noto Sans HK', sans-serif;
+  font-size: 12px;
 }
 
 #top-bar {
