@@ -18,6 +18,10 @@
     </div>
       <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
       <ul id="fileList"></ul>
+      <div id="Metadata">
+        <h3">GUANO Metadata:</h3>
+        <pre id="guano-output">(no file selected)</pre>
+      </div>
   </div>
   <div style="flex-grow: 1; overflow-x: hidden; padding-left: 15px;">  
     <!-- Top Bar -->
@@ -124,9 +128,6 @@
         </label>
       </label>    
     </div>
-  
-    <h3 style="margin-top: 20px;">GUANO Metadata:</h3>
-    <pre id="guano-output">(no file selected)</pre>
     </div>
   </div>   
   <script type="module">
