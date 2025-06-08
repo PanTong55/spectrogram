@@ -13,9 +13,8 @@ export function initSidebar() {
   toggleBtn.addEventListener('click', () => {
     const isVisible = sidebar.style.display === 'block';
     sidebar.style.display = isVisible ? 'none' : 'block';
-    sidebarIcon.classList.toggle('fa-bars', isVisible);
-    sidebarIcon.classList.toggle('fa-xmark', !isVisible);
-    toggleBtn.style.color = isVisible ? '#000' : '#007bff';
+    sidebarIcon.src = isVisible ? 'icons/sidebar_open.svg' : 'icons/sidebar_close.svg';
+    toggleBtn.style.filter = isVisible ? 'none' : 'brightness(0) saturate(100%) invert(31%) sepia(99%) saturate(1607%) hue-rotate(199deg) brightness(92%) contrast(91%)';
   });
 
   searchInput.addEventListener('input', () => {
