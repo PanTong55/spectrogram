@@ -42,19 +42,10 @@ export function initSidebar() {
   }
 
   function updateCurrentPath(filePath) {
-    const filePathSpan = document.getElementById('currentFilePath');
-    filePathSpan.innerHTML = ''; // 先清空
-  
-    const icon = document.createElement('i');
-    icon.className = 'fa-regular fa-file-audio';
-    icon.style.marginRight = '6px';
-  
-    const text = document.createTextNode(filePath || 'Upload wav file(s)');
-  
-    filePathSpan.appendChild(icon);
-    filePathSpan.appendChild(text);
+    const fileNameText = document.getElementById('fileNameText');
+    fileNameText.textContent = filePath ? filePath : 'Upload wav file(s)';
   }
-
+  
   return {
     refresh: (filePath, resetSearch = true) => {
       updateCurrentPath(filePath);
