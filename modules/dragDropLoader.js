@@ -1,7 +1,6 @@
 // modules/dragDropLoader.js
 
 import { extractGuanoMetadata } from './guanoReader.js';
-import Spectrogram from 'https://unpkg.com/wavesurfer.js@7/dist/plugins/spectrogram.esm.js';
 import { setFileList } from './fileState.js';
 
 export function initDragDropLoader({
@@ -15,7 +14,6 @@ export function initDragDropLoader({
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
   let lastObjectUrl = null;
-  let currentPlugin = null;
 
   function showOverlay() {
     overlay.style.display = 'flex';
@@ -46,27 +44,13 @@ export function initDragDropLoader({
     }
 
     const fileUrl = URL.createObjectURL(file);
-    if (currentPlugin?.destroy) currentPlugin.destroy();
     if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
     lastObjectUrl = fileUrl;
 
     await wavesurfer.load(fileUrl);
 
-    currentPlugin = Spectrogram.create({
-      labels: false,
-      height: spectrogramHeight,
-      fftSamples: 1024,
-      frequencyMin: 0,
-      frequencyMax: 128000,
-      scale: 'linear',
-      windowFunc: 'hann',
-      colorMap,
-    });
-
-    wavesurfer.registerPlugin(currentPlugin);
-
     if (typeof onPluginReplaced === 'function') {
-      onPluginReplaced(currentPlugin);
+      onPluginReplaced();
     }
 
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
