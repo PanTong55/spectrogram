@@ -358,6 +358,14 @@ input[type="file"]:hover {
   display: none;
   flex-shrink: 0;
   box-sizing: border-box;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  overflow: hidden;
+}
+
+#sidebar.collapsed {
+  width: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 #top-bar {
