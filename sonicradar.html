@@ -29,21 +29,14 @@
   </div>
   <div style="flex-grow: 1; overflow-x: hidden; padding-left: 15px;">  
     <!-- Top Bar -->
-    <div id="top-bar" style="
-        display: flex;
-        align-items: center;
-        background: #f0f0f0;
-        padding: 4px 10px;
-        font-family: 'Noto Sans HK', sans-serif;
-        font-size: 13px;
-      ">
+    <div id="top-bar">
       <button id="toggleSidebarBtn" class="flat-icon-button tooltip">
-        <img id="sidebarIcon" src="icons/sidebar_open.svg" alt="Sidebar Toggle" style="width:30px; height:30px;">
-        <span class="tooltiptext" id="sidebarTooltip">Open File List</span>
+        <i id="sidebarIcon" class="fas fa-bars"></i>
+        <span class="tooltiptext" id="sidebarTooltip">Toggle File List</span>
       </button>
-      <span id="currentFilePath"> (Drag and drop the wav files below.) </span>
+      <span id="currentFilePath" class="file-path-display">(Drag and drop the wav files below.)</span>
     </div>
-    
+        
     <div id="spectrogram-settings" style="
       padding: 0 0 2px;
       margin-left: 45px;
