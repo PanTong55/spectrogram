@@ -55,21 +55,17 @@
             <option value="95">95%</option>
           </select>
         </label>    
-        <label class="slider-label">F.Range (kHz):
-          <input type="number" id="freqMinInput" value="0" min="0" max="128" step="1" style="width: 40px;">
-        </label>
-        <label class="slider-label">-
-          <input type="number" id="freqMaxInput" value="128" min="1" max="128" step="1" style="width: 40px;">
+        <label class="slider-label">F.Range:
+          <input type="number" id="freqMinInput" title="Minimun frequency (kHz)" value="0" min="0" max="128" step="1" style="width: 40px;">
+          <input type="number" id="freqMaxInput" title="Maximum frequency (kHz)" value="128" min="1" max="128" step="1" style="width: 40px;">
         </label>
         <button id="applyFreqRangeBtn" title="Apply" class="sidebar-button"><i class="fa-solid fa-check"></i></button>
-        <label class="slider-label">Brightness:
-          <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0">
-          <span class="slider-value" id="brightnessVal">0</span>
-        </label>
-        <label class="slider-label">Contrast:
-          <input type="range" id="gainSlider" min="1" max="4" step="0.1" value="2">
-          <span class="slider-value" id="gainVal">2</span>
-        </label>
+        <i class="fa-solid fa-sun"></i>
+        <input type="range" id="brightnessSlider" min="-0.5" max="0.5" step="0.01" value="0" title="Brightness">
+        <span class="slider-value" id="brightnessVal">0</span>
+        <i class="fa-solid fa-circle-half-stroke"></i>
+        <input type="range" id="gainSlider" min="1" max="4" step="0.1" value="2" title="Contrast">
+        <span class="slider-value" id="gainVal">2</span>
         <button id="resetButton" title="Reset to default" class="sidebar-button"><i class="fas fa-rotate-left"></i></button>
         <label class="slider-label">Grid:
           <label class="switch">
