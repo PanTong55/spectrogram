@@ -398,33 +398,37 @@ input[type="file"]:hover {
   font-size: 12px;
 }
 
+#control-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Noto Sans HK', sans-serif;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
 #top-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Noto Sans HK', sans-serif;
-  font-size: 13px;
-  flex-wrap: nowrap; /* 不換行 */
-  min-height: 50px;
 }
 
 #tool-bar {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 0.4s ease, opacity 0.4s ease;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Noto Sans HK', sans-serif;
-  font-size: 13px;
-  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 0;
+  opacity: 0;
+  transition: width 0.4s ease, opacity 0.4s ease;
 }
 
 #tool-bar.open {
-  max-height: 50px; /* 你實際toolbar高度，可微調 */
+  width: 800px;
   opacity: 1;
 }
+
 
 /* Sidebar Button 樣式 */
 .sidebar-button {
