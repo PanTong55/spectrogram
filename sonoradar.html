@@ -157,6 +157,7 @@
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
+    import { getCurrentIndex, getFileList, toggleFileIcon } from './modules/fileState.js';    
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -199,6 +200,21 @@
     sidebarControl = initSidebar({
       onFileSelected: (index) => {
         fileLoaderControl.loadFileAtIndex(index);
+      }
+    });
+    
+    document.addEventListener('keydown', (e) => {
+      const idx = getCurrentIndex();
+      if (idx < 0) return;
+      if (e.key === 'Delete') {
+        toggleFileIcon(idx, 'trash');
+        sidebarControl.refresh(getFileList()[idx].name, false);
+      } else if (e.key === '*') {
+        toggleFileIcon(idx, 'star');
+        sidebarControl.refresh(getFileList()[idx].name, false);
+      } else if (e.key === '?') {
+        toggleFileIcon(idx, 'question');
+        sidebarControl.refresh(getFileList()[idx].name, false);
       }
     });
     
