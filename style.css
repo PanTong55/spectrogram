@@ -287,7 +287,6 @@ input[type="file"]:hover {
   display: inline-block;
   width: 46px;
   height: 26px;
-  margin-left: 6px;
 }
 
 .switch input {
@@ -433,10 +432,9 @@ input[type="file"]:hover {
 }
 
 #tool-bar.open {
-  width: 850px;
+  width: 100%;
   opacity: 1;
 }
-
 
 /* Sidebar Button 樣式 */
 .sidebar-button {
