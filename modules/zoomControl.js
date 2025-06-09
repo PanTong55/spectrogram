@@ -22,7 +22,10 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     if (typeof onBeforeZoom === 'function') onBeforeZoom();
     zoomLevel = Math.max(zoomLevel, minZoomLevel);
 
-    ws.zoom(zoomLevel);
+    if (ws && typeof ws.zoom === 'function' &&
+        typeof ws.getDuration === 'function' && ws.getDuration() > 0) {
+      ws.zoom(zoomLevel);
+    }
     const width = duration() * zoomLevel;
     container.style.width = `${width}px`;
 
