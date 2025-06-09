@@ -9,6 +9,7 @@ export function initSidebar({ onFileSelected } = {}) {
   const fileListUl = document.getElementById('fileList');
   const searchInput = document.getElementById('searchInput');
   const filePathSpan = document.getElementById('currentFilePath');
+  const fileCount = document.getElementById('fileCount');
 
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
@@ -23,7 +24,11 @@ export function initSidebar({ onFileSelected } = {}) {
   function renderFileList(filter = '') {
     const list = getFileList();
     const currentIndex = getCurrentIndex();
-    let activeItem = null;  // <-- 記錄目前 active 的 li
+    if (fileCount) {
+      const countText = `(Total: ${list.length.toLocaleString()} files)`;
+      fileCount.textContent = countText;
+    }    
+    let activeItem = null;
   
     fileListUl.innerHTML = '';
   
