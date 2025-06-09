@@ -30,6 +30,7 @@ export function createSpectrogramPlugin({
   frequencyMin = 0,
   frequencyMax = 128000,
   noverlap = null,
+  container = null,  
 }) {
   const baseOptions = {
     labels: false,
@@ -44,6 +45,10 @@ export function createSpectrogramPlugin({
 
   if (noverlap !== null) {
     baseOptions.noverlap = noverlap;
+  }
+  
+  if (container) {
+    baseOptions.container = container;
   }
 
   return Spectrogram.create(baseOptions);
@@ -78,6 +83,7 @@ export function replacePlugin(
     frequencyMin,
     frequencyMax,
     noverlap,
+    container,    
   });
 
   ws.registerPlugin(plugin);
