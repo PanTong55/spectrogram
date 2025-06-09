@@ -1,3 +1,6 @@
+import { createSpectrogramPlugin, getWavesurfer, getCurrentColorMap } from './wsManager.js';
+import { drawTimeAxis, drawFrequencyGrid } from './axisRenderer.js';
+
 export function initFrequencyHover({
   viewerId,
   wrapperId = 'viewer-wrapper',
@@ -208,8 +211,12 @@ export function initFrequencyHover({
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
+    const magnify = document.createElement('i');
+    magnify.className = 'fa-solid fa-magnifying-glass-plus magnify-icon';
+    rectObj.appendChild(magnify);
+    
     viewer.appendChild(tooltip);
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip };
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, icon: magnify };    
     selections.push(selObj);
     enableDrag(tooltip);
     enableResize(selObj);
@@ -233,22 +240,32 @@ export function initFrequencyHover({
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
       if (isDrawing || resizing) return;
-  
+
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
       let cursor = 'default';
+      let inCenter = true;      
   
       if (offsetX < edgeThreshold) {
         cursor = 'ew-resize';
+        inCenter = false;        
       } else if (offsetX > rectBox.width - edgeThreshold) {
         cursor = 'ew-resize';
+        inCenter = false;        
       } else if (offsetY < edgeThreshold) {
         cursor = 'ns-resize';
+        inCenter = false;        
       } else if (offsetY > rectBox.height - edgeThreshold) {
         cursor = 'ns-resize';
+        inCenter = false;        
       }
       rect.style.cursor = cursor;
+      sel.icon.style.display = inCenter ? 'block' : 'none';
+    });
+
+    rect.addEventListener('mouseleave', () => {
+      sel.icon.style.display = 'none';      
     });
   
     // mousedown 時一次性決定 edge
@@ -271,7 +288,10 @@ export function initFrequencyHover({
         lockedEdge = null;
       }
   
-      if (!lockedEdge) return;
+      if (!lockedEdge) {
+        openPopup(sel);
+        return;
+      }
   
       resizing = true;
       isResizing = true;
@@ -356,12 +376,116 @@ export function initFrequencyHover({
       sel.rect.style.top = `${top}px`;
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
-  
+
+      if (sel.icon) {
+        sel.icon.style.left = '50%';
+        sel.icon.style.top = '50%';
+      }
+      
       const tooltipLeft = left + width + 10;
       sel.tooltip.style.left = `${tooltipLeft}px`;
       sel.tooltip.style.top = `${top}px`;
   
-      updateTooltipValues(sel, left, top, width, height);
+    updateTooltipValues(sel, left, top, width, height);
+  });
+}
+
+  function openPopup(sel) {
+    const { startTime, endTime, Flow, Fhigh } = sel.data;
+    const timeRange = endTime - startTime;
+    const freqRange = Fhigh - Flow;
+
+    const actualWidth = getDuration() * getZoomLevel();
+    const selWidth = (timeRange / getDuration()) * actualWidth;
+    const selHeight = (freqRange / (maxFrequency - minFrequency)) * spectrogramHeight;
+    const aspect = selWidth / selHeight;
+
+    const popupHeight = 600;
+    const popupWidth = popupHeight * aspect;
+
+    const id = Date.now();
+    const wrapperId = `zoom-wrapper-${id}`;
+    const viewerId = `zoom-viewer-${id}`;
+    const specId = `zoom-spec-${id}`;
+    const gridId = `zoom-grid-${id}`;
+    const hoverId = `zoom-hover-${id}`;
+    const hoverVId = `zoom-hoverv-${id}`;
+    const labelId = `zoom-label-${id}`;
+    const timeAxisId = `zoom-time-axis-${id}`;
+    const timeWrapId = `zoom-time-wrap-${id}`;
+    const timeLabelId = `zoom-time-label-${id}`;
+    const freqLabelId = `zoom-freq-label-${id}`;
+    const fixedId = `zoom-fixed-${id}`;
+
+    const popup = document.createElement('div');
+    popup.className = 'zoom-popup';
+    popup.style.left = '100px';
+    popup.style.top = '100px';
+    popup.innerHTML = `
+      <div class="close-btn">×</div>
+      <div id="${freqLabelId}" style="width:45px;height:${popupHeight}px;position:absolute;left:0;top:0;"></div>
+      <div id="${wrapperId}" style="margin-left:45px;position:relative;">
+        <div id="${viewerId}" style="position:relative;overflow:auto;height:${popupHeight}px;width:${popupWidth}px;">
+          <div id="${specId}" style="height:${popupHeight}px;"></div>
+          <canvas id="${gridId}"></canvas>
+          <div id="${fixedId}">
+            <div id="${hoverId}" class="hover-line-horizontal"></div>
+            <div id="${hoverVId}" class="hover-line-vertical"></div>
+            <div id="${labelId}"></div>
+          </div>
+        </div>
+        <div id="${timeWrapId}"><div id="${timeAxisId}"></div></div>
+        <div id="${timeLabelId}">Time (ms)</div>
+      </div>`;
+
+    document.body.appendChild(popup);
+    enableDrag(popup);
+    popup.querySelector('.close-btn').addEventListener('click', () => popup.remove());
+
+    const colorMap = getCurrentColorMap();
+    const plugin = createSpectrogramPlugin({
+      colorMap,
+      height: popupHeight,
+      frequencyMin: Flow,
+      frequencyMax: Fhigh,
+      noverlap: Math.floor(1024 * 0.99),
+      container: document.getElementById(specId),
+    });
+
+    getWavesurfer().registerPlugin(plugin);
+    plugin.render();
+
+    const zoomLevel = popupWidth / timeRange;
+    drawTimeAxis({
+      containerWidth: popupWidth,
+      duration: timeRange,
+      zoomLevel,
+      axisElement: document.getElementById(timeAxisId),
+      labelElement: document.getElementById(timeLabelId),
+    });
+
+    drawFrequencyGrid({
+      gridCanvas: document.getElementById(gridId),
+      labelContainer: document.getElementById(freqLabelId),
+      containerElement: document.getElementById(specId),
+      spectrogramHeight: popupHeight,
+      maxFrequency: freqRange,
+      offsetKHz: Flow,
+    });
+
+    initFrequencyHover({
+      viewerId,
+      wrapperId,
+      hoverLineId: hoverId,
+      hoverLineVId: hoverVId,
+      freqLabelId: labelId,
+      spectrogramHeight: popupHeight,
+      spectrogramWidth: popupWidth,
+      maxFrequency: Fhigh,
+      minFrequency: Flow,
+      totalDuration: timeRange,
+      getZoomLevel: () => zoomLevel,
+      getDuration: () => timeRange,
     });
   }
 
