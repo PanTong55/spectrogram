@@ -56,8 +56,8 @@
           </select>
         </label>    
         <label class="slider-label">F.Range:
-          <input type="number" id="freqMinInput" title="Minimun frequency (kHz)" value="0" min="0" max="128" step="1" style="width: 40px; padding-right:0px"> -
-          <input type="number" id="freqMaxInput" title="Maximum frequency (kHz)" value="128" min="1" max="128" step="1" style="width: 40px; padding-right:0px">
+          <input type="number" id="freqMinInput" title="Minimun frequency (kHz)" value="0" min="0" max="192" step="1" style="width: 40px; padding-right:0px"> -
+          <input type="number" id="freqMaxInput" title="Maximum frequency (kHz)" value="128" min="1" max="192" step="1" style="width: 40px; padding-right:0px">
         </label>
         <button id="applyFreqRangeBtn" title="Apply" class="sidebar-button"><i class="fa-solid fa-check"></i></button>
         <i class="fa-solid fa-sun"></i>
@@ -72,7 +72,13 @@
             <input type="checkbox" id="toggleGridSwitch">
             <span class="slider round"></span>
           </label>
-        </label>    
+        </label>
+        <label class="slider-label">FFT:
+          <label class="switch fft-switch">
+            <input type="checkbox" id="fftSizeSwitch">
+            <span class="slider round"></span>
+          </label>
+        </label>  
       </div>
     </div>
         
@@ -163,6 +169,7 @@
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
+    let currentSampleRate = 256000;    
     let freqHoverControl = null;
     const getDuration = () => duration;
 
@@ -171,7 +178,7 @@
     initWavesurfer({
       container,
       url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/LCW-B_20201110_223912.wav',
-      sampleRate: 256000,
+      sampleRate: currentSampleRate,
     });
     updateSpectrogramSettingsText();
 
@@ -194,14 +201,54 @@
     });
     
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
+
+    const fftSizeSwitch = document.getElementById('fftSizeSwitch');
     
     freqGrid.style.display = 'none';
     toggleGridSwitch.checked = false;
+    fftSizeSwitch.checked = false;
     
     toggleGridSwitch.addEventListener('change', () => {
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
-    
+
+    fftSizeSwitch.addEventListener('change', () => {
+      currentSampleRate = fftSizeSwitch.checked ? 384000 : 256000;
+
+      const maxFreq = currentSampleRate / 2000;
+      freqMaxInput.max = maxFreq;
+      freqMinInput.max = maxFreq;
+
+      if (parseFloat(freqMaxInput.value) > maxFreq) {
+        freqMaxInput.value = maxFreq;
+      }
+
+      if (currentFreqMax > maxFreq) {
+        currentFreqMax = maxFreq;
+      }
+
+      if (getWavesurfer()) {
+        getWavesurfer().options.sampleRate = currentSampleRate;
+      }
+
+      freqHoverControl?.hideHover();
+      replacePlugin(
+        getCurrentColorMap(),
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent(),
+        () => {
+          duration = getWavesurfer().getDuration();
+          zoomControl.applyZoom();
+          renderAxes();
+          freqHoverControl?.refreshHover();
+        }
+      );
+
+      updateSpectrogramSettingsText();
+    });
+
     const renderAxes = () => {
       drawTimeAxis({
         containerWidth: container.scrollWidth,
@@ -325,9 +372,12 @@
     const freqMaxInput = document.getElementById('freqMaxInput');
     const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
+    freqMaxInput.max = currentSampleRate / 2000;
+    freqMinInput.max = freqMaxInput.max;
+    
     function updateSpectrogramSettingsText() {
       const settingBox = document.getElementById('spectrogram-settings');
-      const sampleRate = getWavesurfer()?.options?.sampleRate || 256000;
+      const sampleRate = currentSampleRate;
       const fftSize = 1024;
       const overlap = getOverlapPercent();
       const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
@@ -347,7 +397,8 @@
     
     applyFreqRangeBtn.addEventListener('click', () => {
       const min = Math.max(0, parseFloat(freqMinInput.value));
-      const max = Math.min(128, parseFloat(freqMaxInput.value));
+      const maxAllowed = currentSampleRate / 2000;
+      const max = Math.min(maxAllowed, parseFloat(freqMaxInput.value));
 
       if (isNaN(min) || isNaN(max) || min >= max) {
         alert('Please enter valid frequency values. Min must be less than Max.');
