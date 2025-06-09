@@ -183,7 +183,9 @@
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
         sidebarControl.refresh(file.name);
-      }
+      },
+      onBeforeLoad: () => { freqHoverControl?.hideHover(); },
+      onAfterLoad: () => { freqHoverControl?.refreshHover(); }
     });
     sidebarControl = initSidebar({
       onFileSelected: (index) => {
@@ -239,7 +241,15 @@
     };
 
     const wrapper = document.getElementById('viewer-wrapper');
-    const zoomControl = initZoomControls(getWavesurfer(), container, getDuration, renderAxes, wrapper);
+    const zoomControl = initZoomControls(
+      getWavesurfer(),
+      container,
+      getDuration,
+      renderAxes,
+      wrapper,
+      () => { freqHoverControl?.hideHover(); },
+      () => { freqHoverControl?.refreshHover(); }
+    );
     
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',
@@ -248,6 +258,7 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
+        freqHoverControl?.hideHover();        
         replacePlugin(
           colorMap,
           spectrogramHeight,
@@ -258,6 +269,7 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
+            freqHoverControl?.refreshHover();            
           }
         );
       },
@@ -271,8 +283,10 @@
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
         sidebarControl.refresh(file.name);
-      }
-    });    
+      },
+      onBeforeLoad: () => { freqHoverControl?.hideHover(); },
+      onAfterLoad: () => { freqHoverControl?.refreshHover(); }
+    });   
 
     initScrollSync({
       scrollSourceId: 'viewer-container',
@@ -286,10 +300,11 @@
       } else {
         zoomControl.applyZoom();
       }
-    
+
       plugin?.render();
       requestAnimationFrame(() => {
       renderAxes();
+      freqHoverControl?.refreshHover();        
       });
     });
 
@@ -297,6 +312,7 @@
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
+      freqHoverControl?.refreshHover();
     });
 
     document.body.addEventListener('touchstart', () => {
@@ -347,6 +363,7 @@
     
     document.getElementById('overlapInput').addEventListener('change', () => {
       const colorMap = getCurrentColorMap();
+      freqHoverControl?.hideHover();
       replacePlugin(
         colorMap,
         spectrogramHeight,
@@ -354,29 +371,34 @@
         currentFreqMax,
         getOverlapPercent()
       );
-    
+
+      freqHoverControl?.refreshHover();
+          
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
       updateSpectrogramSettingsText();
     });
     
-    function updateFrequencyRange(freqMin, freqMax) {
-      const colorMap = getCurrentColorMap();
-      currentFreqMin = freqMin;
-      currentFreqMax = freqMax;
-    
-      replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        freqMin,
-        freqMax,
-        getOverlapPercent()
-      );
-    
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
+  function updateFrequencyRange(freqMin, freqMax) {
+    const colorMap = getCurrentColorMap();
+    currentFreqMin = freqMin;
+    currentFreqMax = freqMax;
+
+    freqHoverControl?.hideHover();
+    replacePlugin(
+      colorMap,
+      spectrogramHeight,
+      freqMin,
+      freqMax,
+      getOverlapPercent()
+    );
+
+    freqHoverControl?.refreshHover();
+
+    duration = getWavesurfer().getDuration();
+    zoomControl.applyZoom();
+    renderAxes();
       
       if (freqHoverControl) {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
