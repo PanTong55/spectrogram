@@ -228,7 +228,8 @@ export function initFrequencyHover({
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
-    let lockedEdge = null;
+    let lockedHorizontal = null;
+    let lockedVertical = null;
   
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
@@ -238,16 +239,22 @@ export function initFrequencyHover({
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
       let cursor = 'default';
-  
-      if (offsetX < edgeThreshold) {
+
+      const onLeft = offsetX < edgeThreshold;
+      const onRight = offsetX > rectBox.width - edgeThreshold;
+      const onTop = offsetY < edgeThreshold;
+      const onBottom = offsetY > rectBox.height - edgeThreshold;
+
+      if ((onLeft && onTop) || (onRight && onBottom)) {
+        cursor = 'nwse-resize';
+      } else if ((onRight && onTop) || (onLeft && onBottom)) {
+        cursor = 'nesw-resize';
+      } else if (onLeft || onRight) {
         cursor = 'ew-resize';
-      } else if (offsetX > rectBox.width - edgeThreshold) {
-        cursor = 'ew-resize';
-      } else if (offsetY < edgeThreshold) {
-        cursor = 'ns-resize';
-      } else if (offsetY > rectBox.height - edgeThreshold) {
+      } else if (onTop || onBottom) {
         cursor = 'ns-resize';
       }
+
       rect.style.cursor = cursor;
     });
   
@@ -258,20 +265,15 @@ export function initFrequencyHover({
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
   
-      // 先決定是哪個 edge
-      if (offsetX < edgeThreshold) {
-        lockedEdge = 'left';
-      } else if (offsetX > rectBox.width - edgeThreshold) {
-        lockedEdge = 'right';
-      } else if (offsetY < edgeThreshold) {
-        lockedEdge = 'top';
-      } else if (offsetY > rectBox.height - edgeThreshold) {
-        lockedEdge = 'bottom';
-      } else {
-        lockedEdge = null;
-      }
-  
-      if (!lockedEdge) return;
+      const onLeft = offsetX < edgeThreshold;
+      const onRight = offsetX > rectBox.width - edgeThreshold;
+      const onTop = offsetY < edgeThreshold;
+      const onBottom = offsetY > rectBox.height - edgeThreshold;
+
+      lockedHorizontal = onLeft ? 'left' : onRight ? 'right' : null;
+      lockedVertical = onTop ? 'top' : onBottom ? 'bottom' : null;
+
+      if (!lockedHorizontal && !lockedVertical) return;
   
       resizing = true;
       isResizing = true;
@@ -279,34 +281,34 @@ export function initFrequencyHover({
   
       const moveHandler = (e) => {
         if (!resizing) return;
-  
+
         const viewerRect = viewer.getBoundingClientRect();
         const scrollLeft = viewer.scrollLeft || 0;
         const mouseX = e.clientX - viewerRect.left + scrollLeft;
         const mouseY = e.clientY - viewerRect.top;
-  
+
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
-  
-        if (lockedEdge === 'left') {
+
+        if (lockedHorizontal === 'left') {
           let newStartTime = (mouseX / actualWidth) * getDuration();
           newStartTime = Math.min(newStartTime, sel.data.endTime - 0.001);
           sel.data.startTime = newStartTime;
         }
-  
-        if (lockedEdge === 'right') {
+
+        if (lockedHorizontal === 'right') {
           let newEndTime = (mouseX / actualWidth) * getDuration();
           newEndTime = Math.max(newEndTime, sel.data.startTime + 0.001);
           sel.data.endTime = newEndTime;
         }
-  
-        if (lockedEdge === 'top') {
+
+        if (lockedVertical === 'top') {
           let newFhigh = (1 - mouseY / spectrogramHeight) * freqRange + minFrequency;
           newFhigh = Math.max(newFhigh, sel.data.Flow + 0.1);
           sel.data.Fhigh = newFhigh;
         }
-  
-        if (lockedEdge === 'bottom') {
+
+        if (lockedVertical === 'bottom') {
           let newFlow = (1 - mouseY / spectrogramHeight) * freqRange + minFrequency;
           newFlow = Math.min(newFlow, sel.data.Fhigh - 0.1);
           sel.data.Flow = newFlow;
@@ -318,7 +320,8 @@ export function initFrequencyHover({
       const upHandler = () => {
         resizing = false;
         isResizing = false;
-        lockedEdge = null;
+        lockedHorizontal = null;
+        lockedVertical = null;
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
       };
