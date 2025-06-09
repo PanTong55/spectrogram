@@ -372,6 +372,7 @@ input[type="file"]:hover {
 #fileList {
   list-style: none;
   padding: 0;
+  padding-right: 3px;
   margin: 0;
   height: 100%;
   max-height: calc(100% - 420px);
