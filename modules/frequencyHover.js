@@ -85,7 +85,7 @@ export function initFrequencyHover({
     freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
   };
 
-  viewer.addEventListener('mousemove', updateHoverDisplay);
+  viewer.addEventListener('mousemove', updateHoverDisplay, { passive: true });
   wrapper.addEventListener('mouseleave', hideAll);
   viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
   viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
@@ -126,7 +126,7 @@ export function initFrequencyHover({
     selectionRect.style.top = `${y}px`;
     selectionRect.style.width = `${width}px`;
     selectionRect.style.height = `${height}px`;
-  });
+  }, { passive: true });
 
   viewer.addEventListener('mouseup', (e) => {
     if (!isDrawing) return;
@@ -256,7 +256,7 @@ export function initFrequencyHover({
       }
 
       rect.style.cursor = cursor;
-    });
+    }, { passive: true });
   
     // mousedown 時一次性決定 edge
     rect.addEventListener('mousedown', (e) => {
@@ -326,7 +326,7 @@ export function initFrequencyHover({
         window.removeEventListener('mouseup', upHandler);
       };
   
-      window.addEventListener('mousemove', moveHandler);
+      window.addEventListener('mousemove', moveHandler, { passive: true });
       window.addEventListener('mouseup', upHandler);
     });
   }
@@ -384,7 +384,7 @@ export function initFrequencyHover({
       const newY = e.clientY - viewerRect.top - offsetY;
       element.style.left = `${newX}px`;
       element.style.top = `${newY}px`;
-    });
+    }, { passive: true });
     window.addEventListener('mouseup', () => { isDragging = false; });
   }
 
