@@ -31,6 +31,7 @@ export function initFrequencyHover({
   let isDrawing = false;
   let startX = 0, startY = 0;
   let selectionRect = null;
+  let lastClientX = null, lastClientY = null;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -39,6 +40,8 @@ export function initFrequencyHover({
   };
 
   const updateHoverDisplay = (e) => {
+    lastClientX = e.clientX;
+    lastClientY = e.clientY;    
     if (suppressHover || isResizing) {
       hideAll();
       return;
@@ -388,6 +391,12 @@ export function initFrequencyHover({
       minFrequency = min;
       maxFrequency = max;
       updateSelections();
+    },
+    hideHover: hideAll,
+    refreshHover: () => {
+      if (lastClientX !== null && lastClientY !== null) {
+        updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+      }      
     }
   };
 }
