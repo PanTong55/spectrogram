@@ -44,14 +44,22 @@ export function initSidebar({ onFileSelected } = {}) {
   
       const nameWithoutExt = file.name.replace(/\.wav$/i, '');
 
-      const left = document.createElement('span');      
+      const left = document.createElement('span');
+      left.style.display = 'flex';
+      left.style.alignItems = 'center';
+      left.style.flexGrow = '1';
+      left.style.minWidth = '0';
+      
       const icon = document.createElement('i');
       icon.className = 'fa-regular fa-file-audio';
       icon.style.marginRight = '6px';
       left.appendChild(icon);
   
-      const text = document.createTextNode(nameWithoutExt);
-      left.appendChild(text);
+      const textSpan = document.createElement('span');
+      textSpan.className = 'fileNameText';
+      textSpan.textContent = nameWithoutExt;
+      left.appendChild(textSpan);
+      
       li.appendChild(left);
 
       const flags = document.createElement('span');
