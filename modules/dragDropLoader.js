@@ -15,6 +15,9 @@ export function initDragDropLoader({
 }) {
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
+  const fileNameElem = document.getElementById('fileNameText');
+  const guanoOutput = document.getElementById('guano-output');
+  const spectrogramSettings = document.getElementById('spectrogram-settings');  
   let lastObjectUrl = null;
 
   function showOverlay() {
@@ -36,12 +39,10 @@ export function initDragDropLoader({
       onFileLoaded(file);
     }    
 
-    const fileNameElem = document.getElementById('fileNameText');
     if (fileNameElem) {
       fileNameElem.textContent = file.name;
     }
     
-    const guanoOutput = document.getElementById('guano-output');
     try {
       const result = await extractGuanoMetadata(file);
       guanoOutput.textContent = result || '(No GUANO metadata found)';
@@ -60,8 +61,10 @@ export function initDragDropLoader({
     }
 
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
-    document.getElementById('spectrogram-settings').textContent =
-      `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+    if (spectrogramSettings) {
+      spectrogramSettings.textContent =
+        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+    }
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
