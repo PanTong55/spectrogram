@@ -94,9 +94,48 @@ export function initDragDropLoader({
     hideOverlay();
   });
 
-  dropArea.addEventListener('drop', e => {
+  async function getFilesFromDataTransfer(dt) {
+    if (!dt.items) return Array.from(dt.files);
+
+    const traverse = async (entry) => {
+      if (entry.isFile) {
+        return new Promise((resolve) => {
+          entry.file(f => resolve([f]), () => resolve([]));
+        });
+      }
+      if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const entries = [];
+        const readEntries = () => new Promise((resolve) => {
+          reader.readEntries(async (results) => {
+            if (!results.length) {
+              const children = await Promise.all(entries.map(traverse));
+              resolve(children.flat());
+            } else {
+              entries.push(...results);
+              resolve(await readEntries());
+            }
+          }, () => resolve([]));
+        });
+        return readEntries();
+      }
+      return [];
+    };
+
+    const entries = Array.from(dt.items)
+      .map(item => item.webkitGetAsEntry && item.webkitGetAsEntry())
+      .filter(Boolean);
+
+    if (!entries.length) return Array.from(dt.files);
+
+    const fileArrays = await Promise.all(entries.map(traverse));
+    return fileArrays.flat();
+  }
+
+  dropArea.addEventListener('drop', async e => {
     e.preventDefault();
     hideOverlay();
-    handleFiles(e.dataTransfer.files);
+    const files = await getFilesFromDataTransfer(e.dataTransfer);
+    handleFiles(files);
   });
 }
