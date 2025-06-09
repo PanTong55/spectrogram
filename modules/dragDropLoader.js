@@ -9,7 +9,9 @@ export function initDragDropLoader({
   spectrogramHeight,
   colorMap,
   onPluginReplaced,
-  onFileLoaded
+  onFileLoaded,
+  onBeforeLoad,
+  onAfterLoad
 }) {
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
@@ -25,6 +27,10 @@ export function initDragDropLoader({
 
   async function loadFile(file) {
     if (!file) return;
+
+    if (typeof onBeforeLoad === 'function') {
+      onBeforeLoad();
+    }    
 
     if (typeof onFileLoaded === 'function') {
       onFileLoaded(file);
@@ -56,6 +62,10 @@ export function initDragDropLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     document.getElementById('spectrogram-settings').textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+
+    if (typeof onAfterLoad === 'function') {
+      onAfterLoad();
+    }    
   }
 
   async function handleFiles(files) {
