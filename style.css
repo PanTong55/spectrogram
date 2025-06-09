@@ -475,3 +475,12 @@ input[type="file"]:hover {
   white-space: nowrap;
   font-size: 14px;
 }
+
+/* Reusable file name text style */
+#fileNameText,
+.fileNameText {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
