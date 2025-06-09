@@ -41,6 +41,7 @@ export function initSidebar({ onFileSelected } = {}) {
       li.style.display = 'flex';
       li.style.alignItems = 'center';
       li.style.justifyContent = 'space-between';     
+      li.style.flexWrap = 'nowrap';      
   
       const nameWithoutExt = file.name.replace(/\.wav$/i, '');
 
@@ -63,12 +64,15 @@ export function initSidebar({ onFileSelected } = {}) {
       li.appendChild(left);
 
       const flags = document.createElement('span');
+      flags.style.display = 'flex';
+      flags.style.flexShrink = '0';
+      flags.style.whiteSpace = 'nowrap';    
       const state = getFileIconState(index);
       if (state.trash) {
         const d = document.createElement('i');
         d.className = 'fa-solid fa-trash';
         d.style.color = 'gray';
-        d.style.marginleft = '4px';
+        d.style.marginLeft = '4px';
         flags.appendChild(d);
       }
       if (state.star) {
