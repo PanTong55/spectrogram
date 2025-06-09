@@ -11,7 +11,9 @@ export function initFileLoader({
   spectrogramHeight,
   colorMap,
   onPluginReplaced,
-  onFileLoaded
+  onFileLoaded,
+  onBeforeLoad,
+  onAfterLoad
 }) {
   const fileInput = document.getElementById(fileInputId);
   const prevBtn = document.getElementById('prevBtn');
@@ -20,6 +22,10 @@ export function initFileLoader({
   async function loadFile(file) {
     if (!file) return;
 
+    if (typeof onBeforeLoad === 'function') {
+      onBeforeLoad();
+    }
+    
     if (typeof onFileLoaded === 'function') {
       onFileLoaded(file);
     }
@@ -50,6 +56,10 @@ export function initFileLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     document.getElementById('spectrogram-settings').textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+
+    if (typeof onAfterLoad === 'function') {
+      onAfterLoad();
+    }    
     
   }
 
