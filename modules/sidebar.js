@@ -1,6 +1,6 @@
 // modules/sidebar.js
 
-import { getFileList, getCurrentIndex } from './fileState.js';
+import { getFileList, getCurrentIndex, getFileIconState } from './fileState.js';
 
 export function initSidebar({ onFileSelected } = {}) {
   const sidebar = document.getElementById('sidebar');
@@ -34,21 +34,50 @@ export function initSidebar({ onFileSelected } = {}) {
   
     list.forEach((file, index) => {
       if (filter && !file.name.toLowerCase().includes(filter)) return;
-  
+
       const li = document.createElement('li');
       li.style.padding = '3px 0';
       li.style.cursor = 'pointer';
+      li.style.display = 'flex';
+      li.style.alignItems = 'center';
+      li.style.justifyContent = 'space-between';     
   
       const nameWithoutExt = file.name.replace(/\.wav$/i, '');
-  
+
+      const left = document.createElement('span');      
       const icon = document.createElement('i');
       icon.className = 'fa-regular fa-file-audio';
       icon.style.marginRight = '6px';
+      left.appendChild(icon);
   
       const text = document.createTextNode(nameWithoutExt);
-  
-      li.appendChild(icon);
-      li.appendChild(text);
+      left.appendChild(text);
+      li.appendChild(left);
+
+      const flags = document.createElement('span');
+      const state = getFileIconState(index);
+      if (state.trash) {
+        const d = document.createElement('i');
+        d.className = 'fa-solid fa-trash';
+        d.style.color = 'gray';
+        d.style.marginLeft = '4px';
+        flags.appendChild(d);
+      }
+      if (state.star) {
+        const s = document.createElement('i');
+        s.className = 'fa-solid fa-star';
+        s.style.color = 'yellow';
+        s.style.marginLeft = '4px';
+        flags.appendChild(s);
+      }
+      if (state.question) {
+        const q = document.createElement('i');
+        q.className = 'fa-solid fa-question';
+        q.style.color = 'red';
+        q.style.marginLeft = '4px';
+        flags.appendChild(q);
+      }
+      li.appendChild(flags);
   
       li.addEventListener('click', () => {
         if (typeof onFileSelected === 'function') {
@@ -59,7 +88,7 @@ export function initSidebar({ onFileSelected } = {}) {
       if (index === currentIndex) {
         li.style.fontWeight = 'bold';
         li.style.color = '#007bff';
-        activeItem = li;  // <-- 把需要 scroll 的 item 記錄下來
+        activeItem = li;
       }
   
       fileListUl.appendChild(li);
