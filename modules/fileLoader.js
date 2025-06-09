@@ -18,6 +18,9 @@ export function initFileLoader({
   const fileInput = document.getElementById(fileInputId);
   const prevBtn = document.getElementById('prevBtn');
   const nextBtn = document.getElementById('nextBtn');
+  const fileNameElem = document.getElementById('fileNameText');
+  const guanoOutput = document.getElementById('guano-output');
+  const spectrogramSettings = document.getElementById('spectrogram-settings');  
 
   async function loadFile(file) {
     if (!file) return;
@@ -30,12 +33,10 @@ export function initFileLoader({
       onFileLoaded(file);
     }
     
-    const fileNameElem = document.getElementById('fileNameText');
     if (fileNameElem) {
       fileNameElem.textContent = file.name;
-    }  
+    }
 
-    const guanoOutput = document.getElementById('guano-output');
     try {
       const result = await extractGuanoMetadata(file);
       guanoOutput.textContent = result || '(No GUANO metadata found)';
@@ -54,8 +55,10 @@ export function initFileLoader({
     }
 
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
-    document.getElementById('spectrogram-settings').textContent =
-      `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+    if (spectrogramSettings) {
+      spectrogramSettings.textContent =
+        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+    }
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
