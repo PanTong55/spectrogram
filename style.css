@@ -339,6 +339,33 @@ input[type="file"]:hover {
   box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
 }
 
+.magnify-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  color: rgba(0,0,0,0.7);
+  pointer-events: none;
+  display: none;
+}
+
+.zoom-popup {
+  position: absolute;
+  background: white;
+  border: 1px solid black;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  padding: 8px;
+  z-index: 200;
+}
+
+.zoom-popup .close-btn {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  cursor: pointer;
+}
+
 #searchInput {
   width: 100%;
   box-sizing: border-box;
