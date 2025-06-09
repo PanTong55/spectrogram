@@ -244,9 +244,10 @@
           zoomControl.applyZoom();
           renderAxes();
           freqHoverControl?.refreshHover();
-          updateSpectrogramSettingsText();          
         }
       );
+
+      updateSpectrogramSettingsText();
     });
 
     const renderAxes = () => {
@@ -316,8 +317,7 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
-            freqHoverControl?.refreshHover();
-            updateSpectrogramSettingsText();          
+            freqHoverControl?.refreshHover();            
           }
         );
       },
@@ -352,8 +352,7 @@
       plugin?.render();
       requestAnimationFrame(() => {
       renderAxes();
-      freqHoverControl?.refreshHover();
-      updateSpectrogramSettingsText();    
+      freqHoverControl?.refreshHover();        
       });
     });
 
@@ -362,7 +361,6 @@
       zoomControl.applyZoom();
       renderAxes();
       freqHoverControl?.refreshHover();
-      updateSpectrogramSettingsText();      
     });
 
     document.body.addEventListener('touchstart', () => {
@@ -377,36 +375,18 @@
 
     freqMaxInput.max = currentSampleRate / 2000;
     freqMinInput.max = freqMaxInput.max;
-
-    function getAutoOverlapPercent() {
-      const ws = getWavesurfer();
-      const plugin = getPlugin();
-      if (!ws || !plugin || !plugin.canvas || !ws.backend?.buffer) return null;
-      const fftSize = plugin.fftSamples || 1024;
-      const samplesPerPixel = ws.backend.buffer.length / plugin.canvas.width;
-      const noverlap = Math.max(0, Math.round(fftSize - samplesPerPixel));
-      return Math.round((noverlap / fftSize) * 100);
-    }
-
-   function updateSpectrogramSettingsText() {
-      const settingBox = document.getElementById('spectrogram-settings');
-      const plugin = getPlugin();     
-      const sampleRate = currentSampleRate;
-      const fftSize = plugin?.fftSamples || 1024;
-      const overlap = getOverlapPercent();
-      const windowType = 'Hanning';
     
-      let overlapText;
-      if (overlap !== null) {
-        overlapText = `${overlap}%`;
-      } else {
-        const autoVal = getAutoOverlapPercent();
-        overlapText = autoVal !== null ? `${autoVal}% (Auto)` : 'Auto';
-      }
-
+    function updateSpectrogramSettingsText() {
+      const settingBox = document.getElementById('spectrogram-settings');
+      const sampleRate = currentSampleRate;
+      const fftSize = 1024;
+      const overlap = getOverlapPercent();
+      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+    
+      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }
+    }    
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -441,15 +421,15 @@
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          freqHoverControl?.refreshHover();
-          duration = getWavesurfer().getDuration();
-          zoomControl.applyZoom();
-          renderAxes();
-          updateSpectrogramSettingsText();
-        }
+        getOverlapPercent()
       );
+
+      freqHoverControl?.refreshHover();
+          
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+      updateSpectrogramSettingsText();
     });
     
   function updateFrequencyRange(freqMin, freqMax) {
@@ -463,15 +443,14 @@
       spectrogramHeight,
       freqMin,
       freqMax,
-      getOverlapPercent(),
-      () => {
-        freqHoverControl?.refreshHover();
-        duration = getWavesurfer().getDuration();
-        zoomControl.applyZoom();
-        renderAxes();
-        updateSpectrogramSettingsText();
-      }
-    ); 
+      getOverlapPercent()
+    );
+
+    freqHoverControl?.refreshHover();
+
+    duration = getWavesurfer().getDuration();
+    zoomControl.applyZoom();
+    renderAxes();
       
       if (freqHoverControl) {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
