@@ -352,7 +352,8 @@
       plugin?.render();
       requestAnimationFrame(() => {
       renderAxes();
-      freqHoverControl?.refreshHover();        
+      freqHoverControl?.refreshHover();
+      updateSpectrogramSettingsText();       
       });
     });
 
@@ -361,6 +362,7 @@
       zoomControl.applyZoom();
       renderAxes();
       freqHoverControl?.refreshHover();
+      updateSpectrogramSettingsText();      
     });
 
     document.body.addEventListener('touchstart', () => {
@@ -375,18 +377,35 @@
 
     freqMaxInput.max = currentSampleRate / 2000;
     freqMinInput.max = freqMaxInput.max;
+
+    function getAutoOverlapPercent() {
+      const ws = getWavesurfer();
+      const plugin = getPlugin();
+      if (!ws || !plugin || !plugin.canvas || !ws.backend?.buffer) return null;
+      const fftSize = 1024;
+      const samplesPerPixel = ws.backend.buffer.length / plugin.canvas.width;
+      const noverlap = Math.max(0, Math.round(fftSize - samplesPerPixel));
+      return Math.round((noverlap / fftSize) * 100);
+    }
     
     function updateSpectrogramSettingsText() {
       const settingBox = document.getElementById('spectrogram-settings');
       const sampleRate = currentSampleRate;
       const fftSize = 1024;
       const overlap = getOverlapPercent();
-      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+      const windowType = 'Hanning';
     
-      const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+      let overlapText;
+      if (overlap !== null) {
+        overlapText = `${overlap}%`;
+      } else {
+        const autoVal = getAutoOverlapPercent();
+        overlapText = autoVal !== null ? `${autoVal}% (Auto)` : 'Auto';
+      }
+
       settingBox.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-    }    
+    }
     
     function getOverlapPercent() {
       const select = document.getElementById('overlapInput');
@@ -451,6 +470,7 @@
     duration = getWavesurfer().getDuration();
     zoomControl.applyZoom();
     renderAxes();
+    updateSpectrogramSettingsText();    
       
       if (freqHoverControl) {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
