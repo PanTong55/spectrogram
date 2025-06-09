@@ -60,13 +60,13 @@ export function initSidebar({ onFileSelected } = {}) {
         const d = document.createElement('i');
         d.className = 'fa-solid fa-trash';
         d.style.color = 'gray';
-        d.style.marginLeft = '4px';
+        d.style.marginleft = '4px';
         flags.appendChild(d);
       }
       if (state.star) {
         const s = document.createElement('i');
         s.className = 'fa-solid fa-star';
-        s.style.color = 'yellow';
+        s.style.color = '#FFD700';
         s.style.marginLeft = '4px';
         flags.appendChild(s);
       }
