@@ -1,6 +1,6 @@
 // zoomControl.js (優化版，含修正)
 
-export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement) {
+export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement, onBeforeZoom = null, onAfterZoom = null) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
   const expandBtn = document.getElementById('expand-btn');
@@ -19,6 +19,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
 
   function applyZoom() {
     computeMinZoomLevel();
+    if (typeof onBeforeZoom === 'function') onBeforeZoom();
     zoomLevel = Math.max(zoomLevel, minZoomLevel);
 
     ws.zoom(zoomLevel);
@@ -28,6 +29,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     wrapperElement.style.width = `${width}px`;
 
     applyZoomCallback();
+    if (typeof onAfterZoom === 'function') onAfterZoom();    
     updateZoomButtons();
   }
 
