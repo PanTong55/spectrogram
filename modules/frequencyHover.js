@@ -87,6 +87,8 @@ export function initFrequencyHover({
 
   viewer.addEventListener('mousemove', updateHoverDisplay);
   wrapper.addEventListener('mouseleave', hideAll);
+  viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
+  viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
 
   if (zoomControls) {
     zoomControls.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
