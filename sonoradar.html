@@ -515,10 +515,16 @@
       zoomControlsElem.style.display = 'none';
       document.getElementById('fileNameText').textContent = 'Upload wav file(s)';
       guanoOutput.textContent = '(no file selected)';
-      getPlugin()?.destroy();
       const canvas = document.getElementById('spectrogram-only').querySelector('canvas');
       if (canvas) canvas.remove();
       getWavesurfer()?.empty?.();
+      replacePlugin(
+        getCurrentColorMap(),
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent()
+      );
     });
     
     settingBtn.addEventListener('click', () => {
