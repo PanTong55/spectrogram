@@ -169,6 +169,9 @@
     const timeLabel = document.getElementById('time-label');
     const freqGrid = document.getElementById('freq-grid');
     const freqLabelContainer = document.getElementById('freq-labels');
+    const hoverLineElem = document.getElementById('hover-line');
+    const hoverLineVElem = document.getElementById('hover-line-vertical');
+    const zoomControlsElem = document.getElementById('zoom-controls');    
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
@@ -193,8 +196,11 @@
       colorMap: [],
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
-        overlay.style.display = 'none';        
-        sidebarControl.refresh(file.name);
+        overlay.style.display = 'none';
+        hoverLineElem.style.display = 'block';
+        hoverLineVElem.style.display = 'block';
+        zoomControlsElem.style.display = 'flex';
+        sidebarControl.refresh(file.name);        
       },
       onBeforeLoad: () => { freqHoverControl?.hideHover(); },
       onAfterLoad: () => { freqHoverControl?.refreshHover(); }
@@ -363,7 +369,9 @@
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
         overlay.style.display = 'none';
-        sidebarControl.refresh(file.name);
+        hoverLineElem.style.display = 'block';
+        hoverLineVElem.style.display = 'block';
+        zoomControlsElem.style.display = 'flex';
       },
       onBeforeLoad: () => { freqHoverControl?.hideHover(); },
       onAfterLoad: () => { freqHoverControl?.refreshHover(); }
