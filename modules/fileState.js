@@ -50,3 +50,9 @@ export function toggleFileIcon(index, type) {
 export function getFileIconState(index) {
   return fileIcons[index] || { trash: false, star: false, question: false };
 }
+
+export function clearFileList() {
+  fileList = [];
+  currentIndex = -1;
+  fileIcons = {};
+}
