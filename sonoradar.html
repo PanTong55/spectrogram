@@ -98,7 +98,7 @@
           position: absolute;
           top: 0; left: 0; right: 0; bottom: 20px;
           background-color: rgba(255, 255, 255, 0.5);
-          display: none;
+          display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
@@ -157,7 +157,7 @@
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon } from './modules/fileState.js';    
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList } from './modules/fileState.js'; 
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -180,9 +180,10 @@
 
     initWavesurfer({
       container,
-      url: 'https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/demo_recording.wav',
       sampleRate: currentSampleRate,
     });
+    const overlay = document.getElementById('drop-overlay');
+    overlay.style.display = 'flex';    
     updateSpectrogramSettingsText();
 
     fileLoaderControl = initFileLoader({
@@ -192,6 +193,7 @@
       colorMap: [],
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
+        overlay.style.display = 'none';        
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => { freqHoverControl?.hideHover(); },
@@ -200,8 +202,21 @@
     sidebarControl = initSidebar({
       onFileSelected: (index) => {
         fileLoaderControl.loadFileAtIndex(index);
+        overlay.style.display = 'none'; 
       }
     });
+ 
+    (async () => {
+      try {
+        const resp = await fetch('https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/demo_recording.wav');
+        const blob = await resp.blob();
+        const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
+        setFileList([demoFile], -1);
+        sidebarControl.refresh(demoFile.name);
+      } catch (err) {
+        console.error('Failed to preload demo file', err);
+      }
+    })();
     
     document.addEventListener('keydown', (e) => {
       const idx = getCurrentIndex();
@@ -347,6 +362,7 @@
       colorMap: [],
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
+        overlay.style.display = 'none';
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => { freqHoverControl?.hideHover(); },
