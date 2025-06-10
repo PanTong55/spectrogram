@@ -14,9 +14,12 @@
   <div style="display: flex; flex-direction: row; height: calc(100vh - 50px);">
     <!-- Sidebar -->
   <div id="sidebar">
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
        <span id="fileListHeader" style="font-weight: bold;">File List</span>
-       <span id="fileCount" style="font-weight: normal;"></span>
+       <span style="display:flex; align-items:center; gap:4px;">
+         <span id="fileCount" style="font-weight: normal;"></span>
+         <i id="clearAllBtn" class="fa-solid fa-trash" title="Clear all" style="cursor:pointer;"></i>
+       </span>
     </div>
       <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
       <ul id="fileList"></ul>
@@ -157,7 +160,7 @@
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList } from './modules/fileState.js'; 
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -473,10 +476,10 @@
       updateSpectrogramSettingsText();
     });
     
-  function updateFrequencyRange(freqMin, freqMax) {
-    const colorMap = getCurrentColorMap();
-    currentFreqMin = freqMin;
-    currentFreqMax = freqMax;
+    function updateFrequencyRange(freqMin, freqMax) {
+      const colorMap = getCurrentColorMap();
+      currentFreqMin = freqMin;
+      currentFreqMax = freqMax;
 
     freqHoverControl?.hideHover();
     replacePlugin(
@@ -491,13 +494,24 @@
 
     duration = getWavesurfer().getDuration();
     zoomControl.applyZoom();
-    renderAxes();
+      renderAxes();
       
       if (freqHoverControl) {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
       }
     }
 
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    clearAllBtn.addEventListener('click', () => {
+      clearFileList();
+      sidebarControl.refresh('');
+      overlay.style.display = 'flex';
+      hoverLineElem.style.display = 'none';
+      hoverLineVElem.style.display = 'none';
+      zoomControlsElem.style.display = 'none';
+      guanoOutput.textContent = '(no file selected)';
+    });
+    
     const settingBtn = document.getElementById('setting');
     const toolBar = document.getElementById('tool-bar');
     
