@@ -506,7 +506,6 @@
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
       sidebarControl.refresh('');
-      getWavesurfer().empty();
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
@@ -520,6 +519,9 @@
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
     });
+
+    const settingBtn = document.getElementById('setting');
+    const toolBar = document.getElementById('tool-bar');
     
     settingBtn.addEventListener('click', () => {
       toolBar.classList.toggle('open');
