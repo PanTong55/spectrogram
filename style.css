@@ -328,11 +328,10 @@ input[type="file"]:hover {
   background-color: #2196F3;
 }
 
-/* === FFT Size Switch Colors === */
-.fft-switch .slider.round {
+.fs-switch .slider.round {
   background-color: #FFD700;
 }
-.fft-switch input:checked + .slider.round {
+.fs-switch input:checked + .slider.round {
   background-color: #FF8C00;
 }
 
