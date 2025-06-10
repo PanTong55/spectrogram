@@ -1,12 +1,10 @@
 /* === 全局樣式 === */
 html, body {
-  padding: 0;
+  padding: 5px;
+  margin: 0px;
   overflow-x: hidden;
   background: #fff;
   font-family: 'Noto Sans HK', sans-serif;
-}
-body {
-  padding: 10px;
 }
 
 /* === Viewer 結構 === */
