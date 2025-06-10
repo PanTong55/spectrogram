@@ -202,7 +202,7 @@ input[type="range"]::-moz-range-thumb {
 input[type="text"],
 input[type="number"],
 input[type="file"] {
-  padding: 6px 10px;
+  padding: 4px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
@@ -437,8 +437,8 @@ input[type="file"]:hover {
 
 /* Sidebar Button 樣式 */
 .sidebar-button {
-  width: 35px;
-  height: 35px;
+  width: 30px;
+  height: 30px;
   background-color: #555;  /* 預設深灰色 */
   border: none;
   border-radius: 8px;
@@ -457,14 +457,14 @@ input[type="file"]:hover {
 
 .sidebar-button i {
   color: white;  /* icon 白色 */
-  font-size: 20px;
+  font-size: 15px;
 }
 
 /* File Path Display 樣式 */
 .file-path-display {
   display: inline-block;
   background-color: #f5f5f5;
-  padding: 8px 16px;
+  padding: 5px 16px;
   border-radius: 8px;
   max-width: 200px;
   flex-shrink: 1;
