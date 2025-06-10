@@ -367,6 +367,14 @@ export function initFrequencyHover({
       updateTooltipValues(sel, left, top, width, height);
     });
   }
+  
+  function clearSelections() {
+    selections.forEach(sel => {
+      viewer.removeChild(sel.rect);
+      viewer.removeChild(sel.tooltip);
+    });
+    selections.length = 0;
+  }
 
   function enableDrag(element) {
     let offsetX, offsetY, isDragging = false;
@@ -390,6 +398,7 @@ export function initFrequencyHover({
 
   return {
     updateSelections,
+    clearSelections,
     setFrequencyRange: (min, max) => {
       minFrequency = min;
       maxFrequency = max;
