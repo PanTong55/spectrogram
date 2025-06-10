@@ -1,7 +1,7 @@
 // modules/fileLoader.js
 
 import { extractGuanoMetadata } from './guanoReader.js';
-import { setFileList, getFileList, getCurrentIndex, setCurrentIndex } from './fileState.js';
+import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex } from './fileState.js';
 
 let lastObjectUrl = null;
 
@@ -76,7 +76,7 @@ export function initFileLoader({
     const sortedList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
     const index = sortedList.findIndex(f => f.name === selectedFile.name);
 
-    setFileList(sortedList, index);
+    addFilesToList(sortedList, index);
     await loadFile(selectedFile);
   });
 
