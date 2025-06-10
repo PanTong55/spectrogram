@@ -24,7 +24,10 @@
       <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
       <ul id="fileList"></ul>
       <div id="Metadata">
-        <span class="section-title">GUANO Metadata:</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="section-title">GUANO Metadata:</span>
+          <i id="metadata-toggle" class="fa-solid fa-caret-down" style="cursor:pointer;"></i>
+        </div>
         <pre id="guano-output">(no file selected)</pre>
       </div>
   </div>
@@ -183,7 +186,16 @@
     const getDuration = () => duration;
 
     const guanoOutput = document.getElementById('guano-output');
-
+    const metadataDiv = document.getElementById('Metadata');
+    const fileListElem = document.getElementById('fileList');
+    const metadataToggle = document.getElementById('metadata-toggle');
+    metadataToggle.addEventListener('click', () => {
+      const collapsed = metadataDiv.classList.toggle('collapsed');
+      fileListElem.classList.toggle('metadata-collapsed', collapsed);
+      metadataToggle.classList.toggle('fa-caret-down', !collapsed);
+      metadataToggle.classList.toggle('fa-caret-up', collapsed);
+    });
+    
     initWavesurfer({
       container,
       sampleRate: currentSampleRate,
