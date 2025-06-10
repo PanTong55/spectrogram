@@ -505,9 +505,7 @@
     const clearAllBtn = document.getElementById('clearAllBtn');
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
-      sidebarControl.refresh('');
-      const ws = getWavesurfer();
-      if (ws) ws.empty();     
+      sidebarControl.refresh('');    
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
