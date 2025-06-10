@@ -68,6 +68,12 @@ html, body {
   pointer-events: none;
 }
 
+#hover-line,
+#hover-line-vertical,
+#zoom-controls {
+  display: none;
+}
+
 #hover-label {
   position: absolute;
   transform: translate(0, -50%);
@@ -122,7 +128,6 @@ html, body {
   position: absolute;
   bottom: 30px;
   right: 10px;
-  display: flex;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 4px;
