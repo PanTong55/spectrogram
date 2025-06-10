@@ -205,7 +205,10 @@
         zoomControlsElem.style.display = 'flex';
         sidebarControl.refresh(file.name);        
       },
-      onBeforeLoad: () => { freqHoverControl?.hideHover(); },
+      onBeforeLoad: () => {
+        freqHoverControl?.hideHover();
+        freqHoverControl?.clearSelections();
+      },
       onAfterLoad: () => { freqHoverControl?.refreshHover(); }
     });
     sidebarControl = initSidebar({
@@ -377,7 +380,10 @@
         zoomControlsElem.style.display = 'flex';
         sidebarControl.refresh(file.name);      
       },
-      onBeforeLoad: () => { freqHoverControl?.hideHover(); },
+      onBeforeLoad: () => {
+        freqHoverControl?.hideHover();
+        freqHoverControl?.clearSelections();
+      },
       onAfterLoad: () => { freqHoverControl?.refreshHover(); }
     });   
 
