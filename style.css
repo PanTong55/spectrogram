@@ -380,6 +380,7 @@ input[type="file"]:hover {
   height: 100%;
   max-height: calc(100% - 420px);
   overflow-y: auto;
+  transition: max-height 0.3s ease;
 }
 
 #Metadata {
@@ -390,6 +391,7 @@ input[type="file"]:hover {
   background-color: #f5f5f5;
   border-radius: 8px;
   box-sizing: border-box;
+  transition: height 0.3s ease;
 }
 
 #Metadata .section-title {
@@ -403,6 +405,7 @@ input[type="file"]:hover {
   padding: 0;
   height:310px;
   overflow-x: auto;
+  transition: height 0.3s ease;
   word-break: break-word;
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 12px;
