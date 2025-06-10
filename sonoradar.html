@@ -81,9 +81,9 @@
             <span class="slider round"></span>
           </label>
         </label>
-        <label class="slider-label">FFT:
-          <label class="switch fft-switch" title="256/384kHz">
-            <input type="checkbox" id="fftSizeSwitch">
+        <label class="slider-label">Fs:
+          <label class="switch fs-switch" title="256/384kHz">
+            <input type="checkbox" id="sampleRateSwitch">
             <span class="slider round"></span>
           </label>
         </label>  
@@ -259,18 +259,18 @@
     
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
 
-    const fftSizeSwitch = document.getElementById('fftSizeSwitch');
+    const sampleRateSwitch = document.getElementById('sampleRateSwitch');
     
     freqGrid.style.display = 'none';
     toggleGridSwitch.checked = false;
-    fftSizeSwitch.checked = false;
+    sampleRateSwitch.checked = false;
     
     toggleGridSwitch.addEventListener('change', () => {
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
 
-    fftSizeSwitch.addEventListener('change', () => {
-      currentSampleRate = fftSizeSwitch.checked ? 384000 : 256000;
+    sampleRateSwitch.addEventListener('change', () => {
+      currentSampleRate = sampleRateSwitch.checked ? 384000 : 256000;
 
       const maxFreq = currentSampleRate / 2000;
       freqMaxInput.max = maxFreq;
