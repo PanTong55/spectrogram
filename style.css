@@ -479,9 +479,7 @@ input[type="file"]:hover {
 /* Reusable file name text style */
 #fileNameText,
 .fileNameText {
-  display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 140px;
 }
