@@ -13,13 +13,10 @@
 
   <div style="display: flex; flex-direction: row; height: calc(100vh - 50px);">
     <!-- Sidebar -->
-    <div id="sidebar">
-    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center;">
+  <div id="sidebar">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
        <span id="fileListHeader" style="font-weight: bold;">File List</span>
-       <span style="display: flex; align-items: center; gap: 6px;">
-         <i id="clearFileListBtn" class="fa-solid fa-trash" title="Clear all" style="cursor: pointer;"></i>
-         <span id="fileCount" style="font-weight: normal;"></span>
-       </span>
+       <span id="fileCount" style="font-weight: normal;"></span>
     </div>
       <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
       <ul id="fileList"></ul>
@@ -160,7 +157,7 @@
     import { extractGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList } from './modules/fileState.js';
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList } from './modules/fileState.js'; 
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -503,29 +500,6 @@
 
     const settingBtn = document.getElementById('setting');
     const toolBar = document.getElementById('tool-bar');
-
-    const clearBtn = document.getElementById('clearFileListBtn');
-
-    clearBtn.addEventListener('click', () => {
-      clearFileList();
-      sidebarControl.refresh('');
-      overlay.style.display = 'flex';
-      hoverLineElem.style.display = 'none';
-      hoverLineVElem.style.display = 'none';
-      zoomControlsElem.style.display = 'none';
-      document.getElementById('fileNameText').textContent = 'Upload wav file(s)';
-      guanoOutput.textContent = '(no file selected)';
-      const canvas = document.getElementById('spectrogram-only').querySelector('canvas');
-      if (canvas) canvas.remove();
-      getWavesurfer()?.empty?.();
-      replacePlugin(
-        getCurrentColorMap(),
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent()
-      );
-    });
     
     settingBtn.addEventListener('click', () => {
       toolBar.classList.toggle('open');
