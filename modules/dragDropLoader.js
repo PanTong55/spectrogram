@@ -1,7 +1,7 @@
 // modules/dragDropLoader.js
 
 import { extractGuanoMetadata } from './guanoReader.js';
-import { setFileList } from './fileState.js';
+import { addFilesToList } from './fileState.js';
 
 export function initDragDropLoader({
   targetElementId,
@@ -79,7 +79,7 @@ export function initDragDropLoader({
     }
 
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
-    setFileList(sortedList, 0);
+    addFilesToList(sortedList, 0);
     await loadFile(sortedList[0]);
   }
 
