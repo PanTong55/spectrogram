@@ -382,7 +382,7 @@
         zoomControl.applyZoom();
       }
 
-      plugin?.render();
+      getPlugin()?.render();
       requestAnimationFrame(() => {
       renderAxes();
       freqHoverControl?.refreshHover();        
