@@ -7,7 +7,14 @@ let fileIcons = {}; // { index: { trash: bool, star: bool, question: bool } }
 export function setFileList(list, index = 0) {
   fileList = list;
   currentIndex = index;
-  fileIcons = {};  
+  fileIcons = {};
+}
+
+export function addFilesToList(list, index = 0) {
+  if (!Array.isArray(list) || list.length === 0) return;
+  const startIndex = fileList.length;
+  fileList = fileList.concat(list);
+  currentIndex = startIndex + index;
 }
 
 export function getFileList() {
