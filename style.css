@@ -380,7 +380,6 @@ input[type="file"]:hover {
   height: 100%;
   max-height: calc(100% - 420px);
   overflow-y: auto;
-  transition: height 0.3s ease;
 }
 
 #Metadata {
@@ -407,7 +406,6 @@ input[type="file"]:hover {
   word-break: break-word;
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 12px;
-  transition: height 0.3s ease;
 }
 
 #Metadata.collapsed {
