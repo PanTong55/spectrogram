@@ -483,4 +483,5 @@ input[type="file"]:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 140px;
 }
