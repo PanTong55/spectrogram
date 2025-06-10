@@ -100,9 +100,9 @@ export function initFileLoader({
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') {
+    if (e.key === 'ArrowUp') {
       prevBtn.click();
-    } else if (e.key === 'ArrowRight') {
+    } else if (e.key === 'ArrowDown') {
       nextBtn.click();
     }
   });
