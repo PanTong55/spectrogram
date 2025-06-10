@@ -409,6 +409,18 @@ input[type="file"]:hover {
   font-size: 12px;
 }
 
+#Metadata.collapsed {
+  height: 35px;
+}
+
+#Metadata.collapsed #guano-output {
+  height: 0;
+}
+
+#fileList.metadata-collapsed {
+  max-height: calc(100% - 105px);
+}
+
 #control-bar {
   display: flex;
   align-items: center;
