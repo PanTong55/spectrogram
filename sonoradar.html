@@ -375,6 +375,7 @@
         hoverLineElem.style.display = 'block';
         hoverLineVElem.style.display = 'block';
         zoomControlsElem.style.display = 'flex';
+        sidebarControl.refresh(file.name);      
       },
       onBeforeLoad: () => { freqHoverControl?.hideHover(); },
       onAfterLoad: () => { freqHoverControl?.refreshHover(); }
@@ -505,15 +506,20 @@
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
       sidebarControl.refresh('');
+      getWavesurfer().empty();
+      replacePlugin(
+        getCurrentColorMap(),
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent()
+      );
       overlay.style.display = 'flex';
       hoverLineElem.style.display = 'none';
       hoverLineVElem.style.display = 'none';
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
     });
-    
-    const settingBtn = document.getElementById('setting');
-    const toolBar = document.getElementById('tool-bar');
     
     settingBtn.addEventListener('click', () => {
       toolBar.classList.toggle('open');
