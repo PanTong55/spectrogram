@@ -506,8 +506,8 @@
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
       sidebarControl.refresh('');
-      const spectrogramContainer = document.getElementById('spectrogram-only');
-      spectrogramContainer.innerHTML = '';  
+      const ws = getWavesurfer();
+      if (ws) ws.empty();     
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
