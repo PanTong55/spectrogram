@@ -4,12 +4,14 @@ let fileList = [];
 let currentIndex = -1;
 let fileIcons = {}; // { index: { trash: bool, star: bool, question: bool } }
 let fileNotes = {}; // { index: string }
+let fileMetadata = {}; // { index: { timestamp: string, lat: string, lon: string } }
 
 export function setFileList(list, index = 0) {
   fileList = list;
   currentIndex = index;
   fileIcons = {};
   fileNotes = {};
+  fileMetadata = {};
 }
 
 export function addFilesToList(list, index = 0) {
@@ -21,6 +23,14 @@ export function addFilesToList(list, index = 0) {
 
 export function getFileList() {
   return fileList;
+}
+
+export function setFileMetadata(index, metadata) {
+  fileMetadata[index] = metadata;
+}
+
+export function getFileMetadata(index) {
+  return fileMetadata[index] || {};
 }
 
 export function getCurrentIndex() {
@@ -58,6 +68,7 @@ export function clearFileList() {
   currentIndex = -1;
   fileIcons = {};
   fileNotes = {};
+  fileMetadata = {};
 }
 
 export function setFileNote(index, note) {
@@ -78,5 +89,6 @@ export function removeFilesByName(name) {
     currentIndex = -1;
     fileIcons = {};
     fileNotes = {};
+    fileMetadata = {};
   }
 }

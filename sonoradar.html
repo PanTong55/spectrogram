@@ -54,6 +54,7 @@
         </span>
         <button id="prevBtn" title="Previous file (^)" class="sidebar-button"><i class="fas fa-arrow-up"></i></button>
         <button id="nextBtn" title="Next file (v)" class="sidebar-button"><i class="fas fa-arrow-down"></i></button>
+        <button id="exportBtn" title="Export CSV" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
       </div>
       <!-- Tool Bar -->    
@@ -166,9 +167,9 @@
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
     import { extractGuanoMetadata } from './modules/guanoReader.js';
-    import { initDragDropLoader } from './modules/dragDropLoader.js';
+    import { exportFileListCsv } from './modules/exportCsv.js';
     import { initSidebar } from './modules/sidebar.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList } from './modules/fileState.js';
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, getFileMetadata } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -528,7 +529,7 @@
     const clearAllBtn = document.getElementById('clearAllBtn');
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
-      sidebarControl.refresh('');    
+      sidebarControl.refresh('');
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
@@ -541,6 +542,11 @@
       hoverLineVElem.style.display = 'none';
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
+    });
+
+    const exportBtn = document.getElementById('exportBtn');
+    exportBtn.addEventListener('click', () => {
+      exportFileListCsv();
     });
 
     const settingBtn = document.getElementById('setting');

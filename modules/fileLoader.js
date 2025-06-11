@@ -1,7 +1,7 @@
 // modules/fileLoader.js
 
 import { extractGuanoMetadata } from './guanoReader.js';
-import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName } from './fileState.js';
+import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
 
 let lastObjectUrl = null;
 
@@ -39,7 +39,8 @@ export function initFileLoader({
 
     try {
       const result = await extractGuanoMetadata(file);
-      guanoOutput.textContent = result || '(No GUANO metadata found)';
+      guanoOutput.textContent = result.raw || '(No GUANO metadata found)';
+      setFileMetadata(getCurrentIndex(), result.parsed);
     } catch (err) {
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }

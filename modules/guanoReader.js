@@ -1,7 +1,7 @@
 // modules/guanoReader.js
 
 export async function extractGuanoMetadata(file) {
-  if (!file) return '(no file selected)';
+  if (!file) return { raw: '(no file selected)', parsed: {} };
   
   const buffer = await file.arrayBuffer();
   const view = new DataView(buffer);
@@ -30,5 +30,25 @@ export async function extractGuanoMetadata(file) {
     if (chunkSize % 2 === 1) pos += 1; // word alignment
   }
 
-  return foundGuano || '(No GUANO metadata found in file)';
+  const rawText = foundGuano || '(No GUANO metadata found in file)';
+  const parsed = {};
+
+  if (foundGuano) {
+    const lines = foundGuano.split(/\r?\n/);
+    for (const line of lines) {
+      const idx = line.indexOf(':');
+      if (idx === -1) continue;
+      const key = line.slice(0, idx).trim();
+      const val = line.slice(idx + 1).trim();
+      if (key === 'Timestamp') {
+        parsed.timestamp = val;
+      } else if (key === 'Loc Position') {
+        const [lat, lon] = val.split(/\s+/);
+        parsed.lat = lat;
+        parsed.lon = lon;
+      }
+    }
+  }
+
+  return { raw: rawText, parsed };
 }

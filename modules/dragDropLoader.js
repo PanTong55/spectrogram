@@ -1,7 +1,7 @@
 // modules/dragDropLoader.js
 
 import { extractGuanoMetadata } from './guanoReader.js';
-import { addFilesToList, removeFilesByName } from './fileState.js';
+import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex } from './fileState.js';
 
 export function initDragDropLoader({
   targetElementId,
@@ -45,7 +45,8 @@ export function initDragDropLoader({
     
     try {
       const result = await extractGuanoMetadata(file);
-      guanoOutput.textContent = result || '(No GUANO metadata found)';
+      guanoOutput.textContent = result.raw || '(No GUANO metadata found)';
+      setFileMetadata(getCurrentIndex(), result.parsed);
     } catch (err) {
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }
