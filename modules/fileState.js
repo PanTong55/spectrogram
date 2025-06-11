@@ -67,3 +67,16 @@ export function setFileNote(index, note) {
 export function getFileNote(index) {
   return fileNotes[index] || '';
 }
+
+// Remove files that match the given name from the current list. This also resets
+// any stored icon or note state. The currentIndex will be set to -1 so that the
+// caller can decide which file to load next.
+export function removeFilesByName(name) {
+  const filtered = fileList.filter(f => f.name !== name);
+  if (filtered.length !== fileList.length) {
+    fileList = filtered;
+    currentIndex = -1;
+    fileIcons = {};
+    fileNotes = {};
+  }
+}
