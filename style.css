@@ -586,6 +586,11 @@ body.tag-mode-active #tag-panel {
   gap: 4px;
 }
 
+#tag-panel .tag-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
 #whole-spectrogram {
   transition: transform 0.3s ease;
 }
@@ -598,7 +603,7 @@ body.tag-mode-active #toggleTagModeBtn {
   background-color: #007bff;
 }
 
-.tag-button {
+input.tag-button {
   width: 90px;
   margin-bottom: 4px;
   height: 25px;
@@ -612,11 +617,11 @@ body.tag-mode-active #toggleTagModeBtn {
   padding: 0;
 }
 
-.tag-button.active {
+input.tag-button.active {
   background-color: #ffd700;
 }
 
-.tag-button.editing {
+input.tag-button.editing {
   background-color: #fff;
   cursor: text;
 }
