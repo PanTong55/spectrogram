@@ -493,7 +493,7 @@ input[type="file"]:hover {
 .file-note-input {
   width: 0;
   margin-left: 0;
-  display: inline-block;
+  display: none;
   padding: 0;
   font-size: 13px;
   height: 20px;
@@ -514,6 +514,7 @@ input[type="file"]:hover {
   margin-left: 4px;
   padding: 2px 4px;
   border-width: 1px;
+  display: inline-block;
   opacity: 1;
   pointer-events: auto;
 }
