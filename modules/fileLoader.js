@@ -65,7 +65,8 @@ export function initFileLoader({
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
-    }    
+    }
+    document.dispatchEvent(new Event('file-loaded'));
     
   }
 

@@ -569,3 +569,63 @@ input[type="file"]:hover {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* === Tag Mode === */
+#tag-panel {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100px;
+  padding-left: 10px;
+  box-sizing: border-box;
+}
+
+body.tag-mode-active #tag-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#whole-spectrogram {
+  transition: transform 0.3s ease;
+}
+
+body.tag-mode-active #whole-spectrogram {
+  transform: translateX(100px);
+}
+
+body.tag-mode-active #toggleTagModeBtn {
+  background-color: #007bff;
+}
+
+.tag-button {
+  width: 90px;
+  padding-left: 10px;
+  margin-bottom: 4px;
+  background-color: #fafafa;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 13px;
+}
+
+.tag-button.active {
+  background-color: #ffd700;
+}
+
+.tag-button.editing {
+  background-color: #fff;
+}
+
+#editTagsBtn {
+  margin-top: 8px;
+  background-color: #007bff;
+  color: #fff;
+}
+
+#confirmTagsBtn {
+  margin-top: 4px;
+  background-color: #28a745;
+  color: #fff;
+}
