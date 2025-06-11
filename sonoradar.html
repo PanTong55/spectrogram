@@ -21,7 +21,12 @@
          <i id="clearAllBtn" class="fa-solid fa-trash" title="Clear all" style="cursor:pointer;"></i>
        </span>
     </div>
-      <input type="text" id="searchInput" placeholder="Search files..." style="width:100%; margin-bottom: 8px;">
+      <div id="searchContainer" style="display:flex; align-items:center; gap:4px; margin-bottom:8px;">
+        <input type="text" id="searchInput" placeholder="Search files..." style="flex:1;">
+        <button id="toggleEditBtn" class="sidebar-button" title="Edit mode">
+          <i class="fa-solid fa-pen-to-square"></i>
+        </button>
+      </div>
       <ul id="fileList"></ul>
       <div id="Metadata">
         <div style="display:flex;justify-content:space-between;align-items:center; padding-bottom:4px;">

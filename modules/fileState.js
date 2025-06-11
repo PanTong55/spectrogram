@@ -3,11 +3,13 @@
 let fileList = [];
 let currentIndex = -1;
 let fileIcons = {}; // { index: { trash: bool, star: bool, question: bool } }
+let fileNotes = {}; // { index: string }
 
 export function setFileList(list, index = 0) {
   fileList = list;
   currentIndex = index;
   fileIcons = {};
+  fileNotes = {};
 }
 
 export function addFilesToList(list, index = 0) {
@@ -55,4 +57,13 @@ export function clearFileList() {
   fileList = [];
   currentIndex = -1;
   fileIcons = {};
+  fileNotes = {};
+}
+
+export function setFileNote(index, note) {
+  fileNotes[index] = note;
+}
+
+export function getFileNote(index) {
+  return fileNotes[index] || '';
 }

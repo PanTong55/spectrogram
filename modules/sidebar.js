@@ -1,6 +1,6 @@
 // modules/sidebar.js
 
-import { getFileList, getCurrentIndex, getFileIconState } from './fileState.js';
+import { getFileList, getCurrentIndex, getFileIconState, getFileNote, setFileNote } from './fileState.js';
 
 export function initSidebar({ onFileSelected } = {}) {
   const sidebar = document.getElementById('sidebar');
@@ -8,13 +8,22 @@ export function initSidebar({ onFileSelected } = {}) {
   const sidebarIcon = document.getElementById('sidebarIcon');
   const fileListUl = document.getElementById('fileList');
   const searchInput = document.getElementById('searchInput');
+  const editBtn = document.getElementById('toggleEditBtn');
   const filePathSpan = document.getElementById('currentFilePath');
   const fileCount = document.getElementById('fileCount');
+
+  let isEditMode = false;
 
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
     const isCollapsed = sidebar.classList.contains('collapsed');
     toggleBtn.title = isCollapsed ? 'Open File List' : 'Collapse File List';
+  });
+
+  editBtn.addEventListener('click', () => {
+    isEditMode = !isEditMode;
+    sidebar.classList.toggle('edit-mode', isEditMode);
+    renderFileList(searchInput.value.trim().toLowerCase());
   });
 
   searchInput.addEventListener('input', () => {
@@ -63,10 +72,16 @@ export function initSidebar({ onFileSelected } = {}) {
       
       li.appendChild(left);
 
+      const rightContainer = document.createElement('span');
+      rightContainer.style.display = 'flex';
+      rightContainer.style.alignItems = 'center';
+      rightContainer.style.flexShrink = '0';
+      rightContainer.style.whiteSpace = 'nowrap';
+
       const flags = document.createElement('span');
       flags.style.display = 'flex';
       flags.style.flexShrink = '0';
-      flags.style.whiteSpace = 'nowrap';    
+      flags.style.whiteSpace = 'nowrap';
       const state = getFileIconState(index);
       if (state.trash) {
         const d = document.createElement('i');
@@ -89,7 +104,20 @@ export function initSidebar({ onFileSelected } = {}) {
         q.style.marginLeft = '4px';
         flags.appendChild(q);
       }
-      li.appendChild(flags);
+
+      rightContainer.appendChild(flags);
+
+      const noteInput = document.createElement('input');
+      noteInput.type = 'text';
+      noteInput.className = 'file-note-input';
+      noteInput.value = getFileNote(index);
+      noteInput.addEventListener('click', (e) => e.stopPropagation());
+      noteInput.addEventListener('input', (e) => {
+        setFileNote(index, e.target.value);
+      });
+      rightContainer.appendChild(noteInput);
+
+      li.appendChild(rightContainer);
   
       li.addEventListener('click', () => {
         if (typeof onFileSelected === 'function') {
