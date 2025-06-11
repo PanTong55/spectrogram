@@ -214,7 +214,7 @@ input[type="file"] {
   font-family: 'Noto Sans HK', sans-serif;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   background-color: #fafafa;
-  cursor: pointer;
+  cursor: text;
   transition: background 0.3s;
 }
 input[type="file"]:hover {
