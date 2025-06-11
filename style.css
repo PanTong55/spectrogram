@@ -491,6 +491,7 @@ input[type="file"]:hover {
 .file-note-input {
   width: 0;
   margin-left: 0;
+  display: none;
   padding: 2px 4px;
   font-size: 13px;
   height: 20px;
@@ -505,7 +506,8 @@ input[type="file"]:hover {
 }
 
 #sidebar.edit-mode .file-note-input {
-  width: 45px;
+  width: 100px;
+  display: block;
   margin-left: 4px;
   opacity: 1;
   pointer-events: auto;
