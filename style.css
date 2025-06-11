@@ -534,3 +534,32 @@ input[type="file"]:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Loading overlay for file operations */
+#loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  pointer-events: none;
+}
+
+#loading-overlay .spinner {
+  border: 4px solid rgba(255, 255, 255, 0.6);
+  border-top: 4px solid #333;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
