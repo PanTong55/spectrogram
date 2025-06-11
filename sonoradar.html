@@ -36,7 +36,7 @@
         <pre id="guano-output">(no file selected)</pre>
       </div>
   </div>
-  <div id="main-area" style="flex-grow: 1; overflow-x: hidden; padding-left: 15px; position: relative;">
+  <div style="flex-grow: 1; overflow-x: hidden; padding-left: 15px;">  
     
     <div id="control-bar">
       <!-- Top Bar -->
@@ -54,7 +54,6 @@
         </span>
         <button id="prevBtn" title="Previous file (^)" class="sidebar-button"><i class="fas fa-arrow-up"></i></button>
         <button id="nextBtn" title="Next file (v)" class="sidebar-button"><i class="fas fa-arrow-down"></i></button>
-        <button id="tagBtn" title="Tag Mode" class="sidebar-button"><i class="fa-solid fa-tags"></i></button>
         <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
       </div>
@@ -96,9 +95,8 @@
         </label>  
       </div>
     </div>
-<!-------- Spectrogram Start -------->
-    <div id="tag-container"></div>
-    <div id="whole-spectrogram">
+<!-------- Spectrogram Start -------->      
+    <div id="whole-spectrogram">    
       <div id="spectrogram-settings" style="
         padding: 0 0 2px;
         margin-left: 45px;
@@ -190,27 +188,7 @@
     const freqLabelContainer = document.getElementById('freq-labels');
     const hoverLineElem = document.getElementById('hover-line');
     const hoverLineVElem = document.getElementById('hover-line-vertical');
-    const zoomControlsElem = document.getElementById('zoom-controls');
-    const tagContainer = document.getElementById('tag-container');
-    const mainArea = document.getElementById('main-area');
-    const tagBtn = document.getElementById('tagBtn');
-    const tagInputs = [];
-    const editTagsBtn = document.createElement('button');
-    editTagsBtn.id = 'editTagsBtn';
-    editTagsBtn.textContent = 'Edit Tags';
-    const confirmTagsBtn = document.createElement('button');
-    confirmTagsBtn.id = 'confirmTagsBtn';
-    confirmTagsBtn.textContent = 'Confirm Tags';
-    for (let i = 0; i < 25; i++) {
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.className = 'tag-input-button';
-      inp.readOnly = true;
-      tagInputs.push(inp);
-      tagContainer.appendChild(inp);
-    }
-    tagContainer.appendChild(editTagsBtn);
-    tagContainer.appendChild(confirmTagsBtn);
+    const zoomControlsElem = document.getElementById('zoom-controls');    
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
@@ -579,33 +557,6 @@
       hoverLineVElem.style.display = 'none';
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
-    });
-
-    tagBtn.addEventListener('click', () => {
-      mainArea.classList.toggle('tag-mode');
-    });
-
-    editTagsBtn.addEventListener('click', () => {
-      tagInputs.forEach(inp => { inp.readOnly = false; });
-    });
-
-    confirmTagsBtn.addEventListener('click', () => {
-      tagInputs.forEach(inp => { inp.readOnly = true; });
-    });
-
-    tagContainer.addEventListener('click', (e) => {
-      if (e.target.classList.contains('tag-input-button') && e.target.readOnly) {
-        const text = e.target.value.trim();
-        if (!text) return;
-        const idx = getCurrentIndex();
-        if (idx < 0) return;
-        const current = getFileNote(idx);
-        const parts = current ? current.split(',').map(s => s.trim()).filter(s => s) : [];
-        parts.push(text);
-        const newNote = parts.join(', ');
-        setFileNote(idx, newNote);
-        sidebarControl.refresh(getFileList()[idx].name, false);
-      }
     });
 
     const settingBtn = document.getElementById('setting');
