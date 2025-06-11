@@ -351,6 +351,12 @@ input[type="file"]:hover {
 #searchInput {
   width: 100%;
   box-sizing: border-box;
+}
+
+#searchContainer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 8px;
 }
 
@@ -363,6 +369,10 @@ input[type="file"]:hover {
   box-sizing: border-box;
   transition: width 0.3s ease, opacity 0.3s ease;
   overflow: hidden;
+}
+
+#sidebar.edit-mode {
+  width: 300px;
 }
 
 #sidebar.collapsed {
@@ -476,6 +486,29 @@ input[type="file"]:hover {
 .sidebar-button i {
   color: white;  /* icon 白色 */
   font-size: 15px;
+}
+
+.file-note-input {
+  width: 0;
+  margin-left: 0;
+  padding: 2px 4px;
+  font-size: 13px;
+  height: 20px;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: width 0.3s ease, margin-left 0.3s ease, opacity 0.3s ease;
+}
+
+#sidebar.edit-mode .file-note-input {
+  width: 45px;
+  margin-left: 4px;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* File Path Display 樣式 */
