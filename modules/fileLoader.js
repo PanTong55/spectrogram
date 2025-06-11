@@ -74,6 +74,10 @@ export function initFileLoader({
     const selectedFile = files[0];
     if (!selectedFile) return;
 
+    if (typeof onBeforeLoad === 'function') {
+      onBeforeLoad();
+    }
+
     const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
 
     const sortedList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
