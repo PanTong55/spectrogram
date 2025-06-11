@@ -95,62 +95,64 @@
         </label>  
       </div>
     </div>
-        
-    <div id="spectrogram-settings" style="
-      padding: 0 0 2px;
-      margin-left: 45px;
-      font-size: 12px;
-      font-family: 'Noto Sans HK', sans-serif;
-      z-index: 10;
-    "></div>
-    <div class="viewer-row">
-      <div id="freq-labels"></div>
-      <div id="viewer-wrapper" style="position: relative;">
-        <div id="drop-overlay" style="
-          position: absolute;
-          top: 0; left: 0; right: 0; bottom: 20px;
-          background-color: rgba(255, 255, 255, 0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          pointer-events: none;
-        ">
-          <div style="
+<!-------- Spectrogram Start -------->      
+    <div id="whole-spectrogram">    
+      <div id="spectrogram-settings" style="
+        padding: 0 0 2px;
+        margin-left: 45px;
+        font-size: 12px;
+        font-family: 'Noto Sans HK', sans-serif;
+        z-index: 10;
+      "></div>
+      <div class="viewer-row">
+        <div id="freq-labels"></div>
+        <div id="viewer-wrapper" style="position: relative;">
+          <div id="drop-overlay" style="
             position: absolute;
-            top: 20px; left: 20px; right: 20px; bottom: 20px;
-            border: 5px dashed rgba(150, 150, 150, 0.8);
-            border-radius: 10px;
-          "></div>
-          <div style="text-align: center; font-family: 'Noto Sans HK', sans-serif; font-size: 24px; color: #333;">
-            <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
-            <div>Drop WAV file(s) or folder here</div>
+            top: 0; left: 0; right: 0; bottom: 20px;
+            background-color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            pointer-events: none;
+          ">
+            <div style="
+              position: absolute;
+              top: 20px; left: 20px; right: 20px; bottom: 20px;
+              border: 5px dashed rgba(150, 150, 150, 0.8);
+              border-radius: 10px;
+            "></div>
+            <div style="text-align: center; font-family: 'Noto Sans HK', sans-serif; font-size: 24px; color: #333;">
+              <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
+              <div>Drop WAV file(s) or folder here</div>
+            </div>
+            </div>
+            <div id="loading-overlay" class="loading-overlay">
+              <div class="spinner"></div>
+            </div>
+            <div id="viewer-container">
+            <div id="spectrogram-only" style="height: 800px;"></div>
+            <canvas id="freq-grid"></canvas>
           </div>
-          </div>
-          <div id="loading-overlay" class="loading-overlay">
-            <div class="spinner"></div>
-          </div>
-          <div id="viewer-container">
-          <div id="spectrogram-only" style="height: 800px;"></div>
-          <canvas id="freq-grid"></canvas>
-        </div>
-        <div id="fixed-overlay">
-        <div id="hover-line" class="hover-line-horizontal"></div>
-        <div id="hover-line-vertical" class="hover-line-vertical"></div>
-        <div id="hover-label">-</div>
-          <div id="zoom-controls">
-            <button class="zoom-button" id="zoom-in" title="zoom-in (CTRL+^)">+</button>
-            <button class="zoom-button" id="zoom-out" title="zoom-out (CTRL+v)">−</button>
-            <button id="expand-btn" class="zoom-button" title="Expand Mode (CTRL+0)"><i class="fas fa-expand"></i></button>
+          <div id="fixed-overlay">
+          <div id="hover-line" class="hover-line-horizontal"></div>
+          <div id="hover-line-vertical" class="hover-line-vertical"></div>
+          <div id="hover-label">-</div>
+            <div id="zoom-controls">
+              <button class="zoom-button" id="zoom-in" title="zoom-in (CTRL+^)">+</button>
+              <button class="zoom-button" id="zoom-out" title="zoom-out (CTRL+v)">−</button>
+              <button id="expand-btn" class="zoom-button" title="Expand Mode (CTRL+0)"><i class="fas fa-expand"></i></button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  
     <div id="time-axis-wrapper">
       <div id="time-axis"></div>
     </div>
     <div id="time-label">Time (ms)</div>
+  </div>
+<!-------- Spectrogram End -------->       
     </div>
   </div>   
   <script type="module">
