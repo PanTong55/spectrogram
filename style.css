@@ -490,13 +490,6 @@ input[type="file"]:hover {
   font-size: 15px;
 }
 
-.flag-icons {
-  display: flex;
-  flex-shrink: 0;
-  white-space: nowrap;
-  gap: 4px;
-}
-
 .file-note-input {
   width: 0;
   margin-left: 0;

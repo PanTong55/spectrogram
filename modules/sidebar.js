@@ -81,24 +81,29 @@ export function initSidebar({ onFileSelected } = {}) {
       rightContainer.style.whiteSpace = 'nowrap';
 
       const flags = document.createElement('span');
-      flags.className = 'flag-icons';
+      flags.style.display = 'flex';
+      flags.style.flexShrink = '0';
+      flags.style.whiteSpace = 'nowrap';
       const state = getFileIconState(index);
       if (state.trash) {
         const d = document.createElement('i');
         d.className = 'fa-solid fa-trash';
         d.style.color = 'gray';
+        d.style.marginLeft = '4px';
         flags.appendChild(d);
       }
       if (state.star) {
         const s = document.createElement('i');
         s.className = 'fa-solid fa-star';
         s.style.color = '#FFD700';
+        s.style.marginLeft = '4px';
         flags.appendChild(s);
       }
       if (state.question) {
         const q = document.createElement('i');
         q.className = 'fa-solid fa-question';
         q.style.color = 'red';
+        q.style.marginLeft = '4px';
         flags.appendChild(q);
       }
 
