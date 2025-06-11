@@ -126,8 +126,11 @@
             <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
             <div>Drop WAV file(s) or folder here</div>
           </div>
-        </div>      
-        <div id="viewer-container">
+          </div>
+          <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+          </div>
+          <div id="viewer-container">
           <div id="spectrogram-only" style="height: 800px;"></div>
           <canvas id="freq-grid"></canvas>
         </div>
@@ -207,7 +210,8 @@
       sampleRate: currentSampleRate,
     });
     const overlay = document.getElementById('drop-overlay');
-    overlay.style.display = 'flex';    
+    const loadingOverlay = document.getElementById('loading-overlay');
+    overlay.style.display = 'flex';
     updateSpectrogramSettingsText();
 
     fileLoaderControl = initFileLoader({
@@ -221,13 +225,17 @@
         hoverLineElem.style.display = 'block';
         hoverLineVElem.style.display = 'block';
         zoomControlsElem.style.display = 'flex';
-        sidebarControl.refresh(file.name);        
+        sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
+        loadingOverlay.style.display = 'flex';
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
       },
-      onAfterLoad: () => { freqHoverControl?.refreshHover(); }
+      onAfterLoad: () => {
+        loadingOverlay.style.display = 'none';
+        freqHoverControl?.refreshHover();
+      }
     });
     sidebarControl = initSidebar({
       onFileSelected: (index) => {
@@ -396,14 +404,18 @@
         hoverLineElem.style.display = 'block';
         hoverLineVElem.style.display = 'block';
         zoomControlsElem.style.display = 'flex';
-        sidebarControl.refresh(file.name);      
+        sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
+        loadingOverlay.style.display = 'flex';
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
       },
-      onAfterLoad: () => { freqHoverControl?.refreshHover(); }
-    });   
+      onAfterLoad: () => {
+        loadingOverlay.style.display = 'none';
+        freqHoverControl?.refreshHover();
+      }
+    });
 
     initScrollSync({
       scrollSourceId: 'viewer-container',
@@ -538,6 +550,7 @@
         getOverlapPercent()
       );
       overlay.style.display = 'flex';
+      loadingOverlay.style.display = 'none';
       hoverLineElem.style.display = 'none';
       hoverLineVElem.style.display = 'none';
       zoomControlsElem.style.display = 'none';
