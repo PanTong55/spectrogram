@@ -32,3 +32,37 @@ export async function extractGuanoMetadata(file) {
 
   return foundGuano || '(No GUANO metadata found in file)';
 }
+
+export function parseGuanoMetadata(text) {
+  if (!text || text.startsWith('(No GUANO')) return {};
+  const lines = text.split(/\r?\n/);
+  const meta = {};
+  lines.forEach(line => {
+    const idx = line.indexOf(':');
+    if (idx === -1) return;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
+    meta[key] = value;
+  });
+
+  const ts = meta['Timestamp'];
+  if (ts) {
+    const [datePart, timePartWithZone] = ts.split(' ');
+    const timePart = (timePartWithZone || '').split('+')[0];
+    meta._Date = datePart ? datePart.replace(/-/g, '/') : '';
+    meta._Time = timePart ? timePart.slice(0,5).replace(':','') : '';
+  }
+
+  if (meta['Loc Position']) {
+    const [lat, lon] = meta['Loc Position'].split(/\s+/);
+    meta._Latitude = lat || '';
+    meta._Longitude = lon || '';
+  }
+
+  return {
+    date: meta._Date || '',
+    time: meta._Time || '',
+    latitude: meta._Latitude || '',
+    longitude: meta._Longitude || ''
+  };
+}
