@@ -607,11 +607,13 @@ input.tag-button {
   width: 90px;
   margin-bottom: 4px;
   height: 25px;
-  background-color: #fafafa;
+  background-color: #555;
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
   font-size: 13px;
+  font-weight: bold;
+  color: white;
   text-align: center;
   cursor: pointer;
   padding: 0;
@@ -619,10 +621,13 @@ input.tag-button {
 
 input.tag-button.active {
   background-color: #ffd700;
+  color: black;
+  font-weight: bold;
 }
 
 input.tag-button.editing {
   background-color: #fff;
+  color: black;
   cursor: text;
 }
 
