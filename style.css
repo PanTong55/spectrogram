@@ -577,7 +577,6 @@ input[type="file"]:hover {
   top: 0;
   left: 0;
   width: 100px;
-  padding-left: 10px;
   box-sizing: border-box;
 }
 
@@ -603,6 +602,7 @@ body.tag-mode-active #toggleTagModeBtn {
   width: 90px;
   padding-left: 10px;
   margin-bottom: 4px;
+  height: 25px;
   background-color: #fafafa;
   border: 1px solid #ccc;
   border-radius: 4px;

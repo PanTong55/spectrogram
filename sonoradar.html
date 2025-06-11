@@ -628,17 +628,24 @@
     confirmTagsBtn.id = 'confirmTagsBtn';
     confirmTagsBtn.textContent = 'Confirm Tags';
     confirmTagsBtn.className = 'flat-icon-button';
-    const tagButtons = [];
-    for (let i = 1; i <= 25; i++) {
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.className = 'tag-button';
-      inp.value = `Bat #${i}`;
-      inp.readOnly = true;
-      inp.addEventListener('click', () => handleTagClick(inp));
-      tagPanel.appendChild(inp);
-      tagButtons.push(inp);
-    }
+      const tagButtons = [];
+      const defaultTags = [
+        'JP', 'LP', 'CP', 'KP', 'LBB', 'GBB', 'CN', 'LYB',
+        'HLB', 'ALB', 'CHB', 'IHB', 'LHB',
+        'GBW', 'LBW', 'ABW',
+        'HM', 'RBFM', 'CM', 'WM',
+        'BTB', 'WFTB'
+      ];
+      defaultTags.forEach(tag => {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'tag-button';
+        inp.value = tag;
+        inp.readOnly = true;
+        inp.addEventListener('click', () => handleTagClick(inp));
+        tagPanel.appendChild(inp);
+        tagButtons.push(inp);
+      });
     tagPanel.appendChild(editTagsBtn);
     tagPanel.appendChild(confirmTagsBtn);
 
