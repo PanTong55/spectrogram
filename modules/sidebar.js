@@ -60,6 +60,7 @@ export function initSidebar({ onFileSelected } = {}) {
       left.style.alignItems = 'center';
       left.style.flexGrow = '1';
       left.style.minWidth = '0';
+      left.style.minHeight = '20px';
       
       const icon = document.createElement('i');
       icon.className = 'fa-regular fa-file-audio';
