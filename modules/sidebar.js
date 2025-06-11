@@ -23,14 +23,15 @@ export function initSidebar({ onFileSelected } = {}) {
   editBtn.addEventListener('click', () => {
     isEditMode = !isEditMode;
     sidebar.classList.toggle('edit-mode', isEditMode);
-    renderFileList(searchInput.value.trim().toLowerCase());
+    // Keep current scroll position when toggling edit mode
+    renderFileList(searchInput.value.trim().toLowerCase(), false);
   });
 
   searchInput.addEventListener('input', () => {
     renderFileList(searchInput.value.trim().toLowerCase());
   });
 
-  function renderFileList(filter = '') {
+  function renderFileList(filter = '', doScroll = true) {
     const list = getFileList();
     const currentIndex = getCurrentIndex();
     if (fileCount) {
@@ -134,8 +135,8 @@ export function initSidebar({ onFileSelected } = {}) {
       fileListUl.appendChild(li);
     });
   
-    // 等待瀏覽器渲染完成後執行 scroll
-    if (activeItem) {
+    // 等待瀏覽器渲染完成後執行 scroll (預設行為)
+    if (activeItem && doScroll) {
       requestAnimationFrame(() => {
         activeItem.scrollIntoView({ block: 'center', behavior: 'smooth' });
       });
