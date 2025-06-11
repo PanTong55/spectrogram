@@ -36,7 +36,7 @@
         <pre id="guano-output">(no file selected)</pre>
       </div>
   </div>
-  <div style="flex-grow: 1; overflow-x: hidden; padding-left: 15px;">  
+  <div id="main-area" style="flex-grow: 1; overflow-x: hidden; padding-left: 15px;">
     
     <div id="control-bar">
       <!-- Top Bar -->
@@ -54,6 +54,7 @@
         </span>
         <button id="prevBtn" title="Previous file (^)" class="sidebar-button"><i class="fas fa-arrow-up"></i></button>
         <button id="nextBtn" title="Next file (v)" class="sidebar-button"><i class="fas fa-arrow-down"></i></button>
+        <button id="tagModeBtn" title="Tag Mode" class="sidebar-button"><i class="fa-solid fa-tags"></i></button>
         <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
       </div>
@@ -95,15 +96,21 @@
         </label>  
       </div>
     </div>
-<!-------- Spectrogram Start -------->      
-    <div id="whole-spectrogram">    
-      <div id="spectrogram-settings" style="
-        padding: 0 0 2px;
-        margin-left: 45px;
-        font-size: 12px;
-        font-family: 'Noto Sans HK', sans-serif;
-        z-index: 10;
-      "></div>
+<!-------- Spectrogram Start -------->
+    <div id="spectrogram-area" class="tag-mode-target" style="display:flex; align-items:flex-start;">
+      <div id="tag-container">
+        <div id="tag-buttons"></div>
+        <button id="editTagsBtn" class="tag-edit-btn">Edit Tags</button>
+        <button id="confirmTagsBtn" class="tag-confirm-btn">Confirm Tags</button>
+      </div>
+      <div id="whole-spectrogram">
+        <div id="spectrogram-settings" style="
+          padding: 0 0 2px;
+          margin-left: 45px;
+          font-size: 12px;
+          font-family: 'Noto Sans HK', sans-serif;
+          z-index: 10;
+        "></div>
       <div class="viewer-row">
         <div id="freq-labels"></div>
         <div id="viewer-wrapper" style="position: relative;">
@@ -612,6 +619,61 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    });
+
+    const tagModeBtn = document.getElementById('tagModeBtn');
+    const spectrogramArea = document.getElementById('spectrogram-area');
+    const tagButtonsDiv = document.getElementById('tag-buttons');
+    const editTagsBtn = document.getElementById('editTagsBtn');
+    const confirmTagsBtn = document.getElementById('confirmTagsBtn');
+    const tagInputs = [];
+
+    for (let i = 0; i < 25; i++) {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.className = 'tag-input-button';
+      inp.value = `Bat #${i + 1}`;
+      inp.readOnly = true;
+      inp.addEventListener('click', () => {
+        if (inp.readOnly) {
+          inp.classList.toggle('active');
+          updateNoteFromTags();
+        }
+      });
+      tagButtonsDiv.appendChild(inp);
+      tagInputs.push(inp);
+    }
+
+    function updateNoteFromTags() {
+      const idx = getCurrentIndex();
+      if (idx < 0) return;
+      const tags = tagInputs
+        .filter(t => t.classList.contains('active'))
+        .map(t => t.value.trim())
+        .filter(t => t);
+      const text = tags.join(', ');
+      setFileNote(idx, text);
+      sidebarControl.refresh(getFileList()[idx].name, false);
+    }
+
+    editTagsBtn.addEventListener('click', () => {
+      tagInputs.forEach(t => (t.readOnly = false));
+    });
+
+    confirmTagsBtn.addEventListener('click', () => {
+      tagInputs.forEach(t => (t.readOnly = true));
+      updateNoteFromTags();
+    });
+
+    tagModeBtn.addEventListener('click', () => {
+      const sidebar = document.getElementById('sidebar');
+      const editBtn = document.getElementById('toggleEditBtn');
+      const entering = !spectrogramArea.classList.contains('tag-mode');
+      spectrogramArea.classList.toggle('tag-mode');
+      tagModeBtn.classList.toggle('active', entering);
+      if (entering && !sidebar.classList.contains('edit-mode')) {
+        editBtn.click();
+      }
     });
   </script>
 </body>
