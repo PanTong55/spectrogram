@@ -600,7 +600,6 @@ body.tag-mode-active #toggleTagModeBtn {
 
 .tag-button {
   width: 90px;
-  padding-left: 10px;
   margin-bottom: 4px;
   height: 25px;
   background-color: #fafafa;
@@ -608,6 +607,9 @@ body.tag-mode-active #toggleTagModeBtn {
   border-radius: 4px;
   box-sizing: border-box;
   font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .tag-button.active {
@@ -616,6 +618,7 @@ body.tag-mode-active #toggleTagModeBtn {
 
 .tag-button.editing {
   background-color: #fff;
+  cursor: text;
 }
 
 #editTagsBtn {
@@ -624,8 +627,3 @@ body.tag-mode-active #toggleTagModeBtn {
   color: #fff;
 }
 
-#confirmTagsBtn {
-  margin-top: 4px;
-  background-color: #28a745;
-  color: #fff;
-}

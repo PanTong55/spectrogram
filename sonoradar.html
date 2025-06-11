@@ -619,17 +619,13 @@
 
     // ===== Tag Mode =====
     const toggleTagModeBtn = document.getElementById('toggleTagModeBtn');
-    const tagPanel = document.getElementById('tag-panel');
-    const editTagsBtn = document.createElement('button');
-    editTagsBtn.id = 'editTagsBtn';
-    editTagsBtn.textContent = 'Edit Tags';
-    editTagsBtn.className = 'flat-icon-button';
-    const confirmTagsBtn = document.createElement('button');
-    confirmTagsBtn.id = 'confirmTagsBtn';
-    confirmTagsBtn.textContent = 'Confirm Tags';
-    confirmTagsBtn.className = 'flat-icon-button';
-    const tagButtons = [];
-    const defaultTags = [
+      const tagPanel = document.getElementById('tag-panel');
+      const editTagsBtn = document.createElement('button');
+      editTagsBtn.id = 'editTagsBtn';
+      editTagsBtn.textContent = 'Edit Tags';
+      editTagsBtn.className = 'flat-icon-button';
+      const tagButtons = [];
+      const defaultTags = [
       'JP', 'LP', 'CP', 'KP', 'LBB', 'GBB', 'CN', 'LYB',
       'HLB', 'ALB', 'CHB', 'IHB', 'LHB',
       'GBW', 'LBW', 'ABW',
@@ -646,8 +642,7 @@
       tagPanel.appendChild(inp);
       tagButtons.push(inp);
     });
-    tagPanel.appendChild(editTagsBtn);
-    tagPanel.appendChild(confirmTagsBtn);
+      tagPanel.appendChild(editTagsBtn);
 
     let wasSidebarEdit = false;
 
@@ -688,20 +683,24 @@
       }
     }
 
-    editTagsBtn.addEventListener('click', () => {
-      tagButtons.forEach(btn => {
-        btn.readOnly = false;
-        btn.classList.add('editing');
+      let tagEditing = false;
+      editTagsBtn.addEventListener('click', () => {
+        tagEditing = !tagEditing;
+        if (tagEditing) {
+          editTagsBtn.textContent = 'Confirm';
+          tagButtons.forEach(btn => {
+            btn.readOnly = false;
+            btn.classList.add('editing');
+          });
+        } else {
+          editTagsBtn.textContent = 'Edit Tags';
+          tagButtons.forEach(btn => {
+            btn.readOnly = true;
+            btn.classList.remove('editing');
+          });
+          updateTagButtonStates();
+        }
       });
-    });
-
-    confirmTagsBtn.addEventListener('click', () => {
-      tagButtons.forEach(btn => {
-        btn.readOnly = true;
-        btn.classList.remove('editing');
-      });
-      updateTagButtonStates();
-    });
 
     function enterTagMode() {
       document.body.classList.add('tag-mode-active');
