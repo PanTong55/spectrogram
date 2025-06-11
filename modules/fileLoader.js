@@ -119,8 +119,10 @@ export function initFileLoader({
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp') {
+      e.preventDefault();
       prevBtn.click();
     } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
       nextBtn.click();
     }
   });
