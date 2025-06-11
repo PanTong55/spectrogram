@@ -592,11 +592,11 @@ body.tag-mode-active #tag-panel {
 }
 
 #whole-spectrogram {
-  transition: transform 0.3s ease;
+  transition: padding-left 0.3s ease;
 }
 
 body.tag-mode-active #whole-spectrogram {
-  transform: translateX(100px);
+  padding-left: 100px;
 }
 
 body.tag-mode-active #toggleTagModeBtn {
@@ -628,6 +628,7 @@ input.tag-button.editing {
 
 #editTagsBtn {
   margin-top: 8px;
+  width: 90px;
   background-color: #007bff;
   color: #fff;
 }
