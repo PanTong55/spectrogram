@@ -81,6 +81,10 @@ export function initDragDropLoader({
       return;
     }
 
+    if (typeof onBeforeLoad === 'function') {
+      onBeforeLoad();
+    }
+
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
     removeFilesByName('demo_recording.wav');
     const startIdx = getFileList().length;
