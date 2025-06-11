@@ -569,3 +569,38 @@ input[type="file"]:hover {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+#tag-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100px;
+  display: none;
+}
+
+#tag-container .tag-input-button {
+  width: 90px;
+  margin-bottom: 2px;
+  padding: 2px 4px;
+  font-size: 13px;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#tag-container button {
+  width: 100%;
+  margin-top: 4px;
+  padding: 2px 4px;
+  box-sizing: border-box;
+}
+
+#main-area.tag-mode #tag-container {
+  display: block;
+}
+
+#main-area.tag-mode #whole-spectrogram {
+  margin-left: 100px;
+  transition: margin-left 0.3s ease;
+}
