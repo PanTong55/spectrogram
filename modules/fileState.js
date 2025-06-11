@@ -4,12 +4,14 @@ let fileList = [];
 let currentIndex = -1;
 let fileIcons = {}; // { index: { trash: bool, star: bool, question: bool } }
 let fileNotes = {}; // { index: string }
+let fileMetadata = {}; // { index: { date, time, latitude, longitude } }
 
 export function setFileList(list, index = 0) {
   fileList = list;
   currentIndex = index;
   fileIcons = {};
   fileNotes = {};
+  fileMetadata = {};
 }
 
 export function addFilesToList(list, index = 0) {
@@ -58,6 +60,7 @@ export function clearFileList() {
   currentIndex = -1;
   fileIcons = {};
   fileNotes = {};
+  fileMetadata = {};
 }
 
 export function setFileNote(index, note) {
@@ -66,6 +69,14 @@ export function setFileNote(index, note) {
 
 export function getFileNote(index) {
   return fileNotes[index] || '';
+}
+
+export function setFileMetadata(index, data) {
+  fileMetadata[index] = data;
+}
+
+export function getFileMetadata(index) {
+  return fileMetadata[index] || { date: '', time: '', latitude: '', longitude: '' };
 }
 
 // Remove files that match the given name from the current list. This also resets
@@ -78,5 +89,6 @@ export function removeFilesByName(name) {
     currentIndex = -1;
     fileIcons = {};
     fileNotes = {};
+    fileMetadata = {};
   }
 }

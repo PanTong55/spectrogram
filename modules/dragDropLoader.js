@@ -1,7 +1,7 @@
 // modules/dragDropLoader.js
 
-import { extractGuanoMetadata } from './guanoReader.js';
-import { addFilesToList, removeFilesByName } from './fileState.js';
+import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
+import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
 
 export function initDragDropLoader({
   targetElementId,
@@ -46,6 +46,9 @@ export function initDragDropLoader({
     try {
       const result = await extractGuanoMetadata(file);
       guanoOutput.textContent = result || '(No GUANO metadata found)';
+      const meta = parseGuanoMetadata(result);
+      const idx = getCurrentIndex();
+      setFileMetadata(idx, meta);
     } catch (err) {
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }
@@ -80,7 +83,17 @@ export function initDragDropLoader({
 
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
     removeFilesByName('demo_recording.wav');
+    const startIdx = getFileList().length;
     addFilesToList(sortedList, 0);
+    for (let i = 0; i < sortedList.length; i++) {
+      try {
+        const txt = await extractGuanoMetadata(sortedList[i]);
+        const meta = parseGuanoMetadata(txt);
+        setFileMetadata(startIdx + i, meta);
+      } catch (err) {
+        setFileMetadata(startIdx + i, { date: '', time: '', latitude: '', longitude: '' });
+      }
+    }
     await loadFile(sortedList[0]);
   }
 

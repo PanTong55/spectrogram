@@ -54,6 +54,7 @@
         </span>
         <button id="prevBtn" title="Previous file (^)" class="sidebar-button"><i class="fas fa-arrow-up"></i></button>
         <button id="nextBtn" title="Next file (v)" class="sidebar-button"><i class="fas fa-arrow-down"></i></button>
+        <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
       </div>
       <!-- Tool Bar -->    
@@ -165,10 +166,10 @@
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initScrollSync } from './modules/scrollSync.js';
-    import { extractGuanoMetadata } from './modules/guanoReader.js';
+    import { extractGuanoMetadata, parseGuanoMetadata } from './modules/guanoReader.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList } from './modules/fileState.js';
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, getFileMetadata, setFileMetadata } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -528,7 +529,7 @@
     const clearAllBtn = document.getElementById('clearAllBtn');
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
-      sidebarControl.refresh('');    
+      sidebarControl.refresh('');
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
@@ -548,7 +549,55 @@
     
     settingBtn.addEventListener('click', () => {
       toolBar.classList.toggle('open');
-    });    
+    });
+
+    const exportBtn = document.getElementById('exportBtn');
+    exportBtn.addEventListener('click', async () => {
+      const files = getFileList();
+      const headers = ['File name','Remark','Date','Time','Latitude','Longitude','Noise','Star','Question'];
+      const rows = [headers.join(',')];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        let meta = getFileMetadata(i);
+        if (!meta || (!meta.date && !meta.time && !meta.latitude && !meta.longitude)) {
+          try {
+            const txt = await extractGuanoMetadata(file);
+            meta = parseGuanoMetadata(txt);
+            setFileMetadata(i, meta);
+          } catch (err) {
+            meta = { date: '', time: '', latitude: '', longitude: '' };
+          }
+        }
+
+        const flags = getFileIconState(i);
+        const note = getFileNote(i);
+        const row = [
+          file.name,
+          note,
+          meta.date,
+          meta.time,
+          meta.latitude,
+          meta.longitude,
+          flags.trash ? '1' : '0',
+          flags.star ? '1' : '0',
+          flags.question ? '1' : '0'
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+        rows.push(row);
+      }
+
+      const csvContent = rows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'export.csv';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
   </script>
 </body>
 </html>
