@@ -634,6 +634,7 @@ input.tag-button.editing {
 
 #editTagsBtn {
   margin-top: 8px;
+  border: none;
   width: 90px;
   background-color: #007bff;
   color: #fff;
@@ -641,6 +642,6 @@ input.tag-button.editing {
 }
 
 #editTagsBtn.editing-mode {
-  background-color: '#2ea44f';
+  background-color: #2ea44f;
 }
 
