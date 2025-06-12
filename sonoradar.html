@@ -621,7 +621,6 @@
       URL.revokeObjectURL(url);
     });
 
-    // ===== Tag Mode =====
     const toggleTagModeBtn = document.getElementById('toggleTagModeBtn');
       const tagPanel = document.getElementById('tag-panel');
       const editTagsBtn = document.createElement('button');
@@ -734,7 +733,6 @@
       }
     });
 
-    // update tags when file changes
     document.addEventListener('file-loaded', updateTagButtonStates);
   </script>
 </body>
