@@ -388,8 +388,8 @@ input[type="file"]:hover {
   padding: 0;
   padding-right: 3px;
   margin: 0;
-  height: 100%;
-  max-height: calc(100% - 420px);
+  height: 100vh;
+  max-height: calc(100vh - 460px);
   overflow-y: auto;
   transition: max-height 0.3s ease;
 }
@@ -431,7 +431,7 @@ input[type="file"]:hover {
 }
 
 #fileList.metadata-collapsed {
-  max-height: calc(100% - 105px);
+  max-height: calc(100% - 145px);
 }
 
 #control-bar {
