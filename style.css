@@ -646,3 +646,34 @@ input.tag-button.editing {
   background-color: #2ea44f;
 }
 
+#branding-header {
+   display: flex;
+   align-items: center;
+   gap: 10px;
+   padding: 0px 20px 8px 20px;
+   font-family: 'Noto Sans HK', sans-serif;
+   z-index: 1000;
+   position: relative;
+}
+
+#branding-logo {
+   width: 36px;
+   height: 36px;
+}
+
+.branding-text {
+   display: flex;
+   flex-direction: column;
+   line-height: 1.2;
+}
+
+.branding-title {
+   font-size: 20px;
+   font-weight: 600;
+   color: #222;
+}
+
+.branding-subtitle {
+   font-size: 9px;
+   color: #666;
+}
