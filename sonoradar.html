@@ -471,7 +471,7 @@
       const sampleRate = currentSampleRate;
       const fftSize = 1024;
       const overlap = getOverlapPercent();
-      const windowType = 'Hanning'; // 根據 wsManager.js 使用 'hann'
+      const windowType = 'Hanning';
     
       const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
       settingBox.textContent =
