@@ -690,12 +690,14 @@
         tagEditing = !tagEditing;
         if (tagEditing) {
           editTagsBtn.textContent = 'Confirm';
+          editTagsBtn.classList.add('editing-mode');
           tagButtons.forEach(btn => {
             btn.readOnly = false;
             btn.classList.add('editing');
           });
         } else {
           editTagsBtn.textContent = 'Edit Tags';
+          editTagsBtn.classList.remove('editing-mode');
           tagButtons.forEach(btn => {
             btn.readOnly = true;
             btn.classList.remove('editing');
