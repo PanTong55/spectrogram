@@ -23,8 +23,6 @@ export function initSidebar({ onFileSelected } = {}) {
   editBtn.addEventListener('click', () => {
     isEditMode = !isEditMode;
     sidebar.classList.toggle('edit-mode', isEditMode);
-    // Keep current scroll position when toggling edit mode
-    renderFileList(searchInput.value.trim().toLowerCase(), false);
   });
 
   searchInput.addEventListener('input', () => {
