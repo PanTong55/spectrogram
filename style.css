@@ -606,7 +606,7 @@ body.tag-mode-active #toggleTagModeBtn {
 input.tag-button {
   width: 90px;
   margin-bottom: 4px;
-  height: 25px;
+  height: 27px;
   background-color: #555;
   border: 1px solid #ccc;
   border-radius: 13px;
