@@ -396,7 +396,7 @@ input[type="file"]:hover {
   padding-right: 3px;
   margin: 0;
   height: 100vh;
-  max-height: calc(100vh - 460px);
+  max-height: calc(100vh - 480px);
   overflow-y: auto;
   transition: max-height 0.3s ease;
 }
@@ -549,6 +549,17 @@ input[type="file"]:hover {
 }
 
 /* Loading overlay for file operations */
+#drop-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 20px;
+  background-color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+}  
+
 #loading-overlay {
   position: absolute;
   top: 0;
