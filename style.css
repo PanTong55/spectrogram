@@ -626,9 +626,10 @@ input.tag-button.active {
 }
 
 input.tag-button.editing {
-  background-color: #fff;
+  background-color: #fafafa;
   color: black;
   cursor: text;
+  font-weight: normal;
 }
 
 #editTagsBtn {
@@ -636,5 +637,10 @@ input.tag-button.editing {
   width: 90px;
   background-color: #007bff;
   color: #fff;
+  font-weight: bold;
+}
+
+#editTagsBtn.editing-mode {
+  background-color: '#2ea44f';
 }
 
