@@ -10,7 +10,8 @@ export function initFrequencyHover({
   minFrequency = 0,
   totalDuration = 1000,
   getZoomLevel,
-  getDuration
+  getDuration,
+  isExpandMode = () => false
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -52,7 +53,7 @@ export function initFrequencyHover({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (y > (viewer.clientHeight - scrollbarThickness)) {
+    if (isExpandMode() && y > (viewer.clientHeight - scrollbarThickness)) {
       hideAll();
       return;
     }
