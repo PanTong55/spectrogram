@@ -138,8 +138,8 @@ html, body {
   pointer-events: auto;
 }
 .zoom-button {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   font-size: 18px;
   background: white;
   border: none;
