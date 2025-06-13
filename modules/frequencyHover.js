@@ -10,7 +10,8 @@ export function initFrequencyHover({
   minFrequency = 0,
   totalDuration = 1000,
   getZoomLevel,
-  getDuration
+  getDuration,
+  isExpandMode = () => false
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -23,7 +24,8 @@ export function initFrequencyHover({
   const persistentLines = [];
   const selections = [];
   let persistentLinesEnabled = true;
-  const scrollbarThickness = 20;
+  const defaultScrollbarThickness = 20;
+  const getScrollbarThickness = () => isExpandMode() ? defaultScrollbarThickness : 0;
   const edgeThreshold = 5;
   
   let suppressHover = false;
@@ -52,7 +54,7 @@ export function initFrequencyHover({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    if (y > (viewer.clientHeight - scrollbarThickness)) {
+    if (y > (viewer.clientHeight - getScrollbarThickness())) {
       hideAll();
       return;
     }
@@ -102,7 +104,7 @@ export function initFrequencyHover({
     const rect = viewer.getBoundingClientRect();
     startX = e.clientX - rect.left + viewer.scrollLeft;
     startY = e.clientY - rect.top;
-    if (startY > (viewer.clientHeight - scrollbarThickness)) return;
+    if (startY > (viewer.clientHeight - getScrollbarThickness())) return;
     isDrawing = true;
     suppressHover = true;
     hideAll();
