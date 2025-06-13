@@ -590,10 +590,32 @@
       if (count === 0) return;
       const confirmClear = confirm(`Confirm to clear ${count} trash flagged file(s) from the list?`);
       if (!confirmClear) return;
+
+      const prevIdx = getCurrentIndex();
+      const filesBefore = getFileList();
+      let nextFile = null;
+      if (prevIdx >= 0 && getFileIconState(prevIdx).trash) {
+        for (let i = prevIdx + 1; i < filesBefore.length; i++) {
+          if (!getFileIconState(i).trash) {
+            nextFile = filesBefore[i];
+            break;
+          }
+        }
+        if (!nextFile) {
+          for (let i = prevIdx - 1; i >= 0; i--) {
+            if (!getFileIconState(i).trash) {
+              nextFile = filesBefore[i];
+              break;
+            }
+          }
+        }
+      }
+
       const removed = clearTrashFiles();
       if (removed > 0) {
         sidebarControl.refresh('');
-        if (getFileList().length === 0) {
+        const remaining = getFileList();
+        if (remaining.length === 0) {
           replacePlugin(
             getCurrentColorMap(),
             spectrogramHeight,
@@ -605,6 +627,11 @@
           loadingOverlay.style.display = 'none';
           zoomControlsElem.style.display = 'none';
           guanoOutput.textContent = '(no file selected)';
+        } else if (nextFile) {
+          const idx = remaining.findIndex(f => f === nextFile);
+          if (idx >= 0) {
+            fileLoaderControl.loadFileAtIndex(idx);
+          }
         }
         tagControl.updateTagButtonStates();
       }
