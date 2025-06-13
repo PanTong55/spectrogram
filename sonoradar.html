@@ -181,7 +181,7 @@
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
     import { initTagControl } from './modules/tagControl.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount } from './modules/fileState.js';
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -613,9 +613,9 @@
 
       const removed = clearTrashFiles();
       if (removed > 0) {
-        sidebarControl.refresh('');
         const remaining = getFileList();
         if (remaining.length === 0) {
+          sidebarControl.refresh('');
           replacePlugin(
             getCurrentColorMap(),
             spectrogramHeight,
@@ -627,10 +627,20 @@
           loadingOverlay.style.display = 'none';
           zoomControlsElem.style.display = 'none';
           guanoOutput.textContent = '(no file selected)';
-        } else if (nextFile) {
-          const idx = remaining.findIndex(f => f === nextFile);
-          if (idx >= 0) {
-            fileLoaderControl.loadFileAtIndex(idx);
+        } else {
+          let currentName = '';
+          if (nextFile) {
+            currentName = nextFile.name;
+          } else {
+            const cur = getCurrentFile();
+            currentName = cur ? cur.name : '';
+          }
+          sidebarControl.refresh(currentName);
+          if (nextFile) {
+            const idx = remaining.findIndex(f => f === nextFile);
+            if (idx >= 0) {
+              fileLoaderControl.loadFileAtIndex(idx);
+            }
           }
         }
         tagControl.updateTagButtonStates();
