@@ -381,7 +381,8 @@
           minFrequency: currentFreqMin,
           totalDuration: duration,
           getZoomLevel: () => zoomControl.getZoomLevel(),
-          getDuration: () => duration
+          getDuration: () => duration,
+          isExpandMode: () => zoomControl.isExpandMode()
         });
       } else {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
