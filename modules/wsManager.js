@@ -27,8 +27,8 @@ export function initWavesurfer({
 export function createSpectrogramPlugin({
   colorMap,
   height = 800,
-  frequencyMin = 0,
-  frequencyMax = 128000,
+  frequencyMin = 10,
+  frequencyMax = 128,
   noverlap = null,
 }) {
   const baseOptions = {
@@ -52,7 +52,7 @@ export function createSpectrogramPlugin({
 export function replacePlugin(
   colorMap,
   height = 800,
-  frequencyMin = 0,
+  frequencyMin = 10,
   frequencyMax = 128,
   overlapPercent = null,
   onRendered = null  // ✅ 傳入 callback
