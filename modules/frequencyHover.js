@@ -24,6 +24,7 @@ export function initFrequencyHover({
   const persistentLines = [];
   const selections = [];
   let persistentLinesEnabled = true;
+  let disablePersistentLinesForScrollbar = false;
   const defaultScrollbarThickness = 20;
   const getScrollbarThickness = () => isExpandMode() ? defaultScrollbarThickness : 0;
   const edgeThreshold = 5;
@@ -56,8 +57,12 @@ export function initFrequencyHover({
 
     if (y > (viewer.clientHeight - getScrollbarThickness())) {
       hideAll();
+      viewer.classList.remove('hide-cursor');
+      disablePersistentLinesForScrollbar = true;
       return;
     }
+    disablePersistentLinesForScrollbar = false;
+    viewer.classList.add('hide-cursor');
 
     const scrollLeft = viewer.scrollLeft || 0;
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
@@ -161,7 +166,7 @@ export function initFrequencyHover({
   });
 
   viewer.addEventListener('contextmenu', (e) => {
-    if (!persistentLinesEnabled || isOverTooltip) return;
+    if (!persistentLinesEnabled || disablePersistentLinesForScrollbar || isOverTooltip) return;
     e.preventDefault();
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
