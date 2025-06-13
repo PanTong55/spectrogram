@@ -26,6 +26,18 @@ export function initTagControl() {
     inp.className = 'tag-button';
     inp.value = tag;
     inp.readOnly = true;
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === ',') {
+        e.preventDefault();
+        alert('Commas are not allowed in tag names.');
+      }
+    });
+    inp.addEventListener('input', (e) => {
+      if (e.target.value.includes(',')) {
+        e.target.value = e.target.value.replace(/,/g, '');
+        alert('Commas are not allowed in tag names.');
+      }
+    });
     inp.addEventListener('click', () => handleTagClick(inp));
     tagPanel.appendChild(inp);
     tagButtons.push(inp);
