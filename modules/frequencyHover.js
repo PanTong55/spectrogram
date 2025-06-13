@@ -7,7 +7,7 @@ export function initFrequencyHover({
   spectrogramHeight = 800,
   spectrogramWidth = 1024,
   maxFrequency = 128,
-  minFrequency = 0,
+  minFrequency = 10,
   totalDuration = 1000,
   getZoomLevel,
   getDuration,
