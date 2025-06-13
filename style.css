@@ -105,6 +105,7 @@ html, body {
 .hide-cursor {
   cursor: none !important;
 }
+
 /* === 時間軸 === */
 #time-axis-wrapper {
   overflow: hidden;
@@ -249,7 +250,7 @@ input[type="file"]:hover {
   pointer-events: none;
 }
 
-/* 黑白風格下拉選單樣式 */
+/* === 黑白風格下拉選單樣式 === */
 .styled-select {
   appearance: none;
   -webkit-appearance: none;
@@ -284,7 +285,7 @@ input[type="file"]:hover {
   padding: 6px;
 }
 
-/* === Grid Control的Switch === */
+/* === Grid Control 的 Switch === */
 .switch {
   position: relative;
   display: inline-block;
@@ -339,6 +340,7 @@ input[type="file"]:hover {
   transform: translateX(20px);
 }
 
+/* === Tooltip === */
 .draggable-tooltip {
   border-radius: 5px;
   transition: box-shadow 0.2s ease;
@@ -348,6 +350,7 @@ input[type="file"]:hover {
   box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
 }
 
+/* === 搜尋列 === */
 #searchInput {
   width: 100%;
   box-sizing: border-box;
@@ -360,9 +363,10 @@ input[type="file"]:hover {
   margin-bottom: 8px;
 }
 
+/* === 主區與側邊欄 === */
 #mainarea {
-  flex-grow: 1; 
-  overflow-x: hidden; 
+  flex-grow: 1;
+  overflow-x: hidden;
   padding-left: 15px;
   padding-top: 10px;
 }
@@ -472,11 +476,11 @@ input[type="file"]:hover {
   opacity: 1;
 }
 
-/* Sidebar Button 樣式 */
+/* === Sidebar Button === */
 .sidebar-button {
   width: 30px;
   height: 30px;
-  background-color: #555;  /* 預設深灰色 */
+  background-color: #555;
   border: none;
   border-radius: 8px;
   display: flex;
@@ -489,11 +493,11 @@ input[type="file"]:hover {
 }
 
 .sidebar-button:hover {
-  background-color: #222;  /* Hover時更深灰 */
+  background-color: #222;
 }
 
 .sidebar-button i {
-  color: white;  /* icon 白色 */
+  color: white;
   font-size: 15px;
 }
 
@@ -526,7 +530,7 @@ input[type="file"]:hover {
   pointer-events: auto;
 }
 
-/* File Path Display 樣式 */
+/* === File Path Display === */
 .file-path-display {
   display: inline-block;
   background-color: #f5f5f5;
@@ -548,7 +552,7 @@ input[type="file"]:hover {
   white-space: nowrap;
 }
 
-/* Loading overlay for file operations */
+/* === Loading Overlay === */
 #drop-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 20px;
@@ -558,7 +562,7 @@ input[type="file"]:hover {
   justify-content: center;
   z-index: 1000;
   pointer-events: none;
-}  
+}
 
 #loading-overlay {
   position: absolute;
@@ -664,6 +668,7 @@ input.tag-button.editing {
   background-color: #2ea44f;
 }
 
+/* === Branding Header === */
 #branding-header {
    display: flex;
    align-items: center;
