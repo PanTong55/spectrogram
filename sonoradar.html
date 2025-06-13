@@ -193,7 +193,8 @@
     const freqLabelContainer = document.getElementById('freq-labels');
     const hoverLineElem = document.getElementById('hover-line');
     const hoverLineVElem = document.getElementById('hover-line-vertical');
-    const zoomControlsElem = document.getElementById('zoom-controls');    
+    const hoverLabelElem = document.getElementById('hover-label');
+    const zoomControlsElem = document.getElementById('zoom-controls');
     let duration = 0;
     let currentFreqMin = 0;
     let currentFreqMax = 128;
@@ -218,7 +219,29 @@
     });
     const overlay = document.getElementById('drop-overlay');
     const loadingOverlay = document.getElementById('loading-overlay');
-    overlay.style.display = 'flex';
+
+    function showDropOverlay() {
+      overlay.style.display = 'flex';
+      overlay.style.pointerEvents = 'auto';
+      hoverLineElem.style.display = 'none';
+      hoverLineVElem.style.display = 'none';
+      hoverLabelElem.style.display = 'none';
+      viewer.classList.remove('hide-cursor');
+      freqHoverControl?.setPersistentLinesEnabled(false);
+    }
+
+    function hideDropOverlay() {
+      overlay.style.display = 'none';
+      overlay.style.pointerEvents = 'none';
+      hoverLineElem.style.display = 'block';
+      hoverLineVElem.style.display = 'block';
+      freqHoverControl?.setPersistentLinesEnabled(true);
+      freqHoverControl?.refreshHover();
+    }
+
+    showDropOverlay();
+    document.addEventListener('drop-overlay-show', showDropOverlay);
+    document.addEventListener('drop-overlay-hide', hideDropOverlay);
     updateSpectrogramSettingsText();
 
     fileLoaderControl = initFileLoader({
@@ -228,9 +251,7 @@
       colorMap: [],
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
-        overlay.style.display = 'none';
-        hoverLineElem.style.display = 'block';
-        hoverLineVElem.style.display = 'block';
+        hideDropOverlay();
         zoomControlsElem.style.display = 'flex';
         sidebarControl.refresh(file.name);
       },
@@ -247,7 +268,7 @@
     sidebarControl = initSidebar({
       onFileSelected: (index) => {
         fileLoaderControl.loadFileAtIndex(index);
-        overlay.style.display = 'none'; 
+        hideDropOverlay();
       }
     });
  
@@ -407,9 +428,7 @@
       colorMap: [],
       onPluginReplaced: () => {},
       onFileLoaded: (file) => {
-        overlay.style.display = 'none';
-        hoverLineElem.style.display = 'block';
-        hoverLineVElem.style.display = 'block';
+        hideDropOverlay();
         zoomControlsElem.style.display = 'flex';
         sidebarControl.refresh(file.name);
       },
@@ -556,12 +575,11 @@
         currentFreqMax,
         getOverlapPercent()
       );
-      overlay.style.display = 'flex';
+      showDropOverlay();
       loadingOverlay.style.display = 'none';
-      hoverLineElem.style.display = 'none';
-      hoverLineVElem.style.display = 'none';
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
+      updateTagButtonStates();
     });
 
     const settingBtn = document.getElementById('setting');

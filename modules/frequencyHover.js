@@ -22,6 +22,7 @@ export function initFrequencyHover({
   const container = document.getElementById('spectrogram-only');
   const persistentLines = [];
   const selections = [];
+  let persistentLinesEnabled = true;
   const scrollbarThickness = 2;
   const edgeThreshold = 5;
   
@@ -158,7 +159,7 @@ export function initFrequencyHover({
   });
 
   viewer.addEventListener('contextmenu', (e) => {
-    if (isOverTooltip) return;
+    if (!persistentLinesEnabled || isOverTooltip) return;
     e.preventDefault();
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
@@ -408,7 +409,8 @@ export function initFrequencyHover({
     refreshHover: () => {
       if (lastClientX !== null && lastClientY !== null) {
         updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
-      }      
-    }
+      }
+    },
+    setPersistentLinesEnabled: (val) => { persistentLinesEnabled = val; }
   };
 }
