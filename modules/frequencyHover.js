@@ -23,7 +23,7 @@ export function initFrequencyHover({
   const persistentLines = [];
   const selections = [];
   let persistentLinesEnabled = true;
-  const scrollbarThickness = 2;
+  const scrollbarThickness = 20;
   const edgeThreshold = 5;
   
   let suppressHover = false;
