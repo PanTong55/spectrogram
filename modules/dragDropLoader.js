@@ -103,15 +103,25 @@ export function initDragDropLoader({
     await loadFile(sortedList[0]);
   }
 
-  dropArea.addEventListener('dragover', e => {
+  let dragCounter = 0;
+
+  dropArea.addEventListener('dragenter', e => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    dragCounter++;
     showOverlay();
   });
 
   dropArea.addEventListener('dragleave', e => {
     e.preventDefault();
-    hideOverlay();
+    dragCounter--;
+    if (dragCounter === 0) {
+      hideOverlay();
+    }
+  });
+
+  dropArea.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
   });
 
   async function getFilesFromDataTransfer(dt) {
@@ -154,6 +164,7 @@ export function initDragDropLoader({
 
   dropArea.addEventListener('drop', async e => {
     e.preventDefault();
+    dragCounter = 0;
     hideOverlay();
     const files = await getFilesFromDataTransfer(e.dataTransfer);
     handleFiles(files);
