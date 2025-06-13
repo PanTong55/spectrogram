@@ -588,7 +588,7 @@
     clearTrashBtn.addEventListener('click', () => {
       const count = getTrashFileCount();
       if (count === 0) return;
-      const confirmClear = confirm(`This will clear ${count} trash flagged file(s) from the list. Continue?`);
+      const confirmClear = confirm(`Confirm to clear ${count} trash flagged file(s) from the list?`);
       if (!confirmClear) return;
       const removed = clearTrashFiles();
       if (removed > 0) {
