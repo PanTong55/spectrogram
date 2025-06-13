@@ -22,10 +22,12 @@ export function initDragDropLoader({
 
   function showOverlay() {
     overlay.style.display = 'flex';
+    document.dispatchEvent(new Event('drop-overlay-show'));
   }
 
   function hideOverlay() {
     overlay.style.display = 'none';
+    document.dispatchEvent(new Event('drop-overlay-hide'));
   }
 
   async function loadFile(file) {
