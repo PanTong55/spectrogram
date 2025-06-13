@@ -79,6 +79,49 @@ export function getFileMetadata(index) {
   return fileMetadata[index] || { date: '', time: '', latitude: '', longitude: '' };
 }
 
+// Return the number of files marked with the trash flag
+export function getTrashFileCount() {
+  return fileList.reduce((cnt, _f, idx) => {
+    return (fileIcons[idx] && fileIcons[idx].trash) ? cnt + 1 : cnt;
+  }, 0);
+}
+
+// Remove all files that are currently flagged as trash. Returns the number of
+// removed files so that callers can decide how to update the UI.
+export function clearTrashFiles() {
+  if (fileList.length === 0) return 0;
+  const prevFile = getCurrentFile();
+  const newList = [];
+  const newIcons = {};
+  const newNotes = {};
+  const newMetadata = {};
+
+  fileList.forEach((file, idx) => {
+    const icon = fileIcons[idx] || {};
+    if (!icon.trash) {
+      const newIndex = newList.length;
+      newList.push(file);
+      if (fileIcons[idx]) newIcons[newIndex] = { ...fileIcons[idx] };
+      if (fileNotes[idx]) newNotes[newIndex] = fileNotes[idx];
+      if (fileMetadata[idx]) newMetadata[newIndex] = fileMetadata[idx];
+    }
+  });
+
+  const removed = fileList.length - newList.length;
+  if (removed > 0) {
+    fileList = newList;
+    fileIcons = newIcons;
+    fileNotes = newNotes;
+    fileMetadata = newMetadata;
+    if (prevFile) {
+      currentIndex = newList.findIndex(f => f === prevFile);
+    } else {
+      currentIndex = -1;
+    }
+  }
+  return removed;
+}
+
 // Remove files that match the given name from the current list. This also resets
 // any stored icon or note state. The currentIndex will be set to -1 so that the
 // caller can decide which file to load next.

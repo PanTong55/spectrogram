@@ -27,7 +27,8 @@
        <span style="display:flex; align-items:center; gap:4px;">
          <span id="fileCount" style="font-weight: normal;"></span>
          <i id="clearAllBtn" class="fa-regular fa-file" title="Clear File List" style="cursor:pointer; padding-top:1px;"></i>
-       </span>
+         <i id="clearTrashBtn" class="fa-regular fa-trash" title="Clear Trash Files" style="cursor:pointer; padding-top:1px;"></i>
+      </span>
     </div>
       <div id="searchContainer" style="display:flex; align-items:center; gap:4px; margin-bottom:8px;">
         <input type="text" id="searchInput" placeholder="Search files..." style="flex:1;">
@@ -180,7 +181,7 @@
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
     import { initTagControl } from './modules/tagControl.js';
-    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata } from './modules/fileState.js';
+    import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
     let sidebarControl;
@@ -581,6 +582,32 @@
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
       tagControl.updateTagButtonStates();
+    });
+
+    const clearTrashBtn = document.getElementById('clearTrashBtn');
+    clearTrashBtn.addEventListener('click', () => {
+      const count = getTrashFileCount();
+      if (count === 0) return;
+      const confirmClear = confirm(`This will clear ${count} trash flagged file(s) from the list. Continue?`);
+      if (!confirmClear) return;
+      const removed = clearTrashFiles();
+      if (removed > 0) {
+        sidebarControl.refresh('');
+        if (getFileList().length === 0) {
+          replacePlugin(
+            getCurrentColorMap(),
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent()
+          );
+          showDropOverlay();
+          loadingOverlay.style.display = 'none';
+          zoomControlsElem.style.display = 'none';
+          guanoOutput.textContent = '(no file selected)';
+        }
+        tagControl.updateTagButtonStates();
+      }
     });
 
     const settingBtn = document.getElementById('setting');
