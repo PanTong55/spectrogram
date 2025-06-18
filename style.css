@@ -367,7 +367,7 @@ input[type="file"]:hover {
 #mainarea {
   flex-grow: 1;
   overflow-x: hidden;
-  padding-left: 15px;
+  padding-left: 2px;
   padding-top: 10px;
 }
 
@@ -375,6 +375,7 @@ input[type="file"]:hover {
   width: 250px;
   border-right: 1px solid #ccc;
   padding: 10px 10px 10px 0px;
+  margin-right:10px;
   font-size: 13px;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -387,9 +388,10 @@ input[type="file"]:hover {
 }
 
 #sidebar.collapsed {
-  width: 0 !important;
-  padding: 0 !important;
-  border: none !important;
+  width: 0;
+  padding: 0;
+  margin-right: 0;
+  border: none;
   opacity: 0;
   pointer-events: none;
 }
