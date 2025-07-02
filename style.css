@@ -415,6 +415,7 @@ input[type="file"]:hover {
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 13px;
   margin-bottom: 8px;
+  position: relative;
 }
 
 #top-bar {
@@ -425,20 +426,56 @@ input[type="file"]:hover {
 }
 
 #tool-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%) scale(0.95);
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 5px;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: #fff;
+  border-radius: 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #eee;
+  font-family: 'Noto Sans HK', sans-serif;
   white-space: nowrap;
-  overflow: hidden;
-  width: 100%;
-  max-height: 0;
   opacity: 0;
-  transition: max-height 0.4s ease, opacity 0.4s ease;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  overflow-x: auto;
 }
 
 #tool-bar.open {
-  max-height: 60px;
   opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+}
+
+#tool-bar .toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#tool-bar .toolbar-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+#tool-bar .toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #ddd;
+  margin: 0 4px;
 }
 
 /* === Sidebar Button === */
