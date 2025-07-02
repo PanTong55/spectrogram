@@ -68,7 +68,7 @@ export function initDragDropLoader({
     const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     if (spectrogramSettings) {
       spectrogramSettings.textContent =
-        `Sampling rate: ${sampleRate / 1000}kHz, FFT size: 1024, Overlap size: Auto, Hanning window`;
+        `Sampling rate: ${sampleRate / 1000}kHz`;
     }
 
     if (typeof onAfterLoad === 'function') {
