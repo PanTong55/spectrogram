@@ -6,6 +6,7 @@ import Spectrogram from './spectrogram.esm.js';
 let ws = null;
 let plugin = null;
 let currentColorMap = null;
+let currentFftSize = 1024;
 
 export function initWavesurfer({
   container,
@@ -29,12 +30,13 @@ export function createSpectrogramPlugin({
   height = 800,
   frequencyMin = 10,
   frequencyMax = 128,
+  fftSamples = 1024,
   noverlap = null,
 }) {
   const baseOptions = {
     labels: false,
     height,
-    fftSamples: 1024,
+    fftSamples,
     frequencyMin: frequencyMin * 1000,
     frequencyMax: frequencyMax * 1000,
     scale: 'linear',
@@ -55,7 +57,8 @@ export function replacePlugin(
   frequencyMin = 10,
   frequencyMax = 128,
   overlapPercent = null,
-  onRendered = null  // ✅ 傳入 callback
+  onRendered = null,  // ✅ 傳入 callback
+  fftSamples = currentFftSize
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
@@ -67,7 +70,7 @@ export function replacePlugin(
 
   currentColorMap = colorMap;
 
-  const fftSamples = 1024;
+  currentFftSize = fftSamples;
   const noverlap = overlapPercent !== null
     ? Math.floor(fftSamples * (overlapPercent / 100))
     : null;
@@ -77,6 +80,7 @@ export function replacePlugin(
     height,
     frequencyMin,
     frequencyMax,
+    fftSamples,
     noverlap,
   });
 
@@ -102,4 +106,8 @@ export function getPlugin() {
 
 export function getCurrentColorMap() {
   return currentColorMap;
+}
+
+export function getCurrentFftSize() {
+  return currentFftSize;
 }

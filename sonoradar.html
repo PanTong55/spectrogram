@@ -68,6 +68,13 @@
       </div>
       <!-- Tool Bar -->    
       <div id="tool-bar">
+        <label class="slider-label">FFT size:
+          <select id="fftSizeInput" class="styled-select">
+            <option value="512">512</option>
+            <option value="1024" selected>1024</option>
+            <option value="2048">2048</option>
+          </select>
+        </label>
         <label class="slider-label">Overlap:
           <select id="overlapInput" class="styled-select">
             <option value="auto" selected>Auto</option>
@@ -200,7 +207,8 @@
     let duration = 0;
     let currentFreqMin = 10;
     let currentFreqMax = 128;
-    let currentSampleRate = 256000;    
+    let currentSampleRate = 256000;
+    let currentFftSize = 1024;
     let freqHoverControl = null;
     const getDuration = () => duration;
 
@@ -265,6 +273,7 @@
       onAfterLoad: () => {
         loadingOverlay.style.display = 'none';
         freqHoverControl?.refreshHover();
+        updateSpectrogramSettingsText();
       }
     });
     sidebarControl = initSidebar({
@@ -443,6 +452,7 @@
       onAfterLoad: () => {
         loadingOverlay.style.display = 'none';
         freqHoverControl?.refreshHover();
+        updateSpectrogramSettingsText();
       }
     });
 
@@ -489,7 +499,7 @@
     function updateSpectrogramSettingsText() {
       const settingBox = document.getElementById('spectrogram-settings');
       const sampleRate = currentSampleRate;
-      const fftSize = 1024;
+      const fftSize = currentFftSize;
       const overlap = getOverlapPercent();
       const windowType = 'Hanning';
     
@@ -523,6 +533,30 @@
       document.getElementById('fileInput').click();
     });
     
+    document.getElementById('fftSizeInput').addEventListener('change', () => {
+      const val = parseInt(document.getElementById('fftSizeInput').value, 10);
+      if (!isNaN(val)) {
+        currentFftSize = val;
+        const colorMap = getCurrentColorMap();
+        freqHoverControl?.hideHover();
+        replacePlugin(
+          colorMap,
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent(),
+          () => {
+            duration = getWavesurfer().getDuration();
+            zoomControl.applyZoom();
+            renderAxes();
+            freqHoverControl?.refreshHover();
+          },
+          currentFftSize
+        );
+        updateSpectrogramSettingsText();
+      }
+    });
+
     document.getElementById('overlapInput').addEventListener('change', () => {
       const colorMap = getCurrentColorMap();
       freqHoverControl?.hideHover();
@@ -535,7 +569,7 @@
       );
 
       freqHoverControl?.refreshHover();
-          
+
       duration = getWavesurfer().getDuration();
       zoomControl.applyZoom();
       renderAxes();
@@ -561,10 +595,11 @@
     duration = getWavesurfer().getDuration();
     zoomControl.applyZoom();
       renderAxes();
-      
+
       if (freqHoverControl) {
         freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
       }
+      updateSpectrogramSettingsText();
     }
 
     const clearAllBtn = document.getElementById('clearAllBtn');
