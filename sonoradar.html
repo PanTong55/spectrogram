@@ -311,12 +311,15 @@
       const maxFreq = currentSampleRate / 2000;
       freqMaxInput.max = maxFreq;
       freqMinInput.max = maxFreq;
-      if (parseFloat(freqMaxInput.value) > maxFreq) {
-        freqMaxInput.value = maxFreq;
+
+      // Automatically adjust the frequency range when sampling rate changes
+      freqMaxInput.value = maxFreq;
+      if (parseFloat(freqMinInput.value) > maxFreq) {
+        freqMinInput.value = maxFreq;
+        currentFreqMin = maxFreq;
       }
-      if (currentFreqMax > maxFreq) {
-        currentFreqMax = maxFreq;
-      }
+      currentFreqMax = maxFreq;
+
       if (getWavesurfer()) {
         getWavesurfer().options.sampleRate = currentSampleRate;
       }
