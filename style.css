@@ -696,3 +696,57 @@ input.tag-button.editing {
    font-size: 9px;
    color: #666;
 }
+
+/* === Custom Dropdown === */
+.dropdown-button {
+  font-size: 14px;
+  padding: 6px 30px 6px 12px;
+  background-color: #e0e0e0;
+  color: #333;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
+  font-family: 'Noto Sans HK', sans-serif;
+}
+.dropdown-button:hover {
+  background-color: #d5d5d5;
+}
+.dropdown-button::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  margin-top: -3px;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #333;
+}
+
+.dropdown-menu {
+  position: absolute;
+  display: none;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  padding: 4px 0;
+  z-index: 1000;
+  font-family: 'Noto Sans HK', sans-serif;
+}
+
+.dropdown-item {
+  padding: 6px 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.dropdown-item:hover,
+.dropdown-item.highlighted {
+  background-color: #f0f0f0;
+}
+.dropdown-item.selected::before {
+  content: '\2713';
+  margin-right: 6px;
+  color: #1a73e8;
+}
