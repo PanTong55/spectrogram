@@ -306,7 +306,7 @@
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
 
-    function handleSampleRate(rate) {
+    async function handleSampleRate(rate) {
       currentSampleRate = rate;
       const maxFreq = currentSampleRate / 2000;
       freqMaxInput.max = maxFreq;
@@ -322,6 +322,10 @@
 
       if (getWavesurfer()) {
         getWavesurfer().options.sampleRate = currentSampleRate;
+        const idx = getCurrentIndex();
+        if (idx >= 0) {
+          await fileLoaderControl.loadFileAtIndex(idx);
+        }
       }
       freqHoverControl?.hideHover();
       replacePlugin(
