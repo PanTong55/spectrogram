@@ -112,6 +112,9 @@
             <span class="slider round"></span>
           </label>
         </label>
+        <div class="slider-label">
+          <button id="colorDropdown" class="dropdown-button">Color</button>
+        </div>
       </div>
     </div>
 <!-------- Spectrogram Start -------->
@@ -191,6 +194,7 @@
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initSidebar } from './modules/sidebar.js';
     import { initTagControl } from './modules/tagControl.js';
+    import { initDropdown } from './modules/dropdown.js';
     import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
@@ -696,6 +700,7 @@
     initExportCsv();
 
     const tagControl = initTagControl();
+    initDropdown('colorDropdown', ['Grayscale', 'Inferno', 'Viridis']);
   </script>
 </body>
 </html>
