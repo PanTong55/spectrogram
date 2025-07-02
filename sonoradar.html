@@ -68,6 +68,15 @@
       </div>
       <!-- Tool Bar -->    
       <div id="tool-bar">
+        <label class="slider-label">Fs:
+          <select id="sampleRateInput" class="styled-select">
+            <option value="96000">96</option>
+            <option value="192000">192</option>
+            <option value="256000" selected>256</option>
+            <option value="384000">384</option>
+            <option value="500000">500</option>
+          </select>
+        </label>
         <label class="slider-label">FFT size:
           <select id="fftSizeInput" class="styled-select">
             <option value="512">512</option>
@@ -103,12 +112,6 @@
             <span class="slider round"></span>
           </label>
         </label>
-        <label class="slider-label">Fs:
-          <label class="switch fs-switch" title="256/384kHz">
-            <input type="checkbox" id="sampleRateSwitch">
-            <span class="slider round"></span>
-          </label>
-        </label>  
       </div>
     </div>
 <!-------- Spectrogram Start -------->
@@ -312,18 +315,18 @@
     
     const toggleGridSwitch = document.getElementById('toggleGridSwitch');
 
-    const sampleRateSwitch = document.getElementById('sampleRateSwitch');
-    
+    const sampleRateInput = document.getElementById('sampleRateInput');
+
     freqGrid.style.display = 'none';
     toggleGridSwitch.checked = false;
-    sampleRateSwitch.checked = false;
+    sampleRateInput.value = String(currentSampleRate);
     
     toggleGridSwitch.addEventListener('change', () => {
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
 
-    sampleRateSwitch.addEventListener('change', () => {
-      currentSampleRate = sampleRateSwitch.checked ? 384000 : 256000;
+    sampleRateInput.addEventListener('change', () => {
+      currentSampleRate = parseInt(sampleRateInput.value, 10);
 
       const maxFreq = currentSampleRate / 2000;
       freqMaxInput.max = maxFreq;
