@@ -21,6 +21,8 @@ export function initFrequencyHover({
   const fixedOverlay = document.getElementById('fixed-overlay');
   const zoomControls = document.getElementById('zoom-controls');
   const container = document.getElementById('spectrogram-only');
+  let canvas = null;
+  let canvasCtx = null;
   const persistentLines = [];
   const selections = [];
   let persistentLinesEnabled = true;
@@ -36,6 +38,14 @@ export function initFrequencyHover({
   let startX = 0, startY = 0;
   let selectionRect = null;
   let lastClientX = null, lastClientY = null;
+
+  const updateCanvasRef = () => {
+    const newCanvas = container.querySelector('canvas');
+    if (newCanvas !== canvas) {
+      canvas = newCanvas;
+      canvasCtx = canvas ? canvas.getContext('2d') : null;
+    }
+  };
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -54,6 +64,7 @@ export function initFrequencyHover({
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    updateCanvasRef();
 
     if (y > (viewer.clientHeight - getScrollbarThickness())) {
       hideAll();
@@ -68,6 +79,21 @@ export function initFrequencyHover({
     const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
     const actualWidth = container.scrollWidth;
     const time = ((x + scrollLeft) / actualWidth) * getDuration();
+
+    let db = null;
+    if (canvasCtx) {
+      const scaleX = canvas.width / actualWidth;
+      const scaleY = canvas.height / spectrogramHeight;
+      const px = Math.floor((x + scrollLeft) * scaleX);
+      const py = Math.floor(y * scaleY);
+      const pixel = canvasCtx.getImageData(px, py, 1, 1).data;
+      const intensity = pixel[0] / 255;
+      if (intensity > 0) {
+        db = 20 * Math.log10(intensity);
+      } else {
+        db = -Infinity;
+      }
+    }
 
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
@@ -90,8 +116,11 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
+    const dbText = db === null ? '' : `  ${db.toFixed(1)} dB`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms${dbText}`;
   };
+
+  updateCanvasRef();
 
   viewer.addEventListener('mousemove', updateHoverDisplay, { passive: true });
   wrapper.addEventListener('mouseleave', hideAll);
@@ -414,6 +443,7 @@ export function initFrequencyHover({
     },
     hideHover: hideAll,
     refreshHover: () => {
+      updateCanvasRef();
       if (lastClientX !== null && lastClientY !== null) {
         updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
       }
