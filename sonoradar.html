@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="icon" href="./favicon.ico" sizes="any" type="image/x-icon" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -64,6 +66,7 @@
         <button id="nextBtn" title="Next file (↓)" class="sidebar-button"><i class="fas fa-arrow-down"></i></button>
         <button id="toggleTagModeBtn" title="Tag mode" class="sidebar-button"><i class="fa-solid fa-tags"></i></button>
         <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
+        <button id="mapBtn" title="Map" class="sidebar-button"><i class="fa-solid fa-map-location-dot"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
       </div>
       <!-- Tool Bar -->    
@@ -152,10 +155,13 @@
       <div id="time-axis"></div>
     </div>
     <div id="time-label">Time (ms)</div>
-  </div>      
+  </div>
     </div>
-<!-------- Spectrogram End -------->     
-  </div>   
+<!-------- Spectrogram End -------->
+  <div id="mapPopup" class="map-popup" style="display:none;">
+    <div id="map" style="width:100%;height:100%;"></div>
+  </div>
+  </div>
   <script type="module">
     import {
       initWavesurfer,
@@ -174,6 +180,7 @@
     import { initScrollSync } from './modules/scrollSync.js';
     import { initExportCsv } from './modules/exportCsv.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
+    import { initMapPopup } from './modules/mapPopup.js';
     import { initSidebar } from './modules/sidebar.js';
     import { initTagControl } from './modules/tagControl.js';
     import { initDropdown } from './modules/dropdown.js';
@@ -700,6 +707,7 @@
     });
 
     initExportCsv();
+    initMapPopup();
   </script>
 </body>
 </html>
