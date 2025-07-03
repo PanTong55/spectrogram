@@ -57,18 +57,20 @@ export function initMapPopup({
   let offsetY = 0;
   const edgeThreshold = 20;
 
-  function isNearEdge(x, y) {
+  function isNearEdge(e) {
     const rect = popup.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     return (
-      x - rect.left <= edgeThreshold ||
-      rect.right - x <= edgeThreshold ||
-      y - rect.top <= edgeThreshold ||
-      rect.bottom - y <= edgeThreshold
+      x <= edgeThreshold ||
+      rect.width - x <= edgeThreshold ||
+      y <= edgeThreshold ||
+      rect.height - y <= edgeThreshold
     );
   }
 
   popup.addEventListener('mousedown', (e) => {
-    if (isNearEdge(e.clientX, e.clientY)) {
+    if (isNearEdge(e)) {
       dragging = true;
       offsetX = e.clientX - popup.offsetLeft;
       offsetY = e.clientY - popup.offsetTop;
@@ -80,7 +82,7 @@ export function initMapPopup({
 
   popup.addEventListener('mousemove', (e) => {
     if (!dragging) {
-      popup.style.cursor = isNearEdge(e.clientX, e.clientY) ? 'move' : 'default';
+      popup.style.cursor = isNearEdge(e) ? 'move' : 'default';
     }
   }, true);
 
