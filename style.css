@@ -632,6 +632,10 @@ body.settings-open #setting {
   background-color: #007bff;
 }
 
+body.map-open #mapBtn {
+  background-color: #007bff;
+}
+
 input.tag-button {
   width: 90px;
   margin-bottom: 4px;
@@ -773,5 +777,5 @@ input.tag-button.editing {
   border-radius: 8px;
   z-index: 1000;
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-  cursor: move;
+  cursor: default;
 }
