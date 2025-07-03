@@ -8,6 +8,7 @@ export function initMapPopup({
   const btn = document.getElementById(buttonId);
   const popup = document.getElementById(popupId);
   const mapDiv = document.getElementById(mapId);
+  const dragBar = popup.querySelector('.popup-drag-bar');
   if (!btn || !popup || !mapDiv) return;
   mapDiv.style.cursor = 'grab';
 
@@ -55,36 +56,17 @@ export function initMapPopup({
   let dragging = false;
   let offsetX = 0;
   let offsetY = 0;
-  const edgeThreshold = 20;
 
-  function isNearEdge(e) {
-    const rect = popup.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    return (
-      x <= edgeThreshold ||
-      rect.width - x <= edgeThreshold ||
-      y <= edgeThreshold ||
-      rect.height - y <= edgeThreshold
-    );
-  }
-
-  popup.addEventListener('mousedown', (e) => {
-    if (isNearEdge(e)) {
+  if (dragBar) {
+    dragBar.addEventListener('mousedown', (e) => {
       dragging = true;
       offsetX = e.clientX - popup.offsetLeft;
       offsetY = e.clientY - popup.offsetTop;
       map?.dragging.disable();
       e.preventDefault();
       e.stopPropagation();
-    }
-  }, true);
-
-  popup.addEventListener('mousemove', (e) => {
-    if (!dragging) {
-      popup.style.cursor = isNearEdge(e) ? 'move' : 'default';
-    }
-  }, true);
+    });
+  }
 
   window.addEventListener('mousemove', (e) => {
     if (!dragging) return;
