@@ -330,7 +330,6 @@
         }
       }
       freqHoverControl?.hideHover();
-      loadingOverlay.style.display = 'flex';
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
@@ -342,7 +341,6 @@
           zoomControl.applyZoom();
           renderAxes();
           freqHoverControl?.refreshHover();
-          loadingOverlay.style.display = 'none';
         }
       );
       updateSpectrogramSettingsText();
@@ -405,8 +403,7 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        freqHoverControl?.hideHover();
-        loadingOverlay.style.display = 'flex';
+        freqHoverControl?.hideHover();        
         replacePlugin(
           colorMap,
           spectrogramHeight,
@@ -417,8 +414,7 @@
             duration = getWavesurfer().getDuration();
             zoomControl.applyZoom();
             renderAxes();
-            freqHoverControl?.refreshHover();
-            loadingOverlay.style.display = 'none';
+            freqHoverControl?.refreshHover();            
           }
         );
       },
@@ -552,7 +548,6 @@
       currentFftSize = size;
       const colorMap = getCurrentColorMap();
       freqHoverControl?.hideHover();
-      loadingOverlay.style.display = 'flex';
       replacePlugin(
         colorMap,
         spectrogramHeight,
@@ -564,7 +559,6 @@
           zoomControl.applyZoom();
           renderAxes();
           freqHoverControl?.refreshHover();
-          loadingOverlay.style.display = 'none';
         },
         currentFftSize
       );
@@ -574,23 +568,20 @@
     function handleOverlapChange() {
       const colorMap = getCurrentColorMap();
       freqHoverControl?.hideHover();
-      loadingOverlay.style.display = 'flex';
       replacePlugin(
         colorMap,
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          freqHoverControl?.refreshHover();
-
-          duration = getWavesurfer().getDuration();
-          zoomControl.applyZoom();
-          renderAxes();
-          updateSpectrogramSettingsText();
-          loadingOverlay.style.display = 'none';
-        }
+        getOverlapPercent()
       );
+
+      freqHoverControl?.refreshHover();
+
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+      updateSpectrogramSettingsText();
     }
     
     function updateFrequencyRange(freqMin, freqMax) {
@@ -599,48 +590,42 @@
       currentFreqMax = freqMax;
 
     freqHoverControl?.hideHover();
-    loadingOverlay.style.display = 'flex';
     replacePlugin(
       colorMap,
       spectrogramHeight,
       freqMin,
       freqMax,
-      getOverlapPercent(),
-      () => {
-        freqHoverControl?.refreshHover();
-
-        duration = getWavesurfer().getDuration();
-        zoomControl.applyZoom();
-        renderAxes();
-
-        if (freqHoverControl) {
-          freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
-        }
-        updateSpectrogramSettingsText();
-        loadingOverlay.style.display = 'none';
-      }
+      getOverlapPercent()
     );
+
+    freqHoverControl?.refreshHover();
+
+    duration = getWavesurfer().getDuration();
+    zoomControl.applyZoom();
+      renderAxes();
+
+      if (freqHoverControl) {
+        freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+      }
+      updateSpectrogramSettingsText();
     }
 
     const clearAllBtn = document.getElementById('clearAllBtn');
     clearAllBtn.addEventListener('click', () => {
       clearFileList();
       sidebarControl.refresh('');
-      loadingOverlay.style.display = 'flex';
       replacePlugin(
         getCurrentColorMap(),
         spectrogramHeight,
         currentFreqMin,
         currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          showDropOverlay();
-          loadingOverlay.style.display = 'none';
-          zoomControlsElem.style.display = 'none';
-          guanoOutput.textContent = '(no file selected)';
-          tagControl.updateTagButtonStates();
-        }
+        getOverlapPercent()
       );
+      showDropOverlay();
+      loadingOverlay.style.display = 'none';
+      zoomControlsElem.style.display = 'none';
+      guanoOutput.textContent = '(no file selected)';
+      tagControl.updateTagButtonStates();
     });
 
     const clearTrashBtn = document.getElementById('clearTrashBtn');
@@ -673,7 +658,6 @@
       const removed = clearTrashFiles();
       if (removed > 0) {
         const remaining = getFileList();
-        loadingOverlay.style.display = 'flex';
         if (remaining.length === 0) {
           sidebarControl.refresh('');
           replacePlugin(
@@ -681,15 +665,12 @@
             spectrogramHeight,
             currentFreqMin,
             currentFreqMax,
-            getOverlapPercent(),
-            () => {
-              showDropOverlay();
-              loadingOverlay.style.display = 'none';
-              zoomControlsElem.style.display = 'none';
-              guanoOutput.textContent = '(no file selected)';
-              tagControl.updateTagButtonStates();
-            }
+            getOverlapPercent()
           );
+          showDropOverlay();
+          loadingOverlay.style.display = 'none';
+          zoomControlsElem.style.display = 'none';
+          guanoOutput.textContent = '(no file selected)';
         } else {
           let currentName = '';
           if (nextFile) {
@@ -705,9 +686,8 @@
               fileLoaderControl.loadFileAtIndex(idx);
             }
           }
-          loadingOverlay.style.display = 'none';
-          tagControl.updateTagButtonStates();
         }
+        tagControl.updateTagButtonStates();
       }
     });
 
