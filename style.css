@@ -436,9 +436,9 @@ input[type="file"]:hover {
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  width: 650px;
+  width: 600px;
   background-color: #fff;
-  border-radius: 30px;
+  border-radius: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: 1px solid #eee;
   font-family: 'Noto Sans HK', sans-serif;
