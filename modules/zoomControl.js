@@ -19,6 +19,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
 
   function applyZoom() {
     computeMinZoomLevel();
+    const loadingOverlay = document.getElementById('loading-overlay');
+    if (loadingOverlay) loadingOverlay.style.display = 'flex';
     if (typeof onBeforeZoom === 'function') onBeforeZoom();
     zoomLevel = Math.max(zoomLevel, minZoomLevel);
 
@@ -32,8 +34,9 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     wrapperElement.style.width = `${width}px`;
 
     applyZoomCallback();
-    if (typeof onAfterZoom === 'function') onAfterZoom();    
+    if (typeof onAfterZoom === 'function') onAfterZoom();
     updateZoomButtons();
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
   }
 
   function updateZoomButtons() {
