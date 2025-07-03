@@ -219,6 +219,8 @@
     });
     const overlay = document.getElementById('drop-overlay');
     const loadingOverlay = document.getElementById('loading-overlay');
+    function showLoading() { loadingOverlay.style.display = 'flex'; }
+    function hideLoading() { loadingOverlay.style.display = 'none'; }
 
     function showDropOverlay() {
       overlay.style.display = 'flex';
@@ -329,20 +331,24 @@
           await fileLoaderControl.loadFileAtIndex(idx);
         }
       }
-      freqHoverControl?.hideHover();
-      replacePlugin(
-        getCurrentColorMap(),
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          duration = getWavesurfer().getDuration();
-          zoomControl.applyZoom();
-          renderAxes();
-          freqHoverControl?.refreshHover();
-        }
-      );
+        showLoading();
+        freqHoverControl?.hideHover();
+        requestAnimationFrame(() => {
+          replacePlugin(
+            getCurrentColorMap(),
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent(),
+            () => {
+              duration = getWavesurfer().getDuration();
+              zoomControl.applyZoom();
+              renderAxes();
+              freqHoverControl?.refreshHover();
+              hideLoading();
+            }
+          );
+        });
       updateSpectrogramSettingsText();
     }
 
@@ -392,8 +398,8 @@
       getDuration,
       renderAxes,
       wrapper,
-      () => { freqHoverControl?.hideHover(); },
-      () => { freqHoverControl?.refreshHover(); }
+      () => { freqHoverControl?.hideHover(); showLoading(); },
+      () => { freqHoverControl?.refreshHover(); hideLoading(); }
     );
     
     initBrightnessControl({
@@ -403,20 +409,24 @@
       gainValId: 'gainVal',
       resetBtnId: 'resetButton',
       onColorMapUpdated: (colorMap) => {
-        freqHoverControl?.hideHover();        
-        replacePlugin(
-          colorMap,
-          spectrogramHeight,
-          currentFreqMin,
-          currentFreqMax,
-          getOverlapPercent(),
-          () => {
-            duration = getWavesurfer().getDuration();
-            zoomControl.applyZoom();
-            renderAxes();
-            freqHoverControl?.refreshHover();            
-          }
-        );
+        showLoading();
+        freqHoverControl?.hideHover();
+        requestAnimationFrame(() => {
+          replacePlugin(
+            colorMap,
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent(),
+            () => {
+              duration = getWavesurfer().getDuration();
+              zoomControl.applyZoom();
+              renderAxes();
+              freqHoverControl?.refreshHover();
+              hideLoading();
+            }
+          );
+        });
       },
     });
 
@@ -544,70 +554,82 @@
       document.getElementById('fileInput').click();
     });
     
-    function handleFftSize(size) {
-      currentFftSize = size;
-      const colorMap = getCurrentColorMap();
-      freqHoverControl?.hideHover();
-      replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent(),
-        () => {
+      function handleFftSize(size) {
+        currentFftSize = size;
+        const colorMap = getCurrentColorMap();
+        showLoading();
+        freqHoverControl?.hideHover();
+        requestAnimationFrame(() => {
+          replacePlugin(
+            colorMap,
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent(),
+            () => {
+              duration = getWavesurfer().getDuration();
+              zoomControl.applyZoom();
+              renderAxes();
+              freqHoverControl?.refreshHover();
+              hideLoading();
+            },
+            currentFftSize
+          );
+        });
+      updateSpectrogramSettingsText();
+      }
+
+      function handleOverlapChange() {
+        const colorMap = getCurrentColorMap();
+        showLoading();
+        freqHoverControl?.hideHover();
+        requestAnimationFrame(() => {
+          replacePlugin(
+            colorMap,
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent()
+          );
+
+          freqHoverControl?.refreshHover();
+
           duration = getWavesurfer().getDuration();
           zoomControl.applyZoom();
           renderAxes();
-          freqHoverControl?.refreshHover();
-        },
-        currentFftSize
-      );
-      updateSpectrogramSettingsText();
-    }
-
-    function handleOverlapChange() {
-      const colorMap = getCurrentColorMap();
-      freqHoverControl?.hideHover();
-      replacePlugin(
-        colorMap,
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent()
-      );
-
-      freqHoverControl?.refreshHover();
-
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-      updateSpectrogramSettingsText();
-    }
+          hideLoading();
+          updateSpectrogramSettingsText();
+        });
+      }
     
     function updateFrequencyRange(freqMin, freqMax) {
       const colorMap = getCurrentColorMap();
       currentFreqMin = freqMin;
       currentFreqMax = freqMax;
 
-    freqHoverControl?.hideHover();
-    replacePlugin(
-      colorMap,
-      spectrogramHeight,
-      freqMin,
-      freqMax,
-      getOverlapPercent()
-    );
+      showLoading();
+      freqHoverControl?.hideHover();
+      requestAnimationFrame(() => {
+        replacePlugin(
+          colorMap,
+          spectrogramHeight,
+          freqMin,
+          freqMax,
+          getOverlapPercent()
+        );
 
-    freqHoverControl?.refreshHover();
+        freqHoverControl?.refreshHover();
 
-    duration = getWavesurfer().getDuration();
-    zoomControl.applyZoom();
-      renderAxes();
+        duration = getWavesurfer().getDuration();
+        zoomControl.applyZoom();
+        renderAxes();
 
-      if (freqHoverControl) {
-        freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
-      }
-      updateSpectrogramSettingsText();
+        if (freqHoverControl) {
+          freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+        }
+        hideLoading();
+        updateSpectrogramSettingsText();
+      });
     }
 
     const clearAllBtn = document.getElementById('clearAllBtn');

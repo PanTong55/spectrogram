@@ -20,20 +20,22 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   function applyZoom() {
     computeMinZoomLevel();
     if (typeof onBeforeZoom === 'function') onBeforeZoom();
-    zoomLevel = Math.max(zoomLevel, minZoomLevel);
+    requestAnimationFrame(() => {
+      zoomLevel = Math.max(zoomLevel, minZoomLevel);
 
-    if (ws && typeof ws.zoom === 'function' &&
-        typeof ws.getDuration === 'function' && ws.getDuration() > 0) {
-      ws.zoom(zoomLevel);
-    }
-    const width = duration() * zoomLevel;
-    container.style.width = `${width}px`;
+      if (ws && typeof ws.zoom === 'function' &&
+          typeof ws.getDuration === 'function' && ws.getDuration() > 0) {
+        ws.zoom(zoomLevel);
+      }
+      const width = duration() * zoomLevel;
+      container.style.width = `${width}px`;
 
-    wrapperElement.style.width = `${width}px`;
+      wrapperElement.style.width = `${width}px`;
 
-    applyZoomCallback();
-    if (typeof onAfterZoom === 'function') onAfterZoom();    
-    updateZoomButtons();
+      applyZoomCallback();
+      if (typeof onAfterZoom === 'function') onAfterZoom();
+      updateZoomButtons();
+    });
   }
 
   function updateZoomButtons() {
