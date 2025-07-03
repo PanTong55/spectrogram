@@ -62,6 +62,7 @@ export function replacePlugin(
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
+  const loadingOverlay = document.getElementById('loading-overlay');
 
   const oldCanvas = container.querySelector("canvas");
   if (oldCanvas) oldCanvas.remove();
@@ -87,12 +88,15 @@ export function replacePlugin(
   ws.registerPlugin(plugin);
 
   try {
+    if (loadingOverlay) loadingOverlay.style.display = 'flex';
     plugin.render();
     requestAnimationFrame(() => {
+      if (loadingOverlay) loadingOverlay.style.display = 'none';
       if (typeof onRendered === 'function') onRendered();
     });
   } catch (err) {
     console.warn('⚠️ Spectrogram render failed:', err);
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
   }
 }
 
