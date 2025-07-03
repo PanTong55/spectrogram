@@ -695,9 +695,10 @@
 
     const settingBtn = document.getElementById('setting');
     const toolBar = document.getElementById('tool-bar');
-    
+
     settingBtn.addEventListener('click', () => {
-      toolBar.classList.toggle('open');
+      const isOpen = toolBar.classList.toggle('open');
+      document.body.classList.toggle('settings-open', isOpen);
     });
 
     initExportCsv();
