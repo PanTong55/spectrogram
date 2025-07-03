@@ -626,6 +626,10 @@ body.tag-mode-active #toggleTagModeBtn {
   background-color: #007bff;
 }
 
+body.settings-open #setting {
+  background-color: #007bff;
+}
+
 input.tag-button {
   width: 90px;
   margin-bottom: 4px;
