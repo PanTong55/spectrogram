@@ -9,6 +9,7 @@ export function initMapPopup({
   const popup = document.getElementById(popupId);
   const mapDiv = document.getElementById(mapId);
   const dragBar = popup.querySelector('.popup-drag-bar');
+  const closeBtn = popup.querySelector('.popup-close-btn');
   if (!btn || !popup || !mapDiv) return;
   mapDiv.style.cursor = 'grab';
 
@@ -82,5 +83,8 @@ export function initMapPopup({
   });
 
   btn.addEventListener('click', togglePopup);
+  if (closeBtn) {
+    closeBtn.addEventListener('click', togglePopup);
+  }
   document.addEventListener('file-loaded', updateMap);
 }
