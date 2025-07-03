@@ -76,13 +76,13 @@ export function initMapPopup({
       e.preventDefault();
       e.stopPropagation();
     }
-  });
+  }, true);
 
   popup.addEventListener('mousemove', (e) => {
     if (!dragging) {
       popup.style.cursor = isNearEdge(e.clientX, e.clientY) ? 'move' : 'default';
     }
-  });
+  }, true);
 
   window.addEventListener('mousemove', (e) => {
     if (!dragging) return;
