@@ -385,7 +385,7 @@
     }
 
     async function autoSetSampleRate(rate, skipReload = false) {
-      if (selectedSampleRate === 'auto' && rate && rate !== currentSampleRate) {
+      if (selectedSampleRate === 'auto' && rate) {
         await applySampleRate(rate, !skipReload);
       } else if (selectedSampleRate === 'auto') {
         updateSpectrogramSettingsText();
