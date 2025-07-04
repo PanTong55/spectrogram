@@ -14,6 +14,32 @@ export function initMapPopup({
   mapDiv.style.cursor = 'grab';
 
   const edgeThreshold = 5;
+
+  function getEdgeState(clientX, clientY) {
+    const rect = popup.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const onLeft = x >= -edgeThreshold && x < edgeThreshold;
+    const onRight = x <= rect.width + edgeThreshold && x > rect.width - edgeThreshold;
+    const onTop = y >= -edgeThreshold && y < edgeThreshold;
+    const onBottom = y <= rect.height + edgeThreshold && y > rect.height - edgeThreshold;
+    return { onLeft, onRight, onTop, onBottom };
+  }
+
+  function edgeCursor(state) {
+    const { onLeft, onRight, onTop, onBottom } = state;
+    let cursor = '';
+    if ((onLeft && onTop) || (onRight && onBottom)) {
+      cursor = 'nwse-resize';
+    } else if ((onRight && onTop) || (onLeft && onBottom)) {
+      cursor = 'nesw-resize';
+    } else if (onLeft || onRight) {
+      cursor = 'ew-resize';
+    } else if (onTop || onBottom) {
+      cursor = 'ns-resize';
+    }
+    return cursor;
+  }
   let popupWidth = parseInt(localStorage.getItem('mapPopupWidth'), 10);
   let popupHeight = parseInt(localStorage.getItem('mapPopupHeight'), 10);
   if (isNaN(popupWidth) || popupWidth <= 0) popupWidth = 500;
@@ -92,41 +118,54 @@ export function initMapPopup({
 
   popup.addEventListener('mousemove', (e) => {
     if (dragging || resizing) return;
-    const rect = popup.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const onLeft = x < edgeThreshold;
-    const onRight = x > rect.width - edgeThreshold;
-    const onTop = y < edgeThreshold;
-    const onBottom = y > rect.height - edgeThreshold;
-    let cursor = 'default';
-    if ((onLeft && onTop) || (onRight && onBottom)) {
-      cursor = 'nwse-resize';
-    } else if ((onRight && onTop) || (onLeft && onBottom)) {
-      cursor = 'nesw-resize';
-    } else if (onLeft || onRight) {
-      cursor = 'ew-resize';
-    } else if (onTop || onBottom) {
-      cursor = 'ns-resize';
-    }
+    const state = getEdgeState(e.clientX, e.clientY);
+    const cursor = edgeCursor(state) || 'default';
     popup.style.cursor = cursor;
   });
 
   popup.addEventListener('mousedown', (e) => {
     if (e.target === dragBar || dragBar.contains(e.target)) return;
-    const rect = popup.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const onLeft = x < edgeThreshold;
-    const onRight = x > rect.width - edgeThreshold;
-    const onTop = y < edgeThreshold;
-    const onBottom = y > rect.height - edgeThreshold;
-    if (onLeft || onRight || onTop || onBottom) {
+    const state = getEdgeState(e.clientX, e.clientY);
+    if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
       resizing = true;
-      resizeLeft = onLeft;
-      resizeRight = onRight;
-      resizeTop = onTop;
-      resizeBottom = onBottom;
+      resizeLeft = state.onLeft;
+      resizeRight = state.onRight;
+      resizeTop = state.onTop;
+      resizeBottom = state.onBottom;
+      const cursor = edgeCursor(state) || 'default';
+      popup.style.cursor = cursor;
+      document.body.style.cursor = cursor;
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = popup.offsetWidth;
+      startHeight = popup.offsetHeight;
+      startLeft = popup.offsetLeft;
+      startTop = popup.offsetTop;
+      map?.dragging.disable();
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (dragging || resizing || popup.style.display !== 'block') return;
+    const state = getEdgeState(e.clientX, e.clientY);
+    const cursor = edgeCursor(state);
+    document.body.style.cursor = cursor || '';
+  });
+
+  document.addEventListener('mousedown', (e) => {
+    if (dragging || resizing || popup.style.display !== 'block') return;
+    if (e.target === dragBar || dragBar.contains(e.target)) return;
+    const state = getEdgeState(e.clientX, e.clientY);
+    if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
+      resizing = true;
+      resizeLeft = state.onLeft;
+      resizeRight = state.onRight;
+      resizeTop = state.onTop;
+      resizeBottom = state.onBottom;
+      const cursor = edgeCursor(state) || 'default';
+      document.body.style.cursor = cursor;
       startX = e.clientX;
       startY = e.clientY;
       startWidth = popup.offsetWidth;
@@ -148,6 +187,7 @@ export function initMapPopup({
     if (resizing) {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
+      document.body.style.cursor = document.body.style.cursor || popup.style.cursor;
       if (resizeRight) {
         popupWidth = Math.max(200, startWidth + dx);
         popup.style.width = `${popupWidth}px`;
@@ -180,6 +220,8 @@ export function initMapPopup({
       localStorage.setItem('mapPopupWidth', popupWidth);
       localStorage.setItem('mapPopupHeight', popupHeight);
       map?.invalidateSize();
+      document.body.style.cursor = '';
+      popup.style.cursor = '';
     }
   });
 
