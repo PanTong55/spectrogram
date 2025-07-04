@@ -864,3 +864,18 @@ input.tag-button.editing {
 .leaflet-route-control a.active {
   background-color: #e6e6e6;
 }
+
+/* Reduce spacing between custom map controls */
+.leaflet-route-control,
+.leaflet-import-kml-control,
+.leaflet-clear-kml-control {
+  margin-top: 5px;
+  margin-left: 5px;
+}
+
+/* Set control icon color to dark grey */
+.leaflet-route-control a i,
+.leaflet-import-kml-control a i,
+.leaflet-clear-kml-control a i {
+  color: #555;
+}
