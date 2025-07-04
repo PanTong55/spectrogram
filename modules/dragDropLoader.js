@@ -81,7 +81,8 @@ export function initDragDropLoader({
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
-    }    
+    }
+    document.dispatchEvent(new Event('file-loaded'));
   }
 
   async function handleFiles(files) {
