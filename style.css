@@ -817,11 +817,13 @@ input.tag-button.editing {
   transform: scale(0.5);
   color: #ffd700;
   transform-origin: bottom center;
+  mix-blend-mode: lighten;
 }
 
 .map-marker-current {
   opacity: 1;
   transform: scale(1);
-  color: #fa6e02;
+  color: #ffd700;
   transform-origin: bottom center;
+  z-index: 1000;
 }
