@@ -811,3 +811,15 @@ input.tag-button.editing {
 .popup-close-btn:hover {
   color: #c00;
 }
+
+.map-marker-other {
+  opacity: 0.5;
+  transform: scale(0.7);
+  transform-origin: bottom center;
+}
+
+.map-marker-current {
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: bottom center;
+}

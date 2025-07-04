@@ -1,4 +1,4 @@
-import { getCurrentIndex, getFileMetadata } from './fileState.js';
+import { getCurrentIndex, getFileMetadata, getFileList } from './fileState.js';
 
 export function initMapPopup({
   buttonId = 'mapBtn',
@@ -48,14 +48,36 @@ export function initMapPopup({
   popup.style.height = `${popupHeight}px`;
 
   let map = null;
-  let marker = null;
+  let markers = [];
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
-    marker = L.marker([lat, lon]).addTo(map);
+  }
+
+  function refreshMarkers() {
+    if (!map) return;
+    markers.forEach(m => m.remove());
+    markers = [];
+    const list = getFileList();
+    const curIdx = getCurrentIndex();
+    list.forEach((file, idx) => {
+      const meta = getFileMetadata(idx);
+      const lat = parseFloat(meta.latitude);
+      const lon = parseFloat(meta.longitude);
+      if (isNaN(lat) || isNaN(lon)) return;
+      const cls = idx === curIdx ? 'map-marker-current' : 'map-marker-other';
+      const icon = new L.Icon.Default({ className: cls });
+      const name = file.name.replace(/\.wav$/i, '');
+      const marker = L.marker([lat, lon], { icon, title: name });
+      marker.on('click', () => {
+        document.dispatchEvent(new CustomEvent('map-file-selected', { detail: { index: idx } }));
+      });
+      marker.addTo(map);
+      markers.push(marker);
+    });
   }
 
   function updateMap() {
@@ -70,8 +92,8 @@ export function initMapPopup({
       createMap(lat, lon);
     } else {
       map.setView([lat, lon]);
-      marker.setLatLng([lat, lon]);
     }
+    refreshMarkers();
   }
 
   function togglePopup() {
