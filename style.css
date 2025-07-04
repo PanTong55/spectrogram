@@ -849,3 +849,12 @@ input.tag-button.editing {
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   white-space: nowrap;
 }
+
+/* Route button style */
+.leaflet-route-control a {
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  font-size: 16px;
+}
