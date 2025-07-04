@@ -817,7 +817,7 @@ input.tag-button.editing {
   line-height: 24px;
   color: #ffd700;
   opacity: 0.5;
-  transform: scale(0.5);
+  transform: scale(0.75);
   transform-origin: bottom center;
   pointer-events: none;
   mix-blend-mode: lighten;
