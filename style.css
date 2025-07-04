@@ -813,23 +813,25 @@ input.tag-button.editing {
 }
 
 .map-marker-other i{
-  font-size: 24px;
-  line-height: 24px;
+  font-size: 28px;
+  line-height: 28px;
   color: #ffd700;
   opacity: 0.5;
   transform: scale(0.75);
   transform-origin: bottom center;
   pointer-events: none;
   mix-blend-mode: lighten;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
 }
 
 .map-marker-current i{
-  font-size: 24px;
-  line-height: 24px;
+  font-size: 28px;
+  line-height: 28px;
   color: #fa6e02;
   opacity: 1;
   transform: scale(1);
   transform-origin: bottom center;
   pointer-events: none;
   z-index: 1000;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.4));
 }
