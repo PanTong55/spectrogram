@@ -69,7 +69,12 @@ export function initMapPopup({
       const lon = parseFloat(meta.longitude);
       if (isNaN(lat) || isNaN(lon)) return;
       const cls = idx === curIdx ? 'map-marker-current' : 'map-marker-other';
-      const icon = new L.Icon.Default({ className: cls });
+      const icon = L.divIcon({
+        html: '<i class="fa-solid fa-location-dot"></i>',
+        className: cls,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24]
+      });
       const name = file.name.replace(/\.wav$/i, '');
       const zIndexOffset = idx === curIdx ? 1000 : 0;
       const marker = L.marker([lat, lon], { icon, title: name, zIndexOffset });
