@@ -711,6 +711,12 @@
 
     initExportCsv();
     initMapPopup();
+    document.addEventListener('map-file-selected', (e) => {
+      const idx = e.detail?.index;
+      if (typeof idx === 'number') {
+        fileLoaderControl.loadFileAtIndex(idx);
+      }
+    });
   </script>
 </body>
 </html>
