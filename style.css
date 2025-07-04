@@ -814,12 +814,14 @@ input.tag-button.editing {
 
 .map-marker-other {
   opacity: 0.5;
-  transform: scale(0.7);
+  transform: scale(0.5);
+  color: #ffd700;
   transform-origin: bottom center;
 }
 
 .map-marker-current {
   opacity: 1;
   transform: scale(1);
+  color: #fa6e02;
   transform-origin: bottom center;
 }
