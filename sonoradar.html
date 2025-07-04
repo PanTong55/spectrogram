@@ -207,6 +207,7 @@
     let currentFreqMin = 10;
     let currentFreqMax = 128;
     let currentSampleRate = 256000;
+    let selectedSampleRate = 'auto';
     let currentFftSize = 1024;
     let currentOverlap = 'auto';
     let freqHoverControl = null;
@@ -274,7 +275,8 @@
         loadingOverlay.style.display = 'none';
         freqHoverControl?.refreshHover();
         updateSpectrogramSettingsText();
-      }
+      },
+      onSampleRateDetected: autoSetSampleRate
     });
     sidebarControl = initSidebar({
       onFileSelected: (index) => {
@@ -319,7 +321,7 @@
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
 
-    async function handleSampleRate(rate) {
+    async function applySampleRate(rate) {
       currentSampleRate = rate;
       const maxFreq = currentSampleRate / 2000;
       freqMaxInput.max = maxFreq;
@@ -354,6 +356,23 @@
         }
       );
       updateSpectrogramSettingsText();
+    }
+
+    async function handleSampleRate(rate) {
+      selectedSampleRate = rate;
+      if (rate === 'auto') {
+        updateSpectrogramSettingsText();
+        return;
+      }
+      await applySampleRate(rate);
+    }
+
+    async function autoSetSampleRate(rate) {
+      if (selectedSampleRate === 'auto' && rate && rate !== currentSampleRate) {
+        await applySampleRate(rate);
+      } else if (selectedSampleRate === 'auto') {
+        updateSpectrogramSettingsText();
+      }
     }
 
     const renderAxes = () => {
@@ -450,7 +469,8 @@
         loadingOverlay.style.display = 'none';
         freqHoverControl?.refreshHover();
         updateSpectrogramSettingsText();
-      }
+      },
+      onSampleRateDetected: autoSetSampleRate
     });
 
     initScrollSync({
@@ -494,13 +514,14 @@
     freqMinInput.max = freqMaxInput.max;
 
     const sampleRateDropdown = initDropdown('sampleRateInput', [
+      { label: 'Auto', value: 'auto' },
       { label: '96', value: 96000 },
       { label: '192', value: 192000 },
       { label: '256', value: 256000 },
       { label: '384', value: 384000 },
       { label: '500', value: 500000 },
     ], { onChange: (item) => handleSampleRate(item.value) });
-    sampleRateDropdown.select(2);
+    sampleRateDropdown.select(0);
 
     const fftSizeDropdown = initDropdown('fftSizeInput', [
       { label: '512', value: 512 },
