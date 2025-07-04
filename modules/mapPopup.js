@@ -94,13 +94,20 @@ export function initMapPopup({
         iconSize: [28, 28],
         iconAnchor: [14, 28]
       });
-      const names = group.map(g => g.file.name.replace(/\.wav$/i, '')).join('<br>');
+      const fileNames = group.map(g => g.file.name.replace(/\.wav$/i, ''));
+      const names = (fileNames.length <= 5)
+        ? fileNames.join('<br>')
+        : `${fileNames[0]}<br>│<br>${fileNames[fileNames.length - 1]}`;
       const zIndexOffset = isCurrent ? 1000 : 0;
-      const marker = L.marker([lat, lon], { icon, title: names, zIndexOffset });
+      const marker = L.marker([lat, lon], { icon, zIndexOffset });
       marker.on('click', () => {
         document.dispatchEvent(new CustomEvent('map-file-selected', { detail: { index: first.idx } }));
       });
-      marker.bindTooltip(names, { direction: 'top' });
+      marker.bindTooltip(names, {
+        direction: 'top',
+        offset: [12, -12],
+        className: 'map-tooltip'
+      });
       marker.addTo(map);
       markers.push(marker);
     });
