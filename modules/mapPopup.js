@@ -50,6 +50,7 @@ export function initMapPopup({
   let map = null;
   let markers = [];
   let polylines = [];
+  let routeBtn = null;
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
@@ -65,6 +66,7 @@ export function initMapPopup({
         link.href = '#';
         link.title = 'Route';
         link.innerHTML = '<i class="fa-solid fa-route"></i>';
+        routeBtn = link;
         L.DomEvent.on(link, 'click', L.DomEvent.stop)
           .on(link, 'click', toggleRoute);
         return container;
@@ -132,6 +134,7 @@ export function initMapPopup({
   function clearRoute() {
     polylines.forEach(l => l.remove());
     polylines = [];
+    routeBtn?.classList.remove('active');
   }
 
   function drawRoute() {
@@ -158,14 +161,14 @@ export function initMapPopup({
       if (prev) {
         const dist = map.distance([prev.lat, prev.lon], [p.lat, p.lon]);
         if (dist >= 1000) {
-          if (current.length > 1) polylines.push(L.polyline(current, { color: 'black' }).addTo(map));
+          if (current.length > 1) polylines.push(L.polyline(current, { color: 'black', weight: 2, opacity: 0.8 }).addTo(map));
           current = [];
         }
       }
       current.push([p.lat, p.lon]);
       prev = p;
     });
-    if (current.length > 1) polylines.push(L.polyline(current, { color: 'black' }).addTo(map));
+    if (current.length > 1) polylines.push(L.polyline(current, { color: 'black', weight: 2, opacity: 0.8 }).addTo(map));
   }
 
   function toggleRoute() {
@@ -173,6 +176,7 @@ export function initMapPopup({
       clearRoute();
     } else {
       drawRoute();
+      routeBtn?.classList.add('active');
     }
   }
 
