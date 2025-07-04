@@ -97,7 +97,7 @@ export function initMapPopup({
       const fileNames = group.map(g => g.file.name.replace(/\.wav$/i, ''));
       const names = (fileNames.length <= 5)
         ? fileNames.join('<br>')
-        : `${fileNames[0]}<br>│<br>${fileNames[fileNames.length - 1]}`;
+        : `${fileNames[0]}<br>⋮<br>${fileNames[fileNames.length - 1]}`;
       const zIndexOffset = isCurrent ? 1000 : 0;
       const marker = L.marker([lat, lon], { icon, zIndexOffset });
       marker.on('click', () => {
