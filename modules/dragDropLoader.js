@@ -11,8 +11,7 @@ export function initDragDropLoader({
   onPluginReplaced,
   onFileLoaded,
   onBeforeLoad,
-  onAfterLoad,
-  onSampleRateDetected
+  onAfterLoad
 }) {
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
@@ -66,15 +65,7 @@ export function initDragDropLoader({
       onPluginReplaced();
     }
 
-    const sampleRate =
-      wavesurfer?.backend?.buffer?.sampleRate ||
-      wavesurfer?.options?.sampleRate ||
-      256000;
-
-    if (typeof onSampleRateDetected === 'function') {
-      await onSampleRateDetected(sampleRate);
-    }
-
+    const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     if (spectrogramSettings) {
       spectrogramSettings.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz`;
