@@ -321,7 +321,7 @@
       freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
     });
 
-    async function applySampleRate(rate) {
+    async function applySampleRate(rate, reloadFile = true) {
       const prevRate = currentSampleRate;
       currentSampleRate = rate;
       const maxFreq = currentSampleRate / 2000;
@@ -346,9 +346,11 @@
 
       if (getWavesurfer()) {
         getWavesurfer().options.sampleRate = currentSampleRate;
-        const idx = getCurrentIndex();
-        if (idx >= 0) {
-          await fileLoaderControl.loadFileAtIndex(idx);
+        if (reloadFile) {
+          const idx = getCurrentIndex();
+          if (idx >= 0) {
+            await fileLoaderControl.loadFileAtIndex(idx);
+          }
         }
       }
       freqHoverControl?.hideHover();
@@ -377,9 +379,9 @@
       await applySampleRate(rate);
     }
 
-    async function autoSetSampleRate(rate) {
+    async function autoSetSampleRate(rate, skipReload = false) {
       if (selectedSampleRate === 'auto' && rate && rate !== currentSampleRate) {
-        await applySampleRate(rate);
+        await applySampleRate(rate, !skipReload);
       } else if (selectedSampleRate === 'auto') {
         updateSpectrogramSettingsText();
       }

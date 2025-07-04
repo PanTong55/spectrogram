@@ -31,9 +31,13 @@ export function initFileLoader({
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
     }
-    
+
     if (typeof onFileLoaded === 'function') {
       onFileLoaded(file);
+    }
+
+    if (typeof onSampleRateDetected === 'function') {
+      await onSampleRateDetected(detectedSampleRate, true);
     }
     
     if (fileNameElem) {
@@ -61,10 +65,6 @@ export function initFileLoader({
     }
 
     const sampleRate = detectedSampleRate || wavesurfer?.options?.sampleRate || 256000;
-
-    if (typeof onSampleRateDetected === 'function') {
-      await onSampleRateDetected(sampleRate);
-    }
 
     if (spectrogramSettings) {
       spectrogramSettings.textContent =
