@@ -177,7 +177,7 @@
     } from './modules/wsManager.js';
 
     import { initZoomControls } from './modules/zoomControl.js';
-    import { initFileLoader } from './modules/fileLoader.js';
+    import { initFileLoader, getWavSampleRate } from './modules/fileLoader.js';
     import { initBrightnessControl } from './modules/brightnessControl.js';
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
@@ -372,7 +372,13 @@
     async function handleSampleRate(rate) {
       selectedSampleRate = rate;
       if (rate === 'auto') {
-        updateSpectrogramSettingsText();
+        const cur = getCurrentFile();
+        if (cur) {
+          const autoRate = await getWavSampleRate(cur);
+          await autoSetSampleRate(autoRate, true);
+        } else {
+          updateSpectrogramSettingsText();
+        }
         return;
       }
       await applySampleRate(rate);
