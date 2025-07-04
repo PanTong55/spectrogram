@@ -3,6 +3,85 @@
 import WaveSurfer from './wavesurfer.esm.js';
 import Spectrogram from './spectrogram.esm.js';
 
+const SEGMENT_PX = 3000;
+
+function drawSpectrogramSegmented(data) {
+  if (isNaN(data[0][0])) data = [data];
+  this.wrapper.style.height = this.height * data.length + 'px';
+  const totalWidth = this.getWidth();
+  this.canvas.width = totalWidth;
+  this.canvas.height = this.height * data.length;
+  const ctx = this.spectrCc;
+  const chHeight = this.height;
+  const nyquist = this.buffer.sampleRate / 2;
+  const fmin = this.frequencyMin;
+  const fmax = this.frequencyMax;
+  if (!ctx) return;
+  if (fmax > nyquist) {
+    const col = this.colorMap[this.colorMap.length - 1];
+    ctx.fillStyle = `rgba(${col[0]}, ${col[1]}, ${col[2]}, ${col[3]})`;
+    ctx.fillRect(0, 0, totalWidth, chHeight * data.length);
+  }
+
+  const done = new Array(data.length).fill(false);
+
+  const drawChunk = (channel, start) => {
+    const resampled = this._resampled[channel] || this.resample(data[channel]);
+    this._resampled[channel] = resampled;
+    const sliceHeight = resampled[0].length;
+    const end = Math.min(start + SEGMENT_PX, resampled.length);
+    const segWidth = end - start;
+    const image = new ImageData(segWidth, sliceHeight);
+
+    for (let x = start; x < end; x++) {
+      for (let y = 0; y < resampled[x].length; y++) {
+        const col = this.colorMap[resampled[x][y]];
+        const idx = 4 * ((sliceHeight - y - 1) * segWidth + (x - start));
+        image.data[idx] = 255 * col[0];
+        image.data[idx + 1] = 255 * col[1];
+        image.data[idx + 2] = 255 * col[2];
+        image.data[idx + 3] = 255 * col[3];
+      }
+    }
+
+    const u = this.hzToScale(fmin) / this.hzToScale(nyquist);
+    const f = this.hzToScale(fmax) / this.hzToScale(nyquist);
+    const p = Math.min(1, f);
+
+    createImageBitmap(image, 0, Math.round(sliceHeight * (1 - p)), segWidth,
+      Math.round(sliceHeight * (p - u))).then(bitmap => {
+      ctx.drawImage(bitmap, start, chHeight * (channel + 1 - p / f), segWidth,
+        chHeight * p / f);
+      if (end < resampled.length) {
+        requestAnimationFrame(() => drawChunk(channel, end));
+      } else {
+        done[channel] = true;
+        if (done.every(Boolean)) {
+          if (this.options.labels) {
+            this.loadLabels(
+              this.options.labelsBackground,
+              '12px',
+              '12px',
+              '',
+              this.options.labelsColor,
+              this.options.labelsHzColor || this.options.labelsColor,
+              'center',
+              '#specLabels',
+              data.length,
+            );
+          }
+          this.emit('ready');
+        }
+      }
+    });
+  };
+
+  this._resampled = [];
+  for (let c = 0; c < data.length; c++) {
+    drawChunk(c, 0);
+  }
+}
+
 let ws = null;
 let plugin = null;
 let currentColorMap = null;
@@ -48,7 +127,16 @@ export function createSpectrogramPlugin({
     baseOptions.noverlap = noverlap;
   }
 
-  return Spectrogram.create(baseOptions);
+  const inst = Spectrogram.create(baseOptions);
+  const originalDraw = inst.drawSpectrogram;
+  inst.drawSpectrogram = function(data) {
+    if (this.getWidth() > SEGMENT_PX) {
+      drawSpectrogramSegmented.call(this, data);
+    } else {
+      originalDraw.call(this, data);
+    }
+  };
+  return inst;
 }
 
 export function replacePlugin(
