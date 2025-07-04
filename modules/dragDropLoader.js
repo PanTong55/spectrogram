@@ -1,7 +1,6 @@
 // modules/dragDropLoader.js
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
-import { getWavSampleRate } from "./wavReader.js";
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
 
 export function initDragDropLoader({
@@ -12,8 +11,7 @@ export function initDragDropLoader({
   onPluginReplaced,
   onFileLoaded,
   onBeforeLoad,
-  onAfterLoad,
-  onSampleRateDetected
+  onAfterLoad
 }) {
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
@@ -35,7 +33,6 @@ export function initDragDropLoader({
   async function loadFile(file) {
     if (!file) return;
 
-    const detectedSampleRate = await getWavSampleRate(file);
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
     }    
@@ -68,12 +65,7 @@ export function initDragDropLoader({
       onPluginReplaced();
     }
 
-      const sampleRate = detectedSampleRate || wavesurfer?.options?.sampleRate || 256000;
-
-    if (typeof onSampleRateDetected === 'function') {
-      await onSampleRateDetected(sampleRate);
-    }
-
+    const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     if (spectrogramSettings) {
       spectrogramSettings.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz`;
