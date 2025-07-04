@@ -719,7 +719,11 @@
     });
 
     document.addEventListener('file-loaded', () => {
-      if (!zoomControl.isExpandMode() && zoomControl.getZoomLevel() > 1000) {
+      duration = getWavesurfer().getDuration();
+      if (duration > 8) {
+        // force minimum zoom level for long recordings
+        zoomControl.setZoomLevel(0);
+      } else if (!zoomControl.isExpandMode() && zoomControl.getZoomLevel() > 1000) {
         zoomControl.setZoomLevel(1000);
       }
     });
