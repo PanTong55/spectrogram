@@ -13,6 +13,14 @@ export function initMapPopup({
   if (!btn || !popup || !mapDiv) return;
   mapDiv.style.cursor = 'grab';
 
+  const edgeThreshold = 5;
+  let popupWidth = parseInt(localStorage.getItem('mapPopupWidth'), 10);
+  let popupHeight = parseInt(localStorage.getItem('mapPopupHeight'), 10);
+  if (isNaN(popupWidth) || popupWidth <= 0) popupWidth = 500;
+  if (isNaN(popupHeight) || popupHeight <= 0) popupHeight = 500;
+  popup.style.width = `${popupWidth}px`;
+  popup.style.height = `${popupHeight}px`;
+
   let map = null;
   let marker = null;
 
@@ -47,6 +55,8 @@ export function initMapPopup({
     } else {
       popup.style.display = 'block';
       document.body.classList.add('map-open');
+      popup.style.width = `${popupWidth}px`;
+      popup.style.height = `${popupHeight}px`;
       if (map) {
         map.invalidateSize();
       }
@@ -57,6 +67,17 @@ export function initMapPopup({
   let dragging = false;
   let offsetX = 0;
   let offsetY = 0;
+  let resizing = false;
+  let resizeLeft = false;
+  let resizeRight = false;
+  let resizeTop = false;
+  let resizeBottom = false;
+  let startX = 0;
+  let startY = 0;
+  let startWidth = 0;
+  let startHeight = 0;
+  let startLeft = 0;
+  let startTop = 0;
 
   if (dragBar) {
     dragBar.addEventListener('mousedown', (e) => {
@@ -69,16 +90,96 @@ export function initMapPopup({
     });
   }
 
+  popup.addEventListener('mousemove', (e) => {
+    if (dragging || resizing) return;
+    const rect = popup.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const onLeft = x < edgeThreshold;
+    const onRight = x > rect.width - edgeThreshold;
+    const onTop = y < edgeThreshold;
+    const onBottom = y > rect.height - edgeThreshold;
+    let cursor = 'default';
+    if ((onLeft && onTop) || (onRight && onBottom)) {
+      cursor = 'nwse-resize';
+    } else if ((onRight && onTop) || (onLeft && onBottom)) {
+      cursor = 'nesw-resize';
+    } else if (onLeft || onRight) {
+      cursor = 'ew-resize';
+    } else if (onTop || onBottom) {
+      cursor = 'ns-resize';
+    }
+    popup.style.cursor = cursor;
+  });
+
+  popup.addEventListener('mousedown', (e) => {
+    if (e.target === dragBar || dragBar.contains(e.target)) return;
+    const rect = popup.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const onLeft = x < edgeThreshold;
+    const onRight = x > rect.width - edgeThreshold;
+    const onTop = y < edgeThreshold;
+    const onBottom = y > rect.height - edgeThreshold;
+    if (onLeft || onRight || onTop || onBottom) {
+      resizing = true;
+      resizeLeft = onLeft;
+      resizeRight = onRight;
+      resizeTop = onTop;
+      resizeBottom = onBottom;
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = popup.offsetWidth;
+      startHeight = popup.offsetHeight;
+      startLeft = popup.offsetLeft;
+      startTop = popup.offsetTop;
+      map?.dragging.disable();
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
   window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    popup.style.left = `${e.clientX - offsetX}px`;
-    popup.style.top = `${e.clientY - offsetY}px`;
+    if (dragging) {
+      popup.style.left = `${e.clientX - offsetX}px`;
+      popup.style.top = `${e.clientY - offsetY}px`;
+      return;
+    }
+    if (resizing) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (resizeRight) {
+        popupWidth = Math.max(200, startWidth + dx);
+        popup.style.width = `${popupWidth}px`;
+      }
+      if (resizeBottom) {
+        popupHeight = Math.max(200, startHeight + dy);
+        popup.style.height = `${popupHeight}px`;
+      }
+      if (resizeLeft) {
+        popupWidth = Math.max(200, startWidth - dx);
+        popup.style.width = `${popupWidth}px`;
+        popup.style.left = `${startLeft + dx}px`;
+      }
+      if (resizeTop) {
+        popupHeight = Math.max(200, startHeight - dy);
+        popup.style.height = `${popupHeight}px`;
+        popup.style.top = `${startTop + dy}px`;
+      }
+    }
   });
 
   window.addEventListener('mouseup', () => {
     if (dragging) {
       dragging = false;
       map?.dragging.enable();
+    }
+    if (resizing) {
+      resizing = false;
+      map?.dragging.enable();
+      localStorage.setItem('mapPopupWidth', popupWidth);
+      localStorage.setItem('mapPopupHeight', popupHeight);
+      map?.invalidateSize();
     }
   });
 
