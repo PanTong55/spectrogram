@@ -105,7 +105,7 @@ export function initMapPopup({
       });
       marker.bindTooltip(names, {
         direction: 'top',
-        offset: [0, -32],
+        offset: [-3, -32],
         className: 'map-tooltip'
       });
       marker.addTo(map);
