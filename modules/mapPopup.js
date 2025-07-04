@@ -72,8 +72,8 @@ export function initMapPopup({
       const icon = L.divIcon({
         html: '<i class="fa-solid fa-location-dot"></i>',
         className: cls,
-        iconSize: [24, 24],
-        iconAnchor: [12, 24]
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
       });
       const name = file.name.replace(/\.wav$/i, '');
       const zIndexOffset = idx === curIdx ? 1000 : 0;
