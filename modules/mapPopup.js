@@ -301,7 +301,10 @@ export function initMapPopup({
 
   function updateMap() {
     const idx = getCurrentIndex();
-    if (idx < 0) return;
+    if (idx < 0) {
+      refreshMarkers();
+      return;
+    }
     const meta = getFileMetadata(idx);
     const lat = parseFloat(meta.latitude);
     const lon = parseFloat(meta.longitude);
@@ -473,4 +476,5 @@ export function initMapPopup({
     closeBtn.addEventListener('click', togglePopup);
   }
   document.addEventListener('file-loaded', updateMap);
+  document.addEventListener('file-list-cleared', () => refreshMarkers());
 }

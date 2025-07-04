@@ -669,6 +669,7 @@
       zoomControlsElem.style.display = 'none';
       guanoOutput.textContent = '(no file selected)';
       tagControl.updateTagButtonStates();
+      document.dispatchEvent(new Event('file-list-cleared'));
     });
 
     const clearTrashBtn = document.getElementById('clearTrashBtn');
