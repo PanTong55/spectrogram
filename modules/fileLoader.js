@@ -1,7 +1,6 @@
 // modules/fileLoader.js
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
-import { getWavSampleRate } from "./wavReader.js";
 import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
 
 let lastObjectUrl = null;
@@ -14,8 +13,7 @@ export function initFileLoader({
   onPluginReplaced,
   onFileLoaded,
   onBeforeLoad,
-  onAfterLoad,
-  onSampleRateDetected
+  onAfterLoad
 }) {
   const fileInput = document.getElementById(fileInputId);
   const prevBtn = document.getElementById('prevBtn');
@@ -26,7 +24,6 @@ export function initFileLoader({
 
   async function loadFile(file) {
     if (!file) return;
-    const detectedSampleRate = await getWavSampleRate(file);
 
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
@@ -60,12 +57,7 @@ export function initFileLoader({
       onPluginReplaced();
     }
 
-    const sampleRate = detectedSampleRate || wavesurfer?.options?.sampleRate || 256000;
-
-    if (typeof onSampleRateDetected === 'function') {
-      await onSampleRateDetected(sampleRate);
-    }
-
+    const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     if (spectrogramSettings) {
       spectrogramSettings.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz`;
