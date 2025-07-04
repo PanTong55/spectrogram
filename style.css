@@ -812,22 +812,16 @@ input.tag-button.editing {
   color: #c00;
 }
 
-.map-marker {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  background: currentColor;
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-  transform-origin: bottom center;
-}
-
 .map-marker-other {
   opacity: 0.5;
+  transform: scale(0.5);
   color: #ffd700;
+  transform-origin: bottom center;
 }
 
 .map-marker-current {
   opacity: 1;
+  transform: scale(1);
   color: #fa6e02;
+  transform-origin: bottom center;
 }
