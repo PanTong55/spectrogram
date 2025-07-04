@@ -63,24 +63,44 @@ export function initMapPopup({
     markers = [];
     const list = getFileList();
     const curIdx = getCurrentIndex();
+
+    const groups = {};
     list.forEach((file, idx) => {
       const meta = getFileMetadata(idx);
       const lat = parseFloat(meta.latitude);
       const lon = parseFloat(meta.longitude);
       if (isNaN(lat) || isNaN(lon)) return;
-      const cls = idx === curIdx ? 'map-marker-current' : 'map-marker-other';
+      const key = `${lat.toFixed(6)},${lon.toFixed(6)}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push({ file, idx, meta, lat, lon });
+    });
+
+    function getTimestamp(meta) {
+      if (!meta) return '';
+      const d = (meta.date || '').replace(/\D/g, '');
+      const t = meta.time || '';
+      return `${d}${t}`;
+    }
+
+    Object.values(groups).forEach(group => {
+      group.sort((a, b) => getTimestamp(a.meta).localeCompare(getTimestamp(b.meta)));
+      const first = group[0];
+      const { lat, lon } = first;
+      const isCurrent = group.some(g => g.idx === curIdx);
+      const cls = isCurrent ? 'map-marker-current' : 'map-marker-other';
       const icon = L.divIcon({
         html: '<i class="fa-solid fa-location-dot"></i>',
         className: cls,
         iconSize: [28, 28],
         iconAnchor: [14, 28]
       });
-      const name = file.name.replace(/\.wav$/i, '');
-      const zIndexOffset = idx === curIdx ? 1000 : 0;
-      const marker = L.marker([lat, lon], { icon, title: name, zIndexOffset });
+      const names = group.map(g => g.file.name.replace(/\.wav$/i, '')).join('<br>');
+      const zIndexOffset = isCurrent ? 1000 : 0;
+      const marker = L.marker([lat, lon], { icon, title: names, zIndexOffset });
       marker.on('click', () => {
-        document.dispatchEvent(new CustomEvent('map-file-selected', { detail: { index: idx } }));
+        document.dispatchEvent(new CustomEvent('map-file-selected', { detail: { index: first.idx } }));
       });
+      marker.bindTooltip(names, { direction: 'top' });
       marker.addTo(map);
       markers.push(marker);
     });
