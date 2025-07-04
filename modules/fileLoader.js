@@ -13,8 +13,7 @@ export function initFileLoader({
   onPluginReplaced,
   onFileLoaded,
   onBeforeLoad,
-  onAfterLoad,
-  onSampleRateDetected
+  onAfterLoad
 }) {
   const fileInput = document.getElementById(fileInputId);
   const prevBtn = document.getElementById('prevBtn');
@@ -58,15 +57,7 @@ export function initFileLoader({
       onPluginReplaced();
     }
 
-    const sampleRate =
-      wavesurfer?.backend?.buffer?.sampleRate ||
-      wavesurfer?.options?.sampleRate ||
-      256000;
-
-    if (typeof onSampleRateDetected === 'function') {
-      await onSampleRateDetected(sampleRate);
-    }
-
+    const sampleRate = wavesurfer?.options?.sampleRate || 256000;
     if (spectrogramSettings) {
       spectrogramSettings.textContent =
         `Sampling rate: ${sampleRate / 1000}kHz`;
