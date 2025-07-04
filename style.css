@@ -815,7 +815,8 @@ input.tag-button.editing {
 .map-marker-other i{
   font-size: 28px;
   line-height: 28px;
-  color: rgba(255, 215, 0, 0.5);
+  color: #ffd700;
+  opacity: 0.5;
   transform: scale(0.75);
   transform-origin: bottom center;
   pointer-events: none;
