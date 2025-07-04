@@ -62,9 +62,53 @@ export function initMapPopup({
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+
+    const osmAttr = { attribution: '&copy; OpenStreetMap contributors' };
+    const esriAttr = { attribution: '&copy; Esri' };
+    const cartoAttr = { attribution: '&copy; CARTO' };
+    const googleAttr = { attribution: '&copy; Google' };
+    const imageryAttr = { attribution: '&copy; HKSAR Government' };
+    const landsdAttr = { attribution: '&copy; HKSAR Government' };
+
+    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', osmAttr).addTo(map);
+    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', esriAttr);
+    const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', cartoAttr);
+    const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', cartoAttr);
+    const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', googleAttr);
+    const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', googleAttr);
+    const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', googleAttr);
+
+    const hkImageryLayer = L.tileLayer(
+      'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/imagery/wgs84/{z}/{x}/{y}.png',
+      { ...imageryAttr, minZoom: 0, maxZoom: 19 }
+    );
+
+    const hkVectorBase = L.tileLayer(
+      'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/wgs84/{z}/{x}/{y}.png',
+      { ...landsdAttr, maxZoom: 20, minZoom: 10 }
+    );
+
+    const hkVectorLabel = L.tileLayer(
+      'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/tc/wgs84/{z}/{x}/{y}.png',
+      { attribution: false, maxZoom: 20, minZoom: 0 }
+    );
+
+    const hkVectorGroup = L.layerGroup([hkVectorBase, hkVectorLabel]);
+    const hkImageryGroup = L.layerGroup([hkImageryLayer, hkVectorLabel]);
+
+    const baseLayers = {
+      'OpenStreetMap': streets,
+      'Esri Satellite': esriSatellite,
+      'Carto Light': cartoLight,
+      'Carto Dark': cartoDark,
+      'Google Streets': googleStreets,
+      'Google Satellite': googleSatellite,
+      'Google Hybrid': googleHybrid,
+      'HK Vector': hkVectorGroup,
+      'HK Imagery': hkImageryGroup,
+    };
+
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
     const RouteControl = L.Control.extend({
       options: { position: 'topleft' },
