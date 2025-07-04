@@ -717,6 +717,12 @@
         fileLoaderControl.loadFileAtIndex(idx);
       }
     });
+
+    document.addEventListener('file-loaded', () => {
+      if (!zoomControl.isExpandMode() && zoomControl.getZoomLevel() > 1000) {
+        zoomControl.setZoomLevel(1000);
+      }
+    });
   </script>
 </body>
 </html>
