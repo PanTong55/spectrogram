@@ -72,6 +72,12 @@ export function initMapPopup({
   let resizeRight = false;
   let resizeTop = false;
   let resizeBottom = false;
+  let startX = 0;
+  let startY = 0;
+  let startWidth = 0;
+  let startHeight = 0;
+  let startLeft = 0;
+  let startTop = 0;
 
   if (dragBar) {
     dragBar.addEventListener('mousedown', (e) => {
@@ -121,6 +127,12 @@ export function initMapPopup({
       resizeRight = onRight;
       resizeTop = onTop;
       resizeBottom = onBottom;
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = popup.offsetWidth;
+      startHeight = popup.offsetHeight;
+      startLeft = popup.offsetLeft;
+      startTop = popup.offsetTop;
       map?.dragging.disable();
       e.preventDefault();
       e.stopPropagation();
@@ -134,26 +146,25 @@ export function initMapPopup({
       return;
     }
     if (resizing) {
-      const rect = popup.getBoundingClientRect();
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
       if (resizeRight) {
-        popupWidth = Math.max(200, e.clientX - rect.left);
+        popupWidth = Math.max(200, startWidth + dx);
         popup.style.width = `${popupWidth}px`;
       }
       if (resizeBottom) {
-        popupHeight = Math.max(200, e.clientY - rect.top);
+        popupHeight = Math.max(200, startHeight + dy);
         popup.style.height = `${popupHeight}px`;
       }
       if (resizeLeft) {
-        const newLeft = e.clientX;
-        popupWidth = Math.max(200, rect.right - newLeft);
+        popupWidth = Math.max(200, startWidth - dx);
         popup.style.width = `${popupWidth}px`;
-        popup.style.left = `${newLeft}px`;
+        popup.style.left = `${startLeft + dx}px`;
       }
       if (resizeTop) {
-        const newTop = e.clientY;
-        popupHeight = Math.max(200, rect.bottom - newTop);
+        popupHeight = Math.max(200, startHeight - dy);
         popup.style.height = `${popupHeight}px`;
-        popup.style.top = `${newTop}px`;
+        popup.style.top = `${startTop + dy}px`;
       }
     }
   });
