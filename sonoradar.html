@@ -328,10 +328,9 @@
       freqMaxInput.max = maxFreq;
       freqMinInput.max = maxFreq;
 
-      const shouldAdjustRange =
-        selectedSampleRate !== 'auto' || rate < prevRate;
+      const isManual = selectedSampleRate !== 'auto';
 
-      if (shouldAdjustRange) {
+      if (isManual && rate < prevRate) {
         freqMaxInput.value = maxFreq;
       } else if (parseFloat(freqMaxInput.value) > maxFreq) {
         freqMaxInput.value = maxFreq;
