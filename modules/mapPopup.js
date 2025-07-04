@@ -71,7 +71,8 @@ export function initMapPopup({
       const cls = idx === curIdx ? 'map-marker-current' : 'map-marker-other';
       const icon = new L.Icon.Default({ className: cls });
       const name = file.name.replace(/\.wav$/i, '');
-      const marker = L.marker([lat, lon], { icon, title: name });
+      const zIndexOffset = idx === curIdx ? 1000 : 0;
+      const marker = L.marker([lat, lon], { icon, title: name, zIndexOffset });
       marker.on('click', () => {
         document.dispatchEvent(new CustomEvent('map-file-selected', { detail: { index: idx } }));
       });
