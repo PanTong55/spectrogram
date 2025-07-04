@@ -375,7 +375,7 @@
         const cur = getCurrentFile();
         if (cur) {
           const autoRate = await getWavSampleRate(cur);
-          await autoSetSampleRate(autoRate, true);
+          await autoSetSampleRate(autoRate);
         } else {
           updateSpectrogramSettingsText();
         }
