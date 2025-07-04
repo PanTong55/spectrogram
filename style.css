@@ -860,6 +860,5 @@ input.tag-button.editing {
 }
 
 .leaflet-route-control a.active {
-  background-color: #007bff;
-  color: white;
+  background-color: #e6e6e6;
 }
