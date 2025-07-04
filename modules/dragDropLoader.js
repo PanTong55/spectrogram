@@ -1,7 +1,7 @@
 // modules/dragDropLoader.js
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
-import { getWavSampleRate } from "./wavReader.js";
+import { getWavSampleRate } from './fileLoader.js';
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
 
 export function initDragDropLoader({
