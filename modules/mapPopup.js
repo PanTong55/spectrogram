@@ -49,12 +49,28 @@ export function initMapPopup({
 
   let map = null;
   let markers = [];
+  let polylines = [];
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    const RouteControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-route-control');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Route';
+        link.innerHTML = '<i class="fa-solid fa-route"></i>';
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'click', toggleRoute);
+        return container;
+      }
+    });
+    map.addControl(new RouteControl());
   }
 
   function refreshMarkers() {
@@ -113,6 +129,53 @@ export function initMapPopup({
     });
   }
 
+  function clearRoute() {
+    polylines.forEach(l => l.remove());
+    polylines = [];
+  }
+
+  function drawRoute() {
+    if (!map) return;
+    clearRoute();
+    const list = getFileList();
+    const points = [];
+    list.forEach((_f, idx) => {
+      const meta = getFileMetadata(idx);
+      const lat = parseFloat(meta.latitude);
+      const lon = parseFloat(meta.longitude);
+      const d = (meta.date || '').replace(/\D/g, '');
+      const t = meta.time || '';
+      const ts = `${d}${t}`;
+      if (!isNaN(lat) && !isNaN(lon) && ts) {
+        points.push({ lat, lon, ts });
+      }
+    });
+    points.sort((a, b) => a.ts.localeCompare(b.ts));
+
+    let current = [];
+    let prev = null;
+    points.forEach(p => {
+      if (prev) {
+        const dist = map.distance([prev.lat, prev.lon], [p.lat, p.lon]);
+        if (dist >= 1000) {
+          if (current.length > 1) polylines.push(L.polyline(current, { color: 'black' }).addTo(map));
+          current = [];
+        }
+      }
+      current.push([p.lat, p.lon]);
+      prev = p;
+    });
+    if (current.length > 1) polylines.push(L.polyline(current, { color: 'black' }).addTo(map));
+  }
+
+  function toggleRoute() {
+    if (polylines.length > 0) {
+      clearRoute();
+    } else {
+      drawRoute();
+    }
+  }
+
   function updateMap() {
     const idx = getCurrentIndex();
     if (idx < 0) return;
@@ -133,6 +196,7 @@ export function initMapPopup({
     if (popup.style.display === 'block') {
       popup.style.display = 'none';
       document.body.classList.remove('map-open');
+      clearRoute();
     } else {
       popup.style.display = 'block';
       document.body.classList.add('map-open');
