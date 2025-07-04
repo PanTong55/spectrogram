@@ -851,7 +851,9 @@ input.tag-button.editing {
 }
 
 /* Route button style */
-.leaflet-route-control a {
+.leaflet-route-control a,
+.leaflet-import-kml-control a,
+.leaflet-clear-kml-control a {
   width: 26px;
   height: 26px;
   line-height: 26px;

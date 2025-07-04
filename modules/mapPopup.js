@@ -51,6 +51,14 @@ export function initMapPopup({
   let markers = [];
   let polylines = [];
   let routeBtn = null;
+  let kmlPolylines = [];
+  let importBtn = null;
+  let clearKmlBtn = null;
+  const kmlInput = document.createElement('input');
+  kmlInput.type = 'file';
+  kmlInput.accept = '.kml';
+  kmlInput.style.display = 'none';
+  popup.appendChild(kmlInput);
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
@@ -73,6 +81,38 @@ export function initMapPopup({
       }
     });
     map.addControl(new RouteControl());
+
+    const ImportControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-import-kml-control');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Import KML';
+        link.innerHTML = '<i class="fa-solid fa-file-import"></i>';
+        importBtn = link;
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'click', () => { kmlInput.value = ''; kmlInput.click(); });
+        return container;
+      }
+    });
+    map.addControl(new ImportControl());
+
+    const ClearKmlControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-clear-kml-control');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Clear KML';
+        link.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        clearKmlBtn = link;
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'click', clearKmlRoute);
+        return container;
+      }
+    });
+    map.addControl(new ClearKmlControl());
   }
 
   function refreshMarkers() {
@@ -136,6 +176,41 @@ export function initMapPopup({
     polylines = [];
     routeBtn?.classList.remove('active');
   }
+
+  function clearKmlRoute() {
+    kmlPolylines.forEach(l => l.remove());
+    kmlPolylines = [];
+  }
+
+  function parseKml(text) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'text/xml');
+    const lines = [];
+    const lineStrings = doc.getElementsByTagName('LineString');
+    for (let i = 0; i < lineStrings.length; i++) {
+      const coordsEl = lineStrings[i].getElementsByTagName('coordinates')[0];
+      if (!coordsEl) continue;
+      const coordsText = coordsEl.textContent.trim();
+      const coords = coordsText.split(/\s+/).map(pair => {
+        const [lon, lat] = pair.split(',').map(Number);
+        return (!isNaN(lat) && !isNaN(lon)) ? [lat, lon] : null;
+      }).filter(Boolean);
+      if (coords.length > 1) lines.push(coords);
+    }
+    return lines;
+  }
+
+  kmlInput.addEventListener('change', async () => {
+    const file = kmlInput.files[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = parseKml(text);
+    clearKmlRoute();
+    lines.forEach(coords => {
+      const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
+      kmlPolylines.push(line);
+    });
+  });
 
   function drawRoute() {
     if (!map) return;
@@ -201,6 +276,7 @@ export function initMapPopup({
       popup.style.display = 'none';
       document.body.classList.remove('map-open');
       clearRoute();
+      clearKmlRoute();
     } else {
       popup.style.display = 'block';
       document.body.classList.add('map-open');
