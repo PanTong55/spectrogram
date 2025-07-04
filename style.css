@@ -812,25 +812,24 @@ input.tag-button.editing {
   color: #c00;
 }
 
-.map-marker-other {
+.map-marker-other i{
+  font-size: 24px;
+  line-height: 24px;
+  color: #ffd700;
   opacity: 0.5;
   transform: scale(0.5);
-  color: #ffd700;
   transform-origin: bottom center;
+  pointer-events: none;
   mix-blend-mode: lighten;
 }
 
-.map-marker-current {
-  opacity: 1;
-  transform: scale(1);
-  color: #ffd700;
-  transform-origin: bottom center;
-  z-index: 1000;
-}
-
-.map-marker-other i,
-.map-marker-current i {
+.map-marker-current i{
   font-size: 24px;
   line-height: 24px;
+  color: #fa6e02;
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: bottom center;
   pointer-events: none;
+  z-index: 1000;
 }
