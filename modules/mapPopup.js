@@ -60,6 +60,7 @@ export function initMapPopup({
   let drawControlVisible = false;
   const coordScaleWrapper = mapDiv.querySelector('.coord-scale-wrapper');
   const coordDisplay = mapDiv.querySelector('#coord-display');
+  const noCoordMsg = mapDiv.querySelector('#no-coord-message');
   let scaleControl = null;
   const kmlInput = document.createElement('input');
   kmlInput.type = 'file';
@@ -83,6 +84,14 @@ export function initMapPopup({
       mapDropOverlay.style.pointerEvents = 'none';
     }
     map?.dragging.enable();
+  }
+
+  function showNoCoordMessage() {
+    if (noCoordMsg) noCoordMsg.style.display = 'flex';
+  }
+
+  function hideNoCoordMessage() {
+    if (noCoordMsg) noCoordMsg.style.display = 'none';
   }
 
   mapDiv.addEventListener('dragenter', (e) => {
@@ -451,12 +460,18 @@ export function initMapPopup({
     if (idx < 0) {
       refreshMarkers();
       showDeviceLocation();
+      hideNoCoordMessage();
       return;
     }
     const meta = getFileMetadata(idx);
     const lat = parseFloat(meta.latitude);
     const lon = parseFloat(meta.longitude);
-    if (isNaN(lat) || isNaN(lon)) return;
+    if (isNaN(lat) || isNaN(lon)) {
+      refreshMarkers();
+      showNoCoordMessage();
+      return;
+    }
+    hideNoCoordMessage();
 
     if (!map) {
       createMap(lat, lon);
