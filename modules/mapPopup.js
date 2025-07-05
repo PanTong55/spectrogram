@@ -54,6 +54,10 @@ export function initMapPopup({
   let kmlPolylines = [];
   let importBtn = null;
   let clearKmlBtn = null;
+  let drawBtn = null;
+  let drawControl = null;
+  let drawnItems = null;
+  let drawControlVisible = false;
   const kmlInput = document.createElement('input');
   kmlInput.type = 'file';
   kmlInput.accept = '.kml';
@@ -168,6 +172,15 @@ export function initMapPopup({
 
     L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
+    drawnItems = new L.FeatureGroup().addTo(map);
+    drawControl = new L.Control.Draw({
+      position: 'topleft',
+      edit: { featureGroup: drawnItems }
+    });
+    map.on(L.Draw.Event.CREATED, (e) => {
+      drawnItems.addLayer(e.layer);
+    });
+
     const RouteControl = L.Control.extend({
       options: { position: 'topleft' },
       onAdd() {
@@ -215,6 +228,22 @@ export function initMapPopup({
       }
     });
     map.addControl(new ClearKmlControl());
+
+    const DrawToggleControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-draw-toggle-control');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Draw';
+        link.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
+        drawBtn = link;
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'click', toggleDrawControl);
+        return container;
+      }
+    });
+    map.addControl(new DrawToggleControl());
   }
 
   function refreshMarkers() {
@@ -359,6 +388,19 @@ export function initMapPopup({
     } else {
       drawRoute();
       routeBtn?.classList.add('active');
+    }
+  }
+
+  function toggleDrawControl() {
+    if (!drawControl) return;
+    if (drawControlVisible) {
+      map.removeControl(drawControl);
+      drawBtn?.classList.remove('active');
+      drawControlVisible = false;
+    } else {
+      drawControl.addTo(map);
+      drawBtn?.classList.add('active');
+      drawControlVisible = true;
     }
   }
 
