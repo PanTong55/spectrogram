@@ -299,10 +299,32 @@ export function initMapPopup({
     }
   }
 
+  function showDeviceLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const icon = L.divIcon({
+        html: '<i class="fa-solid fa-location-crosshairs"></i>',
+        className: 'map-marker-device',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28]
+      });
+      if (!map) {
+        createMap(lat, lon);
+      } else {
+        map.setView([lat, lon]);
+      }
+      const marker = L.marker([lat, lon], { icon, zIndexOffset: 1001 });
+      marker.addTo(map);
+      markers.push(marker);
+    });
+  }
+
   function updateMap() {
     const idx = getCurrentIndex();
     if (idx < 0) {
       refreshMarkers();
+      showDeviceLocation();
       return;
     }
     const meta = getFileMetadata(idx);
