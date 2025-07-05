@@ -107,10 +107,15 @@ export function initMapPopup({
     const text = await file.text();
     const lines = parseKml(text);
     clearKmlRoute();
+    const allCoords = [];
     lines.forEach(coords => {
       const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
       kmlPolylines.push(line);
+      allCoords.push(...coords);
     });
+    if (allCoords.length > 0) {
+      map.fitBounds(allCoords);
+    }
   });
 
   function createMap(lat, lon) {
@@ -303,10 +308,15 @@ export function initMapPopup({
     const text = await file.text();
     const lines = parseKml(text);
     clearKmlRoute();
+    const allCoords = [];
     lines.forEach(coords => {
       const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
       kmlPolylines.push(line);
+      allCoords.push(...coords);
     });
+    if (allCoords.length > 0) {
+      map.fitBounds(allCoords);
+    }
   });
 
   function drawRoute() {
