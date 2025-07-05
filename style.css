@@ -882,7 +882,6 @@ input.tag-button.editing {
   height: 26px;
   line-height: 26px;
   text-align: center;
-  font-size: 16px;
 }
 
 .leaflet-route-control a.active {
@@ -900,4 +899,11 @@ input.tag-button.editing {
 .leaflet-clear-kml-control a i,
 .leaflet-draw-toggle-control a i {
   color: #363636;
+}
+
+.leaflet-div-icon {
+    height: 10px !important;
+    width: 10px !important;
+    border-radius: 5px !important;
+    margin: -5px !important;
 }
