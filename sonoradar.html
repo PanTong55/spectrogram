@@ -162,7 +162,15 @@
     <div class="popup-drag-bar">
       <button class="popup-close-btn" title="Close">&times;</button>
     </div>
-    <div id="map" style="width:100%;height:calc(100% - 31px);border-radius: 0px 0px 8px 8px;"></div>
+    <div id="map" style="width:100%;height:calc(100% - 31px);border-radius: 0px 0px 8px 8px; position: relative;">
+      <div id="map-drop-overlay">
+        <div style="position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px; border: 5px dashed rgba(150, 150, 150, 0.8); border-radius: 10px;"></div>
+        <div style="text-align: center; font-family: 'Noto Sans HK', sans-serif; font-size: 24px; color: #333;">
+          <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
+          <div>Drop KML file here</div>
+        </div>
+      </div>
+    </div>
   </div>
   </div>
   <script type="module">
