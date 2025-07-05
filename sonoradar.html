@@ -304,6 +304,9 @@
         const blob = await resp.blob();
         const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
         setFileList([demoFile], -1);
+        toggleFileIcon(0, 'trash');
+        toggleFileIcon(0, 'star');
+        toggleFileIcon(0, 'question');
         sidebarControl.refresh(demoFile.name);
       } catch (err) {
         console.error('Failed to preload demo file', err);
