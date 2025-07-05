@@ -773,7 +773,6 @@
       const currentFile = getCurrentFile();
       duration = getWavesurfer().getDuration();
       if (duration > 8) {
-        // force minimum zoom level for long recordings
         zoomControl.setZoomLevel(0);
       } else if (currentFile && currentFile.name !== lastLoadedFileName &&
                  !zoomControl.isExpandMode() && zoomControl.getZoomLevel() > 1000) {
