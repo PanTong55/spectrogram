@@ -17,7 +17,24 @@ export function initTrashProgram({ buttonId = 'trashProgramBtn' } = {}) {
     lines.push('@echo off');
     lines.push('setlocal EnableDelayedExpansion');
     lines.push(`set COUNT=${names.length}`);
-    lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; $res=[Microsoft.VisualBasic.Interaction]::MsgBox((\\"This will delete !COUNT! wav file(s).\\"),\\"OkCancel,Exclamation\\",\\"Confirm Delete\\"); if ($res -ne \\"Ok\\") { exit 0 }"');
+
+    // 🔍 Check if the first file exists
+    lines.push(`if not exist "${names[0]}" (`);
+    lines.push('  powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.Interaction]::MsgBox((\\"Cannot find the target .wav files.`nPlease place this batch file in the folder containing the .wav files and try again.\\"),\\"OKOnly,Critical\\",\\"File Not Found\\")"');
+    lines.push('  exit /b');
+    lines.push(')');
+
+    // 📋 List all filenames
+    lines.push('echo Listing !COUNT! .wav file(s) to be deleted:');
+    names.forEach(name => {
+      lines.push(`echo ${name}`);
+    });
+    lines.push('echo.');
+
+    // 🪟 Confirmation dialog
+    lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; $res=[Microsoft.VisualBasic.Interaction]::MsgBox((\\"This will delete !COUNT! wav file(s). Continue?\\"),\\"OkCancel,Exclamation\\",\\"Confirm Delete\\"); if ($res -ne \\"Ok\\") { exit 0 }"');
+
+    // 🗑️ Deletion loop
     lines.push('set DELETED=0');
     lines.push('for %%F in (');
     names.forEach(name => {
@@ -29,9 +46,13 @@ export function initTrashProgram({ buttonId = 'trashProgramBtn' } = {}) {
     lines.push('    if not errorlevel 1 set /a DELETED+=1');
     lines.push('  )');
     lines.push(')');
+
+    // ✅ Completion dialog
+    lines.push('echo.');
     lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.Interaction]::MsgBox((\\"Deleted !DELETED! wav file(s).\\"),\\"OKOnly,Information\\",\\"Delete Done\\")"');
     lines.push('endlocal');
 
+    // 🔽 Trigger download
     const blob = new Blob([lines.join('\r\n')], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
