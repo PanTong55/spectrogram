@@ -2,14 +2,28 @@
 
 import { getTrashFileNames } from './fileState.js';
 
-export function initTrashProgram({ buttonId = 'trashProgramBtn' } = {}) {
+export function initTrashProgram({
+  buttonId = 'trashProgramBtn',
+  popupId = 'trashProgramPopup',
+  confirmId = 'trashProgramConfirmBtn',
+  cancelId = 'trashProgramCancelBtn'
+} = {}) {
   const btn = document.getElementById(buttonId);
-  if (!btn) {
-    console.warn(`[trashProgram] Button with id '${buttonId}' not found.`);
+  const popup = document.getElementById(popupId);
+  const confirmBtn = document.getElementById(confirmId);
+  const cancelBtn = document.getElementById(cancelId);
+  const closeBtn = popup?.querySelector('.popup-close-btn');
+
+  if (!btn || !popup || !confirmBtn || !cancelBtn) {
+    console.warn('[trashProgram] Required elements not found.');
     return;
   }
 
-  btn.addEventListener('click', () => {
+  function hidePopup() {
+    popup.style.display = 'none';
+  }
+
+  function downloadProgram() {
     const names = getTrashFileNames();
     if (names.length === 0) return;
 
@@ -62,5 +76,19 @@ export function initTrashProgram({ buttonId = 'trashProgramBtn' } = {}) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  function showPopup() {
+    if (getTrashFileNames().length === 0) return;
+    popup.style.display = 'block';
+  }
+
+  btn.addEventListener('click', showPopup);
+  confirmBtn.addEventListener('click', () => {
+    hidePopup();
+    downloadProgram();
   });
+  cancelBtn.addEventListener('click', hidePopup);
+  closeBtn?.addEventListener('click', hidePopup);
 }
+

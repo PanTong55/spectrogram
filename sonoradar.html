@@ -176,6 +176,24 @@
       <div class="coord-scale-wrapper"><span id="coord-display"></span></div>
     </div>
   </div>
+  <div id="trashProgramPopup" class="map-popup" style="display:none;">
+    <div class="popup-drag-bar">
+      <button class="popup-close-btn" title="Close">&times;</button>
+    </div>
+    <div style="padding:10px; white-space:pre-line;">
+This will download a batch (.bat) program to delete the .wav files marked as Trash.
+
+To proceed:
+1. Save the .bat file to the folder containing those .wav files.
+2. Run the .bat file from that folder to complete the deletion.
+
+Do you want to continue?
+      <div style="margin-top:10px; text-align:center;">
+        <button id="trashProgramConfirmBtn" class="flat-icon-button" style="margin-right:10px;">Download</button>
+        <button id="trashProgramCancelBtn" class="flat-icon-button">Cancel</button>
+      </div>
+    </div>
+  </div>
   </div>
   <script type="module">
     import {

@@ -860,6 +860,17 @@ input.tag-button.editing {
   opacity: 0.5;
 }
 
+/* Centered popup for trash program confirmation */
+#trashProgramPopup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: auto;
+  font-size: 14px;
+}
+
 .map-marker-current i{
   font-size: 28px;
   line-height: 28px;
