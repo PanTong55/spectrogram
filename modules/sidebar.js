@@ -88,6 +88,7 @@ export function initSidebar({ onFileSelected } = {}) {
         d.className = 'fa-solid fa-trash';
         d.style.color = 'gray';
         d.style.marginLeft = '4px';
+        d.title = 'Mark as Trash (Delete)';
         flags.appendChild(d);
       }
       if (state.star) {
@@ -95,6 +96,7 @@ export function initSidebar({ onFileSelected } = {}) {
         s.className = 'fa-solid fa-star';
         s.style.color = '#FFD700';
         s.style.marginLeft = '4px';
+        s.title = 'Mark as Star ( * button)';
         flags.appendChild(s);
       }
       if (state.question) {
@@ -102,6 +104,7 @@ export function initSidebar({ onFileSelected } = {}) {
         q.className = 'fa-solid fa-question';
         q.style.color = 'red';
         q.style.marginLeft = '4px';
+        q.title = 'Mark as Question ( ? button)';
         flags.appendChild(q);
       }
 
