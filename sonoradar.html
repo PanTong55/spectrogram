@@ -32,6 +32,7 @@
          <span id="fileCount" style="font-weight: normal;"></span>
          <i id="clearAllBtn" class="fa-regular fa-file" title="Clear File List" style="cursor:pointer; padding-top:1px;"></i>
          <i id="clearTrashBtn" class="fas fa-trash" title="Clear Trash Files" style="cursor:pointer; padding-top:1px;"></i>
+         <i id="trashProgramBtn" class="fa-solid fa-trash-arrow-up" title="Trash Program" style="cursor:pointer; padding-top:1px;"></i>
       </span>
     </div>
       <div id="searchContainer" style="display:flex; align-items:center; gap:4px; margin-bottom:8px;">
@@ -193,6 +194,7 @@
     import { initFrequencyHover } from './modules/frequencyHover.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initExportCsv } from './modules/exportCsv.js';
+    import { initTrashProgram } from './modules/trashProgram.js';
     import { initDragDropLoader } from './modules/dragDropLoader.js';
     import { initMapPopup } from './modules/mapPopup.js';
     import { initSidebar } from './modules/sidebar.js';
@@ -764,6 +766,7 @@
     });
 
     initExportCsv();
+    initTrashProgram();
     initMapPopup();
     document.addEventListener('map-file-selected', (e) => {
       const idx = e.detail?.index;
