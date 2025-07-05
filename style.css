@@ -903,6 +903,9 @@ input.tag-button.editing {
 }
 
 /* Draw toolbar layout */
+.map-popup .leaflet-top.leaflet-left {
+  width: 100%;
+}
 .leaflet-top.leaflet-left .leaflet-draw {
   left: 50%;
   transform: translateX(-50%);
