@@ -901,17 +901,3 @@ input.tag-button.editing {
 .leaflet-draw-toggle-control a i {
   color: #363636;
 }
-
-/* Draw toolbar layout */
-.map-popup .leaflet-top.leaflet-left {
-  width: 100%;
-}
-.leaflet-top.leaflet-left .leaflet-draw {
-  left: 50%;
-  transform: translateX(-50%);
-  top: 10px;
-}
-.leaflet-draw-toolbar {
-  display: flex;
-  flex-direction: row;
-}
