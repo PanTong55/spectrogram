@@ -140,7 +140,7 @@ export function initMapPopup({
     function updateCoords(latlng) {
       if (!coordDisplay) return;
       const { lat, lng } = latlng;
-      coordDisplay.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      coordDisplay.textContent = `${lat.toFixed(4)} ${lng.toFixed(4)}`;
     }
     map.on('mousemove', (e) => updateCoords(e.latlng));
     map.on('move', () => updateCoords(map.getCenter()));
