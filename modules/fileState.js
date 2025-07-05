@@ -86,6 +86,16 @@ export function getTrashFileCount() {
   }, 0);
 }
 
+// Return an array of file names that are marked with the trash flag
+export function getTrashFileNames() {
+  return fileList.reduce((arr, file, idx) => {
+    if (fileIcons[idx] && fileIcons[idx].trash) {
+      arr.push(file.name);
+    }
+    return arr;
+  }, []);
+}
+
 // Remove all files that are currently flagged as trash. Returns the number of
 // removed files so that callers can decide how to update the UI.
 export function clearTrashFiles() {
