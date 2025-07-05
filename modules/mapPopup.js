@@ -58,6 +58,9 @@ export function initMapPopup({
   let drawControl = null;
   let drawnItems = null;
   let drawControlVisible = false;
+  const coordScaleWrapper = mapDiv.querySelector('.coord-scale-wrapper');
+  const coordDisplay = mapDiv.querySelector('#coord-display');
+  let scaleControl = null;
   const kmlInput = document.createElement('input');
   kmlInput.type = 'file';
   kmlInput.accept = '.kml';
@@ -124,6 +127,24 @@ export function initMapPopup({
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
+    scaleControl = L.control.scale({
+      position: 'bottomleft',
+      metric: true,
+      imperial: false,
+    }).addTo(map);
+    if (coordScaleWrapper) {
+      const scaleEl = scaleControl.getContainer();
+      scaleEl.style.position = 'static';
+      coordScaleWrapper.appendChild(scaleEl);
+    }
+    function updateCoords(latlng) {
+      if (!coordDisplay) return;
+      const { lat, lng } = latlng;
+      coordDisplay.textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+    map.on('mousemove', (e) => updateCoords(e.latlng));
+    map.on('move', () => updateCoords(map.getCenter()));
+    updateCoords(map.getCenter());
 
     const osmAttr = { attribution: '&copy; OpenStreetMap contributors' };
     const esriAttr = { attribution: '&copy; Esri' };
