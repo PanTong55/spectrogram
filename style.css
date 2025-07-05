@@ -834,6 +834,9 @@ input.tag-button.editing {
   font-size: 12px;
   pointer-events: none;
   z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .coord-scale-wrapper .leaflet-control-scale {
   margin: 0;

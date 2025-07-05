@@ -127,7 +127,11 @@ export function initMapPopup({
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
-    scaleControl = L.control.scale({ position: 'bottomleft' }).addTo(map);
+    scaleControl = L.control.scale({
+      position: 'bottomleft',
+      metric: true,
+      imperial: false,
+    }).addTo(map);
     if (coordScaleWrapper) {
       const scaleEl = scaleControl.getContainer();
       scaleEl.style.position = 'static';
