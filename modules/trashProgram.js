@@ -15,9 +15,9 @@ export function initTrashProgram({ buttonId = 'trashProgramBtn' } = {}) {
 
     const lines = [];
     lines.push('@echo off');
-    lines.push('setlocal');
+    lines.push('setlocal EnableDelayedExpansion');
     lines.push(`set COUNT=${names.length}`);
-    lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; $res=[Microsoft.VisualBasic.Interaction]::MsgBox(\'This will delete %COUNT% wav file(s).\',\'OkCancel,Exclamation\',\'Confirm Delete\'); if($res -ne \"Ok\"){exit 0}"');
+    lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; $res=[Microsoft.VisualBasic.Interaction]::MsgBox((\\"This will delete !COUNT! wav file(s).\\"),\\"OkCancel,Exclamation\\",\\"Confirm Delete\\"); if ($res -ne \\"Ok\\") { exit 0 }"');
     lines.push('set DELETED=0');
     lines.push('for %%F in (');
     names.forEach(name => {
@@ -29,7 +29,7 @@ export function initTrashProgram({ buttonId = 'trashProgramBtn' } = {}) {
     lines.push('    if not errorlevel 1 set /a DELETED+=1');
     lines.push('  )');
     lines.push(')');
-    lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.Interaction]::MsgBox(\'Deleted %DELETED% wav file(s).\',\'OKOnly,Information\',\'Delete Done\')"');
+    lines.push('powershell -NoProfile -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.Interaction]::MsgBox((\\"Deleted !DELETED! wav file(s).\\"),\\"OKOnly,Information\\",\\"Delete Done\\")"');
     lines.push('endlocal');
 
     const blob = new Blob([lines.join('\r\n')], { type: 'application/octet-stream' });
