@@ -59,6 +59,59 @@ export function initMapPopup({
   kmlInput.accept = '.kml';
   kmlInput.style.display = 'none';
   popup.appendChild(kmlInput);
+  const mapDropOverlay = document.getElementById('map-drop-overlay');
+  let dropCounter = 0;
+
+  function showMapDropOverlay() {
+    if (mapDropOverlay) {
+      mapDropOverlay.style.display = 'flex';
+      mapDropOverlay.style.pointerEvents = 'auto';
+    }
+    map?.dragging.disable();
+  }
+
+  function hideMapDropOverlay() {
+    if (mapDropOverlay) {
+      mapDropOverlay.style.display = 'none';
+      mapDropOverlay.style.pointerEvents = 'none';
+    }
+    map?.dragging.enable();
+  }
+
+  mapDiv.addEventListener('dragenter', (e) => {
+    if (!e.dataTransfer.types?.includes('Files')) return;
+    e.preventDefault();
+    dropCounter++;
+    showMapDropOverlay();
+  });
+
+  mapDiv.addEventListener('dragover', (e) => {
+    if (!e.dataTransfer.types?.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+
+  mapDiv.addEventListener('dragleave', (e) => {
+    if (!e.dataTransfer.types?.includes('Files')) return;
+    e.preventDefault();
+    dropCounter--;
+    if (dropCounter <= 0) hideMapDropOverlay();
+  });
+
+  mapDiv.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dropCounter = 0;
+    hideMapDropOverlay();
+    const file = Array.from(e.dataTransfer.files).find(f => f.name.endsWith('.kml'));
+    if (!file) return;
+    const text = await file.text();
+    const lines = parseKml(text);
+    clearKmlRoute();
+    lines.forEach(coords => {
+      const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
+      kmlPolylines.push(line);
+    });
+  });
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
