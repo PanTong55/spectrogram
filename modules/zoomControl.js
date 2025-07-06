@@ -15,8 +15,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
     if (isSelectionExpandMode()) {
       const dur = duration();
       if (dur > 0) {
-        if (dur < 1) return 4000;
-        if (dur < 3) return 3000;
+        if (dur < 1000) return 4000;
+        if (dur < 3000) return 3000;
       }
     }
     return 2500;
