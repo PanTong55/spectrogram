@@ -491,8 +491,8 @@
         const blob = await cropWavBlob(file, startTime, endTime);
         if (blob) {
           await getWavesurfer().loadBlob(blob);
-          zoomControl.setExpandMode(true);
           selectionExpandMode = true;
+          zoomControl.setExpandMode(true);
           sampleRateBtn.disabled = true;
           renderAxes();
           freqHoverControl?.clearSelections();
