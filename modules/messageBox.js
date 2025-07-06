@@ -30,7 +30,7 @@ export function showMessageBox({
   const content = document.createElement('div');
   content.style.padding = '10px';
   content.style.whiteSpace = 'pre-line';
-  content.style.fontsize = '14px';
+  content.style['font-size'] = '14px';
   content.textContent = message;
   popup.appendChild(content);
 
