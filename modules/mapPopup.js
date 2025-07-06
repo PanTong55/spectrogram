@@ -464,10 +464,13 @@ export function initMapPopup({
     })[c]);
   }
 
-  function createTextIcon(text) {
+  function createTextIcon(text, showTooltip = false) {
+    const titleAttr = showTooltip
+      ? ' title="Right click to edit\nLeft click to delete"'
+      : '';
     return L.divIcon({
       className: 'map-text-icon',
-      html: `<span class="map-text-label">${escapeHtml(text)}</span>`
+      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`
     });
   }
 
@@ -475,10 +478,10 @@ export function initMapPopup({
     if (!map || activeTextInput) return;
     const latlng = marker.getLatLng();
     const point = map.latLngToContainerPoint(latlng);
-    const input = document.createElement('input');
-    input.type = 'text';
+    const input = document.createElement('textarea');
     input.value = marker.text || '';
     input.className = 'map-text-input';
+    input.rows = 1;
     input.style.left = `${point.x}px`;
     input.style.top = `${point.y}px`;
     map.getContainer().appendChild(input);
@@ -493,14 +496,14 @@ export function initMapPopup({
       map.dragging.enable();
       if (val) {
         marker.text = val;
-        marker.setIcon(createTextIcon(val));
+        marker.setIcon(createTextIcon(val, textMode));
       } else {
         map.removeLayer(marker);
         textMarkers = textMarkers.filter(m => m !== marker);
       }
     };
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         finish();
       }
@@ -509,7 +512,7 @@ export function initMapPopup({
   }
 
   function createTextMarker(latlng, text) {
-    const marker = L.marker(latlng, { icon: createTextIcon(text), draggable: textMode });
+    const marker = L.marker(latlng, { icon: createTextIcon(text, textMode), draggable: textMode });
     marker.text = text;
     marker.on('dblclick', () => { if (textMode) editTextMarker(marker); });
     marker.on('click', (e) => {
@@ -531,6 +534,8 @@ export function initMapPopup({
     textMarkers.forEach(m => {
       if (textMode) m.dragging.enable();
       else m.dragging.disable();
+      const txt = m.text || '';
+      m.setIcon(createTextIcon(txt, textMode));
     });
   }
 
