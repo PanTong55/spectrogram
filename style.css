@@ -726,15 +726,16 @@ input.tag-button.editing {
 /* === Custom Dropdown === */
 .dropdown-button {
   font-size: 14px;
-  padding: 6px 30px 6px 12px;
+  padding: 4px 30px 4px 12px;
   background-color: #fff;
   color: #333;
-  border: 1px solid #bbb;
+  border: 1px solid #ccc;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
   position: relative;
   font-family: 'Noto Sans HK', sans-serif;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 .dropdown-button:hover {
   background-color: #d5d5d5;
