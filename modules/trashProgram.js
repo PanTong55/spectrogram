@@ -70,6 +70,7 @@ export function initTrashProgram({
   btn.addEventListener('click', () => {
     if (getTrashFileNames().length === 0) return;
     showMessageBox({
+      title: 'Auto-trash delete program',
       message: `A batch (.bat) program will be generated to delete the .wav files marked as Trash.\n\nTo proceed:\n1. Move the .bat file to the folder containing those .wav files.\n2. Run the .bat file from that folder to complete the deletion.`,
       confirmText: 'Download',
       cancelText: 'Cancel',
