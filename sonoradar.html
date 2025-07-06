@@ -477,12 +477,7 @@
       () => { freqHoverControl?.refreshHover(); },
       () => selectionExpandMode
     );
-    document.getElementById('expand-btn').addEventListener('click', () => {
-      if (!zoomControl.isExpandMode()) {
-        selectionExpandMode = false;
-        sampleRateBtn.disabled = false;
-      }
-    });
+);
 
     viewer.addEventListener('expand-selection', async (e) => {
       const { startTime, endTime } = e.detail;
