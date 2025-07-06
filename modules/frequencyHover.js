@@ -229,6 +229,8 @@ export function initFrequencyHover({
           detail: { startTime, endTime }
         }));
       });
+      expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
       rectObj.appendChild(expandBtn);
     }
 
