@@ -473,6 +473,16 @@
       () => { freqHoverControl?.hideHover(); },
       () => { freqHoverControl?.refreshHover(); }
     );
+
+    viewer.addEventListener('expand-selection', (e) => {
+      const { startTime, endTime } = e.detail;
+      const seg = endTime - startTime;
+      if (seg > 0) {
+        const targetZoom = wrapper.clientWidth / seg;
+        zoomControl.setZoomLevel(targetZoom);
+        viewer.scrollLeft = startTime * targetZoom;
+      }
+    });
     
     initBrightnessControl({
       brightnessSliderId: 'brightnessSlider',

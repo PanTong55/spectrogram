@@ -217,7 +217,21 @@ export function initFrequencyHover({
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
     viewer.appendChild(tooltip);
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip };
+
+    let expandBtn = null;
+    if (Duration * 1000 > 100) {
+      expandBtn = document.createElement('i');
+      expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+      expandBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        viewer.dispatchEvent(new CustomEvent('expand-selection', {
+          detail: { startTime, endTime }
+        }));
+      });
+      rectObj.appendChild(expandBtn);
+    }
+
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn };
     selections.push(selObj);
     enableDrag(tooltip);
     enableResize(selObj);
