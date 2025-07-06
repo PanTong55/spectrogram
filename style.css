@@ -1023,12 +1023,12 @@ input.tag-button.editing {
 
 .map-text-input {
   position: absolute;
-  font-family: 'Noto Sans HK', sans-serif;
+  font-family: 'Noto Sans HK';
   font-size: 16px;
-  padding: 2px 6px;
-  border: 1px solid #000000;
+  padding: 4px 6px 0px;
+  border: 1px solid rgba(0,0,0,0.4);
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   z-index: 1000;
   overflow: hidden;
   resize: none;
