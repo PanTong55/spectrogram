@@ -3,6 +3,7 @@
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { getWavSampleRate } from './fileLoader.js';
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
+import { showMessageBox } from './messageBox.js';
 
 export function initDragDropLoader({
   targetElementId,
@@ -112,7 +113,7 @@ export function initDragDropLoader({
   async function handleFiles(files) {
     const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
     if (validFiles.length === 0) {
-      alert('Only .wav files are supported.');
+      showMessageBox({ message: 'Only .wav files are supported.' });
       return;
     }
 
