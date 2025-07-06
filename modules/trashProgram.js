@@ -1,26 +1,15 @@
 // modules/trashProgram.js
 
 import { getTrashFileNames } from './fileState.js';
+import { showMessageBox } from './messageBox.js';
 
 export function initTrashProgram({
-  buttonId = 'trashProgramBtn',
-  popupId = 'trashProgramPopup',
-  confirmId = 'trashProgramConfirmBtn',
-  cancelId = 'trashProgramCancelBtn'
+  buttonId = 'trashProgramBtn'
 } = {}) {
   const btn = document.getElementById(buttonId);
-  const popup = document.getElementById(popupId);
-  const confirmBtn = document.getElementById(confirmId);
-  const cancelBtn = document.getElementById(cancelId);
-  const closeBtn = popup?.querySelector('.popup-close-btn');
-
-  if (!btn || !popup || !confirmBtn || !cancelBtn) {
-    console.warn('[trashProgram] Required elements not found.');
+  if (!btn) {
+    console.warn('[trashProgram] Button not found.');
     return;
-  }
-
-  function hidePopup() {
-    popup.style.display = 'none';
   }
 
   function downloadProgram() {
@@ -78,17 +67,14 @@ export function initTrashProgram({
     URL.revokeObjectURL(url);
   }
 
-  function showPopup() {
+  btn.addEventListener('click', () => {
     if (getTrashFileNames().length === 0) return;
-    popup.style.display = 'block';
-  }
-
-  btn.addEventListener('click', showPopup);
-  confirmBtn.addEventListener('click', () => {
-    hidePopup();
-    downloadProgram();
+    showMessageBox({
+      message: `A batch (.bat) program will be generated to delete the .wav files marked as Trash.\n\nTo proceed:\n1. Move the .bat file to the folder containing those .wav files.\n2. Run the .bat file from that folder to complete the deletion.`,
+      confirmText: 'Download',
+      cancelText: 'Cancel',
+      onConfirm: downloadProgram
+    });
   });
-  cancelBtn.addEventListener('click', hidePopup);
-  closeBtn?.addEventListener('click', hidePopup);
 }
 
