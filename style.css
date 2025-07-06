@@ -979,3 +979,51 @@ input.tag-button.editing {
     border-radius: 5px !important;
     margin: -5px !important;
 }
+
+/* Text button */
+.leaflet-text-toggle-control a {
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+}
+
+.leaflet-text-toggle-control {
+  margin-top: 1px !important;
+}
+
+.leaflet-text-toggle-control a.active {
+  background-color: #e6e6e6;
+}
+
+.leaflet-text-toggle-control a i {
+  color: #363636;
+}
+
+/* Text label style */
+.map-text-icon {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.map-text-label {
+  font-size: 16px;
+  color: #000;
+  white-space: pre;
+  text-shadow: -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 1px 1px 0 #ffffff;
+  pointer-events: auto;
+}
+
+.map-text-input {
+  position: absolute;
+  font-size: 16px;
+  padding: 2px 4px;
+  border: 1px solid #000000;
+  background: #ffffff;
+  z-index: 1000;
+}

@@ -55,6 +55,10 @@ export function initMapPopup({
   let importBtn = null;
   let clearKmlBtn = null;
   let drawBtn = null;
+  let textBtn = null;
+  let textMode = false;
+  let textMarkers = [];
+  let activeTextInput = null;
   let drawControl = null;
   let drawnItems = null;
   let drawControlVisible = false;
@@ -260,6 +264,22 @@ export function initMapPopup({
     });
     map.addControl(new ClearKmlControl());
 
+    const TextToggleControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-text-toggle-control');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Text';
+        link.innerHTML = '<i class="fa-solid fa-font"></i>';
+        textBtn = link;
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'click', toggleTextMode);
+        return container;
+      }
+    });
+    map.addControl(new TextToggleControl());
+
     const DrawToggleControl = L.Control.extend({
       options: { position: 'topleft' },
       onAdd() {
@@ -435,6 +455,101 @@ export function initMapPopup({
     }
   }
 
+  function escapeHtml(str) {
+    return str.replace(/[&<>"]/g, (c) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;'
+    })[c]);
+  }
+
+  function createTextIcon(text) {
+    return L.divIcon({
+      className: 'map-text-icon',
+      html: `<span class="map-text-label">${escapeHtml(text)}</span>`
+    });
+  }
+
+  function editTextMarker(marker) {
+    if (!map || activeTextInput) return;
+    const latlng = marker.getLatLng();
+    const point = map.latLngToContainerPoint(latlng);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = marker.text || '';
+    input.className = 'map-text-input';
+    input.style.left = `${point.x}px`;
+    input.style.top = `${point.y}px`;
+    map.getContainer().appendChild(input);
+    activeTextInput = input;
+    map.dragging.disable();
+    input.focus();
+    const finish = () => {
+      if (!activeTextInput) return;
+      const val = input.value.trim();
+      map.getContainer().removeChild(input);
+      activeTextInput = null;
+      map.dragging.enable();
+      if (val) {
+        marker.text = val;
+        marker.setIcon(createTextIcon(val));
+      } else {
+        map.removeLayer(marker);
+        textMarkers = textMarkers.filter(m => m !== marker);
+      }
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finish();
+      }
+    });
+    input.addEventListener('blur', finish);
+  }
+
+  function createTextMarker(latlng, text) {
+    const marker = L.marker(latlng, { icon: createTextIcon(text), draggable: textMode });
+    marker.text = text;
+    marker.on('dblclick', () => { if (textMode) editTextMarker(marker); });
+    marker.on('contextmenu', () => {
+      if (textMode && !activeTextInput) {
+        map.removeLayer(marker);
+        textMarkers = textMarkers.filter(m => m !== marker);
+      }
+    });
+    return marker;
+  }
+
+  function updateTextMarkersDraggable() {
+    textMarkers.forEach(m => {
+      if (textMode) m.dragging.enable();
+      else m.dragging.disable();
+    });
+  }
+
+  function onMapTextClick(e) {
+    if (activeTextInput) return;
+    const marker = createTextMarker(e.latlng, '');
+    marker.addTo(map);
+    textMarkers.push(marker);
+    editTextMarker(marker);
+  }
+
+  function toggleTextMode() {
+    textMode = !textMode;
+    textBtn?.classList.toggle('active', textMode);
+    if (textMode) {
+      map.on('click', onMapTextClick);
+    } else {
+      map.off('click', onMapTextClick);
+      if (activeTextInput) {
+        activeTextInput.blur();
+      }
+    }
+    updateTextMarkersDraggable();
+  }
+
   function showDeviceLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -488,6 +603,7 @@ export function initMapPopup({
       document.body.classList.remove('map-open');
       clearRoute();
       clearKmlRoute();
+      if (textMode) toggleTextMode();
     } else {
       popup.style.display = 'block';
       document.body.classList.add('map-open');
