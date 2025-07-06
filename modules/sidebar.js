@@ -1,6 +1,13 @@
 // modules/sidebar.js
 
-import { getFileList, getCurrentIndex, getFileIconState, getFileNote, setFileNote } from './fileState.js';
+import {
+  getFileList,
+  getCurrentIndex,
+  getFileIconState,
+  getFileNote,
+  setFileNote,
+  toggleFileIcon
+} from './fileState.js';
 
 export function initSidebar({ onFileSelected } = {}) {
   const sidebar = document.getElementById('sidebar');
@@ -82,31 +89,47 @@ export function initSidebar({ onFileSelected } = {}) {
       flags.style.display = 'flex';
       flags.style.flexShrink = '0';
       flags.style.whiteSpace = 'nowrap';
+
       const state = getFileIconState(index);
-      if (state.trash) {
-        const d = document.createElement('i');
-        d.className = 'fa-solid fa-trash';
-        d.style.color = 'gray';
-        d.style.marginLeft = '4px';
-        d.title = 'Mark as Trash (Delete)';
-        flags.appendChild(d);
-      }
-      if (state.star) {
-        const s = document.createElement('i');
-        s.className = 'fa-solid fa-star';
-        s.style.color = '#FFD700';
-        s.style.marginLeft = '4px';
-        s.title = 'Mark as Star ( * button)';
-        flags.appendChild(s);
-      }
-      if (state.question) {
-        const q = document.createElement('i');
-        q.className = 'fa-solid fa-question';
-        q.style.color = 'red';
-        q.style.marginLeft = '4px';
-        q.title = 'Mark as Question ( ? button)';
-        flags.appendChild(q);
-      }
+
+      const d = document.createElement('i');
+      d.className = 'fa-solid fa-trash';
+      d.style.marginLeft = '4px';
+      d.style.cursor = 'pointer';
+      d.title = 'Mark as Trash (Delete)';
+      d.style.color = state.trash ? 'gray' : '#ccc';
+      d.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFileIcon(index, 'trash');
+        renderFileList(filter, false);
+      });
+      flags.appendChild(d);
+
+      const s = document.createElement('i');
+      s.className = 'fa-solid fa-star';
+      s.style.marginLeft = '4px';
+      s.style.cursor = 'pointer';
+      s.title = 'Mark as Star ( * button)';
+      s.style.color = state.star ? '#FFD700' : '#ccc';
+      s.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFileIcon(index, 'star');
+        renderFileList(filter, false);
+      });
+      flags.appendChild(s);
+
+      const q = document.createElement('i');
+      q.className = 'fa-solid fa-question';
+      q.style.marginLeft = '4px';
+      q.style.cursor = 'pointer';
+      q.title = 'Mark as Question ( ? button)';
+      q.style.color = state.question ? 'red' : '#ccc';
+      q.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleFileIcon(index, 'question');
+        renderFileList(filter, false);
+      });
+      flags.appendChild(q);
 
       rightContainer.appendChild(flags);
 
