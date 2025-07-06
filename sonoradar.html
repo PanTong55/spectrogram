@@ -200,6 +200,7 @@
     import { initFileLoader, getWavSampleRate } from './modules/fileLoader.js';
     import { initBrightnessControl } from './modules/brightnessControl.js';
     import { initFrequencyHover } from './modules/frequencyHover.js';
+    import { cropWavBlob } from './modules/cropAudio.js';
     import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
     import { initExportCsv } from './modules/exportCsv.js';
     import { initTrashProgram } from './modules/trashProgram.js';
@@ -474,13 +475,17 @@
       () => { freqHoverControl?.refreshHover(); }
     );
 
-    viewer.addEventListener('expand-selection', (e) => {
+    viewer.addEventListener('expand-selection', async (e) => {
       const { startTime, endTime } = e.detail;
-      const seg = endTime - startTime;
-      if (seg > 0) {
-        const targetZoom = wrapper.clientWidth / seg;
-        zoomControl.setZoomLevel(targetZoom);
-        viewer.scrollLeft = startTime * targetZoom;
+      if (endTime > startTime) {
+        const file = getCurrentFile();
+        const blob = await cropWavBlob(file, startTime, endTime);
+        if (blob) {
+          await getWavesurfer().loadBlob(blob);
+          zoomControl.setExpandMode(true);
+          renderAxes();
+          freqHoverControl?.clearSelections();
+        }
       }
     });
     
