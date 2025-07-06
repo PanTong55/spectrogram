@@ -512,6 +512,12 @@ export function initMapPopup({
     const marker = L.marker(latlng, { icon: createTextIcon(text), draggable: textMode });
     marker.text = text;
     marker.on('dblclick', () => { if (textMode) editTextMarker(marker); });
+    marker.on('click', (e) => {
+      if (textMode && !activeTextInput) {
+        e.originalEvent.stopPropagation();
+        editTextMarker(marker);
+      }
+    });
     marker.on('contextmenu', () => {
       if (textMode && !activeTextInput) {
         map.removeLayer(marker);
