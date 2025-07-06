@@ -222,6 +222,7 @@ export function initFrequencyHover({
     if (Duration * 1000 > 100) {
       expandBtn = document.createElement('i');
       expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+      expandBtn.title = 'Crop and expand this session';
       expandBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
         viewer.dispatchEvent(new CustomEvent('expand-selection', {
