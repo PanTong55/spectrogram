@@ -313,7 +313,7 @@ input[type="file"]:hover {
 /* === Selection Expand Button === */
 .selection-expand-btn {
   position: absolute;
-  top: -6px;
+  top: 0px;
   right: 0px;
   background: rgba(255,255,255,0.7);
   border-radius: 3px;
