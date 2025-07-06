@@ -801,6 +801,11 @@ input.tag-button.editing {
 .dropdown-button:hover {
   background-color: #d5d5d5;
 }
+.dropdown-button:disabled {
+  background-color: #eee;
+  color: #aaa;
+  cursor: not-allowed;
+}
 .dropdown-button::after {
   content: '';
   position: absolute;
