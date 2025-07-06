@@ -2,6 +2,7 @@
 
 export function showMessageBox({
   message = '',
+  title = '',
   confirmText = 'OK',
   cancelText = null,
   onConfirm,
@@ -20,6 +21,12 @@ export function showMessageBox({
 
   const dragBar = document.createElement('div');
   dragBar.className = 'popup-drag-bar';
+  if (title) {
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'popup-title';
+    titleSpan.textContent = title;
+    dragBar.appendChild(titleSpan);
+  }
   const closeBtn = document.createElement('button');
   closeBtn.className = 'popup-close-btn';
   closeBtn.title = 'Close';
