@@ -63,13 +63,16 @@ export function showMessageBox({
 
   function close(result) {
     popup.remove();
-    if (result === 'confirm' && typeof onConfirm === 'function') onConfirm();
-    if (result === 'cancel' && typeof onCancel === 'function') onCancel();
+    if (result === 'confirm' && typeof onConfirm === 'function') {
+      onConfirm();
+    } else if (result === 'cancel' && typeof onCancel === 'function') {
+      onCancel();
+    }
   }
 
   confirmBtn.addEventListener('click', () => close('confirm'));
   cancelBtn?.addEventListener('click', () => close('cancel'));
-  closeBtn.addEventListener('click', () => close('cancel'));
+  closeBtn.addEventListener('click', () => close('close'));
 
   document.body.appendChild(popup);
 }
