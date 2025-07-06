@@ -62,6 +62,8 @@ export function initMapPopup({
   let drawControl = null;
   let drawnItems = null;
   let drawControlVisible = false;
+  let layersControl = null;
+  let hkgridLayer = null;
   const coordScaleWrapper = mapDiv.querySelector('.coord-scale-wrapper');
   const coordDisplay = mapDiv.querySelector('#coord-display');
   const noCoordMsg = mapDiv.querySelector('#no-coord-message');
@@ -204,7 +206,21 @@ export function initMapPopup({
       'HK Imagery': hkImageryGroup,
     };
 
-    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+    layersControl = L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
+
+    fetch("https://raw.githubusercontent.com/PanTong55/spectrogram/main/hkgrid.geojson")
+      .then((r) => r.json())
+      .then((hkgriddata) => {
+        hkgridLayer = L.geoJSON(hkgriddata, {
+          style: {
+            color: '#3388ff',
+            weight: 2,
+            fillColor: '#3388ff',
+            fillOpacity: 0,
+          },
+        });
+        layersControl.addOverlay(hkgridLayer, '1km Grid');
+      });
 
     drawnItems = new L.FeatureGroup().addTo(map);
     drawControl = new L.Control.Draw({
