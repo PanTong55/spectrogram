@@ -478,17 +478,23 @@ export function initMapPopup({
     if (!map || activeTextInput) return;
     const latlng = marker.getLatLng();
     const point = map.latLngToContainerPoint(latlng);
-    const input = document.createElement('textarea');
-    input.value = marker.text || '';
-    input.className = 'map-text-input';
-    input.rows = 1;
-    input.style.left = `${point.x}px`;
-    input.style.top = `${point.y}px`;
-    map.getContainer().appendChild(input);
-    activeTextInput = input;
-    map.dragging.disable();
-    input.focus();
-    const finish = () => {
+  const input = document.createElement('textarea');
+  input.value = marker.text || '';
+  input.className = 'map-text-input';
+  input.rows = 1;
+  input.style.left = `${point.x}px`;
+  input.style.top = `${point.y}px`;
+  map.getContainer().appendChild(input);
+  activeTextInput = input;
+  map.dragging.disable();
+  input.focus();
+  const adjustHeight = () => {
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
+  };
+  adjustHeight();
+  input.addEventListener('input', adjustHeight);
+  const finish = () => {
       if (!activeTextInput) return;
       const val = input.value.trim();
       map.getContainer().removeChild(input);
