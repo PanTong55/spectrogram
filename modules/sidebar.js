@@ -97,7 +97,14 @@ export function initSidebar({ onFileSelected } = {}) {
       d.style.marginLeft = '4px';
       d.style.cursor = 'pointer';
       d.title = 'Mark as Trash (Delete)';
-      d.style.color = state.trash ? 'gray' : '#ccc';
+      const dActive = 'gray';
+      d.style.color = state.trash ? dActive : '#ccc';
+      d.addEventListener('mouseenter', () => {
+        if (!state.trash) d.style.color = dActive;
+      });
+      d.addEventListener('mouseleave', () => {
+        if (!state.trash) d.style.color = '#ccc';
+      });
       d.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleFileIcon(index, 'trash');
@@ -110,7 +117,14 @@ export function initSidebar({ onFileSelected } = {}) {
       s.style.marginLeft = '4px';
       s.style.cursor = 'pointer';
       s.title = 'Mark as Star ( * button)';
-      s.style.color = state.star ? '#FFD700' : '#ccc';
+      const sActive = '#FFD700';
+      s.style.color = state.star ? sActive : '#ccc';
+      s.addEventListener('mouseenter', () => {
+        if (!state.star) s.style.color = sActive;
+      });
+      s.addEventListener('mouseleave', () => {
+        if (!state.star) s.style.color = '#ccc';
+      });
       s.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleFileIcon(index, 'star');
@@ -123,7 +137,14 @@ export function initSidebar({ onFileSelected } = {}) {
       q.style.marginLeft = '4px';
       q.style.cursor = 'pointer';
       q.title = 'Mark as Question ( ? button)';
-      q.style.color = state.question ? 'red' : '#ccc';
+      const qActive = 'red';
+      q.style.color = state.question ? qActive : '#ccc';
+      q.addEventListener('mouseenter', () => {
+        if (!state.question) q.style.color = qActive;
+      });
+      q.addEventListener('mouseleave', () => {
+        if (!state.question) q.style.color = '#ccc';
+      });
       q.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleFileIcon(index, 'question');
