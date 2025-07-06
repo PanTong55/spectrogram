@@ -205,7 +205,8 @@ export function initMapPopup({
     drawnItems = new L.FeatureGroup().addTo(map);
     drawControl = new L.Control.Draw({
       position: 'topleft',
-      edit: { featureGroup: drawnItems }
+      edit: { featureGroup: drawnItems },
+      draw: { circlemarker: false }
     });
     map.on(L.Draw.Event.CREATED, (e) => {
       drawnItems.addLayer(e.layer);
