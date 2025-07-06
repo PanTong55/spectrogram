@@ -139,6 +139,7 @@
               <div class="spinner"></div>
             </div>
             <div id="upload-overlay" class="upload-overlay">
+              <div class="spinner"></div>
               <div class="progress-container">
                 <div class="progress-bar" id="upload-progress-bar"></div>
               </div>
@@ -267,6 +268,7 @@ To proceed:
     });
     const overlay = document.getElementById('drop-overlay');
     const loadingOverlay = document.getElementById('loading-overlay');
+    const uploadOverlay = document.getElementById('upload-overlay');
 
     function showDropOverlay() {
       overlay.style.display = 'flex';
@@ -304,12 +306,16 @@ To proceed:
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
-        loadingOverlay.style.display = 'flex';
+        if (uploadOverlay.style.display !== 'flex') {
+          loadingOverlay.style.display = 'flex';
+        }
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
       },
       onAfterLoad: () => {
-        loadingOverlay.style.display = 'none';
+        if (uploadOverlay.style.display !== 'flex') {
+          loadingOverlay.style.display = 'none';
+        }
         freqHoverControl?.refreshHover();
         updateSpectrogramSettingsText();
       },
@@ -518,12 +524,16 @@ To proceed:
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
-        loadingOverlay.style.display = 'flex';
+        if (uploadOverlay.style.display !== 'flex') {
+          loadingOverlay.style.display = 'flex';
+        }
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
       },
       onAfterLoad: () => {
-        loadingOverlay.style.display = 'none';
+        if (uploadOverlay.style.display !== 'flex') {
+          loadingOverlay.style.display = 'none';
+        }
         freqHoverControl?.refreshHover();
         updateSpectrogramSettingsText();
       },
