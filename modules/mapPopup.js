@@ -508,7 +508,12 @@ export function initMapPopup({
         finish();
       }
     });
-    input.addEventListener('blur', finish);
+    input.addEventListener('pointerdown', (e) => e.stopPropagation());
+    input.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.activeElement !== input) finish();
+      });
+    });
   }
 
   function createTextMarker(latlng, text) {
