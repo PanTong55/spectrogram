@@ -6,7 +6,7 @@ export function showMessageBox({
   cancelText = null,
   onConfirm,
   onCancel,
-  width = 450
+  width = 420
 } = {}) {
   const popup = document.createElement('div');
   popup.className = 'map-popup';
@@ -30,7 +30,7 @@ export function showMessageBox({
   const content = document.createElement('div');
   content.style.padding = '10px';
   content.style.whiteSpace = 'pre-line';
-  content.style.marginTop = '-20px';
+  content.style.font-size = '14px';
   content.textContent = message;
   popup.appendChild(content);
 
