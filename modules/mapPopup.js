@@ -466,7 +466,7 @@ export function initMapPopup({
 
   function createTextIcon(text, showTooltip = false) {
     const titleAttr = showTooltip
-      ? ' title="Right click to edit\nLeft click to delete"'
+      ? ' title="Left click to edit\nRight click to delete"'
       : '';
     return L.divIcon({
       className: 'map-text-icon',
