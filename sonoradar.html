@@ -208,6 +208,7 @@
     import { initSidebar } from './modules/sidebar.js';
     import { initTagControl } from './modules/tagControl.js';
     import { initDropdown } from './modules/dropdown.js';
+    import { showMessageBox } from './modules/messageBox.js';
     import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
     const spectrogramHeight = 800;
@@ -232,6 +233,7 @@
     let selectedSampleRate = 'auto';
     let currentFftSize = 1024;
     let currentOverlap = 'auto';
+    let overlapWarningShown = false;
     let freqHoverControl = null;
     const getDuration = () => duration;
 
@@ -591,6 +593,12 @@
         const num = parseInt(val, 10);
         if (!isNaN(num) && num >= 1 && num <= 99) {
           currentOverlap = num;
+          if (num >= 80 && !overlapWarningShown) {
+            showMessageBox({
+              message: `Reminder:\nUsing an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`
+            });
+            overlapWarningShown = true;
+          }
         } else {
           alert('Overlap must be between 1 and 99.');
           overlapInput.value = '';
