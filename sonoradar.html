@@ -492,7 +492,7 @@
         if (blob) {
           await getWavesurfer().loadBlob(blob);
           selectionExpandMode = true;
-          zoomControl.setExpandMode(true);
+          zoomControl.setZoomLevel(0);
           sampleRateBtn.disabled = true;
           renderAxes();
           freqHoverControl?.clearSelections();
