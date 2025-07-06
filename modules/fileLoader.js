@@ -43,7 +43,31 @@ export function initFileLoader({
   const nextBtn = document.getElementById('nextBtn');
   const fileNameElem = document.getElementById('fileNameText');
   const guanoOutput = document.getElementById('guano-output');
-  const spectrogramSettings = document.getElementById('spectrogram-settings');  
+  const spectrogramSettings = document.getElementById('spectrogram-settings');
+  const uploadOverlay = document.getElementById('upload-overlay');
+  const uploadProgressBar = document.getElementById('upload-progress-bar');
+  const uploadProgressText = document.getElementById('upload-progress-text');
+
+  function showUploadOverlay(total) {
+    if (!uploadOverlay) return;
+    if (uploadProgressBar) uploadProgressBar.style.width = '0%';
+    if (uploadProgressText) uploadProgressText.textContent = `0/${total}`;
+    uploadOverlay.style.display = 'flex';
+  }
+
+  function updateUploadOverlay(count, total) {
+    if (uploadProgressBar) {
+      const pct = total > 0 ? (count / total) * 100 : 0;
+      uploadProgressBar.style.width = `${pct}%`;
+    }
+    if (uploadProgressText) {
+      uploadProgressText.textContent = `${count}/${total}`;
+    }
+  }
+
+  function hideUploadOverlay() {
+    if (uploadOverlay) uploadOverlay.style.display = 'none';
+  }
 
   async function loadFile(file) {
     if (!file) return;
@@ -104,11 +128,12 @@ export function initFileLoader({
     const selectedFile = files[0];
     if (!selectedFile) return;
 
+    const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
+    showUploadOverlay(sameDirFiles.length);
+
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
     }
-
-    const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
 
     const sortedList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
     const index = sortedList.findIndex(f => f.name === selectedFile.name);
@@ -124,7 +149,9 @@ export function initFileLoader({
       } catch (err) {
         setFileMetadata(startIdx + i, { date: '', time: '', latitude: '', longitude: '' });
       }
+      updateUploadOverlay(i + 1, sortedList.length);
     }
+    hideUploadOverlay();
     await loadFile(selectedFile);
   });
 

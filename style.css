@@ -601,6 +601,42 @@ input[type="file"]:hover {
   animation: spin 1s linear infinite;
 }
 
+#upload-overlay {
+  position: absolute;
+  top: 0px; left: 0px; right: 0px; bottom: 0px;
+  border: 1px solid;
+  background-color: rgba(255, 255, 255, 0.6);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 998;
+  pointer-events: none;
+}
+
+#upload-overlay .progress-container {
+  width: 60%;
+  height: 10px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+#upload-overlay .progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: #333;
+  border-radius: 5px;
+}
+
+#upload-overlay .progress-text {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #333;
+  font-family: 'Noto Sans HK', sans-serif;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
