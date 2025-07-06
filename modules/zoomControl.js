@@ -101,6 +101,17 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
       zoomLevel = Math.max(newZoom, minZoomLevel);
       applyZoom();
     },
+    setExpandMode: (val) => {
+      isExpandMode = val;
+      computeMinZoomLevel();
+      if (isExpandMode) {
+        zoomLevel = minZoomLevel;
+      } else {
+        zoomLevel = Math.max(minZoomLevel, 500);
+      }
+      applyZoom();
+      updateZoomButtons();
+    },
     isExpandMode: () => isExpandMode,
     forceExpandMode: () => {
       computeMinZoomLevel();
