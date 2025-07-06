@@ -1028,4 +1028,6 @@ input.tag-button.editing {
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.8);
   z-index: 1000;
+  overflow: hidden;
+  resize: none;
 }
