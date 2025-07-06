@@ -30,13 +30,15 @@ export function showMessageBox({
   const content = document.createElement('div');
   content.style.padding = '10px';
   content.style.whiteSpace = 'pre-line';
-  content.style.font-size = '14px';
+  content.style.fontsize = '14px';
   content.textContent = message;
   popup.appendChild(content);
 
   const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.justifyContent = 'center';
+  actions.style.gap = '30px';
   actions.style.marginBottom = '10px';
-  actions.style.textAlign = 'center';
 
   const confirmBtn = document.createElement('button');
   confirmBtn.className = 'flat-icon-button';
