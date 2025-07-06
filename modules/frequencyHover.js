@@ -98,6 +98,23 @@ export function initFrequencyHover({
   viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
   viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
 
+  const cancelDrawing = () => {
+    if (!isDrawing) return;
+    isDrawing = false;
+    if (selectionRect && viewer.contains(selectionRect)) {
+      viewer.removeChild(selectionRect);
+    }
+    selectionRect = null;
+    suppressHover = false;
+  };
+
+  viewer.addEventListener('mouseleave', (e) => {
+    if (isDrawing) {
+      cancelDrawing();
+      hideAll();
+    }
+  });
+
   if (zoomControls) {
     zoomControls.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
     zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
@@ -124,6 +141,19 @@ export function initFrequencyHover({
   viewer.addEventListener('mousemove', (e) => {
     if (!isDrawing) return;
     const rect = viewer.getBoundingClientRect();
+
+    const insideX = e.clientX >= rect.left && e.clientX <= rect.right;
+    const insideY = e.clientY >= rect.top && e.clientY <= (rect.bottom - getScrollbarThickness());
+    if (!insideX || !insideY) {
+      // Cancel drawing when cursor leaves the spectrogram area
+      viewer.removeChild(selectionRect);
+      selectionRect = null;
+      isDrawing = false;
+      suppressHover = false;
+      hideAll();
+      return;
+    }
+
     const currentX = e.clientX - rect.left + viewer.scrollLeft;
     const currentY = e.clientY - rect.top;
     const x = Math.min(currentX, startX);
