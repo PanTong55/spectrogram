@@ -474,7 +474,8 @@
       renderAxes,
       wrapper,
       () => { freqHoverControl?.hideHover(); },
-      () => { freqHoverControl?.refreshHover(); }
+      () => { freqHoverControl?.refreshHover(); },
+      () => selectionExpandMode
     );
     document.getElementById('expand-btn').addEventListener('click', () => {
       if (!zoomControl.isExpandMode()) {

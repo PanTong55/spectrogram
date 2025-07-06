@@ -1,6 +1,8 @@
 // zoomControl.js (優化版，含修正)
 
-export function initZoomControls(ws, container, duration, applyZoomCallback, wrapperElement, onBeforeZoom = null, onAfterZoom = null) {
+export function initZoomControls(ws, container, duration, applyZoomCallback,
+                                wrapperElement, onBeforeZoom = null,
+                                onAfterZoom = null, isSelectionExpandMode = () => false) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
   const expandBtn = document.getElementById('expand-btn');
@@ -8,6 +10,17 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   let zoomLevel = 500;
   let minZoomLevel = 250;
   let isExpandMode = false;
+
+  function computeMaxZoomLevel() {
+    if (isSelectionExpandMode()) {
+      const dur = duration();
+      if (dur > 0) {
+        if (dur < 1) return 4000;
+        if (dur < 3) return 3000;
+      }
+    }
+    return 2500;
+  }
 
   function computeMinZoomLevel() {
     let visibleWidth = wrapperElement.clientWidth;
@@ -20,7 +33,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   function applyZoom() {
     computeMinZoomLevel();
     if (typeof onBeforeZoom === 'function') onBeforeZoom();
-    zoomLevel = Math.max(zoomLevel, minZoomLevel);
+    const maxZoom = computeMaxZoomLevel();
+    zoomLevel = Math.min(Math.max(zoomLevel, minZoomLevel), maxZoom);
 
     if (ws && typeof ws.zoom === 'function' &&
         typeof ws.getDuration === 'function' && ws.getDuration() > 0) {
@@ -39,7 +53,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   function updateZoomButtons() {
     computeMinZoomLevel();
     const disabled = isExpandMode;
-    zoomInBtn.disabled = disabled || zoomLevel >= 2500;
+    const maxZoom = computeMaxZoomLevel();
+    zoomInBtn.disabled = disabled || zoomLevel >= maxZoom;
     zoomOutBtn.disabled = disabled || zoomLevel <= minZoomLevel;
     expandBtn.classList.toggle('active', isExpandMode);
   }
@@ -58,8 +73,11 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
   }
 
   zoomInBtn.onclick = () => {
-    if (!isExpandMode && zoomLevel < 2500) {
-      zoomLevel = Math.min(zoomLevel + 500, 2500);
+    if (!isExpandMode) {
+      const maxZoom = computeMaxZoomLevel();
+      if (zoomLevel < maxZoom) {
+        zoomLevel = Math.min(zoomLevel + 500, maxZoom);
+      }
       applyZoom();
     }
   };
@@ -103,7 +121,8 @@ export function initZoomControls(ws, container, duration, applyZoomCallback, wra
     getZoomLevel: () => zoomLevel,
     setZoomLevel: (newZoom) => {
       computeMinZoomLevel();
-      zoomLevel = Math.max(newZoom, minZoomLevel);
+      const maxZoom = computeMaxZoomLevel();
+      zoomLevel = Math.min(Math.max(newZoom, minZoomLevel), maxZoom);
       applyZoom();
     },
     setExpandMode,
