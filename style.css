@@ -310,6 +310,22 @@ input[type="file"]:hover {
   box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
 }
 
+/* === Selection Expand Button === */
+.selection-expand-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: rgba(255,255,255,0.8);
+  border-radius: 3px;
+  padding: 2px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 25;
+}
+.selection-expand-btn:hover {
+  background: rgba(255,255,255,1);
+}
+
 /* === 搜尋列 === */
 #searchInput {
   width: 100%;
