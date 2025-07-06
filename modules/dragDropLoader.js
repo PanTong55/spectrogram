@@ -17,6 +17,9 @@ export function initDragDropLoader({
 }) {
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
+  const uploadOverlay = document.getElementById('upload-overlay');
+  const uploadProgressBar = document.getElementById('upload-progress-bar');
+  const uploadProgressText = document.getElementById('upload-progress-text');
   const fileNameElem = document.getElementById('fileNameText');
   const guanoOutput = document.getElementById('guano-output');
   const spectrogramSettings = document.getElementById('spectrogram-settings');  
@@ -30,6 +33,27 @@ export function initDragDropLoader({
   function hideOverlay() {
     overlay.style.display = 'none';
     document.dispatchEvent(new Event('drop-overlay-hide'));
+  }
+
+  function showUploadOverlay(total) {
+    if (!uploadOverlay) return;
+    if (uploadProgressBar) uploadProgressBar.style.width = '0%';
+    if (uploadProgressText) uploadProgressText.textContent = `0/${total}`;
+    uploadOverlay.style.display = 'flex';
+  }
+
+  function updateUploadOverlay(count, total) {
+    if (uploadProgressBar) {
+      const pct = total > 0 ? (count / total) * 100 : 0;
+      uploadProgressBar.style.width = `${pct}%`;
+    }
+    if (uploadProgressText) {
+      uploadProgressText.textContent = `${count}/${total}`;
+    }
+  }
+
+  function hideUploadOverlay() {
+    if (uploadOverlay) uploadOverlay.style.display = 'none';
   }
 
   async function loadFile(file) {
@@ -92,6 +116,8 @@ export function initDragDropLoader({
       return;
     }
 
+    showUploadOverlay(validFiles.length);
+
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
     }
@@ -108,7 +134,9 @@ export function initDragDropLoader({
       } catch (err) {
         setFileMetadata(startIdx + i, { date: '', time: '', latitude: '', longitude: '' });
       }
+      updateUploadOverlay(i + 1, sortedList.length);
     }
+    hideUploadOverlay();
     await loadFile(sortedList[0]);
   }
 
