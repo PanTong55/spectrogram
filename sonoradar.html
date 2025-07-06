@@ -236,6 +236,8 @@
     let currentOverlap = 'auto';
     let overlapWarningShown = false;
     let freqHoverControl = null;
+    const sampleRateBtn = document.getElementById('sampleRateInput');
+    let selectionExpandMode = false;
     const getDuration = () => duration;
 
     const guanoOutput = document.getElementById('guano-output');
@@ -474,6 +476,12 @@
       () => { freqHoverControl?.hideHover(); },
       () => { freqHoverControl?.refreshHover(); }
     );
+    document.getElementById('expand-btn').addEventListener('click', () => {
+      if (!zoomControl.isExpandMode()) {
+        selectionExpandMode = false;
+        sampleRateBtn.disabled = false;
+      }
+    });
 
     viewer.addEventListener('expand-selection', async (e) => {
       const { startTime, endTime } = e.detail;
@@ -483,6 +491,8 @@
         if (blob) {
           await getWavesurfer().loadBlob(blob);
           zoomControl.setExpandMode(true);
+          selectionExpandMode = true;
+          sampleRateBtn.disabled = true;
           renderAxes();
           freqHoverControl?.clearSelections();
         }
@@ -835,6 +845,13 @@
         zoomControl.setZoomLevel(1000);
       }
       lastLoadedFileName = currentFile ? currentFile.name : null;
+      selectionExpandMode = false;
+      sampleRateBtn.disabled = false;
+    });
+
+    document.addEventListener('file-list-cleared', () => {
+      selectionExpandMode = false;
+      sampleRateBtn.disabled = false;
     });
   </script>
 </body>
