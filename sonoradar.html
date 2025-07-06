@@ -595,7 +595,8 @@
           currentOverlap = num;
           if (num >= 80 && !overlapWarningShown) {
             showMessageBox({
-              message: `Reminder:\nUsing an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`
+              title: 'Reminder',
+              message: `Using an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`
             });
             overlapWarningShown = true;
           }

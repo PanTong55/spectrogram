@@ -854,6 +854,12 @@ input.tag-button.editing {
   user-select: none;
 }
 
+.popup-title {
+  margin-left: 10px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
 .popup-close-btn {
   position: absolute;
   top: 0;
