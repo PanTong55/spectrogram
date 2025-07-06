@@ -234,50 +234,6 @@
     let currentFftSize = 1024;
     let currentOverlap = 'auto';
     let overlapWarningShown = false;
-
-    function bufferToWav(abuffer) {
-      const numOfChan = abuffer.numberOfChannels;
-      const length = abuffer.length * numOfChan * 2 + 44;
-      const buffer = new ArrayBuffer(length);
-      const view = new DataView(buffer);
-
-      const writeString = (view, offset, string) => {
-        for (let i = 0; i < string.length; i++) {
-          view.setUint8(offset + i, string.charCodeAt(i));
-        }
-      };
-
-      let offset = 0;
-      writeString(view, offset, 'RIFF'); offset += 4;
-      view.setUint32(offset, 36 + abuffer.length * numOfChan * 2, true); offset += 4;
-      writeString(view, offset, 'WAVE'); offset += 4;
-      writeString(view, offset, 'fmt '); offset += 4;
-      view.setUint32(offset, 16, true); offset += 4;
-      view.setUint16(offset, 1, true); offset += 2;
-      view.setUint16(offset, numOfChan, true); offset += 2;
-      view.setUint32(offset, abuffer.sampleRate, true); offset += 4;
-      view.setUint32(offset, abuffer.sampleRate * numOfChan * 2, true); offset += 4;
-      view.setUint16(offset, numOfChan * 2, true); offset += 2;
-      view.setUint16(offset, 16, true); offset += 2;
-      writeString(view, offset, 'data'); offset += 4;
-      view.setUint32(offset, abuffer.length * numOfChan * 2, true); offset += 4;
-
-      const channels = [];
-      for (let i = 0; i < numOfChan; i++) {
-        channels.push(abuffer.getChannelData(i));
-      }
-
-      let pos = offset;
-      for (let i = 0; i < abuffer.length; i++) {
-        for (let ch = 0; ch < numOfChan; ch++) {
-          let sample = Math.max(-1, Math.min(1, channels[ch][i]));
-          view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-          pos += 2;
-        }
-      }
-
-      return new Blob([buffer], { type: 'audio/wav' });
-    }
     let freqHoverControl = null;
     const getDuration = () => duration;
 
@@ -518,43 +474,14 @@
       () => { freqHoverControl?.refreshHover(); }
     );
 
-    viewer.addEventListener('expand-selection', async (e) => {
+    viewer.addEventListener('expand-selection', (e) => {
       const { startTime, endTime } = e.detail;
       const seg = endTime - startTime;
-      if (seg <= 0) return;
-
-      const ws = getWavesurfer();
-      const buf = ws?.backend?.buffer;
-      if (!buf) return;
-
-      const sr = buf.sampleRate;
-      const startSample = Math.floor(startTime * sr);
-      const endSample = Math.floor(endTime * sr);
-      const frameCount = Math.max(endSample - startSample, 1);
-      const ac = ws.backend.ac;
-      const newBuffer = ac.createBuffer(buf.numberOfChannels, frameCount, sr);
-      for (let c = 0; c < buf.numberOfChannels; c++) {
-        const sliced = buf.getChannelData(c).slice(startSample, endSample);
-        newBuffer.copyToChannel(sliced, c);
+      if (seg > 0) {
+        const targetZoom = wrapper.clientWidth / seg;
+        zoomControl.setZoomLevel(targetZoom);
+        viewer.scrollLeft = startTime * targetZoom;
       }
-
-      const wavBlob = bufferToWav(newBuffer);
-      await ws.loadBlob(wavBlob);
-
-      replacePlugin(
-        getCurrentColorMap(),
-        spectrogramHeight,
-        currentFreqMin,
-        currentFreqMax,
-        getOverlapPercent(),
-        () => {
-          duration = ws.getDuration();
-          zoomControl.setExpandMode(true);
-          renderAxes();
-          freqHoverControl?.refreshHover();
-        },
-        currentFftSize
-      );
     });
     
     initBrightnessControl({
