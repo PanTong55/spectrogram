@@ -55,8 +55,6 @@ export function initMapPopup({
   let importBtn = null;
   let clearKmlBtn = null;
   let drawBtn = null;
-  let textBtn = null;
-  let textMode = false;
   let drawControl = null;
   let drawnItems = null;
   let drawControlVisible = false;
@@ -207,8 +205,7 @@ export function initMapPopup({
     drawnItems = new L.FeatureGroup().addTo(map);
     drawControl = new L.Control.Draw({
       position: 'topleft',
-      edit: { featureGroup: drawnItems },
-      draw: { circlemarker: false }
+      edit: { featureGroup: drawnItems }
     });
     map.on(L.Draw.Event.CREATED, (e) => {
       drawnItems.addLayer(e.layer);
@@ -277,22 +274,6 @@ export function initMapPopup({
       }
     });
     map.addControl(new DrawToggleControl());
-
-    const TextControl = L.Control.extend({
-      options: { position: 'topleft' },
-      onAdd() {
-        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-draw-text-control');
-        const link = L.DomUtil.create('a', '', container);
-        link.href = '#';
-        link.title = 'Text';
-        link.innerHTML = '<i class="fa-solid fa-font"></i>';
-        textBtn = link;
-        L.DomEvent.on(link, 'click', L.DomEvent.stop)
-          .on(link, 'click', toggleTextMode);
-        return container;
-      }
-    });
-    map.addControl(new TextControl());
   }
 
   function refreshMarkers() {
@@ -453,40 +434,6 @@ export function initMapPopup({
     }
   }
 
-  function exitTextMode() {
-    textMode = false;
-    map?.off('click', handleTextClick);
-    textBtn?.classList.remove('active');
-    map?.dragging.enable();
-    if (map) map.getContainer().style.cursor = '';
-  }
-
-  function handleTextClick(e) {
-    const txt = prompt('Enter text:');
-    if (txt && txt.trim()) {
-      const icon = L.divIcon({
-        html: `<span class="map-text-marker">${txt}</span>`,
-        className: '',
-        iconSize: [0, 0]
-      });
-      const marker = L.marker(e.latlng, { icon, draggable: true });
-      drawnItems.addLayer(marker);
-    }
-    exitTextMode();
-  }
-
-  function toggleTextMode() {
-    if (textMode) {
-      exitTextMode();
-    } else {
-      textMode = true;
-      map?.on('click', handleTextClick);
-      textBtn?.classList.add('active');
-      map?.dragging.disable();
-      if (map) map.getContainer().style.cursor = 'crosshair';
-    }
-  }
-
   function showDeviceLocation() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -536,7 +483,6 @@ export function initMapPopup({
 
   function togglePopup() {
     if (popup.style.display === 'block') {
-      exitTextMode();
       popup.style.display = 'none';
       document.body.classList.remove('map-open');
       clearRoute();
