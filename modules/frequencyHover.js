@@ -252,6 +252,7 @@ export function initFrequencyHover({
     }
 
     let expandBtn = null;
+    let closeBtn = null;
     if (Duration * 1000 > 100) {
       expandBtn = document.createElement('i');
       expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
@@ -265,9 +266,26 @@ export function initFrequencyHover({
       expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
       rectObj.appendChild(expandBtn);
+
+      closeBtn = document.createElement('i');
+      closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
+      closeBtn.title = 'Close selection';
+      closeBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const index = selections.findIndex(sel => sel.rect === rectObj);
+        if (index !== -1) {
+          viewer.removeChild(selections[index].rect);
+          if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
+          selections.splice(index, 1);
+        }
+        suppressHover = false;
+      });
+      closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+      rectObj.appendChild(closeBtn);
     }
 
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn };
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn, closeBtn };
     selections.push(selObj);
     if (tooltip) {
       enableDrag(tooltip);
