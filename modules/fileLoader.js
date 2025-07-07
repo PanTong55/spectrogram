@@ -175,6 +175,7 @@ export function initFileLoader({
   });
 
   document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey) return; // avoid conflict with zoom shortcuts
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       prevBtn.click();
