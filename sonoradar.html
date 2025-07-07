@@ -304,6 +304,7 @@
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
+        zoomControl.setZoomLevel(0);
         if (uploadOverlay.style.display !== 'flex') {
           loadingOverlay.style.display = 'flex';
         }
@@ -549,6 +550,7 @@
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
+        zoomControl.setZoomLevel(0);
         if (uploadOverlay.style.display !== 'flex') {
           loadingOverlay.style.display = 'flex';
         }
