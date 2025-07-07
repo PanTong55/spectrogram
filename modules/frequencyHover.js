@@ -224,29 +224,32 @@ export function initFrequencyHover({
   });
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'draggable-tooltip';
-    tooltip.style.position = 'absolute';
-    tooltip.style.left = `${left + width + 10}px`;
-    tooltip.style.top = `${top}px`;
-    tooltip.style.zIndex = '30';
-    tooltip.style.padding = '6px 10px';
-    tooltip.style.background = 'white';
-    tooltip.style.border = '1px solid black';
-    tooltip.style.fontSize = '12px';
-    tooltip.style.fontFamily = 'Noto Sans HK';
-    tooltip.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
-    tooltip.style.cursor = 'move';
-    tooltip.innerHTML = `
-      <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
-      <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
-      <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
-      <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
-      <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
-    `;
-    tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
-    tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
-    viewer.appendChild(tooltip);
+    let tooltip = null;
+    if (Duration * 1000 <= 100) {
+      tooltip = document.createElement('div');
+      tooltip.className = 'draggable-tooltip';
+      tooltip.style.position = 'absolute';
+      tooltip.style.left = `${left + width + 10}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.style.zIndex = '30';
+      tooltip.style.padding = '6px 10px';
+      tooltip.style.background = 'white';
+      tooltip.style.border = '1px solid black';
+      tooltip.style.fontSize = '12px';
+      tooltip.style.fontFamily = 'Noto Sans HK';
+      tooltip.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
+      tooltip.style.cursor = 'move';
+      tooltip.innerHTML = `
+        <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
+        <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
+        <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
+        <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
+        <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
+      `;
+      tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
+      tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
+      viewer.appendChild(tooltip);
+    }
 
     let expandBtn = null;
     if (Duration * 1000 > 100) {
@@ -266,18 +269,20 @@ export function initFrequencyHover({
 
     const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn };
     selections.push(selObj);
-    enableDrag(tooltip);
+    if (tooltip) {
+      enableDrag(tooltip);
+      tooltip.querySelector('.close-btn').addEventListener('click', () => {
+        const index = selections.findIndex(sel => sel.tooltip === tooltip);
+        if (index !== -1) {
+          viewer.removeChild(selections[index].rect);
+          viewer.removeChild(selections[index].tooltip);
+          selections.splice(index, 1);
+        }
+        isOverTooltip = false;
+        suppressHover = false;
+      });
+    }
     enableResize(selObj);
-    tooltip.querySelector('.close-btn').addEventListener('click', () => {
-      const index = selections.findIndex(sel => sel.tooltip === tooltip);
-      if (index !== -1) {
-        viewer.removeChild(selections[index].rect);
-        viewer.removeChild(selections[index].tooltip);
-        selections.splice(index, 1);
-      }
-      isOverTooltip = false;
-      suppressHover = false;
-    });
   }
 
   function enableResize(sel) {
@@ -388,17 +393,18 @@ export function initFrequencyHover({
   
   function updateTooltipValues(sel, left, top, width, height) {
     const { data, tooltip } = sel;
+    if (!tooltip) return;
     const Flow = data.Flow;
     const Fhigh = data.Fhigh;
     const Bandwidth = Fhigh - Flow;
     const Duration = (data.endTime - data.startTime);
-    
+
     tooltip.querySelector('.fhigh').textContent = Fhigh.toFixed(1);
     tooltip.querySelector('.flow').textContent = Flow.toFixed(1);
     tooltip.querySelector('.bandwidth').textContent = Bandwidth.toFixed(1);
     tooltip.querySelector('.duration').textContent = (Duration * 1000).toFixed(1);
   }
-  
+
   function updateSelections() {
     const actualWidth = getDuration() * getZoomLevel();
     const freqRange = maxFrequency - minFrequency;
@@ -415,18 +421,20 @@ export function initFrequencyHover({
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
   
-      const tooltipLeft = left + width + 10;
-      sel.tooltip.style.left = `${tooltipLeft}px`;
-      sel.tooltip.style.top = `${top}px`;
-  
-      updateTooltipValues(sel, left, top, width, height);
+      if (sel.tooltip) {
+        const tooltipLeft = left + width + 10;
+        sel.tooltip.style.left = `${tooltipLeft}px`;
+        sel.tooltip.style.top = `${top}px`;
+
+        updateTooltipValues(sel, left, top, width, height);
+      }
     });
   }
-  
+
   function clearSelections() {
     selections.forEach(sel => {
       viewer.removeChild(sel.rect);
-      viewer.removeChild(sel.tooltip);
+      if (sel.tooltip) viewer.removeChild(sel.tooltip);
     });
     selections.length = 0;
   }
