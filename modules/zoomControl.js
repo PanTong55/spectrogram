@@ -23,7 +23,9 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
   }
 
   function computeMinZoomLevel() {
-    let visibleWidth = wrapperElement.clientWidth;
+    let visibleWidth = wrapperElement.parentElement
+      ? wrapperElement.parentElement.clientWidth
+      : wrapperElement.clientWidth;
     const dur = duration();
     if (dur > 0) {
       minZoomLevel = Math.floor((visibleWidth - 2) / dur);
