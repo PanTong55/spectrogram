@@ -871,6 +871,7 @@
       document.addEventListener('file-loaded', () => {
         const currentFile = getCurrentFile();
         duration = getWavesurfer().getDuration();
+        zoomControl.setExpandMode(false);
         zoomControl.setZoomLevel(0);
         lastLoadedFileName = currentFile ? currentFile.name : null;
         selectionExpandMode = false;
