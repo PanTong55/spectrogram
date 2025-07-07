@@ -871,7 +871,7 @@
     document.addEventListener('file-loaded', () => {
       const currentFile = getCurrentFile();
       duration = getWavesurfer().getDuration();
-      if (duration > 8) {
+      if (duration > 6) {
         zoomControl.setZoomLevel(0);
       } else if (currentFile && currentFile.name !== lastLoadedFileName &&
                  !zoomControl.isExpandMode() && zoomControl.getZoomLevel() > 1000) {
