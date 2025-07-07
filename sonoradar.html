@@ -71,6 +71,9 @@
         <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
         <button id="mapBtn" title="Map" class="sidebar-button"><i class="fa-solid fa-map-location-dot"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
+        <button id="expandBackBtn" title="Back to previous session (Backspace)" class="sidebar-button" style="display:none;">
+          <i class="fa-solid fa-reply"></i>
+        </button>
       </div>
       <!-- Tool Bar -->    
       <div id="tool-bar">
@@ -238,6 +241,12 @@
     let freqHoverControl = null;
     const sampleRateBtn = document.getElementById('sampleRateInput');
     let selectionExpandMode = false;
+    let expandHistory = [];
+    let currentExpandBlob = null;
+    const expandBackBtn = document.getElementById('expandBackBtn');
+    function updateExpandBackBtn() {
+      expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
+    }
     const getDuration = () => duration;
 
     const guanoOutput = document.getElementById('guano-output');
@@ -481,15 +490,18 @@
     viewer.addEventListener('expand-selection', async (e) => {
       const { startTime, endTime } = e.detail;
       if (endTime > startTime) {
-        const file = getCurrentFile();
-        const blob = await cropWavBlob(file, startTime, endTime);
+        const base = currentExpandBlob || getCurrentFile();
+        const blob = await cropWavBlob(base, startTime, endTime);
         if (blob) {
+          expandHistory.push(base);
           await getWavesurfer().loadBlob(blob);
+          currentExpandBlob = blob;
           selectionExpandMode = true;
           zoomControl.setZoomLevel(0);
           sampleRateBtn.disabled = true;
           renderAxes();
           freqHoverControl?.clearSelections();
+          updateExpandBackBtn();
         }
       }
     });
@@ -830,6 +842,32 @@
       }
     });
 
+    expandBackBtn.addEventListener('click', async () => {
+      if (expandHistory.length === 0) return;
+      const prev = expandHistory.pop();
+      if (prev && prev.name !== undefined) {
+        currentExpandBlob = null;
+        await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
+      } else if (prev) {
+        await getWavesurfer().loadBlob(prev);
+        currentExpandBlob = prev;
+        selectionExpandMode = true;
+        zoomControl.setZoomLevel(0);
+        sampleRateBtn.disabled = true;
+        renderAxes();
+        freqHoverControl?.clearSelections();
+      }
+      updateExpandBackBtn();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && expandHistory.length > 0 &&
+          !(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
+        e.preventDefault();
+        expandBackBtn.click();
+      }
+    });
+
     document.addEventListener('file-loaded', () => {
       const currentFile = getCurrentFile();
       duration = getWavesurfer().getDuration();
@@ -842,11 +880,17 @@
       lastLoadedFileName = currentFile ? currentFile.name : null;
       selectionExpandMode = false;
       sampleRateBtn.disabled = false;
+      expandHistory = [];
+      currentExpandBlob = null;
+      updateExpandBackBtn();
     });
 
     document.addEventListener('file-list-cleared', () => {
       selectionExpandMode = false;
       sampleRateBtn.disabled = false;
+      expandHistory = [];
+      currentExpandBlob = null;
+      updateExpandBackBtn();
     });
   </script>
 </body>
