@@ -133,6 +133,17 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
         zoomLevel = minZoomLevel;
         applyZoom();
       }
+    },
+    forceZoomLevel: (newZoom) => {
+      zoomLevel = newZoom;
+      if (ws && typeof ws.zoom === 'function') {
+        ws.zoom(newZoom);
+      }
+      const width = duration() * zoomLevel;
+      container.style.width = `${width}px`;
+      wrapperElement.style.width = `${width}px`;
+      applyZoomCallback();
+      updateZoomButtons();
     }
   };
 }
