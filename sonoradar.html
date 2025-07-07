@@ -868,17 +868,22 @@
       }
     });
 
-      document.addEventListener('file-loaded', () => {
-        const currentFile = getCurrentFile();
-        duration = getWavesurfer().getDuration();
+    document.addEventListener('file-loaded', () => {
+      const currentFile = getCurrentFile();
+      duration = getWavesurfer().getDuration();
+      if (duration > 6) {
         zoomControl.setZoomLevel(0);
-        lastLoadedFileName = currentFile ? currentFile.name : null;
-        selectionExpandMode = false;
-        sampleRateBtn.disabled = false;
-        expandHistory = [];
-        currentExpandBlob = null;
-        updateExpandBackBtn();
-      });
+      } else if (currentFile && currentFile.name !== lastLoadedFileName &&
+                 !zoomControl.isExpandMode() && zoomControl.getZoomLevel() > 1000) {
+        zoomControl.setZoomLevel(1000);
+      }
+      lastLoadedFileName = currentFile ? currentFile.name : null;
+      selectionExpandMode = false;
+      sampleRateBtn.disabled = false;
+      expandHistory = [];
+      currentExpandBlob = null;
+      updateExpandBackBtn();
+    });
 
     document.addEventListener('file-list-cleared', () => {
       selectionExpandMode = false;
