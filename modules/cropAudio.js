@@ -1,8 +1,6 @@
-export async function cropWavBlob(file, startTime, endTime, abortSignal = null) {
+export async function cropWavBlob(file, startTime, endTime) {
   if (!file) return null;
-  if (abortSignal?.aborted) return null;
   const buf = await file.arrayBuffer();
-  if (abortSignal?.aborted) return null;
   const view = new DataView(buf);
 
   let fmtOffset = -1;
@@ -57,6 +55,5 @@ export async function cropWavBlob(file, startTime, endTime, abortSignal = null) 
   outView.setUint32(4, output.length - 8, true); // update RIFF chunk size
   outView.setUint32(dataOffset - 4, newDataLength, true); // update data chunk size
 
-  if (abortSignal?.aborted) return null;
   return new Blob([output.buffer], { type: file.type || 'audio/wav' });
 }
