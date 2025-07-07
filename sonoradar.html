@@ -309,6 +309,13 @@
         }
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
+        if (selectionExpandMode) {
+          selectionExpandMode = false;
+          sampleRateBtn.disabled = false;
+          expandHistory = [];
+          currentExpandBlob = null;
+          updateExpandBackBtn();
+        }
       },
       onAfterLoad: () => {
         if (uploadOverlay.style.display !== 'flex') {
