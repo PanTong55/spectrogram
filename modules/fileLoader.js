@@ -3,8 +3,13 @@
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
 
+const sampleRateCache = new WeakMap();
+
 export async function getWavSampleRate(file) {
   if (!file) return 256000;
+  if (sampleRateCache.has(file)) {
+    return sampleRateCache.get(file);
+  }
   const buffer = await file.arrayBuffer();
   const view = new DataView(buffer);
   let pos = 12;
@@ -17,11 +22,14 @@ export async function getWavSampleRate(file) {
     );
     const chunkSize = view.getUint32(pos + 4, true);
     if (chunkId === 'fmt ') {
-      return view.getUint32(pos + 12, true);
+      const rate = view.getUint32(pos + 12, true);
+      sampleRateCache.set(file, rate);
+      return rate;
     }
     pos += 8 + chunkSize;
     if (chunkSize % 2 === 1) pos += 1; // word alignment
   }
+  sampleRateCache.set(file, 256000);
   return 256000;
 }
 
