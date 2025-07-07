@@ -575,7 +575,7 @@
       if (zoomControl.isExpandMode()) {
         zoomControl.forceExpandMode();
       } else {
-        zoomControl.applyZoom();
+        zoomControl.applyZoom(500);
       }
 
       getPlugin()?.render();
@@ -854,6 +854,9 @@
       const prev = expandHistory.pop();
       if (prev && prev.name !== undefined) {
         currentExpandBlob = null;
+        selectionExpandMode = false;
+        zoomControl.setExpandMode(false);
+        zoomControl.setZoomLevel(500);
         await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
       } else if (prev) {
         await getWavesurfer().loadBlob(prev);
