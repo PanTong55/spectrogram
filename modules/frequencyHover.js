@@ -281,6 +281,10 @@ export function initFrequencyHover({
         }
         suppressHover = false;
       });
+      // Prevent resize initiation when interacting with the close button
+      closeBtn.addEventListener('mousedown', (ev) => {
+        ev.stopPropagation();
+      });
       closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
       rectObj.appendChild(closeBtn);
@@ -318,6 +322,10 @@ export function initFrequencyHover({
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
       if (isDrawing || resizing) return;
+      if (e.target.closest('.selection-close-btn')) {
+        rect.style.cursor = 'default';
+        return;
+      }
   
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
@@ -345,6 +353,7 @@ export function initFrequencyHover({
     // mousedown 時一次性決定 edge
     rect.addEventListener('mousedown', (e) => {
       if (resizing) return;
+      if (e.target.closest('.selection-close-btn')) return;
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
