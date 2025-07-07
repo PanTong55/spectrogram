@@ -247,45 +247,6 @@
     function updateExpandBackBtn() {
       expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
     }
-
-    /**
-     * Clear all states and resources related to selectionExpandMode.
-     * Useful before entering expand mode or when loading a new file.
-     */
-    function clearExpandModeState() {
-      selectionExpandMode = false;
-      sampleRateBtn.disabled = false;
-      expandHistory = [];
-      currentExpandBlob = null;
-
-      try {
-        const plugin = getPlugin?.();
-        if (plugin && typeof plugin.destroy === 'function') {
-          plugin.destroy();
-        }
-      } catch (err) {
-        console.warn('[SonoRadar] Failed to destroy plugin:', err);
-      }
-
-      try {
-        const ws = getWavesurfer?.();
-        if (ws?.isPlaying?.()) ws.pause?.();
-        if (ws?.backend?.ac?.state === 'running') {
-          ws.backend.ac.suspend?.();
-        }
-      } catch (err) {
-        console.warn('[SonoRadar] Audio suspend failed:', err);
-      }
-
-      try {
-        freqHoverControl?.hideHover?.();
-        freqHoverControl?.clearSelections?.();
-      } catch (err) {
-        console.warn('[SonoRadar] Hover cleanup failed:', err);
-      }
-
-      updateExpandBackBtn?.();
-    }
     const getDuration = () => duration;
 
     const guanoOutput = document.getElementById('guano-output');
@@ -349,7 +310,11 @@
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
         if (selectionExpandMode) {
-          clearExpandModeState();
+          selectionExpandMode = false;
+          sampleRateBtn.disabled = false;
+          expandHistory = [];
+          currentExpandBlob = null;
+          updateExpandBackBtn();
         }
       },
       onAfterLoad: () => {
@@ -589,9 +554,6 @@
         }
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
-        if (selectionExpandMode) {
-          clearExpandModeState();
-        }
       },
       onAfterLoad: () => {
         if (uploadOverlay.style.display !== 'flex') {
@@ -918,11 +880,19 @@
         duration = getWavesurfer().getDuration();
         zoomControl.setZoomLevel(0);
         lastLoadedFileName = currentFile ? currentFile.name : null;
-        clearExpandModeState();
+        selectionExpandMode = false;
+        sampleRateBtn.disabled = false;
+        expandHistory = [];
+        currentExpandBlob = null;
+        updateExpandBackBtn();
       });
 
     document.addEventListener('file-list-cleared', () => {
-      clearExpandModeState();
+      selectionExpandMode = false;
+      sampleRateBtn.disabled = false;
+      expandHistory = [];
+      currentExpandBlob = null;
+      updateExpandBackBtn();
     });
   </script>
 </body>
