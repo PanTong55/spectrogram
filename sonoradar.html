@@ -243,6 +243,7 @@
     let selectionExpandMode = false;
     let expandHistory = [];
     let currentExpandBlob = null;
+    let cropAbortController = null;
     const expandBackBtn = document.getElementById('expandBackBtn');
     function updateExpandBackBtn() {
       expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
@@ -304,11 +305,13 @@
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
+        zoomControl.forceZoomLevel(250);
         if (uploadOverlay.style.display !== 'flex') {
           loadingOverlay.style.display = 'flex';
         }
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
+        cropAbortController?.abort();
         if (selectionExpandMode) {
           selectionExpandMode = false;
           sampleRateBtn.disabled = false;
@@ -498,11 +501,16 @@
       const { startTime, endTime } = e.detail;
       if (endTime > startTime) {
         const base = currentExpandBlob || getCurrentFile();
-        const blob = await cropWavBlob(base, startTime, endTime);
+        if (cropAbortController) cropAbortController.abort();
+        cropAbortController = new AbortController();
+        const { signal } = cropAbortController;
+        const blob = await cropWavBlob(base, startTime, endTime, signal);
+        if (signal.aborted) return;
         if (blob) {
           expandHistory.push(base);
           await getWavesurfer().loadBlob(blob);
           currentExpandBlob = blob;
+          cropAbortController = null;
           selectionExpandMode = true;
           zoomControl.setZoomLevel(0);
           sampleRateBtn.disabled = true;
@@ -549,11 +557,13 @@
         sidebarControl.refresh(file.name);
       },
       onBeforeLoad: () => {
+        zoomControl.forceZoomLevel(250);
         if (uploadOverlay.style.display !== 'flex') {
           loadingOverlay.style.display = 'flex';
         }
         freqHoverControl?.hideHover();
         freqHoverControl?.clearSelections();
+        cropAbortController?.abort();
       },
       onAfterLoad: () => {
         if (uploadOverlay.style.display !== 'flex') {
@@ -852,12 +862,15 @@
     expandBackBtn.addEventListener('click', async () => {
       if (expandHistory.length === 0) return;
       const prev = expandHistory.pop();
+      cropAbortController?.abort();
       if (prev && prev.name !== undefined) {
         currentExpandBlob = null;
         await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
+        cropAbortController = null;
       } else if (prev) {
         await getWavesurfer().loadBlob(prev);
         currentExpandBlob = prev;
+        cropAbortController = null;
         selectionExpandMode = true;
         zoomControl.setZoomLevel(0);
         sampleRateBtn.disabled = true;
@@ -884,6 +897,7 @@
         sampleRateBtn.disabled = false;
         expandHistory = [];
         currentExpandBlob = null;
+        cropAbortController = null;
         updateExpandBackBtn();
       });
 
@@ -892,6 +906,7 @@
       sampleRateBtn.disabled = false;
       expandHistory = [];
       currentExpandBlob = null;
+      cropAbortController = null;
       updateExpandBackBtn();
     });
   </script>
