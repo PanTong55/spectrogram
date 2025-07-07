@@ -342,6 +342,21 @@ input[type="file"]:hover {
   background: rgba(210,210,210,1);
 }
 
+/* === Selection Duration Label === */
+.selection-duration {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -14px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1px 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 3px;
+  z-index: 25;
+}
+
 /* === 搜尋列 === */
 #searchInput {
   width: 100%;

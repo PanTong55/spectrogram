@@ -253,6 +253,7 @@ export function initFrequencyHover({
 
     let expandBtn = null;
     let closeBtn = null;
+    let durationLabel = null;
     if (Duration * 1000 > 100) {
       expandBtn = document.createElement('i');
       expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
@@ -285,7 +286,12 @@ export function initFrequencyHover({
       rectObj.appendChild(closeBtn);
     }
 
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn, closeBtn };
+    durationLabel = document.createElement('div');
+    durationLabel.className = 'selection-duration';
+    durationLabel.textContent = `${(Duration * 1000).toFixed(1)} ms`;
+    rectObj.appendChild(durationLabel);
+
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn, closeBtn, durationLabel };
     selections.push(selObj);
     if (tooltip) {
       enableDrag(tooltip);
@@ -411,11 +417,15 @@ export function initFrequencyHover({
   
   function updateTooltipValues(sel, left, top, width, height) {
     const { data, tooltip } = sel;
-    if (!tooltip) return;
     const Flow = data.Flow;
     const Fhigh = data.Fhigh;
     const Bandwidth = Fhigh - Flow;
     const Duration = (data.endTime - data.startTime);
+    if (!tooltip) {
+      if (sel.durationLabel) sel.durationLabel.textContent = `${(Duration * 1000).toFixed(1)} ms`;
+      return;
+    }
+    if (sel.durationLabel) sel.durationLabel.textContent = `${(Duration * 1000).toFixed(1)} ms`;
 
     tooltip.querySelector('.fhigh').textContent = Fhigh.toFixed(1);
     tooltip.querySelector('.flow').textContent = Flow.toFixed(1);
@@ -438,12 +448,14 @@ export function initFrequencyHover({
       sel.rect.style.top = `${top}px`;
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
-  
+
       if (sel.tooltip) {
         const tooltipLeft = left + width + 10;
         sel.tooltip.style.left = `${tooltipLeft}px`;
         sel.tooltip.style.top = `${top}px`;
 
+        updateTooltipValues(sel, left, top, width, height);
+      } else {
         updateTooltipValues(sel, left, top, width, height);
       }
     });
