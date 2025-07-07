@@ -504,6 +504,7 @@
           await getWavesurfer().loadBlob(blob);
           currentExpandBlob = blob;
           selectionExpandMode = true;
+          wrapper.style.width = `${wrapper.parentElement.clientWidth}px`;
           zoomControl.setZoomLevel(0);
           sampleRateBtn.disabled = true;
           renderAxes();
@@ -859,6 +860,7 @@
         await getWavesurfer().loadBlob(prev);
         currentExpandBlob = prev;
         selectionExpandMode = true;
+        wrapper.style.width = `${wrapper.parentElement.clientWidth}px`;
         zoomControl.setZoomLevel(0);
         sampleRateBtn.disabled = true;
         renderAxes();
@@ -878,6 +880,7 @@
       document.addEventListener('file-loaded', () => {
         const currentFile = getCurrentFile();
         duration = getWavesurfer().getDuration();
+        wrapper.style.width = `${wrapper.parentElement.clientWidth}px`;
         zoomControl.setZoomLevel(0);
         lastLoadedFileName = currentFile ? currentFile.name : null;
         selectionExpandMode = false;
