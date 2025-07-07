@@ -2,6 +2,7 @@
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
+import { displayCachedSpectrogram } from './spectrogramCache.js';
 
 export async function getWavSampleRate(file) {
   if (!file) return 256000;
@@ -72,6 +73,8 @@ export function initFileLoader({
   async function loadFile(file) {
     if (!file) return;
     const detectedSampleRate = await getWavSampleRate(file);
+
+    displayCachedSpectrogram(file);
 
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
