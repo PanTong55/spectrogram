@@ -149,9 +149,7 @@
               <div id="upload-progress-text" class="progress-text">0/0</div>
             </div>
             <div id="viewer-container">
-            <div id="spectrogram-only" style="height: 800px; position: relative;">
-              <img id="spectrogram-img" style="position:absolute;top:0;left:0;width:100%;height:100%;display:none;" />
-            </div>
+            <div id="spectrogram-only" style="height: 800px;"></div>
             <canvas id="freq-grid"></canvas>
           </div>
           <div id="fixed-overlay">
@@ -214,7 +212,6 @@
     import { initSidebar } from './modules/sidebar.js';
     import { initTagControl } from './modules/tagControl.js';
     import { initDropdown } from './modules/dropdown.js';
-    import { saveSpectrogram, displayCachedSpectrogram } from './modules/spectrogramCache.js';
     import { showMessageBox } from './modules/messageBox.js';
     import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
@@ -512,14 +509,6 @@
           renderAxes();
           freqHoverControl?.clearSelections();
           updateExpandBackBtn();
-          setTimeout(() => {
-            const canvas = document.querySelector('#spectrogram-only canvas');
-            if (canvas) {
-              const dataUrl = canvas.toDataURL('image/png');
-              saveSpectrogram(currentExpandBlob, dataUrl);
-              displayCachedSpectrogram(currentExpandBlob);
-            }
-          }, 300);
         }
       }
     });
@@ -876,14 +865,6 @@
         freqHoverControl?.clearSelections();
       }
       updateExpandBackBtn();
-      setTimeout(() => {
-        const canvas = document.querySelector('#spectrogram-only canvas');
-        if (canvas) {
-          const dataUrl = canvas.toDataURL('image/png');
-          saveSpectrogram(currentExpandBlob || prev, dataUrl);
-          displayCachedSpectrogram(currentExpandBlob || prev);
-        }
-      }, 300);
     });
 
     document.addEventListener('keydown', (e) => {
@@ -894,26 +875,17 @@
       }
     });
 
-    document.addEventListener('file-loaded', () => {
-      const currentFile = getCurrentFile();
-      duration = getWavesurfer().getDuration();
-      zoomControl.setZoomLevel(0);
-      lastLoadedFileName = currentFile ? currentFile.name : null;
-      selectionExpandMode = false;
-      sampleRateBtn.disabled = false;
-      expandHistory = [];
-      currentExpandBlob = null;
-      updateExpandBackBtn();
-      setTimeout(() => {
-        const canvas = document.querySelector('#spectrogram-only canvas');
-        if (canvas) {
-          const dataUrl = canvas.toDataURL('image/png');
-          const key = currentExpandBlob || currentFile;
-          saveSpectrogram(key, dataUrl);
-          displayCachedSpectrogram(key);
-        }
-      }, 300);
-    });
+      document.addEventListener('file-loaded', () => {
+        const currentFile = getCurrentFile();
+        duration = getWavesurfer().getDuration();
+        zoomControl.setZoomLevel(0);
+        lastLoadedFileName = currentFile ? currentFile.name : null;
+        selectionExpandMode = false;
+        sampleRateBtn.disabled = false;
+        expandHistory = [];
+        currentExpandBlob = null;
+        updateExpandBackBtn();
+      });
 
     document.addEventListener('file-list-cleared', () => {
       selectionExpandMode = false;
