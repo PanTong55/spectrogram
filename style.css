@@ -756,6 +756,12 @@ input.tag-button {
   padding: 0;
 }
 
+/* Hover effect for tag buttons */
+input.tag-button:hover {
+  background-color: #ffd700;
+  color: black;
+}
+
 input.tag-button.active {
   background-color: #ffd700;
   color: black;
