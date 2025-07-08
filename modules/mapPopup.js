@@ -460,6 +460,10 @@ export function initMapPopup({
 
   function toggleDrawControl() {
     if (!drawControl) return;
+    const willShow = !drawControlVisible;
+    if (willShow && textMode) {
+      toggleTextMode();
+    }
     if (drawControlVisible) {
       map.removeControl(drawControl);
       drawBtn?.classList.remove('active');
@@ -575,7 +579,11 @@ export function initMapPopup({
   }
 
   function toggleTextMode() {
-    textMode = !textMode;
+    const newMode = !textMode;
+    if (newMode && drawControlVisible) {
+      toggleDrawControl();
+    }
+    textMode = newMode;
     textBtn?.classList.toggle('active', textMode);
     if (textMode) {
       map.on('click', onMapTextClick);
