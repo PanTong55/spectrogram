@@ -1090,4 +1090,5 @@ input.tag-button.editing {
   z-index: 1000;
   overflow: hidden;
   resize: none;
+  transform: translate(-50%, -100%);
 }
