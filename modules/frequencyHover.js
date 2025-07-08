@@ -264,11 +264,6 @@ export function initFrequencyHover({
           detail: { startTime, endTime }
         }));
       });
-      // Prevent accidental resize initiation when clicking near the button edges
-      // which could leave the hover indicators hidden after expanding
-      expandBtn.addEventListener('mousedown', (ev) => {
-        ev.stopPropagation();
-      });
       expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
       rectObj.appendChild(expandBtn);
