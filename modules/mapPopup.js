@@ -490,7 +490,8 @@ export function initMapPopup({
       : '';
     return L.divIcon({
       className: 'map-text-icon',
-      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`
+      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`,
+      iconAnchor: [0, 0]
     });
   }
 
