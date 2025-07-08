@@ -639,8 +639,6 @@ export function initMapPopup({
     if (popup.style.display === 'block') {
       popup.style.display = 'none';
       document.body.classList.remove('map-open');
-      clearRoute();
-      clearKmlRoute();
       if (textMode) toggleTextMode();
     } else {
       popup.style.display = 'block';
