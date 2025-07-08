@@ -153,6 +153,8 @@ export function initFileLoader({
     }
     hideUploadOverlay();
     await loadFile(selectedFile);
+    // reset value so that selecting the same file again triggers change
+    fileInput.value = '';
   });
 
   prevBtn.addEventListener('click', () => {
