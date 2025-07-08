@@ -50,6 +50,7 @@ export function initFileLoader({
 
   function showUploadOverlay(total) {
     if (!uploadOverlay) return;
+    document.dispatchEvent(new Event('drop-overlay-hide'));
     if (uploadProgressBar) uploadProgressBar.style.width = '0%';
     if (uploadProgressText) uploadProgressText.textContent = `0/${total}`;
     uploadOverlay.style.display = 'flex';
