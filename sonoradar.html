@@ -575,7 +575,7 @@
       if (zoomControl.isExpandMode()) {
         zoomControl.forceExpandMode();
       } else {
-        zoomControl.applyZoom();
+        zoomControl.setZoomLevel(0);
       }
 
       getPlugin()?.render();
@@ -587,7 +587,7 @@
 
     getWavesurfer().on('decode', () => {
       duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
+      zoomControl.setZoomLevel(0);
       renderAxes();
       freqHoverControl?.refreshHover();
     });
