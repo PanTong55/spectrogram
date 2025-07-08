@@ -113,7 +113,11 @@ export function initDragDropLoader({
   async function handleFiles(files) {
     const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
     if (validFiles.length === 0) {
-      showMessageBox({ message: 'Only .wav files are supported.' });
+      showMessageBox({ 
+        title: 'Reminder',
+        message: 'Only .wav files are supported.' 
+      });
+      showOverlay();
       return;
     }
 
