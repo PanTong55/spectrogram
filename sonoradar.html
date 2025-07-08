@@ -851,10 +851,24 @@
 
     expandBackBtn.addEventListener('click', async () => {
       if (expandHistory.length === 0) return;
+      const wasSingle = expandHistory.length === 1;
       const prev = expandHistory.pop();
+
       if (prev && prev.name !== undefined) {
-        currentExpandBlob = null;
-        await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
+        if (wasSingle) {
+          await getWavesurfer().loadBlob(prev);
+          duration = getWavesurfer().getDuration();
+          currentExpandBlob = null;
+          selectionExpandMode = false;
+          sampleRateBtn.disabled = false;
+          zoomControl.setZoomLevel(0);
+          renderAxes();
+          freqHoverControl?.clearSelections();
+          expandHistory = [];
+        } else {
+          currentExpandBlob = null;
+          await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
+        }
       } else if (prev) {
         await getWavesurfer().loadBlob(prev);
         currentExpandBlob = prev;
