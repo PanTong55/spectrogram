@@ -424,6 +424,7 @@ export function initMapPopup({
     });
     if (allCoords.length > 0) {
       map.fitBounds(allCoords);
+      updateMap();
     }
   }
 
@@ -665,6 +666,8 @@ export function initMapPopup({
     });
   }
 
+  const DEFAULT_ZOOM = 13;
+
   function updateMap() {
     const idx = getCurrentIndex();
     if (idx < 0) {
@@ -686,7 +689,11 @@ export function initMapPopup({
     if (!map) {
       createMap(lat, lon);
     } else {
-      map.setView([lat, lon]);
+      if (popup.style.display !== 'block') {
+        map.setView([lat, lon], DEFAULT_ZOOM);
+      } else {
+        map.setView([lat, lon]);
+      }
     }
     refreshMarkers();
   }
