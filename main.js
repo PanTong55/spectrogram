@@ -57,39 +57,6 @@ const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
-const spectrogramCache = new Map();
-specWorker.onmessage = (e) => {
-  if (e.data.type === 'preloaded') {
-    spectrogramCache.set(e.data.key, e.data.imageData);
-  }
-};
-
-function displayCached(file) {
-  const cached = spectrogramCache.get(file.name);
-  if (cached) {
-    specWorker.postMessage({ type: 'display', imageData: cached });
-  }
-}
-
-async function preloadNextFile() {
-  const idx = getCurrentIndex();
-  const files = getFileList();
-  if (idx >= 0 && idx < files.length - 1) {
-    const nextFile = files[idx + 1];
-    if (spectrogramCache.has(nextFile.name)) return;
-    const arrayBuf = await nextFile.arrayBuffer();
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-    specWorker.postMessage({
-      type: 'preload',
-      key: nextFile.name,
-      buffer: audioBuf.getChannelData(0),
-      sampleRate: audioBuf.sampleRate,
-      fftSize: currentFftSize,
-      overlap: getOverlapPercent()
-    }, [audioBuf.getChannelData(0).buffer]);
-  }
-}
 function updateExpandBackBtn() {
 expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
 }
@@ -144,12 +111,11 @@ wavesurfer: getWavesurfer(),
 spectrogramHeight,
 colorMap: [],
 onPluginReplaced: () => {},
-  onFileLoaded: (file) => {
-    hideDropOverlay();
-    zoomControlsElem.style.display = 'flex';
-    sidebarControl.refresh(file.name);
-    displayCached(file);
-  },
+onFileLoaded: (file) => {
+hideDropOverlay();
+zoomControlsElem.style.display = 'flex';
+sidebarControl.refresh(file.name);
+},
 onBeforeLoad: () => {
 if (uploadOverlay.style.display !== 'flex') {
 loadingOverlay.style.display = 'flex';
@@ -751,7 +717,6 @@ document.addEventListener("file-loaded", async () => {
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
     specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
-    preloadNextFile();
   }
 });
 

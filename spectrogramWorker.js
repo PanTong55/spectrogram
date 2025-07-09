@@ -8,28 +8,17 @@ self.onmessage = (e) => {
     ctx = canvas.getContext('2d');
   } else if (type === 'render') {
     if (!ctx) return;
-    const img = computeImageData(e.data.buffer, e.data.fftSize || 1024, e.data.overlap || 0);
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.putImageData(img, 0, 0);
-    self.postMessage({ type: 'rendered' });
-  } else if (type === 'preload') {
-    const img = computeImageData(e.data.buffer, e.data.fftSize || 1024, e.data.overlap || 0);
-    self.postMessage({ type: 'preloaded', key: e.data.key, imageData: img });
-  } else if (type === 'display') {
-    if (!ctx) return;
-    const img = e.data.imageData;
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.putImageData(img, 0, 0);
+    renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0);
   }
 };
 
-function computeImageData(signal, fftSize, overlapPct) {
+function renderSpectrogram(signal, sr, fftSize, overlapPct) {
   const hop = Math.max(1, Math.floor(fftSize * (1 - overlapPct / 100)));
   const width = Math.max(1, Math.ceil((signal.length - fftSize) / hop));
   const height = fftSize / 2;
-  const img = new ImageData(width, height);
+  canvas.width = width;
+  canvas.height = height;
+  const img = ctx.createImageData(width, height);
   const window = hannWindow(fftSize);
   const real = new Float32Array(fftSize);
   const imag = new Float32Array(fftSize);
@@ -51,7 +40,8 @@ function computeImageData(signal, fftSize, overlapPct) {
       img.data[idx * 4 + 3] = 255;
     }
   }
-  return img;
+  ctx.putImageData(img, 0, 0);
+  self.postMessage({ type: 'rendered' });
 }
 
 function hannWindow(N) {
