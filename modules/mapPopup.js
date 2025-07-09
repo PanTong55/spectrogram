@@ -424,6 +424,7 @@ export function initMapPopup({
     });
     if (allCoords.length > 0) {
       map.fitBounds(allCoords);
+      updateMap();
     }
   }
 
