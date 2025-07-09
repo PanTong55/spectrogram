@@ -490,7 +490,10 @@ export function initMapPopup({
       : '';
     return L.divIcon({
       className: 'map-text-icon',
-      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`
+      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`,
+      iconSize: null, // 可保持 null 讓其自適應
+      iconAnchor: [0, 0], // 將 anchor 設為左上角
+      popupAnchor: [0, 0]
     });
   }
 
