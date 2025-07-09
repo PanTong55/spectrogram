@@ -11,8 +11,12 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
   let minZoomLevel = 250;
 
   function computeMaxZoomLevel() {
+    const dur = duration();
+
+    if (dur > 15000) return 1500;
+    if (dur > 10000) return 2000;
+
     if (isSelectionExpandMode()) {
-      const dur = duration();
       if (dur > 0) {
         if (dur < 1000) return 4000;
         if (dur < 3000) return 3000;
