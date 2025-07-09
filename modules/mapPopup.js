@@ -245,6 +245,7 @@ export function initMapPopup({
       .then((r) => r.json())
       .then((hkgriddata) => {
         hkgridLayer = L.geoJSON(hkgriddata, {
+          interactive: false,
           style: {
             color: '#3388ff',
             weight: 2,
