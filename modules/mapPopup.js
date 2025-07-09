@@ -11,7 +11,7 @@ export function initMapPopup({
   const dragBar = popup.querySelector('.popup-drag-bar');
   const closeBtn = popup.querySelector('.popup-close-btn');
   if (!btn || !popup || !mapDiv) return;
-  mapDiv.style.cursor = 'grab';
+  mapDiv.style.cursor = 'default';
 
   const edgeThreshold = 5;
 
@@ -70,6 +70,7 @@ export function initMapPopup({
   const copyCoordMsg = mapDiv.querySelector('#copy-coord-message');
   let copyMsgTimer = null;
   let scaleControl = null;
+  let isMapDragging = false;
   const kmlInput = document.createElement('input');
   kmlInput.type = 'file';
   kmlInput.accept = '.kml';
@@ -77,6 +78,16 @@ export function initMapPopup({
   popup.appendChild(kmlInput);
   const mapDropOverlay = document.getElementById('map-drop-overlay');
   let dropCounter = 0;
+
+  function updateCursor() {
+    if (textMode) {
+      mapDiv.style.cursor = 'text';
+    } else if (isMapDragging) {
+      mapDiv.style.cursor = 'grabbing';
+    } else {
+      mapDiv.style.cursor = 'default';
+    }
+  }
 
   function showMapDropOverlay() {
     if (mapDropOverlay) {
@@ -153,6 +164,9 @@ export function initMapPopup({
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
+    map.on('dragstart', () => { isMapDragging = true; updateCursor(); });
+    map.on('dragend', () => { isMapDragging = false; updateCursor(); });
+    updateCursor();
     scaleControl = L.control.scale({
       position: 'bottomleft',
       metric: true,
@@ -615,6 +629,7 @@ export function initMapPopup({
       }
     }
     updateTextMarkersDraggable();
+    updateCursor();
   }
 
   function showDeviceLocation() {
@@ -678,6 +693,7 @@ export function initMapPopup({
         map.invalidateSize();
       }
       updateMap();
+      updateCursor();
     }
   }
 
