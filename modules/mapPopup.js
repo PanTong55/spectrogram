@@ -67,6 +67,8 @@ export function initMapPopup({
   const coordScaleWrapper = mapDiv.querySelector('.coord-scale-wrapper');
   const coordDisplay = mapDiv.querySelector('#coord-display');
   const noCoordMsg = mapDiv.querySelector('#no-coord-message');
+  const copyCoordMsg = mapDiv.querySelector('#copy-coord-message');
+  let copyMsgTimer = null;
   let scaleControl = null;
   const kmlInput = document.createElement('input');
   kmlInput.type = 'file';
@@ -98,6 +100,15 @@ export function initMapPopup({
 
   function hideNoCoordMessage() {
     if (noCoordMsg) noCoordMsg.style.display = 'none';
+  }
+
+  function showCopyCoordMessage() {
+    if (!copyCoordMsg) return;
+    copyCoordMsg.style.display = 'flex';
+    clearTimeout(copyMsgTimer);
+    copyMsgTimer = setTimeout(() => {
+      copyCoordMsg.style.display = 'none';
+    }, 3000);
   }
 
   mapDiv.addEventListener('dragenter', (e) => {
@@ -160,6 +171,13 @@ export function initMapPopup({
     map.on('mousemove', (e) => updateCoords(e.latlng));
     map.on('move', () => updateCoords(map.getCenter()));
     updateCoords(map.getCenter());
+
+    map.on('contextmenu', (e) => {
+      const { lat, lng } = e.latlng;
+      const text = `${lat.toFixed(6)}\t${lng.toFixed(6)}`;
+      navigator.clipboard?.writeText(text).catch(() => {});
+      showCopyCoordMessage();
+    });
 
     const osmAttr = { attribution: '&copy; OpenStreetMap contributors' };
     const esriAttr = { attribution: '&copy; Esri' };
