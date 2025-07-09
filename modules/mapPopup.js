@@ -507,7 +507,6 @@ export function initMapPopup({
   input.rows = 1;
   input.style.left = `${point.x}px`;
   input.style.top = `${point.y}px`;
-  input.style.transform = 'translate(-50%, -100%)';
   map.getContainer().appendChild(input);
   activeTextInput = input;
   map.dragging.disable();
