@@ -63,7 +63,7 @@ export function replacePlugin(
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
 
-  const oldCanvas = container.querySelector("canvas:not(#spectrogram-canvas)");
+  const oldCanvas = container.querySelector("canvas");
   if (oldCanvas) oldCanvas.remove();
 
   if (plugin?.destroy) plugin.destroy();
@@ -88,8 +88,6 @@ export function replacePlugin(
 
   try {
     plugin.render();
-    const pluginCanvas = container.querySelector("canvas:not(#spectrogram-canvas)");
-    if (pluginCanvas) pluginCanvas.style.display = 'none';
     requestAnimationFrame(() => {
       if (typeof onRendered === 'function') onRendered();
     });
