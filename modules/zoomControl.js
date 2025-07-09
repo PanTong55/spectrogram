@@ -9,7 +9,6 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
 
   let zoomLevel = 500;
   let minZoomLevel = 250;
-  let isExpandMode = false;
 
   function computeMaxZoomLevel() {
     if (isSelectionExpandMode()) {
@@ -50,50 +49,38 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
     updateZoomButtons();
   }
 
-  function updateZoomButtons() {
+  function setZoomLevel(newZoom) {
     computeMinZoomLevel();
-    const disabled = isExpandMode;
     const maxZoom = computeMaxZoomLevel();
-    zoomInBtn.disabled = disabled || zoomLevel >= maxZoom;
-    zoomOutBtn.disabled = disabled || zoomLevel <= minZoomLevel;
-    expandBtn.classList.toggle('active', isExpandMode);
+    zoomLevel = Math.min(Math.max(newZoom, minZoomLevel), maxZoom);
+    applyZoom();
   }
 
-  function setExpandMode(val) {
-    if (isExpandMode === val) return;
-    isExpandMode = val;
+  function updateZoomButtons() {
     computeMinZoomLevel();
-    if (isExpandMode) {
-      zoomLevel = minZoomLevel;
-    } else {
-      zoomLevel = Math.max(minZoomLevel, 500);
-    }
-    applyZoom();
-    updateZoomButtons();
+    const maxZoom = computeMaxZoomLevel();
+    zoomInBtn.disabled = zoomLevel >= maxZoom;
+    zoomOutBtn.disabled = zoomLevel <= minZoomLevel;
   }
 
   zoomInBtn.onclick = () => {
-    if (!isExpandMode) {
-      const maxZoom = computeMaxZoomLevel();
-      if (zoomLevel < maxZoom) {
-        zoomLevel = Math.min(zoomLevel + 500, maxZoom);
-      }
+    const maxZoom = computeMaxZoomLevel();
+    if (zoomLevel < maxZoom) {
+      zoomLevel = Math.min(zoomLevel + 500, maxZoom);
       applyZoom();
     }
   };
 
   zoomOutBtn.onclick = () => {
-    if (!isExpandMode) {
-      computeMinZoomLevel();
-      if (zoomLevel > minZoomLevel) {
-        zoomLevel = Math.max(zoomLevel - 500, minZoomLevel);
-        applyZoom();
-      }
+    computeMinZoomLevel();
+    if (zoomLevel > minZoomLevel) {
+      zoomLevel = Math.max(zoomLevel - 500, minZoomLevel);
+      applyZoom();
     }
   };
 
   expandBtn.onclick = () => {
-    setExpandMode(!isExpandMode);
+    setZoomLevel(minZoomLevel);
   };
 
   document.addEventListener('keydown', (e) => {
@@ -119,20 +106,10 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
     applyZoom,
     updateZoomButtons,
     getZoomLevel: () => zoomLevel,
-    setZoomLevel: (newZoom) => {
-      computeMinZoomLevel();
-      const maxZoom = computeMaxZoomLevel();
-      zoomLevel = Math.min(Math.max(newZoom, minZoomLevel), maxZoom);
-      applyZoom();
-    },
-    setExpandMode,
-    isExpandMode: () => isExpandMode,
+    setZoomLevel,
+    isExpandMode: () => false,
     forceExpandMode: () => {
-      computeMinZoomLevel();
-      if (isExpandMode) {
-        zoomLevel = minZoomLevel;
-        applyZoom();
-      }
+      setZoomLevel(minZoomLevel);
     }
   };
 }
