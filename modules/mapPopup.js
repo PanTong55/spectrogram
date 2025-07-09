@@ -59,6 +59,7 @@ export function initMapPopup({
   let textMode = false;
   let textMarkers = [];
   let activeTextInput = null;
+  let suppressNextTextClick = false;
   let drawControl = null;
   let drawnItems = null;
   let drawControlVisible = false;
@@ -571,6 +572,7 @@ export function initMapPopup({
     });
     input.addEventListener('pointerdown', (e) => e.stopPropagation());
     input.addEventListener('blur', () => {
+      suppressNextTextClick = true;
       setTimeout(() => {
         if (document.activeElement !== input) finish();
       });
@@ -606,6 +608,10 @@ export function initMapPopup({
   }
 
   function onMapTextClick(e) {
+    if (suppressNextTextClick) {
+      suppressNextTextClick = false;
+      return;
+    }
     if (activeTextInput) return;
     const marker = createTextMarker(e.latlng, '');
     marker.addTo(map);
