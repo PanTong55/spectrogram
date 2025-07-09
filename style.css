@@ -359,7 +359,7 @@ input[type="file"]:hover {
 
 /* === 搜尋列 === */
 #searchInput {
-  width: 100%;
+  flex: 1;
   box-sizing: border-box;
 }
 
@@ -1096,4 +1096,135 @@ input.tag-button.editing {
   overflow: hidden;
   resize: none;
   transform: translate(-50%, -100%);
+}
+
+/* === Inline style replacements === */
+#layout {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+}
+
+#fileListHeaderRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.metadata-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#fileListHeader {
+  font-weight: bold;
+}
+
+#fileCount {
+  font-weight: normal;
+}
+
+.action-icon {
+  cursor: pointer;
+  padding-top: 1px;
+}
+
+#metadata-toggle {
+  cursor: pointer;
+}
+
+#fileInput {
+  display: none;
+}
+
+#currentFilePath i {
+  margin-right: 6px;
+}
+
+#expandBackBtn {
+  display: none;
+}
+
+#overlapInput {
+  width: 45px;
+  padding-right: 0;
+  text-align: center;
+}
+
+.freq-input {
+  width: 40px;
+  padding-right: 0;
+}
+
+.contrast-icon {
+  padding-left: 15px;
+}
+
+#spectrogram-wrapper {
+  position: relative;
+}
+
+#spectrogram-settings {
+  padding: 0 0 2px;
+  margin-left: 45px;
+  font-size: 12px;
+  font-family: 'Noto Sans HK', sans-serif;
+  z-index: 10;
+}
+
+.drop-border {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  border: 5px dashed rgba(150, 150, 150, 0.8);
+  border-radius: 10px;
+}
+
+.drop-message {
+  text-align: center;
+  font-family: 'Noto Sans HK', sans-serif;
+  font-size: 24px;
+  color: #333;
+}
+
+.drop-icon {
+  font-size: 60px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+#spectrogram-only {
+  height: 800px;
+}
+
+#mapPopup {
+  display: none;
+}
+
+#map {
+  width: 100%;
+  height: calc(100% - 31px);
+  border-radius: 0 0 8px 8px;
+  position: relative;
+}
+
+#no-coord-message,
+#copy-coord-message {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 10px;
+  bottom: auto;
+  display: none;
 }
