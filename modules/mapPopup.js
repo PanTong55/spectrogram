@@ -1,5 +1,7 @@
 import { getCurrentIndex, getFileMetadata, getFileList } from './fileState.js';
 
+let importKmlFileFn = null;
+
 export function initMapPopup({
   buttonId = 'mapBtn',
   popupId = 'mapPopup',
@@ -153,18 +155,8 @@ export function initMapPopup({
     dropCounter = 0;
     hideMapDropOverlay();
     const file = Array.from(e.dataTransfer.files).find(f => f.name.endsWith('.kml'));
-    if (!file) return;
-    const text = await file.text();
-    const lines = parseKml(text);
-    clearKmlRoute();
-    const allCoords = [];
-    lines.forEach(coords => {
-      const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
-      kmlPolylines.push(line);
-      allCoords.push(...coords);
-    });
-    if (allCoords.length > 0) {
-      map.fitBounds(allCoords);
+    if (file) {
+      await importKml(file);
     }
   });
 
@@ -419,6 +411,24 @@ export function initMapPopup({
     kmlPolylines = [];
   }
 
+  async function importKml(file) {
+    if (!file) return;
+    const text = await file.text();
+    const lines = parseKml(text);
+    clearKmlRoute();
+    const allCoords = [];
+    lines.forEach(coords => {
+      const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
+      kmlPolylines.push(line);
+      allCoords.push(...coords);
+    });
+    if (allCoords.length > 0) {
+      map.fitBounds(allCoords);
+    }
+  }
+
+  importKmlFileFn = importKml;
+
   function parseKml(text) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/xml');
@@ -439,18 +449,8 @@ export function initMapPopup({
 
   kmlInput.addEventListener('change', async () => {
     const file = kmlInput.files[0];
-    if (!file) return;
-    const text = await file.text();
-    const lines = parseKml(text);
-    clearKmlRoute();
-    const allCoords = [];
-    lines.forEach(coords => {
-      const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
-      kmlPolylines.push(line);
-      allCoords.push(...coords);
-    });
-    if (allCoords.length > 0) {
-      map.fitBounds(allCoords);
+    if (file) {
+      await importKml(file);
     }
   });
 
@@ -850,4 +850,10 @@ export function initMapPopup({
   }
   document.addEventListener('file-loaded', updateMap);
   document.addEventListener('file-list-cleared', () => refreshMarkers());
+}
+
+export async function importKmlFile(file) {
+  if (importKmlFileFn && file) {
+    await importKmlFileFn(file);
+  }
 }
