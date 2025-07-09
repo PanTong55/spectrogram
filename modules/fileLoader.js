@@ -2,6 +2,7 @@
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
+import { showMessageBox } from './messageBox.js';
 
 export async function getWavSampleRate(file) {
   if (!file) return 256000;
@@ -23,6 +24,42 @@ export async function getWavSampleRate(file) {
     if (chunkSize % 2 === 1) pos += 1; // word alignment
   }
   return 256000;
+}
+
+export async function getWavDuration(file) {
+  if (!file) return 0;
+  const buffer = await file.arrayBuffer();
+  const view = new DataView(buffer);
+  let pos = 12;
+  let sampleRate = 0;
+  let numChannels = 1;
+  let bitsPerSample = 16;
+  let dataSize = 0;
+  while (pos < view.byteLength - 8) {
+    const chunkId = String.fromCharCode(
+      view.getUint8(pos),
+      view.getUint8(pos + 1),
+      view.getUint8(pos + 2),
+      view.getUint8(pos + 3)
+    );
+    const chunkSize = view.getUint32(pos + 4, true);
+    if (chunkId === 'fmt ') {
+      numChannels = view.getUint16(pos + 10, true);
+      sampleRate = view.getUint32(pos + 12, true);
+      bitsPerSample = view.getUint16(pos + 22, true);
+    } else if (chunkId === 'data') {
+      dataSize = chunkSize;
+      break;
+    }
+    pos += 8 + chunkSize;
+    if (chunkSize % 2 === 1) pos += 1;
+  }
+  if (sampleRate > 0 && dataSize > 0) {
+    const bytesPerSample = (bitsPerSample / 8) * numChannels;
+    const numSamples = dataSize / bytesPerSample;
+    return numSamples / sampleRate;
+  }
+  return 0;
 }
 
 let lastObjectUrl = null;
@@ -136,26 +173,48 @@ export function initFileLoader({
       onBeforeLoad();
     }
 
+    let skippedLong = 0;
     const sortedList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
-    const index = sortedList.findIndex(f => f.name === selectedFile.name);
-
-    removeFilesByName('demo_recording.wav');
-    const startIdx = getFileList().length;
-    addFilesToList(sortedList, index);
+    const filteredList = [];
+    const metaList = [];
     for (let i = 0; i < sortedList.length; i++) {
-      try {
-        const txt = await extractGuanoMetadata(sortedList[i]);
-        const meta = parseGuanoMetadata(txt);
-        setFileMetadata(startIdx + i, meta);
-      } catch (err) {
-        setFileMetadata(startIdx + i, { date: '', time: '', latitude: '', longitude: '' });
+      const dur = await getWavDuration(sortedList[i]);
+      if (dur > 20) {
+        skippedLong++;
+      } else {
+        filteredList.push(sortedList[i]);
+        try {
+          const txt = await extractGuanoMetadata(sortedList[i]);
+          metaList.push(parseGuanoMetadata(txt));
+        } catch (err) {
+          metaList.push({ date: '', time: '', latitude: '', longitude: '' });
+        }
       }
       updateUploadOverlay(i + 1, sortedList.length);
     }
+
+    const index = filteredList.findIndex(f => f.name === selectedFile.name);
+
+    removeFilesByName('demo_recording.wav');
+    const startIdx = getFileList().length;
+    if (filteredList.length > 0) {
+      addFilesToList(filteredList, index >= 0 ? index : 0);
+      for (let i = 0; i < filteredList.length; i++) {
+        setFileMetadata(startIdx + i, metaList[i]);
+      }
+    }
     hideUploadOverlay();
-    await loadFile(selectedFile);
+    if (filteredList.length > 0) {
+      await loadFile(filteredList[index >= 0 ? index : 0]);
+    }
     // reset value so that selecting the same file again triggers change
     fileInput.value = '';
+    if (skippedLong > 0) {
+      showMessageBox({
+        title: 'Warning',
+        message: `.wav files longer than 20 seconds are not supported and a total of (${skippedLong}) such files were skipped during the loading process. Please trim or preprocess these files to meet the duration requirement before loading.`
+      });
+    }
   });
 
   prevBtn.addEventListener('click', () => {

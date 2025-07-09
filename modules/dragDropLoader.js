@@ -1,7 +1,7 @@
 // modules/dragDropLoader.js
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
-import { getWavSampleRate } from './fileLoader.js';
+import { getWavSampleRate, getWavDuration } from './fileLoader.js';
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
 import { showMessageBox } from './messageBox.js';
 
@@ -113,9 +113,9 @@ export function initDragDropLoader({
   async function handleFiles(files) {
     const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
     if (validFiles.length === 0) {
-      showMessageBox({ 
+      showMessageBox({
         title: 'Reminder',
-        message: 'Only .wav files are supported.' 
+        message: 'Only .wav files are supported.'
       });
       showOverlay();
       return;
@@ -127,22 +127,44 @@ export function initDragDropLoader({
       onBeforeLoad();
     }
 
+    let skippedLong = 0;
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
-    removeFilesByName('demo_recording.wav');
-    const startIdx = getFileList().length;
-    addFilesToList(sortedList, 0);
+    const filteredList = [];
+    const metaList = [];
     for (let i = 0; i < sortedList.length; i++) {
-      try {
-        const txt = await extractGuanoMetadata(sortedList[i]);
-        const meta = parseGuanoMetadata(txt);
-        setFileMetadata(startIdx + i, meta);
-      } catch (err) {
-        setFileMetadata(startIdx + i, { date: '', time: '', latitude: '', longitude: '' });
+      const dur = await getWavDuration(sortedList[i]);
+      if (dur > 20) {
+        skippedLong++;
+      } else {
+        filteredList.push(sortedList[i]);
+        try {
+          const txt = await extractGuanoMetadata(sortedList[i]);
+          metaList.push(parseGuanoMetadata(txt));
+        } catch (err) {
+          metaList.push({ date: '', time: '', latitude: '', longitude: '' });
+        }
       }
       updateUploadOverlay(i + 1, sortedList.length);
     }
+
+    removeFilesByName('demo_recording.wav');
+    const startIdx = getFileList().length;
+    if (filteredList.length > 0) {
+      addFilesToList(filteredList, 0);
+      for (let i = 0; i < filteredList.length; i++) {
+        setFileMetadata(startIdx + i, metaList[i]);
+      }
+    }
     hideUploadOverlay();
-    await loadFile(sortedList[0]);
+    if (filteredList.length > 0) {
+      await loadFile(filteredList[0]);
+    }
+    if (skippedLong > 0) {
+      showMessageBox({
+        title: 'Warning',
+        message: `.wav files longer than 20 seconds are not supported and a total of (${skippedLong}) such files were skipped during the loading process. Please trim or preprocess these files to meet the duration requirement before loading.`
+      });
+    }
   }
 
   let dragCounter = 0;
