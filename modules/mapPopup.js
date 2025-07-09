@@ -80,10 +80,10 @@ export function initMapPopup({
   let dropCounter = 0;
 
   function updateCursor() {
-    if (textMode) {
-      mapDiv.style.cursor = 'text';
-    } else if (isMapDragging) {
+    if (isMapDragging) {
       mapDiv.style.cursor = 'grabbing';
+    } else if (textMode) {
+      mapDiv.style.cursor = 'text';
     } else {
       mapDiv.style.cursor = 'default';
     }
