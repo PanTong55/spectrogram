@@ -4,6 +4,7 @@ import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { getWavSampleRate, getWavDuration } from './fileLoader.js';
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
 import { showMessageBox } from './messageBox.js';
+import { importKmlFile } from './mapPopup.js';
 
 export function initDragDropLoader({
   targetElementId,
@@ -111,6 +112,11 @@ export function initDragDropLoader({
   }
 
   async function handleFiles(files) {
+    const kmlFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.kml'));
+    if (kmlFile) {
+      importKmlFile(kmlFile);
+    }
+
     const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
     if (validFiles.length === 0) {
       showMessageBox({
