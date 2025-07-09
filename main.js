@@ -149,7 +149,7 @@ const tagControl = initTagControl();
 
 (async () => {
 try {
-const resp = await fetch('https://raw.githubusercontent.com/PanTong55/spectrogram/main/recording/demo_recording.wav');
+const resp = await fetch('https://hkbatradar.com/sonoradar/demo_recording.wav');
 const blob = await resp.blob();
 const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
 setFileList([demoFile], -1);
