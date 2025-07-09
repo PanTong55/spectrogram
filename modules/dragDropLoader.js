@@ -111,10 +111,12 @@ export function initDragDropLoader({
     document.dispatchEvent(new Event('file-loaded'));
   }
 
+  let pendingKmlFile = null;
+
   async function handleFiles(files) {
     const kmlFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.kml'));
     if (kmlFile) {
-      importKmlFile(kmlFile);
+      pendingKmlFile = kmlFile;
     }
 
     const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
@@ -164,6 +166,10 @@ export function initDragDropLoader({
     hideUploadOverlay();
     if (filteredList.length > 0) {
       await loadFile(filteredList[0]);
+      if (pendingKmlFile) {
+        await importKmlFile(pendingKmlFile);
+        pendingKmlFile = null;
+      }
     }
     if (skippedLong > 0) {
       showMessageBox({
