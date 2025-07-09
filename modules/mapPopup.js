@@ -484,13 +484,29 @@ export function initMapPopup({
     })[c]);
   }
 
+
+  function measureText(text) {
+    const span = document.createElement("span");
+    span.className = "map-text-label";
+    span.style.position = "absolute";
+    span.style.visibility = "hidden";
+    span.style.whiteSpace = "pre";
+    span.textContent = text;
+    document.body.appendChild(span);
+    const rect = span.getBoundingClientRect();
+    document.body.removeChild(span);
+    return { width: rect.width, height: rect.height };
+  }
   function createTextIcon(text, showTooltip = false) {
     const titleAttr = showTooltip
       ? ' title="Left click to edit\nRight click to delete"'
       : '';
+    const { width, height } = measureText(text);
     return L.divIcon({
       className: 'map-text-icon',
-      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`
+      html: `<span class="map-text-label"${titleAttr}>${escapeHtml(text)}</span>`,
+      iconSize: [width, height],
+      iconAnchor: [width / 2, height / 2]
     });
   }
 
