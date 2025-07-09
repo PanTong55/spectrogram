@@ -19,10 +19,10 @@ export function initMapPopup({
     const rect = popup.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    const onLeft = x >= -edgeThreshold && x <= edgeThreshold;
-    const onRight = x <= rect.width + edgeThreshold && x >= rect.width - edgeThreshold;
-    const onTop = y >= -edgeThreshold && y <= edgeThreshold;
-    const onBottom = y <= rect.height + edgeThreshold && y >= rect.height - edgeThreshold;
+    const onLeft   = Math.abs(x - 0) <= edgeThreshold;
+    const onRight  = Math.abs(x - rect.width) <= edgeThreshold;
+    const onTop    = Math.abs(y - 0) <= edgeThreshold;
+    const onBottom = Math.abs(y - rect.height) <= edgeThreshold;
     return { onLeft, onRight, onTop, onBottom };
   }
 
