@@ -287,9 +287,8 @@ maxFrequency: currentFreqMax,
 minFrequency: currentFreqMin,
 totalDuration: duration,
 getZoomLevel: () => zoomControl.getZoomLevel(),
-getDuration: () => duration,
-isExpandMode: () => zoomControl.isExpandMode()
-});
+    getDuration: () => duration
+  });
 } else {
 freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
 }
@@ -384,12 +383,8 @@ scrollTargetId: 'time-axis-wrapper',
 });
 
 getWavesurfer().on('ready', () => {
-duration = getWavesurfer().getDuration();
-if (zoomControl.isExpandMode()) {
-zoomControl.forceExpandMode();
-} else {
-zoomControl.setZoomLevel(0);
-}
+    duration = getWavesurfer().getDuration();
+    zoomControl.setZoomLevel(0);
 
 getPlugin()?.render();
 requestAnimationFrame(() => {

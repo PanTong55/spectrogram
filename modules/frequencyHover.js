@@ -10,8 +10,7 @@ export function initFrequencyHover({
   minFrequency = 10,
   totalDuration = 1000,
   getZoomLevel,
-  getDuration,
-  isExpandMode = () => false
+  getDuration
 }) {
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
@@ -26,7 +25,7 @@ export function initFrequencyHover({
   let persistentLinesEnabled = true;
   let disablePersistentLinesForScrollbar = false;
   const defaultScrollbarThickness = 20;
-  const getScrollbarThickness = () => isExpandMode() ? defaultScrollbarThickness : 0;
+  const getScrollbarThickness = () => defaultScrollbarThickness;
   const edgeThreshold = 5;
   
   let suppressHover = false;
