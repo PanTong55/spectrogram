@@ -295,11 +295,6 @@ freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
 };
 
 const wrapper = document.getElementById('viewer-wrapper');
-function resetWrapperWidth() {
-  if (wrapper && wrapper.parentElement) {
-    wrapper.style.width = `${wrapper.parentElement.clientWidth}px`;
-  }
-}
 const zoomControl = initZoomControls(
 getWavesurfer(),
 container,
@@ -318,12 +313,11 @@ const base = currentExpandBlob || getCurrentFile();
 const blob = await cropWavBlob(base, startTime, endTime);
 if (blob) {
 expandHistory.push(base);
-      await getWavesurfer().loadBlob(blob);
-      currentExpandBlob = blob;
-      selectionExpandMode = true;
-      resetWrapperWidth();
-      zoomControl.setZoomLevel(0);
-      sampleRateBtn.disabled = true;
+await getWavesurfer().loadBlob(blob);
+currentExpandBlob = blob;
+selectionExpandMode = true;
+zoomControl.setZoomLevel(0);
+sampleRateBtn.disabled = true;
 renderAxes();
 freqHoverControl?.clearSelections();
 updateExpandBackBtn();
@@ -390,7 +384,6 @@ scrollTargetId: 'time-axis-wrapper',
 
 getWavesurfer().on('ready', () => {
     duration = getWavesurfer().getDuration();
-    resetWrapperWidth();
     zoomControl.setZoomLevel(0);
 
 getPlugin()?.render();
@@ -402,7 +395,6 @@ freqHoverControl?.refreshHover();
 
 getWavesurfer().on('decode', () => {
 duration = getWavesurfer().getDuration();
-resetWrapperWidth();
 zoomControl.setZoomLevel(0);
 renderAxes();
 freqHoverControl?.refreshHover();
@@ -681,14 +673,13 @@ const prev = expandHistory.pop();
 
 if (prev && prev.name !== undefined) {
 if (wasSingle) {
-      await getWavesurfer().loadBlob(prev);
-      duration = getWavesurfer().getDuration();
-      currentExpandBlob = null;
-      selectionExpandMode = false;
-      sampleRateBtn.disabled = false;
-      resetWrapperWidth();
-      zoomControl.setZoomLevel(0);
-      renderAxes();
+await getWavesurfer().loadBlob(prev);
+duration = getWavesurfer().getDuration();
+currentExpandBlob = null;
+selectionExpandMode = false;
+sampleRateBtn.disabled = false;
+zoomControl.setZoomLevel(0);
+renderAxes();
 freqHoverControl?.clearSelections();
 expandHistory = [];
 } else {
@@ -696,12 +687,11 @@ currentExpandBlob = null;
 await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
 }
 } else if (prev) {
-  await getWavesurfer().loadBlob(prev);
-  currentExpandBlob = prev;
-  selectionExpandMode = true;
-  resetWrapperWidth();
-  zoomControl.setZoomLevel(0);
-  sampleRateBtn.disabled = true;
+await getWavesurfer().loadBlob(prev);
+currentExpandBlob = prev;
+selectionExpandMode = true;
+zoomControl.setZoomLevel(0);
+sampleRateBtn.disabled = true;
 renderAxes();
 freqHoverControl?.clearSelections();
 }
@@ -719,7 +709,6 @@ expandBackBtn.click();
 document.addEventListener("file-loaded", async () => {
   const currentFile = getCurrentFile();
   duration = getWavesurfer().getDuration();
-  resetWrapperWidth();
   zoomControl.setZoomLevel(0);
   lastLoadedFileName = currentFile ? currentFile.name : null;
   selectionExpandMode = false;
