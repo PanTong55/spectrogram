@@ -15,7 +15,7 @@
 </head>
 <body>
 
-  <div style="display: flex; flex-direction: row; height: 100vh;">
+  <div id="layout">
     <!-- Sidebar -->
   <div id="sidebar">
     <!-- SonoRadar Branding Header -->
@@ -26,26 +26,26 @@
         <div class="branding-subtitle">Powered by Hong Kong Bat Radar</div>
       </div>
     </div>    
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-       <span id="fileListHeader" style="font-weight: bold;">File List</span>
-       <span style="display:flex; align-items:center; gap:4px;">
-         <span id="fileCount" style="font-weight: normal;"></span>
-         <i id="clearAllBtn" class="fa-regular fa-file" title="Clear File List" style="cursor:pointer; padding-top:1px;"></i>
-         <i id="clearTrashBtn" class="fas fa-trash" title="Clear Trash Files" style="cursor:pointer; padding-top:1px;"></i>
-         <i id="trashProgramBtn" class="fa-solid fa-trash-arrow-up" title="Trash Program" style="cursor:pointer; padding-top:1px;"></i>
+    <div id="fileListHeaderRow">
+       <span id="fileListHeader">File List</span>
+       <span class="header-icons">
+         <span id="fileCount"></span>
+         <i id="clearAllBtn" class="fa-regular fa-file action-icon" title="Clear File List"></i>
+         <i id="clearTrashBtn" class="fas fa-trash action-icon" title="Clear Trash Files"></i>
+         <i id="trashProgramBtn" class="fa-solid fa-trash-arrow-up action-icon" title="Trash Program"></i>
       </span>
     </div>
-      <div id="searchContainer" style="display:flex; align-items:center; gap:4px; margin-bottom:8px;">
-        <input type="text" id="searchInput" placeholder="Search files..." style="flex:1;">
+      <div id="searchContainer">
+        <input type="text" id="searchInput" placeholder="Search files...">
         <button id="toggleEditBtn" class="sidebar-button" title="Edit mode">
           <i class="fa-solid fa-pen-to-square"></i>
         </button>
       </div>
       <ul id="fileList"></ul>
-      <div id="Metadata">
-        <div style="display:flex;justify-content:space-between;align-items:center; padding-bottom:4px;">
+        <div id="Metadata">
+          <div class="metadata-header">
           <span class="section-title">GUANO Metadata:</span>
-          <i id="metadata-toggle" class="fa-solid fa-caret-down" style="cursor:pointer;"></i>
+            <i id="metadata-toggle" class="fa-solid fa-caret-down"></i>
         </div>
         <pre id="guano-output">(no file selected)</pre>
       </div>
@@ -57,12 +57,12 @@
         <button id="toggleSidebarBtn" class="sidebar-button" title="Toggle File List">
           <i class="fas fa-bars"></i>
         </button>
-        <input type="file" id="fileInput" accept=".wav" multiple style="display: none;">
+        <input type="file" id="fileInput" accept=".wav" multiple>
         <button id="fileInputBtn" class="sidebar-button" title="Load files">
           <i class="fa-solid fa-cloud-arrow-up"></i>
         </button>
         <span id="currentFilePath" class="file-path-display">
-          <i class="fa-regular fa-file-audio" style="margin-right: 6px;"></i>
+          <i class="fa-regular fa-file-audio"></i>
           <span id="fileNameText">Upload wav file(s)</span>
         </span>
         <button id="prevBtn" title="Previous file (↑)" class="sidebar-button"><i class="fas fa-arrow-up"></i></button>
@@ -71,7 +71,7 @@
         <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
         <button id="mapBtn" title="Map" class="sidebar-button"><i class="fa-solid fa-map-location-dot"></i></button>
         <button id="setting" title="Spectrogram setting" class="sidebar-button"><i class="fa-solid fa-sliders"></i></button>
-        <button id="expandBackBtn" title="Back to previous session (Backspace)" class="sidebar-button" style="display:none;">
+        <button id="expandBackBtn" title="Back to previous session (Backspace)" class="sidebar-button">
           <i class="fa-solid fa-reply"></i>
         </button>
       </div>
@@ -84,18 +84,18 @@
           <button id="fftSizeInput" class="dropdown-button" title="FFT Size">1024</button>
         </label>
         <label class="slider-label">Overlap
-          <input type="number" id="overlapInput" title="Overlap Size (1-99)" placeholder="Auto" min="1" max="99" step="1" style="width: 45px; padding-right:0px; text-align:center">
+          <input type="number" id="overlapInput" title="Overlap Size (1-99)" placeholder="Auto" min="1" max="99" step="1">
         </label>
         <div class="toolbar-divider"></div>
         <label class="slider-label">F.Range
-          <input type="number" id="freqMinInput" title="Minimun frequency (kHz)" value="10" min="0" max="192" step="1" style="width: 40px; padding-right:0px"> -
-          <input type="number" id="freqMaxInput" title="Maximum frequency (kHz)" value="128" min="1" max="192" step="1" style="width: 40px; padding-right:0px">
+          <input type="number" id="freqMinInput" class="freq-input" title="Minimun frequency (kHz)" value="10" min="0" max="192" step="1"> -
+          <input type="number" id="freqMaxInput" class="freq-input" title="Maximum frequency (kHz)" value="128" min="1" max="192" step="1">
         </label>
         <button id="applyFreqRangeBtn" title="Apply frequency range" class="toolbar-button"><i class="fa-solid fa-check"></i></button>
         <i class="fa-solid fa-sun"></i>
         <input type="range" id="brightnessSlider" min="-0.2" max="0.2" step="0.01" value="0" title="Brightness">
         <span class="slider-value" id="brightnessVal">0</span>
-        <i class="fa-solid fa-circle-half-stroke" style="padding-left:15px"></i>
+        <i class="fa-solid fa-circle-half-stroke contrast-icon"></i>
         <input type="range" id="gainSlider" min="1" max="4" step="0.1" value="2" title="Contrast">
         <span class="slider-value" id="gainVal">2</span>
         <button id="resetButton" title="Reset Brightness & Contrast to default" class="toolbar-button"><i class="fas fa-rotate-left"></i></button>
@@ -109,32 +109,21 @@
       </div>
     </div>
 <!-------- Spectrogram Start -------->
-    <div id="spectrogram-wrapper" style="position: relative;">
+    <div id="spectrogram-wrapper">
       <div id="tag-panel">
         <div class="tag-title">
           <span>Species Tags&nbsp;</span><i class="fas fa-tags"></i>
         </div>
       </div>
       <div id="whole-spectrogram">
-      <div id="spectrogram-settings" style="
-        padding: 0 0 2px;
-        margin-left: 45px;
-        font-size: 12px;
-        font-family: 'Noto Sans HK', sans-serif;
-        z-index: 10;
-      "></div>
+      <div id="spectrogram-settings"></div>
       <div class="viewer-row">
         <div id="freq-labels"></div>
-        <div id="viewer-wrapper" style="position: relative;">
+          <div id="viewer-wrapper">
           <div id="drop-overlay">
-            <div style="
-              position: absolute;
-              top: 20px; left: 20px; right: 20px; bottom: 20px;
-              border: 5px dashed rgba(150, 150, 150, 0.8);
-              border-radius: 10px;
-            "></div>
-            <div style="text-align: center; font-family: 'Noto Sans HK', sans-serif; font-size: 24px; color: #333;">
-              <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
+            <div class="drop-border"></div>
+            <div class="drop-message">
+              <i class="fas fa-cloud-arrow-up drop-icon"></i>
               <div>Drop WAV file(s) or folder here</div>
             </div>
             </div>
@@ -149,7 +138,7 @@
               <div id="upload-progress-text" class="progress-text">0/0</div>
             </div>
             <div id="viewer-container">
-            <div id="spectrogram-only" style="height: 800px;"><canvas id="spectrogram-canvas"></canvas></div>
+            <div id="spectrogram-only"><canvas id="spectrogram-canvas"></canvas></div>
             <canvas id="freq-grid"></canvas>
           </div>
           <div id="fixed-overlay">
@@ -171,21 +160,21 @@
   </div>
     </div>
 <!-------- Spectrogram End -------->
-  <div id="mapPopup" class="map-popup" style="display:none;">
+  <div id="mapPopup" class="map-popup">
     <div class="popup-drag-bar">
       <button class="popup-close-btn" title="Close">&times;</button>
     </div>
-    <div id="map" style="width:100%;height:calc(100% - 31px);border-radius: 0px 0px 8px 8px; position: relative;">
+    <div id="map">
       <div id="map-drop-overlay">
-        <div style="position: absolute; top: 20px; left: 20px; right: 20px; bottom: 20px; border: 5px dashed rgba(150, 150, 150, 0.8); border-radius: 10px;"></div>
-        <div style="text-align: center; font-family: 'Noto Sans HK', sans-serif; font-size: 24px; color: #333;">
-          <i class="fas fa-cloud-arrow-up" style="font-size:60px; color:#666; margin-bottom:10px;"></i>
+        <div class="drop-border"></div>
+        <div class="drop-message">
+          <i class="fas fa-cloud-arrow-up drop-icon"></i>
           <div>Drop KML file here</div>
         </div>
       </div>
       <div class="coord-scale-wrapper"><span id="coord-display"></span></div>
-      <div id="no-coord-message" class="coord-scale-wrapper" style="top:0; left:50%; transform:translateX(-50%); margin-top:10px; bottom:auto; display:none;">This wav file without coordinates</div>
-      <div id="copy-coord-message" class="coord-scale-wrapper" style="top:0; left:50%; transform:translateX(-50%); margin-top:10px; bottom:auto; display:none;">The coordinates have been copied to the clipboard</div>
+      <div id="no-coord-message" class="coord-scale-wrapper">This wav file without coordinates</div>
+      <div id="copy-coord-message" class="coord-scale-wrapper">The coordinates have been copied to the clipboard</div>
     </div>
   </div>
   <script type="module" src="./main.js"></script>
