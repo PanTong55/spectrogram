@@ -194,6 +194,7 @@ export function initFrequencyHover({
 
   viewer.addEventListener('contextmenu', (e) => {
     if (!persistentLinesEnabled || disablePersistentLinesForScrollbar || isOverTooltip) return;
+    if (e.target.closest('.selection-expand-btn')) return;
     e.preventDefault();
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
@@ -305,7 +306,7 @@ export function initFrequencyHover({
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
       if (isDrawing || resizing) return;
-      if (e.target.closest('.selection-close-btn')) {
+      if (e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn')) {
         rect.style.cursor = 'default';
         return;
       }
@@ -336,7 +337,7 @@ export function initFrequencyHover({
     // mousedown 時一次性決定 edge
     rect.addEventListener('mousedown', (e) => {
       if (resizing) return;
-      if (e.target.closest('.selection-close-btn')) return;
+      if (e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn')) return;
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
