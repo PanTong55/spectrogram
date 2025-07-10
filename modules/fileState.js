@@ -48,6 +48,13 @@ export function toggleFileIcon(index, type) {
   }
   if (type in fileIcons[index]) {
     fileIcons[index][type] = !fileIcons[index][type];
+    try {
+      document.dispatchEvent(new CustomEvent('file-icon-toggled', {
+        detail: { index, type, state: fileIcons[index][type] }
+      }));
+    } catch (err) {
+      // ignore if document is undefined (e.g. non-browser environment)
+    }
   }
 }
 

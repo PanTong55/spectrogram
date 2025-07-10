@@ -1,4 +1,4 @@
-import { getCurrentIndex, getFileMetadata, getFileList } from './fileState.js';
+import { getCurrentIndex, getFileMetadata, getFileList, getFileIconState } from './fileState.js';
 
 let importKmlFileFn = null;
 
@@ -374,7 +374,11 @@ export function initMapPopup({
       const first = group[0];
       const { lat, lon } = first;
       const isCurrent = group.some(g => g.idx === curIdx);
-      const cls = isCurrent ? 'map-marker-current' : 'map-marker-other';
+      const hasTrash = group.some(g => getFileIconState(g.idx).trash);
+      let cls = isCurrent ? 'map-marker-current' : 'map-marker-other';
+      if (!isCurrent && hasTrash) {
+        cls = 'map-marker-trash';
+      }
       const icon = L.divIcon({
         html: '<i class="fa-solid fa-location-dot"></i>',
         className: cls,
@@ -857,6 +861,7 @@ export function initMapPopup({
   }
   document.addEventListener('file-loaded', updateMap);
   document.addEventListener('file-list-cleared', () => refreshMarkers());
+  document.addEventListener('file-icon-toggled', () => refreshMarkers());
 }
 
 export async function importKmlFile(file) {
