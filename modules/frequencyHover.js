@@ -234,7 +234,6 @@ export function initFrequencyHover({
       tooltip.style.zIndex = '30';
       tooltip.style.padding = '6px 10px';
       tooltip.style.background = 'white';
-      tooltip.style.border = '1px solid black';
       tooltip.style.fontSize = '12px';
       tooltip.style.fontFamily = 'Noto Sans HK';
       tooltip.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
