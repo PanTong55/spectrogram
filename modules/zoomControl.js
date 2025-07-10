@@ -26,16 +26,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
   }
 
   function computeMinZoomLevel() {
-    // Reset the wrapper width so previous zoom levels don't affect
-    // the computed minimum zoom for newly loaded files.
-    wrapperElement.style.width = '';
-
-    // Use the visible width of the viewer wrapper's parent so
-    // reloading a new wav file after zooming doesn't use the
-    // previously expanded wrapper width.
-    let visibleWidth = wrapperElement.parentElement
-      ? wrapperElement.parentElement.clientWidth
-      : wrapperElement.clientWidth;
+    let visibleWidth = wrapperElement.clientWidth;
     const dur = duration();
     if (dur > 0) {
       minZoomLevel = Math.floor((visibleWidth - 2) / dur);
