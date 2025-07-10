@@ -36,8 +36,10 @@ export function drawTimeAxis({
 
     // 置中數字
     const label = step >= 1000 ? `${(t / 1000)}` : `${t}`;
+    const isZero = label === '0';
+    const extraClass = isZero ? ' zero-label' : '';
     html.push(`
-      <span class="time-axis-label" style="left:${left}px">${label}</span>
+      <span class="time-axis-label${extraClass}" style="left:${left}px">${label}</span>
     `);
   }
 
