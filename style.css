@@ -1058,6 +1058,9 @@ input.tag-button.editing {
   transform: translateX(-50%);
   font-size: 12px;
 }
+.time-axis-label.zero-label {
+  transform: none;
+}
 
 .coord-scale-wrapper {
   position: absolute;
