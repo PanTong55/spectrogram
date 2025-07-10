@@ -111,9 +111,5 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
     updateZoomButtons,
     getZoomLevel: () => zoomLevel,
     setZoomLevel,
-    isExpandMode: () => false,
-    forceExpandMode: () => {
-      setZoomLevel(minZoomLevel);
-    }
   };
 }
