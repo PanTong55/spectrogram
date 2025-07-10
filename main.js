@@ -456,6 +456,15 @@ currentOverlap = 'auto';
 handleOverlapChange();
 });
 
+const quickPresetBtn = document.getElementById('quickPresetBtn');
+quickPresetBtn.addEventListener('click', () => {
+  fftSizeDropdown.select(0);
+  overlapInput.value = '';
+  currentOverlap = 'auto';
+  handleOverlapChange();
+  sampleRateDropdown.select(3);
+});
+
 function updateSpectrogramSettingsText() {
 const settingBox = document.getElementById('spectrogram-settings');
 const sampleRate = currentSampleRate;
