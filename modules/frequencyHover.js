@@ -131,10 +131,7 @@ export function initFrequencyHover({
     suppressHover = true;
     hideAll();
     selectionRect = document.createElement('div');
-    selectionRect.style.position = 'absolute';
-    selectionRect.style.border = '1px solid black';
-    selectionRect.style.backgroundColor = 'rgba(0,0,0,0.05)';
-    selectionRect.style.zIndex = '20';
+    selectionRect.className = 'selection-rect';
     viewer.appendChild(selectionRect);
   });
 
@@ -211,13 +208,8 @@ export function initFrequencyHover({
       if (persistentLines.length >= 5) return;
       const yPos = Math.round((1 - (freq - minFrequency) / (maxFrequency - minFrequency)) * spectrogramHeight);
       const line = document.createElement('div');
-      line.style.position = 'absolute';
+      line.className = 'persistent-line';
       line.style.top = `${yPos}px`;
-      line.style.left = '0';
-      line.style.width = '100%';
-      line.style.height = '1px';
-      line.style.background = 'red';
-      line.style.zIndex = '15';
       fixedOverlay.appendChild(line);
       persistentLines.push({ freq, div: line });
     }
@@ -227,23 +219,15 @@ export function initFrequencyHover({
     let tooltip = null;
     if (Duration * 1000 <= 100) {
       tooltip = document.createElement('div');
-      tooltip.className = 'draggable-tooltip';
-      tooltip.style.position = 'absolute';
+      tooltip.className = 'draggable-tooltip freq-tooltip';
       tooltip.style.left = `${left + width + 10}px`;
       tooltip.style.top = `${top}px`;
-      tooltip.style.zIndex = '30';
-      tooltip.style.padding = '6px 10px';
-      tooltip.style.background = 'white';
-      tooltip.style.fontSize = '12px';
-      tooltip.style.fontFamily = 'Noto Sans HK';
-      tooltip.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.2)';
-      tooltip.style.cursor = 'move';
       tooltip.innerHTML = `
         <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
         <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
         <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
         <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
-        <div style="position:absolute; top:2px; right:6px; cursor:pointer;" class="close-btn">×</div>
+        <div class="tooltip-close-btn">×</div>
       `;
       tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
       tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
@@ -298,7 +282,7 @@ export function initFrequencyHover({
     selections.push(selObj);
     if (tooltip) {
       enableDrag(tooltip);
-      tooltip.querySelector('.close-btn').addEventListener('click', () => {
+      tooltip.querySelector('.tooltip-close-btn').addEventListener('click', () => {
         const index = selections.findIndex(sel => sel.tooltip === tooltip);
         if (index !== -1) {
           viewer.removeChild(selections[index].rect);
@@ -480,7 +464,7 @@ export function initFrequencyHover({
   function enableDrag(element) {
     let offsetX, offsetY, isDragging = false;
     element.addEventListener('mousedown', (e) => {
-      if (e.target.classList.contains('close-btn')) return;
+      if (e.target.classList.contains('tooltip-close-btn')) return;
       isDragging = true;
       const rect = element.getBoundingClientRect();
       offsetX = e.clientX - rect.left;
