@@ -26,12 +26,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
   }
 
   function computeMinZoomLevel() {
-    // Use the parent's width rather than the wrapper's current width.
-    // The wrapper width may be expanded when zoomed in, leading to an
-    // overestimated min zoom on subsequent file loads.
-    let visibleWidth = wrapperElement.parentElement
-      ? wrapperElement.parentElement.clientWidth
-      : wrapperElement.clientWidth;
+    let visibleWidth = wrapperElement.clientWidth;
     const dur = duration();
     if (dur > 0) {
       minZoomLevel = Math.floor((visibleWidth - 2) / dur);
