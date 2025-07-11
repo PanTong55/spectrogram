@@ -45,12 +45,14 @@ export function initBrightnessControl({
     }
   }
 
-  // 事件綁定
-  brightnessSlider.addEventListener('input', updateSliderValues);
-  gainSlider.addEventListener('input', updateSliderValues);
+  // 事件綁定 - 在滑動時即時更新數值和顏色條
+  function handleInput() {
+    updateSliderValues();
+    updateColorMap();
+  }
 
-  brightnessSlider.addEventListener('change', updateColorMap);
-  gainSlider.addEventListener('change', updateColorMap);
+  brightnessSlider.addEventListener('input', handleInput);
+  gainSlider.addEventListener('input', handleInput);
 
   resetBtn.addEventListener('click', () => {
     brightnessSlider.value = defaultBrightness;

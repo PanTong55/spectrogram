@@ -130,13 +130,14 @@ currentExpandBlob = null;
 updateExpandBackBtn();
 }
 },
-onAfterLoad: () => {
-if (uploadOverlay.style.display !== 'flex') {
-loadingOverlay.style.display = 'none';
-}
-freqHoverControl?.refreshHover();
-updateSpectrogramSettingsText();
-},
+  onAfterLoad: () => {
+    if (uploadOverlay.style.display !== 'flex') {
+      loadingOverlay.style.display = 'none';
+    }
+    freqHoverControl?.refreshHover();
+    drawColorBar(getCurrentColorMap());
+    updateSpectrogramSettingsText();
+  },
 onSampleRateDetected: autoSetSampleRate
 });
 sidebarControl = initSidebar({
@@ -368,13 +369,14 @@ loadingOverlay.style.display = 'flex';
 freqHoverControl?.hideHover();
 freqHoverControl?.clearSelections();
 },
-onAfterLoad: () => {
-if (uploadOverlay.style.display !== 'flex') {
-loadingOverlay.style.display = 'none';
-}
-freqHoverControl?.refreshHover();
-updateSpectrogramSettingsText();
-},
+  onAfterLoad: () => {
+    if (uploadOverlay.style.display !== 'flex') {
+      loadingOverlay.style.display = 'none';
+    }
+    freqHoverControl?.refreshHover();
+    drawColorBar(getCurrentColorMap());
+    updateSpectrogramSettingsText();
+  },
 onSampleRateDetected: autoSetSampleRate
 });
 
