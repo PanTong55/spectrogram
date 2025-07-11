@@ -103,7 +103,7 @@ freqHoverControl?.refreshHover();
 showDropOverlay();
 document.addEventListener('drop-overlay-show', showDropOverlay);
 document.addEventListener('drop-overlay-hide', hideDropOverlay);
-refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 
 fileLoaderControl = initFileLoader({
 fileInputId: 'fileInput',
@@ -135,7 +135,7 @@ if (uploadOverlay.style.display !== 'flex') {
 loadingOverlay.style.display = 'none';
 }
 freqHoverControl?.refreshHover();
-refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 },
 onSampleRateDetected: autoSetSampleRate
 });
@@ -230,7 +230,7 @@ renderAxes();
 freqHoverControl?.refreshHover();
 }
 );
-refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 }
 
 async function handleSampleRate(rate) {
@@ -241,7 +241,7 @@ if (cur) {
 const autoRate = await getWavSampleRate(cur);
 await autoSetSampleRate(autoRate);
 } else {
-    refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 }
 return;
 }
@@ -252,7 +252,7 @@ async function autoSetSampleRate(rate, skipReload = false) {
 if (selectedSampleRate === 'auto' && rate) {
 await applySampleRate(rate, !skipReload);
 } else if (selectedSampleRate === 'auto') {
-    refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 }
 }
 
@@ -332,7 +332,7 @@ brightnessValId: 'brightnessVal',
 gainValId: 'gainVal',
 resetBtnId: 'resetButton',
 onColorMapUpdated: (colorMap) => {
-freqHoverControl?.hideHover();
+freqHoverControl?.hideHover();        
 replacePlugin(
 colorMap,
 spectrogramHeight,
@@ -343,12 +343,10 @@ getOverlapPercent(),
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
-  freqHoverControl?.refreshHover();
-  }
-  );
-  ensureColorBarAttached();
-  drawColorBar(colorMap);
-  },
+freqHoverControl?.refreshHover();            
+}
+);
+},
 });
 
 initDragDropLoader({
@@ -374,7 +372,7 @@ if (uploadOverlay.style.display !== 'flex') {
 loadingOverlay.style.display = 'none';
 }
 freqHoverControl?.refreshHover();
-  refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 },
 onSampleRateDetected: autoSetSampleRate
 });
@@ -477,42 +475,7 @@ const windowType = 'Hanning';
 const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
 settingBox.textContent =
 `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-}
-
-function ensureColorBarAttached() {
-  const container = document.getElementById('spectrogram-settings');
-  if (!container) return;
-  let canvas = document.getElementById('color-bar');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.id = 'color-bar';
-    canvas.width = 600;
-    canvas.height = 20;
-  }
-  if (!container.contains(canvas)) {
-    container.appendChild(canvas);
-  }
-  drawColorBar(getCurrentColorMap());
-}
-
-function refreshSpectrogramSettings() {
-  updateSpectrogramSettingsText();
-  ensureColorBarAttached();
-}
-
-function drawColorBar(colorMap) {
-  const canvas = document.getElementById('color-bar');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
-  const step = width / colorMap.length;
-  for (let i = 0; i < colorMap.length; i++) {
-    const [r, g, b, a] = colorMap[i];
-    ctx.fillStyle = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
-    ctx.fillRect(i * step, 0, step, height);
-  }
-}
+}    
 
 function getOverlapPercent() {
 if (currentOverlap === 'auto') return null;
@@ -555,7 +518,7 @@ freqHoverControl?.refreshHover();
 },
 currentFftSize
 );
-refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 }
 
 function handleOverlapChange() {
@@ -574,7 +537,7 @@ freqHoverControl?.refreshHover();
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
-refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 }
 
 function updateFrequencyRange(freqMin, freqMax) {
@@ -598,9 +561,9 @@ zoomControl.applyZoom();
 renderAxes();
 
 if (freqHoverControl) {
-  freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
 }
-refreshSpectrogramSettings();
+updateSpectrogramSettingsText();
 }
 
 const clearAllBtn = document.getElementById('clearAllBtn');
