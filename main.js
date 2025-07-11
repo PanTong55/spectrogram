@@ -11,7 +11,6 @@ initScrollSync,
 import { initZoomControls } from './modules/zoomControl.js';
 import { initFileLoader, getWavSampleRate } from './modules/fileLoader.js';
 import { initBrightnessControl } from './modules/brightnessControl.js';
-import { COLOR_MAPS, COLOR_MAP_ITEMS, getColorMap } from './modules/colormaps.js';
 import { initFrequencyHover } from './modules/frequencyHover.js';
 import { cropWavBlob } from './modules/cropAudio.js';
 import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
@@ -327,14 +326,13 @@ updateExpandBackBtn();
 }
 });
 
-const brightnessControl = initBrightnessControl({
-  brightnessSliderId: 'brightnessSlider',
-  gainSliderId: 'gainSlider',
-  brightnessValId: 'brightnessVal',
-  gainValId: 'gainVal',
-  resetBtnId: 'resetButton',
-  baseColorMap: COLOR_MAPS.grayscale,
-  onColorMapUpdated: (colorMap) => {
+initBrightnessControl({
+brightnessSliderId: 'brightnessSlider',
+gainSliderId: 'gainSlider',
+brightnessValId: 'brightnessVal',
+gainValId: 'gainVal',
+resetBtnId: 'resetButton',
+onColorMapUpdated: (colorMap) => {
 freqHoverControl?.hideHover();        
 replacePlugin(
 colorMap,
@@ -429,16 +427,11 @@ const sampleRateDropdown = initDropdown('sampleRateInput', [
 sampleRateDropdown.select(0);
 
 const fftSizeDropdown = initDropdown('fftSizeInput', [
-  { label: '512', value: 512 },
-  { label: '1024', value: 1024 },
-  { label: '2048', value: 2048 },
+{ label: '512', value: 512 },
+{ label: '1024', value: 1024 },
+{ label: '2048', value: 2048 },
 ], { onChange: (item) => handleFftSize(item.value) });
 fftSizeDropdown.select(1);
-
-const colorMapDropdown = initDropdown('colorMapInput', COLOR_MAP_ITEMS, {
-  onChange: (item) => handleColorMapChange(item.value)
-});
-colorMapDropdown.select(0);
 
 const overlapInput = document.getElementById('overlapInput');
 overlapInput.value = '';
@@ -495,7 +488,6 @@ function drawColorBar(colorMap) {
   const ctx = canvas.getContext('2d');
   const width = canvas.width;
   const height = canvas.height;
-  ctx.clearRect(0, 0, width, height);
   const step = width / colorMap.length;
   for (let i = 0; i < colorMap.length; i++) {
     const [r, g, b, a] = colorMap[i];
@@ -545,12 +537,7 @@ freqHoverControl?.refreshHover();
 },
 currentFftSize
 );
-  updateSpectrogramSettingsText();
-}
-
-function handleColorMapChange(name) {
-  const map = getColorMap(name);
-  brightnessControl.setBaseColorMap(map);
+updateSpectrogramSettingsText();
 }
 
 function handleOverlapChange() {
