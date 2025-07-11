@@ -1,5 +1,3 @@
-import { getCurrentColorMap } from './wsManager.js';
-
 export function initFrequencyHover({
   viewerId,
   wrapperId = 'viewer-wrapper',
@@ -70,38 +68,6 @@ export function initFrequencyHover({
     const actualWidth = container.scrollWidth;
     const time = ((x + scrollLeft) / actualWidth) * getDuration();
 
-    let dbText = '';
-    try {
-      const canvas = document.getElementById('spectrogram-canvas');
-      const ctx = canvas?.getContext('2d');
-      const colorMap = getCurrentColorMap();
-      if (ctx && colorMap) {
-        const scaleX = canvas.width / actualWidth;
-        const scaleY = canvas.height / spectrogramHeight;
-        const pxData = ctx.getImageData(
-          Math.floor((x + scrollLeft) * scaleX),
-          Math.floor(y * scaleY),
-          1,
-          1
-        ).data;
-        const brightness = pxData[0] / 255;
-        let closest = 0;
-        let diff = Infinity;
-        for (let i = 0; i < colorMap.length; i++) {
-          const d = Math.abs(colorMap[i][0] - brightness);
-          if (d < diff) {
-            diff = d;
-            closest = i;
-          }
-        }
-        const amplitude = closest / 255;
-        const db = 20 * Math.log10(Math.max(amplitude, 1e-5));
-        dbText = `   ${db.toFixed(1)} dB`;
-      }
-    } catch (err) {
-      // ignore errors from getImageData
-    }
-
     hoverLine.style.top = `${y}px`;
     hoverLine.style.display = 'block';
 
@@ -123,7 +89,7 @@ export function initFrequencyHover({
     freqLabel.style.top = `${y}px`;
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
-    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms${dbText}`;
+    freqLabel.textContent = `${freq.toFixed(1)} kHz   ${(time * 1000).toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay, { passive: true });
