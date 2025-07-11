@@ -343,11 +343,10 @@ getOverlapPercent(),
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
-  freqHoverControl?.refreshHover();
-  }
-  );
-  drawColorBar(colorMap);
-  },
+freqHoverControl?.refreshHover();            
+}
+);
+},
 });
 
 initDragDropLoader({
@@ -467,32 +466,16 @@ quickPresetBtn.addEventListener('click', () => {
 });
 
 function updateSpectrogramSettingsText() {
-  const textElem = document.getElementById('spectrogram-settings-text');
-  const sampleRate = currentSampleRate;
-  const fftSize = currentFftSize;
-  const overlap = getOverlapPercent();
-  const windowType = 'Hanning';
+const settingBox = document.getElementById('spectrogram-settings');
+const sampleRate = currentSampleRate;
+const fftSize = currentFftSize;
+const overlap = getOverlapPercent();
+const windowType = 'Hanning';
 
-  const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
-  if (textElem) {
-    textElem.textContent =
-      `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-  }
-}
-
-function drawColorBar(colorMap) {
-  const canvas = document.getElementById('color-bar');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
-  const step = width / colorMap.length;
-  for (let i = 0; i < colorMap.length; i++) {
-    const [r, g, b, a] = colorMap[i];
-    ctx.fillStyle = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
-    ctx.fillRect(i * step, 0, step, height);
-  }
-}
+const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+settingBox.textContent =
+`Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
+}    
 
 function getOverlapPercent() {
 if (currentOverlap === 'auto') return null;
