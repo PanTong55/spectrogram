@@ -1318,15 +1318,6 @@ input.tag-button.editing {
   font-size: 12px;
   font-family: 'Noto Sans HK', sans-serif;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-#colormap-bar {
-  width: 512px;
-  height: 16px;
-  border: 1px solid #ccc;
 }
 
 .drop-border {
