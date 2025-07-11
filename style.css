@@ -502,7 +502,8 @@ input[type="file"]:hover {
   z-index: 100;
 }
 
-#tool-bar .toolbar-button {
+#tool-bar .toolbar-button,
+.toolbar-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -515,7 +516,7 @@ input[type="file"]:hover {
   transition: background-color 0.2s;
 }
 
-#tool-bar .toolbar-button:hover {
+.toolbar-button:hover {
   background-color: rgba(0, 0, 0, 0.05);
 }
 

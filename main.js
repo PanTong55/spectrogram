@@ -80,6 +80,8 @@ sampleRate: currentSampleRate,
 const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
 const uploadOverlay = document.getElementById('upload-overlay');
+const maxFreqBtn = document.getElementById('maxFreqToggleBtn');
+let highlightMaxFreq = false;
 
 function showDropOverlay() {
 overlay.style.display = 'flex';
@@ -104,6 +106,15 @@ showDropOverlay();
 document.addEventListener('drop-overlay-show', showDropOverlay);
 document.addEventListener('drop-overlay-hide', hideDropOverlay);
 updateSpectrogramSettingsText();
+
+maxFreqBtn.addEventListener('click', () => {
+  highlightMaxFreq = !highlightMaxFreq;
+  maxFreqBtn.innerHTML = highlightMaxFreq ?
+    '<i class="fa-solid fa-eye-slash"></i>' :
+    '<i class="fa-solid fa-eye"></i>';
+  document.getElementById('brightnessSlider')
+    .dispatchEvent(new Event('input'));
+});
 
 fileLoaderControl = initFileLoader({
 fileInputId: 'fileInput',
@@ -333,13 +344,14 @@ brightnessValId: 'brightnessVal',
 gainValId: 'gainVal',
 resetBtnId: 'resetButton',
 onColorMapUpdated: (colorMap) => {
-freqHoverControl?.hideHover();        
-replacePlugin(
-colorMap,
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
+  freqHoverControl?.hideHover();
+  const finalMap = applyHighlight(colorMap);
+  replacePlugin(
+  finalMap,
+  spectrogramHeight,
+  currentFreqMin,
+  currentFreqMax,
+  getOverlapPercent(),
 () => {
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
@@ -347,7 +359,7 @@ renderAxes();
   freqHoverControl?.refreshHover();
   }
   );
-  drawColorBar(colorMap);
+  drawColorBar(finalMap);
   },
 });
 
@@ -494,6 +506,13 @@ function drawColorBar(colorMap) {
     ctx.fillStyle = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
     ctx.fillRect(i * step, 0, step, height);
   }
+}
+
+function applyHighlight(map) {
+  if (!highlightMaxFreq) return map;
+  const count = Math.floor(map.length * 0.05);
+  const yellow = [1, 215 / 255, 0, 1];
+  return map.map((c, i) => (i >= map.length - count ? yellow : c));
 }
 
 function getOverlapPercent() {
