@@ -6,6 +6,7 @@ export function initBrightnessControl({
   brightnessValId,
   gainValId,
   resetBtnId,
+  baseColorMap = [],
   defaultBrightness = 0,
   defaultGain = 2,
   onColorMapUpdated,
@@ -24,6 +25,8 @@ export function initBrightnessControl({
     gainVal.textContent = gain.toFixed(2);
   }
 
+  let baseMap = baseColorMap.slice();
+
   // 👉 真正重新生成 colorMap 並觸發外部 callback
   function updateColorMap() {
     const brightness = parseFloat(brightnessSlider.value);
@@ -33,11 +36,11 @@ export function initBrightnessControl({
     brightnessVal.textContent = brightness.toFixed(2);
     gainVal.textContent = gain.toFixed(2);
 
-    const colorMap = Array.from({ length: 256 }, (_, i) => {
-      const t = Math.pow(i / 255, gain);
-      let v = 1 - t + brightness;
-      v = Math.max(0, Math.min(1, v));
-      return [v, v, v, 1];
+    const colorMap = baseMap.map(([r, g, b, a]) => {
+      const nr = Math.max(0, Math.min(1, r * gain + brightness));
+      const ng = Math.max(0, Math.min(1, g * gain + brightness));
+      const nb = Math.max(0, Math.min(1, b * gain + brightness));
+      return [nr, ng, nb, a];
     });
 
     if (typeof onColorMapUpdated === 'function') {
@@ -62,4 +65,11 @@ export function initBrightnessControl({
 
   // 初次初始化
   updateColorMap();
+
+  return {
+    setBaseColorMap(map) {
+      baseMap = map.slice();
+      updateColorMap();
+    },
+  };
 }
