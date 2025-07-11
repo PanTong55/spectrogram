@@ -80,7 +80,7 @@ export function initFileLoader({
   const nextBtn = document.getElementById('nextBtn');
   const fileNameElem = document.getElementById('fileNameText');
   const guanoOutput = document.getElementById('guano-output');
-  const spectrogramSettings = document.getElementById('spectrogram-settings');
+  const spectrogramSettingsText = document.getElementById('spectrogram-settings-text');
   const uploadOverlay = document.getElementById('upload-overlay');
   const uploadProgressBar = document.getElementById('upload-progress-bar');
   const uploadProgressText = document.getElementById('upload-progress-text');
@@ -148,11 +148,6 @@ export function initFileLoader({
     }
 
     const sampleRate = detectedSampleRate || wavesurfer?.options?.sampleRate || 256000;
-
-    if (spectrogramSettings) {
-      spectrogramSettings.textContent =
-        `Sampling rate: ${sampleRate / 1000}kHz`;
-    }
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();

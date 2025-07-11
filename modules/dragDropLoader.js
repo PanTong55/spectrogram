@@ -24,7 +24,7 @@ export function initDragDropLoader({
   const uploadProgressText = document.getElementById('upload-progress-text');
   const fileNameElem = document.getElementById('fileNameText');
   const guanoOutput = document.getElementById('guano-output');
-  const spectrogramSettings = document.getElementById('spectrogram-settings');  
+  const spectrogramSettingsText = document.getElementById('spectrogram-settings-text');
   let lastObjectUrl = null;
 
   function showOverlay() {
@@ -100,10 +100,7 @@ export function initDragDropLoader({
       await onSampleRateDetected(sampleRate);
     }
 
-    if (spectrogramSettings) {
-      spectrogramSettings.textContent =
-        `Sampling rate: ${sampleRate / 1000}kHz`;
-    }
+
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
