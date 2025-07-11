@@ -1324,10 +1324,10 @@ input.tag-button.editing {
 }
 
 #color-bar {
-  width: 600px;
-  height: 20px;
+  width: 400px;
+  height: 15px;
   margin-left: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #222;
 }
 
 .drop-border {
