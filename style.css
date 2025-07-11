@@ -1107,6 +1107,7 @@ input.tag-button.editing {
 .map-marker-other:hover i{
   transform: scale(1);
   opacity: 0.8;
+  z-index: 1000;
 }
 
 .map-marker-current i{
