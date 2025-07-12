@@ -1306,7 +1306,8 @@ input.tag-button.editing {
 }
 
 .brightness-icon,
-.gain-icon {
+.gain-icon,
+.contrast-icon {
   padding-left: 10px;
   margin-right: -10px;
 }

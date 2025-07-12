@@ -329,8 +329,10 @@ updateExpandBackBtn();
 initBrightnessControl({
 brightnessSliderId: 'brightnessSlider',
 gainSliderId: 'gainSlider',
+contrastSliderId: 'contrastSlider',
 brightnessValId: 'brightnessVal',
 gainValId: 'gainVal',
+contrastValId: 'contrastVal',
 resetBtnId: 'resetButton',
 onColorMapUpdated: (colorMap) => {
 freqHoverControl?.hideHover();        
