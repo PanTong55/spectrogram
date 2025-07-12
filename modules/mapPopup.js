@@ -861,6 +861,7 @@ export function initMapPopup({
   }
   document.addEventListener('file-loaded', updateMap);
   document.addEventListener('file-list-cleared', () => refreshMarkers());
+  document.addEventListener('file-list-changed', () => refreshMarkers());
   document.addEventListener('file-icon-toggled', () => refreshMarkers());
 }
 
