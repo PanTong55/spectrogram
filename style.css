@@ -1305,8 +1305,10 @@ input.tag-button.editing {
   padding-right: 0;
 }
 
+.brightness-icon,
 .gain-icon {
-  padding-left: 15px;
+  padding-left: 10px;
+  margin-right: -10px;
 }
 
 #spectrogram-wrapper {
