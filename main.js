@@ -666,6 +666,7 @@ fileLoaderControl.loadFileAtIndex(idx);
 }
 }
 tagControl.updateTagButtonStates();
+document.dispatchEvent(new Event('file-list-changed'));
 }
 });
 
