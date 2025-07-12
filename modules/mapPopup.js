@@ -374,9 +374,11 @@ export function initMapPopup({
       const first = group[0];
       const { lat, lon } = first;
       const isCurrent = group.some(g => g.idx === curIdx);
-      const hasTrash = group.some(g => getFileIconState(g.idx).trash);
-      let cls = isCurrent ? 'map-marker-current' : 'map-marker-other';
-      if (!isCurrent && hasTrash) {
+      const allTrash = group.every(g => getFileIconState(g.idx).trash);
+      let cls = 'map-marker-other';
+      if (isCurrent) {
+        cls = 'map-marker-current';
+      } else if (allTrash) {
         cls = 'map-marker-trash';
       }
       const icon = L.divIcon({
