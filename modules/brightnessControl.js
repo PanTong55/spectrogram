@@ -55,15 +55,21 @@ export function initBrightnessControl({
     }
   }
 
-  // 事件綁定 - 在滑動時即時更新數值和顏色條
+  // 事件綁定 - 滑動時僅更新文字，放開後才更新圖表
   function handleInput() {
     updateSliderValues();
+  }
+
+  function handleChange() {
     updateColorMap();
   }
 
   brightnessSlider.addEventListener('input', handleInput);
   gainSlider.addEventListener('input', handleInput);
   contrastSlider.addEventListener('input', handleInput);
+  brightnessSlider.addEventListener('change', handleChange);
+  gainSlider.addEventListener('change', handleChange);
+  contrastSlider.addEventListener('change', handleChange);
 
   resetBtn.addEventListener('click', () => {
     brightnessSlider.value = defaultBrightness;
