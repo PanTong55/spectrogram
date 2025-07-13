@@ -749,10 +749,22 @@ export function initMapPopup({
   }
 
   popup.addEventListener('mousemove', (e) => {
-    if (dragging || resizing) return;
+    if (dragging || resizing) {
+      e.stopPropagation();
+      return;
+    }
     const state = getEdgeState(e.clientX, e.clientY);
     const cursor = edgeCursor(state) || 'default';
     popup.style.cursor = cursor;
+    if (cursor !== 'default') {
+      mapDiv.style.cursor = cursor;
+      document.body.style.cursor = cursor;
+      e.stopPropagation();
+    } else {
+      mapDiv.style.cursor = '';
+      document.body.style.cursor = '';
+      updateCursor();
+    }
   });
 
   popup.addEventListener('mousedown', (e) => {
@@ -766,6 +778,7 @@ export function initMapPopup({
       resizeBottom = state.onBottom;
       const cursor = edgeCursor(state) || 'default';
       popup.style.cursor = cursor;
+      mapDiv.style.cursor = cursor;
       document.body.style.cursor = cursor;
       startX = e.clientX;
       startY = e.clientY;
@@ -780,14 +793,31 @@ export function initMapPopup({
   });
 
   document.addEventListener('mousemove', (e) => {
-    if (dragging || resizing || popup.style.display !== 'block') return;
+    if (popup.style.display !== 'block') return;
+    if (dragging || resizing) {
+      e.stopPropagation();
+      return;
+    }
     const state = getEdgeState(e.clientX, e.clientY);
     const cursor = edgeCursor(state);
-    document.body.style.cursor = cursor || '';
-  });
+    if (cursor) {
+      document.body.style.cursor = cursor;
+      mapDiv.style.cursor = cursor;
+      e.stopPropagation();
+    } else {
+      document.body.style.cursor = '';
+      mapDiv.style.cursor = '';
+      updateCursor();
+    }
+  }, true);
 
   document.addEventListener('mousedown', (e) => {
-    if (dragging || resizing || popup.style.display !== 'block') return;
+    if (popup.style.display !== 'block') return;
+    if (dragging || resizing) {
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
     if (e.target === dragBar || dragBar.contains(e.target)) return;
     const state = getEdgeState(e.clientX, e.clientY);
     if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
@@ -797,6 +827,8 @@ export function initMapPopup({
       resizeTop = state.onTop;
       resizeBottom = state.onBottom;
       const cursor = edgeCursor(state) || 'default';
+      popup.style.cursor = cursor;
+      mapDiv.style.cursor = cursor;
       document.body.style.cursor = cursor;
       startX = e.clientX;
       startY = e.clientY;
@@ -808,18 +840,20 @@ export function initMapPopup({
       e.preventDefault();
       e.stopPropagation();
     }
-  });
+  }, true);
 
   window.addEventListener('mousemove', (e) => {
     if (dragging) {
       popup.style.left = `${e.clientX - offsetX}px`;
       popup.style.top = `${e.clientY - offsetY}px`;
+      e.stopPropagation();
       return;
     }
     if (resizing) {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      document.body.style.cursor = document.body.style.cursor || popup.style.cursor;
+      mapDiv.style.cursor = popup.style.cursor;
+      document.body.style.cursor = popup.style.cursor;
       if (resizeRight) {
         popupWidth = Math.max(200, startWidth + dx);
         popup.style.width = `${popupWidth}px`;
@@ -838,13 +872,15 @@ export function initMapPopup({
         popup.style.height = `${popupHeight}px`;
         popup.style.top = `${startTop + dy}px`;
       }
+      e.stopPropagation();
     }
-  });
+  }, true);
 
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('mouseup', (e) => {
     if (dragging) {
       dragging = false;
       map?.dragging.enable();
+      e.stopPropagation();
     }
     if (resizing) {
       resizing = false;
@@ -854,8 +890,11 @@ export function initMapPopup({
       map?.invalidateSize();
       document.body.style.cursor = '';
       popup.style.cursor = '';
+      mapDiv.style.cursor = '';
+      updateCursor();
+      e.stopPropagation();
     }
-  });
+  }, true);
 
   btn.addEventListener('click', togglePopup);
   if (closeBtn) {
