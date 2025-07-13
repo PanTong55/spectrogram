@@ -943,7 +943,6 @@ input.tag-button.editing {
 /* === Sidebar Items === */
 .sidebar-item {
   padding: 3px 0;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -956,6 +955,7 @@ input.tag-button.editing {
   flex-grow: 1;
   min-width: 0;
   min-height: 20px;
+  cursor: pointer;
 }
 
 .sidebar-file-icon {
