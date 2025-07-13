@@ -10,7 +10,6 @@ export function initMapPopup({
   const btn = document.getElementById(buttonId);
   const popup = document.getElementById(popupId);
   const mapDiv = document.getElementById(mapId);
-  const viewer = document.getElementById('viewer-container');
   const dragBar = popup.querySelector('.popup-drag-bar');
   const closeBtn = popup.querySelector('.popup-close-btn');
   if (!btn || !popup || !mapDiv) return;
@@ -744,39 +743,16 @@ export function initMapPopup({
       offsetX = e.clientX - popup.offsetLeft;
       offsetY = e.clientY - popup.offsetTop;
       map?.dragging.disable();
-      if (viewer) {
-        viewer.style.pointerEvents = 'none';
-        viewer.classList.remove('hide-cursor');
-      }
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
       e.preventDefault();
       e.stopPropagation();
     });
   }
 
   popup.addEventListener('mousemove', (e) => {
-    if (dragging || resizing) {
-      e.stopPropagation();
-      return;
-    }
+    if (dragging || resizing) return;
     const state = getEdgeState(e.clientX, e.clientY);
     const cursor = edgeCursor(state) || 'default';
     popup.style.cursor = cursor;
-    if (cursor !== 'default') {
-      mapDiv.style.cursor = cursor;
-      document.body.style.cursor = cursor;
-      if (viewer) {
-        viewer.style.pointerEvents = 'none';
-        viewer.classList.remove('hide-cursor');
-      }
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
-      e.stopPropagation();
-    } else {
-      mapDiv.style.cursor = '';
-      document.body.style.cursor = '';
-      if (viewer) viewer.style.pointerEvents = '';
-      updateCursor();
-    }
   });
 
   popup.addEventListener('mousedown', (e) => {
@@ -790,13 +766,7 @@ export function initMapPopup({
       resizeBottom = state.onBottom;
       const cursor = edgeCursor(state) || 'default';
       popup.style.cursor = cursor;
-      mapDiv.style.cursor = cursor;
       document.body.style.cursor = cursor;
-      if (viewer) {
-        viewer.style.pointerEvents = 'none';
-        viewer.classList.remove('hide-cursor');
-      }
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
       startX = e.clientX;
       startY = e.clientY;
       startWidth = popup.offsetWidth;
@@ -810,37 +780,14 @@ export function initMapPopup({
   });
 
   document.addEventListener('mousemove', (e) => {
-    if (popup.style.display !== 'block') return;
-    if (dragging || resizing) {
-      e.stopPropagation();
-      return;
-    }
+    if (dragging || resizing || popup.style.display !== 'block') return;
     const state = getEdgeState(e.clientX, e.clientY);
     const cursor = edgeCursor(state);
-    if (cursor) {
-      document.body.style.cursor = cursor;
-      mapDiv.style.cursor = cursor;
-      if (viewer) {
-        viewer.style.pointerEvents = 'none';
-        viewer.classList.remove('hide-cursor');
-      }
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
-      e.stopPropagation();
-    } else {
-      document.body.style.cursor = '';
-      mapDiv.style.cursor = '';
-      if (viewer) viewer.style.pointerEvents = '';
-      updateCursor();
-    }
-  }, true);
+    document.body.style.cursor = cursor || '';
+  });
 
   document.addEventListener('mousedown', (e) => {
-    if (popup.style.display !== 'block') return;
-    if (dragging || resizing) {
-      e.stopPropagation();
-      e.preventDefault();
-      return;
-    }
+    if (dragging || resizing || popup.style.display !== 'block') return;
     if (e.target === dragBar || dragBar.contains(e.target)) return;
     const state = getEdgeState(e.clientX, e.clientY);
     if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
@@ -850,14 +797,7 @@ export function initMapPopup({
       resizeTop = state.onTop;
       resizeBottom = state.onBottom;
       const cursor = edgeCursor(state) || 'default';
-      popup.style.cursor = cursor;
-      mapDiv.style.cursor = cursor;
       document.body.style.cursor = cursor;
-      if (viewer) {
-        viewer.style.pointerEvents = 'none';
-        viewer.classList.remove('hide-cursor');
-      }
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
       startX = e.clientX;
       startY = e.clientY;
       startWidth = popup.offsetWidth;
@@ -868,22 +808,18 @@ export function initMapPopup({
       e.preventDefault();
       e.stopPropagation();
     }
-  }, true);
+  });
 
   window.addEventListener('mousemove', (e) => {
     if (dragging) {
       popup.style.left = `${e.clientX - offsetX}px`;
       popup.style.top = `${e.clientY - offsetY}px`;
-      e.stopPropagation();
       return;
     }
     if (resizing) {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      mapDiv.style.cursor = popup.style.cursor;
-      document.body.style.cursor = popup.style.cursor;
-      if (viewer) viewer.style.pointerEvents = 'none';
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
+      document.body.style.cursor = document.body.style.cursor || popup.style.cursor;
       if (resizeRight) {
         popupWidth = Math.max(200, startWidth + dx);
         popup.style.width = `${popupWidth}px`;
@@ -902,16 +838,13 @@ export function initMapPopup({
         popup.style.height = `${popupHeight}px`;
         popup.style.top = `${startTop + dy}px`;
       }
-      e.stopPropagation();
     }
-  }, true);
+  });
 
-  window.addEventListener('mouseup', (e) => {
+  window.addEventListener('mouseup', () => {
     if (dragging) {
       dragging = false;
       map?.dragging.enable();
-      if (viewer) viewer.style.pointerEvents = '';
-      e.stopPropagation();
     }
     if (resizing) {
       resizing = false;
@@ -921,12 +854,8 @@ export function initMapPopup({
       map?.invalidateSize();
       document.body.style.cursor = '';
       popup.style.cursor = '';
-      mapDiv.style.cursor = '';
-      if (viewer) viewer.style.pointerEvents = '';
-      updateCursor();
-      e.stopPropagation();
     }
-  }, true);
+  });
 
   btn.addEventListener('click', togglePopup);
   if (closeBtn) {

@@ -681,9 +681,6 @@ document.body.classList.toggle('settings-open', isOpen);
 initExportCsv();
 initTrashProgram();
 initMapPopup();
-document.addEventListener('hide-spectrogram-hover', () => {
-  freqHoverControl?.hideHover();
-});
 document.addEventListener('map-file-selected', (e) => {
 const idx = e.detail?.index;
 if (typeof idx === 'number') {
