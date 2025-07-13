@@ -144,8 +144,8 @@ export function initSidebar({ onFileSelected } = {}) {
       rightContainer.appendChild(noteInput);
 
       li.appendChild(rightContainer);
-  
-      li.addEventListener('click', () => {
+
+      left.addEventListener('click', () => {
         if (typeof onFileSelected === 'function') {
           onFileSelected(index);
         }
