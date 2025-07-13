@@ -8,9 +8,9 @@ export function initBrightnessControl({
   gainValId,
   contrastValId,
   resetBtnId,
-  defaultBrightness = 0,
-  defaultGain = 2,
-  defaultContrast = 1,
+  defaultBrightness = -0.06,
+  defaultGain = 2.1,
+  defaultContrast = 1.25,
   onColorMapUpdated,
 }) {
   const brightnessSlider = document.getElementById(brightnessSliderId);
