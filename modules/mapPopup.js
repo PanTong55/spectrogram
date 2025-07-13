@@ -749,14 +749,10 @@ export function initMapPopup({
   }
 
   popup.addEventListener('mousemove', (e) => {
-    if (dragging || resizing) {
-      e.stopPropagation();
-      return;
-    }
+    if (dragging || resizing) return;
     const state = getEdgeState(e.clientX, e.clientY);
     const cursor = edgeCursor(state) || 'default';
     popup.style.cursor = cursor;
-    if (cursor !== 'default') e.stopPropagation();
   });
 
   popup.addEventListener('mousedown', (e) => {
@@ -784,24 +780,14 @@ export function initMapPopup({
   });
 
   document.addEventListener('mousemove', (e) => {
-    if (popup.style.display !== 'block') return;
-    if (dragging || resizing) {
-      e.stopPropagation();
-      return;
-    }
+    if (dragging || resizing || popup.style.display !== 'block') return;
     const state = getEdgeState(e.clientX, e.clientY);
     const cursor = edgeCursor(state);
     document.body.style.cursor = cursor || '';
-    if (cursor) e.stopPropagation();
-  }, true);
+  });
 
   document.addEventListener('mousedown', (e) => {
-    if (popup.style.display !== 'block') return;
-    if (dragging || resizing) {
-      e.stopPropagation();
-      e.preventDefault();
-      return;
-    }
+    if (dragging || resizing || popup.style.display !== 'block') return;
     if (e.target === dragBar || dragBar.contains(e.target)) return;
     const state = getEdgeState(e.clientX, e.clientY);
     if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
@@ -822,13 +808,12 @@ export function initMapPopup({
       e.preventDefault();
       e.stopPropagation();
     }
-  }, true);
+  });
 
   window.addEventListener('mousemove', (e) => {
     if (dragging) {
       popup.style.left = `${e.clientX - offsetX}px`;
       popup.style.top = `${e.clientY - offsetY}px`;
-      e.stopPropagation();
       return;
     }
     if (resizing) {
@@ -853,15 +838,13 @@ export function initMapPopup({
         popup.style.height = `${popupHeight}px`;
         popup.style.top = `${startTop + dy}px`;
       }
-      e.stopPropagation();
     }
-  }, true);
+  });
 
-  window.addEventListener('mouseup', (e) => {
+  window.addEventListener('mouseup', () => {
     if (dragging) {
       dragging = false;
       map?.dragging.enable();
-      e.stopPropagation();
     }
     if (resizing) {
       resizing = false;
@@ -871,9 +854,8 @@ export function initMapPopup({
       map?.invalidateSize();
       document.body.style.cursor = '';
       popup.style.cursor = '';
-      e.stopPropagation();
     }
-  }, true);
+  });
 
   btn.addEventListener('click', togglePopup);
   if (closeBtn) {
