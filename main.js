@@ -38,6 +38,7 @@ const hoverLineElem = document.getElementById('hover-line');
 const hoverLineVElem = document.getElementById('hover-line-vertical');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
+let lastContainerWidth = container.clientWidth;
 let duration = 0;
 let lastLoadedFileName = null;
 let currentFreqMin = 10;
@@ -755,4 +756,13 @@ sampleRateBtn.disabled = false;
 expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
+});
+
+window.addEventListener('resize', () => {
+  const newWidth = container.clientWidth;
+  if (newWidth !== lastContainerWidth) {
+    lastContainerWidth = newWidth;
+    renderAxes();
+    freqHoverControl?.refreshHover();
+  }
 });
