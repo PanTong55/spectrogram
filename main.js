@@ -756,3 +756,12 @@ expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
 });
+
+window.addEventListener('resize', () => {
+  const prevWidth = container.clientWidth;
+  zoomControl.applyZoom();
+  if (container.clientWidth !== prevWidth) {
+    renderAxes();
+    freqHoverControl?.refreshHover();
+  }
+});
