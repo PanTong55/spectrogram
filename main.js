@@ -18,6 +18,7 @@ import { initExportCsv } from './modules/exportCsv.js';
 import { initTrashProgram } from './modules/trashProgram.js';
 import { initDragDropLoader } from './modules/dragDropLoader.js';
 import { initMapPopup } from './modules/mapPopup.js';
+import { initPulsePopup, openPulsePopup } from './modules/pulsePopup.js';
 import { initSidebar } from './modules/sidebar.js';
 import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
@@ -324,6 +325,15 @@ freqHoverControl?.clearSelections();
 updateExpandBackBtn();
 }
 }
+});
+
+viewer.addEventListener('pulse-expand', async (e) => {
+  const { startTime, Flow, Fhigh } = e.detail;
+  const base = currentExpandBlob || getCurrentFile();
+  const blob = await cropWavBlob(base, startTime, startTime + 0.1);
+  if (blob) {
+    openPulsePopup(blob, Flow, Fhigh);
+  }
 });
 
 initBrightnessControl({
@@ -681,6 +691,7 @@ document.body.classList.toggle('settings-open', isOpen);
 initExportCsv();
 initTrashProgram();
 initMapPopup();
+initPulsePopup();
 document.addEventListener('hide-spectrogram-hover', () => {
   freqHoverControl?.hideHover();
 });
