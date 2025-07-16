@@ -83,6 +83,7 @@ initWavesurfer({
 });
 getWavesurfer().on('finish', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -93,12 +94,14 @@ getWavesurfer().on('play', () => {
   progressLineElem.style.display = 'block';
   progressLineElem.style.pointerEvents = 'none';
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  playPauseBtn.title = 'Pause';
   playPauseBtn.classList.add('playing');
   playPauseBtn.classList.remove('paused');
 });
 
 getWavesurfer().on('pause', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  playPauseBtn.title = 'Continue';
   playPauseBtn.classList.add('paused');
   playPauseBtn.classList.remove('playing');
   progressLineElem.style.pointerEvents = 'auto';
@@ -114,6 +117,7 @@ getWavesurfer().on('seek', (prog) => {
 
 document.addEventListener('file-loaded', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
