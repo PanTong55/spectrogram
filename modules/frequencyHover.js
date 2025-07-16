@@ -235,6 +235,7 @@ export function initFrequencyHover({
     }
 
     let expandBtn = null;
+    let pulseBtn = null;
     let closeBtn = null;
     let durationLabel = null;
     if (Duration * 1000 > 100) {
@@ -271,6 +272,20 @@ export function initFrequencyHover({
       closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
       rectObj.appendChild(closeBtn);
+    }
+    if (Duration * 1000 <= 100) {
+      pulseBtn = document.createElement('i');
+      pulseBtn.className = 'fa-solid fa-magnifying-glass selection-expand-btn';
+      pulseBtn.title = 'Pulse spectrogram';
+      pulseBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        viewer.dispatchEvent(new CustomEvent('pulse-expand', {
+          detail: { startTime, Flow, Fhigh }
+        }));
+      });
+      pulseBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      pulseBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+      rectObj.appendChild(pulseBtn);
     }
 
     durationLabel = document.createElement('div');
