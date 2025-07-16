@@ -58,6 +58,7 @@ let selectionExpandMode = false;
 let expandHistory = [];
 let currentExpandBlob = null;
 const expandBackBtn = document.getElementById('expandBackBtn');
+let ignoreNextPause = false;
 const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
@@ -118,6 +119,10 @@ getWavesurfer().on('play', () => {
 });
 
 getWavesurfer().on('pause', () => {
+  if (ignoreNextPause) {
+    ignoreNextPause = false;
+    return;
+  }
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Continue';
   playPauseBtn.classList.add('paused');
@@ -167,6 +172,7 @@ playPauseBtn.addEventListener('click', () => {
 stopBtn.addEventListener('click', () => {
   const ws = getWavesurfer();
   if (!ws) return;
+  ignoreNextPause = true;
   ws.stop();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
