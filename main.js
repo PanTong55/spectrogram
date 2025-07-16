@@ -40,6 +40,7 @@ const progressLineElem = document.getElementById('progress-line');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
+const stopBtn = document.getElementById('stopBtn');
 let isDraggingProgress = false;
 let manualSeekTime = null;
 let duration = 0;
@@ -64,6 +65,21 @@ specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 function updateExpandBackBtn() {
 expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
 }
+function showStopButton() {
+  stopBtn.style.display = 'inline-flex';
+  requestAnimationFrame(() => stopBtn.classList.add('show'));
+}
+function hideStopButton() {
+  stopBtn.classList.remove('show');
+  stopBtn.addEventListener('transitionend', function handler() {
+    stopBtn.removeEventListener('transitionend', handler);
+    if (!stopBtn.classList.contains('show')) {
+      stopBtn.style.display = 'none';
+    }
+  }, { once: true });
+}
+playPauseBtn.disabled = true;
+hideStopButton();
 const getDuration = () => duration;
 
 const guanoOutput = document.getElementById('guano-output');
@@ -88,6 +104,7 @@ getWavesurfer().on('finish', () => {
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
+  hideStopButton();
 });
 
 getWavesurfer().on('play', () => {
@@ -97,6 +114,7 @@ getWavesurfer().on('play', () => {
   playPauseBtn.title = 'Pause';
   playPauseBtn.classList.add('playing');
   playPauseBtn.classList.remove('paused');
+  showStopButton();
 });
 
 getWavesurfer().on('pause', () => {
@@ -105,6 +123,7 @@ getWavesurfer().on('pause', () => {
   playPauseBtn.classList.add('paused');
   playPauseBtn.classList.remove('playing');
   progressLineElem.style.pointerEvents = 'auto';
+  showStopButton();
 });
 
 getWavesurfer().on('audioprocess', (time) => {
@@ -122,6 +141,8 @@ document.addEventListener('file-loaded', () => {
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
+  playPauseBtn.disabled = false;
+  hideStopButton();
   updateProgressLine(0);
 });
 
@@ -137,6 +158,20 @@ playPauseBtn.addEventListener('click', () => {
     }
     ws.play();
   }
+});
+
+stopBtn.addEventListener('click', () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  ws.stop();
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  playPauseBtn.title = 'Play';
+  playPauseBtn.classList.remove('playing', 'paused');
+  progressLineElem.style.display = 'none';
+  progressLineElem.style.pointerEvents = 'none';
+  manualSeekTime = null;
+  updateProgressLine(0);
+  hideStopButton();
 });
 const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -841,6 +876,8 @@ document.addEventListener("file-loaded", async () => {
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
+  playPauseBtn.disabled = false;
+  hideStopButton();
   updateProgressLine(0);
   lastLoadedFileName = currentFile ? currentFile.name : null;
   selectionExpandMode = false;
@@ -862,6 +899,8 @@ sampleRateBtn.disabled = false;
 expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
+  playPauseBtn.disabled = true;
+  hideStopButton();
 });
 
 window.addEventListener('resize', () => {
