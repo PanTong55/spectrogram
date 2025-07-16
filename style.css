@@ -1438,10 +1438,11 @@ input.tag-button.editing {
 #stopBtn {
   background-color: #1035AC;
   display: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  width: 0;
+  overflow: hidden;
+  transition: width 0.2s ease;
 }
 #stopBtn.show {
   display: inline-flex;
-  opacity: 1;
+  width: 30px;
 }
