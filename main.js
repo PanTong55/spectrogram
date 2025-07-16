@@ -40,6 +40,8 @@ const progressLineElem = document.getElementById('progress-line');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
+let isDraggingProgress = false;
+let manualSeekTime = null;
 let duration = 0;
 let lastLoadedFileName = null;
 let currentFreqMin = 10;
@@ -83,10 +85,13 @@ getWavesurfer().on('finish', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
+  progressLineElem.style.pointerEvents = 'none';
+  manualSeekTime = null;
 });
 
 getWavesurfer().on('play', () => {
   progressLineElem.style.display = 'block';
+  progressLineElem.style.pointerEvents = 'none';
   playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
   playPauseBtn.classList.add('playing');
   playPauseBtn.classList.remove('paused');
@@ -96,6 +101,7 @@ getWavesurfer().on('pause', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.classList.add('paused');
   playPauseBtn.classList.remove('playing');
+  progressLineElem.style.pointerEvents = 'auto';
 });
 
 getWavesurfer().on('audioprocess', (time) => {
@@ -110,6 +116,8 @@ document.addEventListener('file-loaded', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
+  progressLineElem.style.pointerEvents = 'none';
+  manualSeekTime = null;
   updateProgressLine(0);
 });
 
@@ -119,6 +127,10 @@ playPauseBtn.addEventListener('click', () => {
   if (ws.isPlaying()) {
     ws.pause();
   } else {
+    if (manualSeekTime !== null) {
+      ws.setTime(manualSeekTime);
+      manualSeekTime = null;
+    }
     ws.play();
   }
 });
@@ -354,7 +366,9 @@ wrapper,
 );
 
 function updateProgressLine(time) {
-  const x = time * zoomControl.getZoomLevel() - viewer.scrollLeft;
+  if (isDraggingProgress) return;
+  const t = (manualSeekTime !== null && !getWavesurfer().isPlaying()) ? manualSeekTime : time;
+  const x = t * zoomControl.getZoomLevel() - viewer.scrollLeft;
   progressLineElem.style.left = `${x}px`;
 }
 
@@ -362,6 +376,28 @@ viewer.addEventListener('scroll', () => {
   const ws = getWavesurfer();
   if (!ws) return;
   updateProgressLine(ws.getCurrentTime());
+});
+
+progressLineElem.addEventListener('mousedown', (e) => {
+  const ws = getWavesurfer();
+  if (!ws || ws.isPlaying()) return;
+  isDraggingProgress = true;
+  e.preventDefault();
+});
+
+viewer.addEventListener('mousemove', (e) => {
+  if (!isDraggingProgress) return;
+  const rect = viewer.getBoundingClientRect();
+  let x = e.clientX - rect.left;
+  x = Math.max(0, Math.min(rect.width, x));
+  manualSeekTime = Math.max(0, Math.min(duration, (x + viewer.scrollLeft) / zoomControl.getZoomLevel()));
+  progressLineElem.style.left = `${x}px`;
+});
+
+document.addEventListener('mouseup', () => {
+  if (isDraggingProgress) {
+    isDraggingProgress = false;
+  }
 });
 
 viewer.addEventListener('expand-selection', async (e) => {
@@ -799,6 +835,8 @@ document.addEventListener("file-loaded", async () => {
   zoomControl.setZoomLevel(0);
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
+  progressLineElem.style.pointerEvents = 'none';
+  manualSeekTime = null;
   updateProgressLine(0);
   lastLoadedFileName = currentFile ? currentFile.name : null;
   selectionExpandMode = false;

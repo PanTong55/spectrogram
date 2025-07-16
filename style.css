@@ -76,6 +76,7 @@ html, body {
   z-index: 25;
   pointer-events: none;
   display: none;
+  cursor: ew-resize;
 }
 
 .sidebar-button.playing {
@@ -119,6 +120,9 @@ html, body {
 }
 #fixed-overlay > * {
   pointer-events: none;
+}
+#progress-line {
+  pointer-events: auto;
 }
 .hide-cursor {
   cursor: none !important;
