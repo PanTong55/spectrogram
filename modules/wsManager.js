@@ -26,6 +26,7 @@ export function initWavesurfer({
 }
 
 export function createSpectrogramPlugin({
+  container,
   colorMap,
   height = 800,
   frequencyMin = 10,
@@ -34,6 +35,7 @@ export function createSpectrogramPlugin({
   noverlap = null,
 }) {
   const baseOptions = {
+    container,
     labels: false,
     height,
     fftSamples,
@@ -61,9 +63,9 @@ export function replacePlugin(
   fftSamples = currentFftSize
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
-  const container = document.getElementById("spectrogram-only");
+  const containerElem = document.getElementById("spectrogram-only");
 
-  const oldCanvas = container.querySelector("canvas");
+  const oldCanvas = containerElem.querySelector("canvas");
   if (oldCanvas) oldCanvas.remove();
 
   if (plugin?.destroy) plugin.destroy();
@@ -76,6 +78,7 @@ export function replacePlugin(
     : null;
 
   plugin = createSpectrogramPlugin({
+    container: containerElem,
     colorMap,
     height,
     frequencyMin,
