@@ -185,6 +185,21 @@
       <div id="copy-coord-message" class="coord-scale-wrapper">The coordinates have been copied to the clipboard</div>
     </div>
   </div>
+  <div id="pulsePopup" class="map-popup">
+    <div class="popup-drag-bar">
+      <button class="popup-close-btn" title="Close">&times;</button>
+    </div>
+    <div id="pulse-viewer-wrapper">
+      <div id="pulse-viewer-container">
+        <div id="pulse-spectrogram-only"><canvas id="pulse-spectrogram-canvas"></canvas></div>
+      </div>
+      <div id="pulse-fixed-overlay">
+        <div id="pulse-hover-line" class="hover-line-horizontal"></div>
+        <div id="pulse-hover-line-vertical" class="hover-line-vertical"></div>
+        <div id="pulse-hover-label">-</div>
+      </div>
+    </div>
+  </div>
   <script type="module" src="./main.js"></script>
   </div>
 </body>
