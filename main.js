@@ -38,6 +38,7 @@ const hoverLineElem = document.getElementById('hover-line');
 const hoverLineVElem = document.getElementById('hover-line-vertical');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
+const playPauseBtn = document.getElementById('playPauseBtn');
 let duration = 0;
 let lastLoadedFileName = null;
 let currentFreqMin = 10;
@@ -74,8 +75,27 @@ metadataToggle.classList.toggle('fa-caret-up', collapsed);
 });
 
 initWavesurfer({
-container,
-sampleRate: currentSampleRate,
+  container,
+  sampleRate: currentSampleRate,
+});
+getWavesurfer().on('finish', () => {
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+});
+
+document.addEventListener('file-loaded', () => {
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+});
+
+playPauseBtn.addEventListener('click', () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  if (ws.isPlaying()) {
+    ws.pause();
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  } else {
+    ws.play();
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  }
 });
 const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
