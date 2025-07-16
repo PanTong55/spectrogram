@@ -123,7 +123,11 @@ getWavesurfer().on('pause', () => {
   playPauseBtn.classList.add('paused');
   playPauseBtn.classList.remove('playing');
   progressLineElem.style.pointerEvents = 'auto';
-  showStopButton();
+  if (getWavesurfer().getCurrentTime() === 0) {
+    hideStopButton();
+  } else {
+    showStopButton();
+  }
 });
 
 getWavesurfer().on('audioprocess', (time) => {
