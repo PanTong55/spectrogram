@@ -68,6 +68,24 @@ html, body {
   pointer-events: none;
 }
 
+.progress-line {
+  position: absolute;
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 0, 0, 0.7);
+  z-index: 25;
+  pointer-events: none;
+  display: none;
+}
+
+.sidebar-button.playing {
+  background-color: #B91F1C;
+}
+
+.sidebar-button.paused {
+  background-color: #0B6623;
+}
+
 #hover-line,
 #hover-line-vertical,
 #zoom-controls {
