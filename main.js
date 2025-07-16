@@ -36,6 +36,7 @@ const freqGrid = document.getElementById('freq-grid');
 const freqLabelContainer = document.getElementById('freq-labels');
 const hoverLineElem = document.getElementById('hover-line');
 const hoverLineVElem = document.getElementById('hover-line-vertical');
+const progressLineElem = document.getElementById('progress-line');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
@@ -80,10 +81,29 @@ initWavesurfer({
 });
 getWavesurfer().on('finish', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  progressLineElem.style.display = 'none';
+});
+
+getWavesurfer().on('play', () => {
+  progressLineElem.style.display = 'block';
+});
+
+getWavesurfer().on('pause', () => {
+  progressLineElem.style.display = 'none';
+});
+
+getWavesurfer().on('audioprocess', (time) => {
+  updateProgressLine(time);
+});
+
+getWavesurfer().on('seek', (prog) => {
+  updateProgressLine(prog * duration);
 });
 
 document.addEventListener('file-loaded', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  progressLineElem.style.display = 'none';
+  updateProgressLine(0);
 });
 
 playPauseBtn.addEventListener('click', () => {
@@ -92,9 +112,11 @@ playPauseBtn.addEventListener('click', () => {
   if (ws.isPlaying()) {
     ws.pause();
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    progressLineElem.style.display = 'none';
   } else {
     ws.play();
     playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    progressLineElem.style.display = 'block';
   }
 });
 const overlay = document.getElementById('drop-overlay');
@@ -278,13 +300,13 @@ updateSpectrogramSettingsText();
 }
 
 const renderAxes = () => {
-drawTimeAxis({
-containerWidth: container.scrollWidth,
-duration,
-zoomLevel: zoomControl.getZoomLevel(),
-axisElement: timeAxis,
-labelElement: timeLabel,
-});
+  drawTimeAxis({
+    containerWidth: container.scrollWidth,
+    duration,
+    zoomLevel: zoomControl.getZoomLevel(),
+    axisElement: timeAxis,
+    labelElement: timeLabel,
+  });
 
 drawFrequencyGrid({
 gridCanvas: freqGrid,
@@ -310,9 +332,10 @@ totalDuration: duration,
 getZoomLevel: () => zoomControl.getZoomLevel(),
     getDuration: () => duration
   });
-} else {
-freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
-}
+  } else {
+    freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+  }
+  updateProgressLine(getWavesurfer().getCurrentTime());
 };
 
 const wrapper = document.getElementById('viewer-wrapper');
@@ -326,6 +349,17 @@ wrapper,
 () => { freqHoverControl?.refreshHover(); },
 () => selectionExpandMode
 );
+
+function updateProgressLine(time) {
+  const x = time * zoomControl.getZoomLevel() - viewer.scrollLeft;
+  progressLineElem.style.left = `${x}px`;
+}
+
+viewer.addEventListener('scroll', () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  updateProgressLine(ws.getCurrentTime());
+});
 
 viewer.addEventListener('expand-selection', async (e) => {
 const { startTime, endTime } = e.detail;
@@ -411,16 +445,21 @@ getWavesurfer().on('ready', () => {
     duration = getWavesurfer().getDuration();
     zoomControl.setZoomLevel(0);
 
+  progressLineElem.style.display = 'none';
+  updateProgressLine(0);
+
 getPlugin()?.render();
 requestAnimationFrame(() => {
 renderAxes();
-freqHoverControl?.refreshHover();        
+freqHoverControl?.refreshHover();
 });
 });
 
 getWavesurfer().on('decode', () => {
 duration = getWavesurfer().getDuration();
 zoomControl.setZoomLevel(0);
+progressLineElem.style.display = 'none';
+updateProgressLine(0);
 renderAxes();
 freqHoverControl?.refreshHover();
 });
@@ -755,6 +794,8 @@ document.addEventListener("file-loaded", async () => {
   const currentFile = getCurrentFile();
   duration = getWavesurfer().getDuration();
   zoomControl.setZoomLevel(0);
+  progressLineElem.style.display = 'none';
+  updateProgressLine(0);
   lastLoadedFileName = currentFile ? currentFile.name : null;
   selectionExpandMode = false;
   sampleRateBtn.disabled = false;
