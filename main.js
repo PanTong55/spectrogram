@@ -40,7 +40,9 @@ const progressLineElem = document.getElementById('progress-line');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
+const slowPlayPauseBtn = document.getElementById('slowPlayPauseBtn');
 const stopBtn = document.getElementById('stopBtn');
+const slowStopBtn = document.getElementById('slowStopBtn');
 let isDraggingProgress = false;
 let manualSeekTime = null;
 let duration = 0;
@@ -54,6 +56,8 @@ let currentOverlap = 'auto';
 let overlapWarningShown = false;
 let freqHoverControl = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
+let normalSampleRate = 256000;
+let isSlowMode = false;
 let selectionExpandMode = false;
 let expandHistory = [];
 let currentExpandBlob = null;
@@ -79,8 +83,36 @@ function hideStopButton() {
     }
   }, { once: true });
 }
+function showSlowStopButton() {
+  slowStopBtn.style.display = 'inline-flex';
+  requestAnimationFrame(() => slowStopBtn.classList.add('show'));
+}
+function hideSlowStopButton() {
+  slowStopBtn.classList.remove('show');
+  slowStopBtn.addEventListener('transitionend', function handler() {
+    slowStopBtn.removeEventListener('transitionend', handler);
+    if (!slowStopBtn.classList.contains('show')) {
+      slowStopBtn.style.display = 'none';
+    }
+  }, { once: true });
+}
+
+function enterSlowMode() {
+  if (isSlowMode) return;
+  normalSampleRate = currentSampleRate;
+  applySampleRate(currentSampleRate / 10, false);
+  isSlowMode = true;
+}
+
+function exitSlowMode() {
+  if (!isSlowMode) return;
+  applySampleRate(normalSampleRate, false);
+  isSlowMode = false;
+}
 playPauseBtn.disabled = true;
 hideStopButton();
+slowPlayPauseBtn.disabled = true;
+hideSlowStopButton();
 const getDuration = () => duration;
 
 const guanoOutput = document.getElementById('guano-output');
@@ -99,23 +131,52 @@ initWavesurfer({
   sampleRate: currentSampleRate,
 });
 getWavesurfer().on('finish', () => {
+  const ws = getWavesurfer();
+  const slow = ws.getPlaybackRate() === 0.1;
+  ws.setPlaybackRate(1);
+  if (slow) exitSlowMode();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
+  slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+  slowPlayPauseBtn.title = 'Slow Play';
+  slowPlayPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
-  hideStopButton();
+  if (slow) {
+    hideSlowStopButton();
+  } else {
+    hideStopButton();
+  }
 });
 
 getWavesurfer().on('play', () => {
   progressLineElem.style.display = 'block';
   progressLineElem.style.pointerEvents = 'none';
-  playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-  playPauseBtn.title = 'Pause';
-  playPauseBtn.classList.add('playing');
-  playPauseBtn.classList.remove('paused');
-  showStopButton();
+  const ws = getWavesurfer();
+  const slow = ws.getPlaybackRate() === 0.1;
+  if (slow) {
+    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-pause"></i>';
+    slowPlayPauseBtn.title = 'Pause';
+    slowPlayPauseBtn.classList.add('playing');
+    slowPlayPauseBtn.classList.remove('paused');
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playPauseBtn.title = 'Play';
+    playPauseBtn.classList.remove('playing', 'paused');
+    showSlowStopButton();
+    hideStopButton();
+  } else {
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    playPauseBtn.title = 'Pause';
+    playPauseBtn.classList.add('playing');
+    playPauseBtn.classList.remove('paused');
+    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+    slowPlayPauseBtn.title = 'Slow Play';
+    slowPlayPauseBtn.classList.remove('playing', 'paused');
+    showStopButton();
+    hideSlowStopButton();
+  }
 });
 
 getWavesurfer().on('pause', () => {
@@ -123,15 +184,29 @@ getWavesurfer().on('pause', () => {
     ignoreNextPause = false;
     return;
   }
-  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Continue';
-  playPauseBtn.classList.add('paused');
-  playPauseBtn.classList.remove('playing');
+  const ws = getWavesurfer();
+  const slow = ws.getPlaybackRate() === 0.1;
   progressLineElem.style.pointerEvents = 'auto';
-  if (getWavesurfer().getCurrentTime() === 0) {
-    hideStopButton();
+  if (slow) {
+    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+    slowPlayPauseBtn.title = 'Continue';
+    slowPlayPauseBtn.classList.add('paused');
+    slowPlayPauseBtn.classList.remove('playing');
+    if (ws.getCurrentTime() === 0) {
+      hideSlowStopButton();
+    } else {
+      showSlowStopButton();
+    }
   } else {
-    showStopButton();
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playPauseBtn.title = 'Continue';
+    playPauseBtn.classList.add('paused');
+    playPauseBtn.classList.remove('playing');
+    if (ws.getCurrentTime() === 0) {
+      hideStopButton();
+    } else {
+      showStopButton();
+    }
   }
 });
 
@@ -151,13 +226,35 @@ document.addEventListener('file-loaded', () => {
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
   playPauseBtn.disabled = false;
+  slowPlayPauseBtn.disabled = false;
   hideStopButton();
+  hideSlowStopButton();
+  normalSampleRate = currentSampleRate;
+  isSlowMode = false;
   updateProgressLine(0);
 });
 
 playPauseBtn.addEventListener('click', () => {
   const ws = getWavesurfer();
   if (!ws) return;
+  exitSlowMode();
+  ws.setPlaybackRate(1);
+  if (ws.isPlaying()) {
+    ws.pause();
+  } else {
+    if (manualSeekTime !== null) {
+      ws.setTime(manualSeekTime);
+      manualSeekTime = null;
+    }
+    ws.play();
+  }
+});
+
+slowPlayPauseBtn.addEventListener('click', () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  enterSlowMode();
+  ws.setPlaybackRate(0.1);
   if (ws.isPlaying()) {
     ws.pause();
   } else {
@@ -174,6 +271,8 @@ stopBtn.addEventListener('click', () => {
   if (!ws) return;
   ignoreNextPause = true;
   ws.stop();
+  exitSlowMode();
+  ws.setPlaybackRate(1);
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
@@ -182,6 +281,23 @@ stopBtn.addEventListener('click', () => {
   manualSeekTime = null;
   updateProgressLine(0);
   hideStopButton();
+});
+
+slowStopBtn.addEventListener('click', () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  ignoreNextPause = true;
+  ws.stop();
+  exitSlowMode();
+  ws.setPlaybackRate(1);
+  slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+  slowPlayPauseBtn.title = 'Slow Play';
+  slowPlayPauseBtn.classList.remove('playing', 'paused');
+  progressLineElem.style.display = 'none';
+  progressLineElem.style.pointerEvents = 'none';
+  manualSeekTime = null;
+  updateProgressLine(0);
+  hideSlowStopButton();
 });
 const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -295,6 +411,7 @@ freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
 async function applySampleRate(rate, reloadFile = true) {
 const prevRate = currentSampleRate;
 currentSampleRate = rate;
+ if (!isSlowMode) normalSampleRate = currentSampleRate;
 const maxFreq = currentSampleRate / 2000;
 freqMaxInput.max = maxFreq;
 freqMinInput.max = maxFreq;
@@ -910,7 +1027,9 @@ expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
   playPauseBtn.disabled = true;
+  slowPlayPauseBtn.disabled = true;
   hideStopButton();
+  hideSlowStopButton();
 });
 
 window.addEventListener('resize', () => {
