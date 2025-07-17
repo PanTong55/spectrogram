@@ -40,9 +40,7 @@ const progressLineElem = document.getElementById('progress-line');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
-const slowPlayPauseBtn = document.getElementById('slowPlayPauseBtn');
 const stopBtn = document.getElementById('stopBtn');
-const slowStopBtn = document.getElementById('slowStopBtn');
 let isDraggingProgress = false;
 let manualSeekTime = null;
 let duration = 0;
@@ -81,23 +79,8 @@ function hideStopButton() {
     }
   }, { once: true });
 }
-function showSlowStopButton() {
-  slowStopBtn.style.display = 'inline-flex';
-  requestAnimationFrame(() => slowStopBtn.classList.add('show'));
-}
-function hideSlowStopButton() {
-  slowStopBtn.classList.remove('show');
-  slowStopBtn.addEventListener('transitionend', function handler() {
-    slowStopBtn.removeEventListener('transitionend', handler);
-    if (!slowStopBtn.classList.contains('show')) {
-      slowStopBtn.style.display = 'none';
-    }
-  }, { once: true });
-}
 playPauseBtn.disabled = true;
 hideStopButton();
-slowPlayPauseBtn.disabled = true;
-hideSlowStopButton();
 const getDuration = () => duration;
 
 const guanoOutput = document.getElementById('guano-output');
@@ -116,51 +99,23 @@ initWavesurfer({
   sampleRate: currentSampleRate,
 });
 getWavesurfer().on('finish', () => {
-  const ws = getWavesurfer();
-  const slow = ws.getPlaybackRate() === 0.1;
-  ws.setPlaybackRate(1);
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
-  slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
-  slowPlayPauseBtn.title = 'Slow Play';
-  slowPlayPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
-  if (slow) {
-    hideSlowStopButton();
-  } else {
-    hideStopButton();
-  }
+  hideStopButton();
 });
 
 getWavesurfer().on('play', () => {
   progressLineElem.style.display = 'block';
   progressLineElem.style.pointerEvents = 'none';
-  const ws = getWavesurfer();
-  const slow = ws.getPlaybackRate() === 0.1;
-  if (slow) {
-    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-pause"></i>';
-    slowPlayPauseBtn.title = 'Pause';
-    slowPlayPauseBtn.classList.add('playing');
-    slowPlayPauseBtn.classList.remove('paused');
-    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-    playPauseBtn.title = 'Play';
-    playPauseBtn.classList.remove('playing', 'paused');
-    showSlowStopButton();
-    hideStopButton();
-  } else {
-    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-    playPauseBtn.title = 'Pause';
-    playPauseBtn.classList.add('playing');
-    playPauseBtn.classList.remove('paused');
-    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
-    slowPlayPauseBtn.title = 'Slow Play';
-    slowPlayPauseBtn.classList.remove('playing', 'paused');
-    showStopButton();
-    hideSlowStopButton();
-  }
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+  playPauseBtn.title = 'Pause';
+  playPauseBtn.classList.add('playing');
+  playPauseBtn.classList.remove('paused');
+  showStopButton();
 });
 
 getWavesurfer().on('pause', () => {
@@ -168,29 +123,15 @@ getWavesurfer().on('pause', () => {
     ignoreNextPause = false;
     return;
   }
-  const ws = getWavesurfer();
-  const slow = ws.getPlaybackRate() === 0.1;
+  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+  playPauseBtn.title = 'Continue';
+  playPauseBtn.classList.add('paused');
+  playPauseBtn.classList.remove('playing');
   progressLineElem.style.pointerEvents = 'auto';
-  if (slow) {
-    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
-    slowPlayPauseBtn.title = 'Continue';
-    slowPlayPauseBtn.classList.add('paused');
-    slowPlayPauseBtn.classList.remove('playing');
-    if (ws.getCurrentTime() === 0) {
-      hideSlowStopButton();
-    } else {
-      showSlowStopButton();
-    }
+  if (getWavesurfer().getCurrentTime() === 0) {
+    hideStopButton();
   } else {
-    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-    playPauseBtn.title = 'Continue';
-    playPauseBtn.classList.add('paused');
-    playPauseBtn.classList.remove('playing');
-    if (ws.getCurrentTime() === 0) {
-      hideStopButton();
-    } else {
-      showStopButton();
-    }
+    showStopButton();
   }
 });
 
@@ -210,31 +151,13 @@ document.addEventListener('file-loaded', () => {
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
   playPauseBtn.disabled = false;
-  slowPlayPauseBtn.disabled = false;
   hideStopButton();
-  hideSlowStopButton();
   updateProgressLine(0);
 });
 
 playPauseBtn.addEventListener('click', () => {
   const ws = getWavesurfer();
   if (!ws) return;
-  ws.setPlaybackRate(1);
-  if (ws.isPlaying()) {
-    ws.pause();
-  } else {
-    if (manualSeekTime !== null) {
-      ws.setTime(manualSeekTime);
-      manualSeekTime = null;
-    }
-    ws.play();
-  }
-});
-
-slowPlayPauseBtn.addEventListener('click', () => {
-  const ws = getWavesurfer();
-  if (!ws) return;
-  ws.setPlaybackRate(0.1);
   if (ws.isPlaying()) {
     ws.pause();
   } else {
@@ -251,7 +174,6 @@ stopBtn.addEventListener('click', () => {
   if (!ws) return;
   ignoreNextPause = true;
   ws.stop();
-  ws.setPlaybackRate(1);
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
@@ -260,22 +182,6 @@ stopBtn.addEventListener('click', () => {
   manualSeekTime = null;
   updateProgressLine(0);
   hideStopButton();
-});
-
-slowStopBtn.addEventListener('click', () => {
-  const ws = getWavesurfer();
-  if (!ws) return;
-  ignoreNextPause = true;
-  ws.stop();
-  ws.setPlaybackRate(1);
-  slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
-  slowPlayPauseBtn.title = 'Slow Play';
-  slowPlayPauseBtn.classList.remove('playing', 'paused');
-  progressLineElem.style.display = 'none';
-  progressLineElem.style.pointerEvents = 'none';
-  manualSeekTime = null;
-  updateProgressLine(0);
-  hideSlowStopButton();
 });
 const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -1004,9 +910,7 @@ expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
   playPauseBtn.disabled = true;
-  slowPlayPauseBtn.disabled = true;
   hideStopButton();
-  hideSlowStopButton();
 });
 
 window.addEventListener('resize', () => {
