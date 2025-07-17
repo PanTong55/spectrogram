@@ -23,6 +23,7 @@ import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
+import { divideFrequencyByTen } from './modules/frequencyDivider.js';
 
 const spectrogramHeight = 800;
 let sidebarControl;
@@ -40,7 +41,9 @@ const progressLineElem = document.getElementById('progress-line');
 const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
+const slowPlayPauseBtn = document.getElementById('slowPlayPauseBtn');
 const stopBtn = document.getElementById('stopBtn');
+const slowStopBtn = document.getElementById('slowStopBtn');
 let isDraggingProgress = false;
 let manualSeekTime = null;
 let duration = 0;
@@ -54,6 +57,9 @@ let currentOverlap = 'auto';
 let overlapWarningShown = false;
 let freqHoverControl = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
+let normalSampleRate = 256000;
+let isSlowMode = false;
+let slowAudioBlob = null;
 let selectionExpandMode = false;
 let expandHistory = [];
 let currentExpandBlob = null;
@@ -79,8 +85,51 @@ function hideStopButton() {
     }
   }, { once: true });
 }
+function showSlowStopButton() {
+  slowStopBtn.style.display = 'inline-flex';
+  requestAnimationFrame(() => slowStopBtn.classList.add('show'));
+}
+function hideSlowStopButton() {
+  slowStopBtn.classList.remove('show');
+  slowStopBtn.addEventListener('transitionend', function handler() {
+    slowStopBtn.removeEventListener('transitionend', handler);
+    if (!slowStopBtn.classList.contains('show')) {
+      slowStopBtn.style.display = 'none';
+    }
+  }, { once: true });
+}
+
+async function enterSlowMode() {
+  if (isSlowMode) return;
+  const file = getCurrentFile();
+  if (!file) return;
+  slowPlayPauseBtn.disabled = true;
+  slowAudioBlob = await divideFrequencyByTen(file);
+  slowPlayPauseBtn.disabled = false;
+  if (slowAudioBlob) {
+    normalSampleRate = currentSampleRate;
+    await getWavesurfer().loadBlob(slowAudioBlob);
+    applySampleRate(normalSampleRate / 10, false);
+    isSlowMode = true;
+  }
+}
+
+async function exitSlowMode() {
+  if (!isSlowMode) return;
+  slowPlayPauseBtn.disabled = true;
+  const file = getCurrentFile();
+  if (file) {
+    await getWavesurfer().loadBlob(file);
+  }
+  applySampleRate(normalSampleRate, false);
+  isSlowMode = false;
+  slowAudioBlob = null;
+  slowPlayPauseBtn.disabled = false;
+}
 playPauseBtn.disabled = true;
 hideStopButton();
+slowPlayPauseBtn.disabled = true;
+hideSlowStopButton();
 const getDuration = () => duration;
 
 const guanoOutput = document.getElementById('guano-output');
@@ -98,24 +147,50 @@ initWavesurfer({
   container,
   sampleRate: currentSampleRate,
 });
-getWavesurfer().on('finish', () => {
+getWavesurfer().on('finish', async () => {
+  const slow = isSlowMode;
+  if (slow) await exitSlowMode();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
+  slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+  slowPlayPauseBtn.title = 'Slow Play';
+  slowPlayPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
-  hideStopButton();
+  if (slow) {
+    hideSlowStopButton();
+  } else {
+    hideStopButton();
+  }
 });
 
 getWavesurfer().on('play', () => {
   progressLineElem.style.display = 'block';
   progressLineElem.style.pointerEvents = 'none';
-  playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-  playPauseBtn.title = 'Pause';
-  playPauseBtn.classList.add('playing');
-  playPauseBtn.classList.remove('paused');
-  showStopButton();
+  const slow = isSlowMode;
+  if (slow) {
+    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-pause"></i>';
+    slowPlayPauseBtn.title = 'Pause';
+    slowPlayPauseBtn.classList.add('playing');
+    slowPlayPauseBtn.classList.remove('paused');
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playPauseBtn.title = 'Play';
+    playPauseBtn.classList.remove('playing', 'paused');
+    showSlowStopButton();
+    hideStopButton();
+  } else {
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    playPauseBtn.title = 'Pause';
+    playPauseBtn.classList.add('playing');
+    playPauseBtn.classList.remove('paused');
+    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+    slowPlayPauseBtn.title = 'Slow Play';
+    slowPlayPauseBtn.classList.remove('playing', 'paused');
+    showStopButton();
+    hideSlowStopButton();
+  }
 });
 
 getWavesurfer().on('pause', () => {
@@ -123,15 +198,29 @@ getWavesurfer().on('pause', () => {
     ignoreNextPause = false;
     return;
   }
-  playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Continue';
-  playPauseBtn.classList.add('paused');
-  playPauseBtn.classList.remove('playing');
+  const ws = getWavesurfer();
+  const slow = isSlowMode;
   progressLineElem.style.pointerEvents = 'auto';
-  if (getWavesurfer().getCurrentTime() === 0) {
-    hideStopButton();
+  if (slow) {
+    slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+    slowPlayPauseBtn.title = 'Continue';
+    slowPlayPauseBtn.classList.add('paused');
+    slowPlayPauseBtn.classList.remove('playing');
+    if (ws.getCurrentTime() === 0) {
+      hideSlowStopButton();
+    } else {
+      showSlowStopButton();
+    }
   } else {
-    showStopButton();
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playPauseBtn.title = 'Continue';
+    playPauseBtn.classList.add('paused');
+    playPauseBtn.classList.remove('playing');
+    if (ws.getCurrentTime() === 0) {
+      hideStopButton();
+    } else {
+      showStopButton();
+    }
   }
 });
 
@@ -151,13 +240,18 @@ document.addEventListener('file-loaded', () => {
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
   playPauseBtn.disabled = false;
+  slowPlayPauseBtn.disabled = false;
   hideStopButton();
+  hideSlowStopButton();
+  normalSampleRate = currentSampleRate;
+  isSlowMode = false;
   updateProgressLine(0);
 });
 
-playPauseBtn.addEventListener('click', () => {
+playPauseBtn.addEventListener('click', async () => {
   const ws = getWavesurfer();
   if (!ws) return;
+  await exitSlowMode();
   if (ws.isPlaying()) {
     ws.pause();
   } else {
@@ -169,11 +263,29 @@ playPauseBtn.addEventListener('click', () => {
   }
 });
 
-stopBtn.addEventListener('click', () => {
+slowPlayPauseBtn.addEventListener('click', async () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  if (!isSlowMode) {
+    await enterSlowMode();
+  }
+  if (ws.isPlaying()) {
+    ws.pause();
+  } else {
+    if (manualSeekTime !== null) {
+      ws.setTime(manualSeekTime);
+      manualSeekTime = null;
+    }
+    ws.play();
+  }
+});
+
+stopBtn.addEventListener('click', async () => {
   const ws = getWavesurfer();
   if (!ws) return;
   ignoreNextPause = true;
   ws.stop();
+  await exitSlowMode();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
   playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
@@ -182,6 +294,22 @@ stopBtn.addEventListener('click', () => {
   manualSeekTime = null;
   updateProgressLine(0);
   hideStopButton();
+});
+
+slowStopBtn.addEventListener('click', async () => {
+  const ws = getWavesurfer();
+  if (!ws) return;
+  ignoreNextPause = true;
+  ws.stop();
+  await exitSlowMode();
+  slowPlayPauseBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i>';
+  slowPlayPauseBtn.title = 'Slow Play';
+  slowPlayPauseBtn.classList.remove('playing', 'paused');
+  progressLineElem.style.display = 'none';
+  progressLineElem.style.pointerEvents = 'none';
+  manualSeekTime = null;
+  updateProgressLine(0);
+  hideSlowStopButton();
 });
 const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
@@ -295,6 +423,7 @@ freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
 async function applySampleRate(rate, reloadFile = true) {
 const prevRate = currentSampleRate;
 currentSampleRate = rate;
+ if (!isSlowMode) normalSampleRate = currentSampleRate;
 const maxFreq = currentSampleRate / 2000;
 freqMaxInput.max = maxFreq;
 freqMinInput.max = maxFreq;
@@ -910,7 +1039,9 @@ expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
   playPauseBtn.disabled = true;
+  slowPlayPauseBtn.disabled = true;
   hideStopButton();
+  hideSlowStopButton();
 });
 
 window.addEventListener('resize', () => {
