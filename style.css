@@ -1446,3 +1446,14 @@ input.tag-button.editing {
   display: inline-flex;
   width: 30px;
 }
+#slowStopBtn {
+  background-color: #1035AC;
+  display: none;
+  width: 0;
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+#slowStopBtn.show {
+  display: inline-flex;
+  width: 30px;
+}
