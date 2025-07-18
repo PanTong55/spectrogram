@@ -755,66 +755,72 @@ document.dispatchEvent(new Event('file-list-cleared'));
 
 const clearTrashBtn = document.getElementById('clearTrashBtn');
 clearTrashBtn.addEventListener('click', () => {
-const count = getTrashFileCount();
-if (count === 0) return;
-const confirmClear = confirm(`Confirm to clear ${count} trash flagged file(s) from the list?`);
-if (!confirmClear) return;
+  const count = getTrashFileCount();
+  if (count === 0) return;
 
-const prevIdx = getCurrentIndex();
-const filesBefore = getFileList();
-let nextFile = null;
-if (prevIdx >= 0 && getFileIconState(prevIdx).trash) {
-for (let i = prevIdx + 1; i < filesBefore.length; i++) {
-if (!getFileIconState(i).trash) {
-nextFile = filesBefore[i];
-break;
-}
-}
-if (!nextFile) {
-for (let i = prevIdx - 1; i >= 0; i--) {
-if (!getFileIconState(i).trash) {
-nextFile = filesBefore[i];
-break;
-}
-}
-}
-}
+  showMessageBox({
+    title: 'Message',
+    message: `Confirm to clear ${count} trash flagged file(s) from the list?`,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    onConfirm: () => {
+      const prevIdx = getCurrentIndex();
+      const filesBefore = getFileList();
+      let nextFile = null;
+      if (prevIdx >= 0 && getFileIconState(prevIdx).trash) {
+        for (let i = prevIdx + 1; i < filesBefore.length; i++) {
+          if (!getFileIconState(i).trash) {
+            nextFile = filesBefore[i];
+            break;
+          }
+        }
+        if (!nextFile) {
+          for (let i = prevIdx - 1; i >= 0; i--) {
+            if (!getFileIconState(i).trash) {
+              nextFile = filesBefore[i];
+              break;
+            }
+          }
+        }
+      }
 
-const removed = clearTrashFiles();
-if (removed > 0) {
-const remaining = getFileList();
-if (remaining.length === 0) {
-sidebarControl.refresh('');
-replacePlugin(
-getCurrentColorMap(),
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent()
-);
-showDropOverlay();
-loadingOverlay.style.display = 'none';
-zoomControlsElem.style.display = 'none';
-guanoOutput.textContent = '(no file selected)';
-} else {
-let currentName = '';
-if (nextFile) {
-currentName = nextFile.name;
-} else {
-const cur = getCurrentFile();
-currentName = cur ? cur.name : '';
-}
-sidebarControl.refresh(currentName);
-if (nextFile) {
-const idx = remaining.findIndex(f => f === nextFile);
-if (idx >= 0) {
-fileLoaderControl.loadFileAtIndex(idx);
-}
-}
-}
-tagControl.updateTagButtonStates();
-document.dispatchEvent(new Event('file-list-changed'));
-}
+      const removed = clearTrashFiles();
+      if (removed > 0) {
+        const remaining = getFileList();
+        if (remaining.length === 0) {
+          sidebarControl.refresh('');
+          replacePlugin(
+            getCurrentColorMap(),
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent()
+          );
+          showDropOverlay();
+          loadingOverlay.style.display = 'none';
+          zoomControlsElem.style.display = 'none';
+          guanoOutput.textContent = '(no file selected)';
+        } else {
+          let currentName = '';
+          if (nextFile) {
+            currentName = nextFile.name;
+          } else {
+            const cur = getCurrentFile();
+            currentName = cur ? cur.name : '';
+          }
+          sidebarControl.refresh(currentName);
+          if (nextFile) {
+            const idx = remaining.findIndex(f => f === nextFile);
+            if (idx >= 0) {
+              fileLoaderControl.loadFileAtIndex(idx);
+            }
+          }
+        }
+        tagControl.updateTagButtonStates();
+        document.dispatchEvent(new Event('file-list-changed'));
+      }
+    }
+  });
 });
 
 const settingBtn = document.getElementById('setting');
