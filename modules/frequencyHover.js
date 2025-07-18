@@ -25,7 +25,8 @@ export function initFrequencyHover({
   let persistentLinesEnabled = true;
   let disablePersistentLinesForScrollbar = false;
   const defaultScrollbarThickness = 20;
-  const getScrollbarThickness = () => defaultScrollbarThickness;
+  const getScrollbarThickness = () =>
+    container.scrollWidth > viewer.clientWidth ? 0 : defaultScrollbarThickness;
   const edgeThreshold = 5;
   
   let suppressHover = false;
@@ -54,8 +55,8 @@ export function initFrequencyHover({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const isZoomIn = container.scrollWidth > viewer.clientWidth;
-    if (!isZoomIn && y > (viewer.clientHeight - getScrollbarThickness())) {
+    const threshold = getScrollbarThickness();
+    if (y > (viewer.clientHeight - threshold)) {
       hideAll();
       viewer.classList.remove('hide-cursor');
       disablePersistentLinesForScrollbar = true;
