@@ -755,15 +755,10 @@ document.dispatchEvent(new Event('file-list-cleared'));
 
 const clearTrashBtn = document.getElementById('clearTrashBtn');
 clearTrashBtn.addEventListener('click', () => {
-  const count = getTrashFileCount();
-  if (count === 0) return;
-
-  showMessageBox({
-    title: 'Message',
-    message: `Confirm to clear ${count} trash flagged file(s) from the list?`,
-    confirmText: 'Confirm',
-    cancelText: 'Cancel',
-    onConfirm: () => {
+const count = getTrashFileCount();
+if (count === 0) return;
+const confirmClear = confirm(`Confirm to clear ${count} trash flagged file(s) from the list?`);
+if (!confirmClear) return;
 
 const prevIdx = getCurrentIndex();
 const filesBefore = getFileList();
@@ -818,9 +813,8 @@ fileLoaderControl.loadFileAtIndex(idx);
 }
 }
 tagControl.updateTagButtonStates();
-    document.dispatchEvent(new Event('file-list-changed'));
-    }
-  });
+document.dispatchEvent(new Event('file-list-changed'));
+}
 });
 
 const settingBtn = document.getElementById('setting');
