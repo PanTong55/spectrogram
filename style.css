@@ -574,6 +574,23 @@ input[type="file"]:hover {
   background-color: #222;
 }
 
+/* Hover colors for playback buttons */
+.sidebar-button.paused:hover {
+  background-color: #05902c;
+}
+
+.sidebar-button.playing:hover {
+  background-color: #9f1410;
+}
+
+#stopBtn:hover {
+  background-color: #082c87;
+}
+
+#expandBackBtn:hover {
+  background-color: #9f1410;
+}
+
 .sidebar-button i {
   color: white;
   font-size: 15px;
@@ -1319,6 +1336,7 @@ input.tag-button.editing {
 
 #expandBackBtn {
   display: none;
+  background-color: #B91F1C;
 }
 
 #overlapInput {
