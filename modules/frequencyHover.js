@@ -298,6 +298,39 @@ export function initFrequencyHover({
     enableResize(selObj);
   }
 
+  function addTooltipForSelection(sel, left, top, width, height) {
+    const { Flow, Fhigh, startTime, endTime } = sel.data;
+    const Bandwidth = Fhigh - Flow;
+    const Duration = (endTime - startTime);
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'draggable-tooltip freq-tooltip';
+    tooltip.style.left = `${left + width + 10}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.innerHTML = `
+      <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
+      <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
+      <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
+      <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
+      <div class="tooltip-close-btn">×</div>
+    `;
+    tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
+    tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
+    viewer.appendChild(tooltip);
+    enableDrag(tooltip);
+    tooltip.querySelector('.tooltip-close-btn').addEventListener('click', () => {
+      const index = selections.findIndex(s => s === sel);
+      if (index !== -1) {
+        viewer.removeChild(selections[index].rect);
+        viewer.removeChild(selections[index].tooltip);
+        selections.splice(index, 1);
+      }
+      isOverTooltip = false;
+      suppressHover = false;
+    });
+    sel.tooltip = tooltip;
+  }
+
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
@@ -446,7 +479,14 @@ export function initFrequencyHover({
       const durationMs = (endTime - startTime) * 1000;
       if (durationMs <= 100) {
         if (sel.expandBtn) sel.expandBtn.style.display = 'none';
+        if (!sel.tooltip) {
+          addTooltipForSelection(sel, left, top, width, height);
+        }
       } else {
+        if (sel.tooltip) {
+          viewer.removeChild(sel.tooltip);
+          sel.tooltip = null;
+        }
         if (sel.expandBtn) {
           sel.expandBtn.style.display = '';
         } else {
@@ -470,11 +510,9 @@ export function initFrequencyHover({
         const tooltipLeft = left + width + 10;
         sel.tooltip.style.left = `${tooltipLeft}px`;
         sel.tooltip.style.top = `${top}px`;
-
-        updateTooltipValues(sel, left, top, width, height);
-      } else {
-        updateTooltipValues(sel, left, top, width, height);
       }
+
+      updateTooltipValues(sel, left, top, width, height);
     });
   }
 
