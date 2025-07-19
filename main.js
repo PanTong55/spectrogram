@@ -862,6 +862,24 @@ initMapPopup();
 document.addEventListener('hide-spectrogram-hover', () => {
   freqHoverControl?.hideHover();
 });
+document.addEventListener('keydown', (e) => {
+if (!e.ctrlKey) return;
+if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+switch (e.key.toLowerCase()) {
+case 'm':
+e.preventDefault();
+document.getElementById('mapBtn')?.click();
+break;
+case 's':
+e.preventDefault();
+settingBtn.click();
+break;
+case 'p':
+e.preventDefault();
+playPauseBtn.click();
+break;
+}
+});
 document.addEventListener('map-file-selected', (e) => {
 const idx = e.detail?.index;
 if (typeof idx === 'number') {
