@@ -66,11 +66,23 @@ specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 function updateExpandBackBtn() {
 expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
 }
+let stopBtnRafId = null;
 function showStopButton() {
+  if (stopBtnRafId !== null) {
+    cancelAnimationFrame(stopBtnRafId);
+    stopBtnRafId = null;
+  }
   stopBtn.style.display = 'inline-flex';
-  requestAnimationFrame(() => stopBtn.classList.add('show'));
+  stopBtnRafId = requestAnimationFrame(() => {
+    stopBtnRafId = null;
+    stopBtn.classList.add('show');
+  });
 }
 function hideStopButton() {
+  if (stopBtnRafId !== null) {
+    cancelAnimationFrame(stopBtnRafId);
+    stopBtnRafId = null;
+  }
   stopBtn.classList.remove('show');
   stopBtn.addEventListener('transitionend', function handler() {
     stopBtn.removeEventListener('transitionend', handler);
