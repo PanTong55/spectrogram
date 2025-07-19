@@ -430,18 +430,41 @@ export function initFrequencyHover({
   function updateSelections() {
     const actualWidth = getDuration() * getZoomLevel();
     const freqRange = maxFrequency - minFrequency;
-  
+
     selections.forEach(sel => {
       const { startTime, endTime, Flow, Fhigh } = sel.data;
       const left = (startTime / getDuration()) * actualWidth;
       const width = ((endTime - startTime) / getDuration()) * actualWidth;
       const top = (1 - (Fhigh - minFrequency) / freqRange) * spectrogramHeight;
       const height = ((Fhigh - Flow) / freqRange) * spectrogramHeight;
-  
+
       sel.rect.style.left = `${left}px`;
       sel.rect.style.top = `${top}px`;
       sel.rect.style.width = `${width}px`;
       sel.rect.style.height = `${height}px`;
+
+      const durationMs = (endTime - startTime) * 1000;
+      if (durationMs <= 100) {
+        if (sel.expandBtn) sel.expandBtn.style.display = 'none';
+      } else {
+        if (sel.expandBtn) {
+          sel.expandBtn.style.display = '';
+        } else {
+          const expandBtn = document.createElement('i');
+          expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+          expandBtn.title = 'Crop and expand this session';
+          expandBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            viewer.dispatchEvent(new CustomEvent('expand-selection', {
+              detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
+            }));
+          });
+          expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+          expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+          sel.rect.appendChild(expandBtn);
+          sel.expandBtn = expandBtn;
+        }
+      }
 
       if (sel.tooltip) {
         const tooltipLeft = left + width + 10;
