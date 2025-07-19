@@ -170,6 +170,9 @@ html, body {
   justify-content: center;
   cursor: pointer;
 }
+.zoom-button:not(:disabled):hover {
+  background: #eee;
+}
 .zoom-button:disabled {
   background: #eee;
   color: #aaa;
