@@ -238,20 +238,11 @@ export function initFrequencyHover({
 
     let expandBtn = null;
     let closeBtn = null;
+    let btnGroup = null;
     let durationLabel = null;
     if (Duration * 1000 > 100) {
-      expandBtn = document.createElement('i');
-      expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
-      expandBtn.title = 'Crop and expand this session';
-      expandBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        viewer.dispatchEvent(new CustomEvent('expand-selection', {
-          detail: { startTime, endTime }
-        }));
-      });
-      expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-      expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-      rectObj.appendChild(expandBtn);
+      btnGroup = document.createElement('div');
+      btnGroup.className = 'selection-btn-group';
 
       closeBtn = document.createElement('i');
       closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
@@ -266,13 +257,25 @@ export function initFrequencyHover({
         }
         suppressHover = false;
       });
-      // Prevent resize initiation when interacting with the close button
-      closeBtn.addEventListener('mousedown', (ev) => {
-        ev.stopPropagation();
-      });
+      closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
       closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-      rectObj.appendChild(closeBtn);
+
+      expandBtn = document.createElement('i');
+      expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+      expandBtn.title = 'Crop and expand this session';
+      expandBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        viewer.dispatchEvent(new CustomEvent('expand-selection', {
+          detail: { startTime, endTime }
+        }));
+      });
+      expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+      btnGroup.appendChild(closeBtn);
+      btnGroup.appendChild(expandBtn);
+      rectObj.appendChild(btnGroup);
     }
 
     durationLabel = document.createElement('div');
@@ -280,7 +283,7 @@ export function initFrequencyHover({
     durationLabel.textContent = `${(Duration * 1000).toFixed(1)} ms`;
     rectObj.appendChild(durationLabel);
 
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn, closeBtn, durationLabel };
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn, closeBtn, btnGroup, durationLabel };
     selections.push(selObj);
     if (tooltip) {
       enableDrag(tooltip);
@@ -478,8 +481,7 @@ export function initFrequencyHover({
 
       const durationMs = (endTime - startTime) * 1000;
       if (durationMs <= 100) {
-        if (sel.expandBtn) sel.expandBtn.style.display = 'none';
-        if (sel.closeBtn) sel.closeBtn.style.display = 'none';
+        if (sel.btnGroup) sel.btnGroup.style.display = 'none';
         if (!sel.tooltip) {
           addTooltipForSelection(sel, left, top, width, height);
         }
@@ -488,26 +490,13 @@ export function initFrequencyHover({
           viewer.removeChild(sel.tooltip);
           sel.tooltip = null;
         }
-        if (sel.expandBtn) {
-          sel.expandBtn.style.display = '';
+
+        if (sel.btnGroup) {
+          sel.btnGroup.style.display = '';
         } else {
-          const expandBtn = document.createElement('i');
-          expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
-          expandBtn.title = 'Crop and expand this session';
-          expandBtn.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            viewer.dispatchEvent(new CustomEvent('expand-selection', {
-              detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
-            }));
-          });
-          expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-          expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-          sel.rect.appendChild(expandBtn);
-          sel.expandBtn = expandBtn;
-        }
-        if (sel.closeBtn) {
-          sel.closeBtn.style.display = '';
-        } else {
+          const group = document.createElement('div');
+          group.className = 'selection-btn-group';
+
           const closeBtn = document.createElement('i');
           closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
           closeBtn.title = 'Close selection';
@@ -524,8 +513,26 @@ export function initFrequencyHover({
           closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
           closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
           closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-          sel.rect.appendChild(closeBtn);
+
+          const expandBtn = document.createElement('i');
+          expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+          expandBtn.title = 'Crop and expand this session';
+          expandBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            viewer.dispatchEvent(new CustomEvent('expand-selection', {
+              detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
+            }));
+          });
+          expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+          expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+          group.appendChild(closeBtn);
+          group.appendChild(expandBtn);
+          sel.rect.appendChild(group);
+
+          sel.btnGroup = group;
           sel.closeBtn = closeBtn;
+          sel.expandBtn = expandBtn;
         }
       }
 
