@@ -3,7 +3,6 @@
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { getWavSampleRate, getWavDuration } from './fileLoader.js';
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
-import { preloadNeighbors } from './cacheManager.js';
 import { showMessageBox } from './messageBox.js';
 import { importKmlFile } from './mapPopup.js';
 
@@ -107,7 +106,6 @@ export function initDragDropLoader({
       onAfterLoad();
     }
     document.dispatchEvent(new Event('file-loaded'));
-    preloadNeighbors(getCurrentIndex(), getFileList());
   }
 
   let pendingKmlFile = null;
