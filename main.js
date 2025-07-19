@@ -105,6 +105,7 @@ getWavesurfer().on('finish', () => {
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
   manualSeekTime = null;
+  ignoreNextPause = true;
   hideStopButton();
 });
 
@@ -160,12 +161,24 @@ playPauseBtn.addEventListener('click', () => {
   if (!ws) return;
   if (ws.isPlaying()) {
     ws.pause();
+    // Update button immediately in case the pause event is delayed
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+    playPauseBtn.title = 'Continue';
+    playPauseBtn.classList.add('paused');
+    playPauseBtn.classList.remove('playing');
+    progressLineElem.style.pointerEvents = 'auto';
   } else {
     if (manualSeekTime !== null) {
       ws.setTime(manualSeekTime);
       manualSeekTime = null;
     }
     ws.play();
+    // Reflect playing state immediately
+    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+    playPauseBtn.title = 'Pause';
+    playPauseBtn.classList.add('playing');
+    playPauseBtn.classList.remove('paused');
+    progressLineElem.style.pointerEvents = 'none';
   }
 });
 
