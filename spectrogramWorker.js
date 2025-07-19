@@ -1,34 +1,14 @@
 let canvas, ctx, sampleRate = 44100;
 
-self.onmessage = async (e) => {
+self.onmessage = (e) => {
   const { type } = e.data;
   if (type === 'init') {
     canvas = e.data.canvas;
     sampleRate = e.data.sampleRate || sampleRate;
     ctx = canvas.getContext('2d');
   } else if (type === 'render') {
-    if (!ctx) {
-      canvas = new OffscreenCanvas(1, 1);
-      ctx = canvas.getContext('2d');
-    }
-    const bmp = renderSpectrogram(
-      e.data.buffer,
-      e.data.sampleRate || sampleRate,
-      e.data.fftSize || 1024,
-      e.data.overlap || 0
-    );
-    if (e.data.returnBitmap) {
-      self.postMessage({ type: 'rendered', bitmap: bmp }, [bmp]);
-    } else {
-      self.postMessage({ type: 'rendered' });
-    }
-  } else if (type === 'drawImage') {
     if (!ctx) return;
-    const img = e.data.image;
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0);
   }
 };
 
@@ -61,7 +41,7 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  return canvas.transferToImageBitmap();
+  self.postMessage({ type: 'rendered' });
 }
 
 function hannWindow(N) {
