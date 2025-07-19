@@ -2,6 +2,7 @@
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
+import { preloadNeighbors, getAudioBuffer } from './cacheManager.js';
 import { showMessageBox } from './messageBox.js';
 
 export async function getWavSampleRate(file) {
@@ -109,7 +110,9 @@ export function initFileLoader({
 
   async function loadFile(file) {
     if (!file) return;
-    const detectedSampleRate = await getWavSampleRate(file);
+    const idx = getCurrentIndex();
+    const cachedAudio = getAudioBuffer(idx);
+    const detectedSampleRate = cachedAudio ? cachedAudio.sampleRate : await getWavSampleRate(file);
 
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
@@ -137,11 +140,18 @@ export function initFileLoader({
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }
 
-    const fileUrl = URL.createObjectURL(file);
-    if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
-    lastObjectUrl = fileUrl;
-
-    await wavesurfer.load(fileUrl);
+    if (cachedAudio) {
+      if (lastObjectUrl) {
+        URL.revokeObjectURL(lastObjectUrl);
+        lastObjectUrl = null;
+      }
+      await wavesurfer.loadDecodedBuffer(cachedAudio);
+    } else {
+      const fileUrl = URL.createObjectURL(file);
+      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+      lastObjectUrl = fileUrl;
+      await wavesurfer.load(fileUrl);
+    }
 
     if (typeof onPluginReplaced === 'function') {
       onPluginReplaced();
@@ -153,7 +163,9 @@ export function initFileLoader({
       onAfterLoad();
     }
     document.dispatchEvent(new Event('file-loaded'));
-    
+
+    preloadNeighbors(getCurrentIndex(), getFileList());
+
   }
 
   fileInput.addEventListener('change', async (event) => {
