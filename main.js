@@ -23,7 +23,6 @@ import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
-import { getSpectrogramImage, preloadFile } from './modules/cacheManager.js';
 
 const spectrogramHeight = 800;
 let sidebarControl;
@@ -903,18 +902,10 @@ document.addEventListener("file-loaded", async () => {
   currentExpandBlob = null;
   updateExpandBackBtn();
   if (currentFile) {
-    const idx = getCurrentIndex();
-    const cachedImg = getSpectrogramImage(idx);
-    if (cachedImg) {
-      const bmp = cachedImg;
-      specWorker.postMessage({ type: "drawImage", image: bmp });
-    } else {
-      const arrayBuf = await currentFile.arrayBuffer();
-      const ac = new (window.AudioContext || window.webkitAudioContext)();
-      const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-      specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
-      preloadFile(idx, currentFile, { audioCtx: ac, fftSize: currentFftSize, overlap: getOverlapPercent() });
-    }
+    const arrayBuf = await currentFile.arrayBuffer();
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
+    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
   }
 });
 
