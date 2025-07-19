@@ -479,6 +479,7 @@ export function initFrequencyHover({
       const durationMs = (endTime - startTime) * 1000;
       if (durationMs <= 100) {
         if (sel.expandBtn) sel.expandBtn.style.display = 'none';
+        if (sel.closeBtn) sel.closeBtn.style.display = 'none';
         if (!sel.tooltip) {
           addTooltipForSelection(sel, left, top, width, height);
         }
@@ -503,6 +504,28 @@ export function initFrequencyHover({
           expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
           sel.rect.appendChild(expandBtn);
           sel.expandBtn = expandBtn;
+        }
+        if (sel.closeBtn) {
+          sel.closeBtn.style.display = '';
+        } else {
+          const closeBtn = document.createElement('i');
+          closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
+          closeBtn.title = 'Close selection';
+          closeBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const index = selections.findIndex(s => s.rect === sel.rect);
+            if (index !== -1) {
+              viewer.removeChild(selections[index].rect);
+              if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
+              selections.splice(index, 1);
+            }
+            suppressHover = false;
+          });
+          closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
+          closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+          closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+          sel.rect.appendChild(closeBtn);
+          sel.closeBtn = closeBtn;
         }
       }
 
