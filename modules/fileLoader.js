@@ -2,6 +2,7 @@
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
+import { preloadNeighbors } from './cacheManager.js';
 import { showMessageBox } from './messageBox.js';
 
 export async function getWavSampleRate(file) {
@@ -153,7 +154,9 @@ export function initFileLoader({
       onAfterLoad();
     }
     document.dispatchEvent(new Event('file-loaded'));
-    
+
+    preloadNeighbors(getCurrentIndex(), getFileList());
+
   }
 
   fileInput.addEventListener('change', async (event) => {
