@@ -351,9 +351,10 @@ input[type="file"]:hover {
 }
 
 .selection-btn-group i {
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
+  width: 18px;
+  height: 16px;
+  font-size: 9px;
+  padding-top: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
