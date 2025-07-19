@@ -23,6 +23,7 @@ import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
+import { getSpectrogramImage, preloadFile, getAudioBuffer } from './modules/cacheManager.js';
 
 const spectrogramHeight = 800;
 let sidebarControl;
@@ -902,10 +903,32 @@ document.addEventListener("file-loaded", async () => {
   currentExpandBlob = null;
   updateExpandBackBtn();
   if (currentFile) {
-    const arrayBuf = await currentFile.arrayBuffer();
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
+    const idx = getCurrentIndex();
+    const cachedImg = getSpectrogramImage(idx);
+    const cachedAudio = getAudioBuffer(idx);
+    if (cachedImg) {
+      specWorker.postMessage({ type: "drawImage", image: cachedImg });
+    } else {
+      let audioBuf = cachedAudio;
+      if (!audioBuf) {
+        const arrayBuf = await currentFile.arrayBuffer();
+        audioBuf = await getWavesurfer().backend.ac.decodeAudioData(arrayBuf.slice(0));
+      }
+      const chan = audioBuf.getChannelData(0).slice();
+      specWorker.postMessage({ type: "render", buffer: chan, sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [chan.buffer]);
+    }
+    if (!cachedAudio || !cachedImg) {
+      preloadFile(idx, currentFile, {
+        audioCtx: getWavesurfer().backend.ac,
+        fftSize: currentFftSize,
+        overlap: getOverlapPercent()
+      });
+    }
+    preloadNeighbors(idx, getFileList(), {
+      audioCtx: getWavesurfer().backend.ac,
+      fftSize: currentFftSize,
+      overlap: getOverlapPercent()
+    });
   }
 });
 
