@@ -1,18 +1,42 @@
 let canvas, ctx, sampleRate = 44100;
 
-self.onmessage = (e) => {
+self.onmessage = async (e) => {
   const { type } = e.data;
   if (type === 'init') {
     canvas = e.data.canvas;
     sampleRate = e.data.sampleRate || sampleRate;
     ctx = canvas.getContext('2d');
   } else if (type === 'render') {
+    if (!ctx) {
+      canvas = new OffscreenCanvas(1, 1);
+      ctx = canvas.getContext('2d');
+    }
+    const bmp = renderSpectrogram(
+      e.data.buffer,
+      e.data.sampleRate || sampleRate,
+      e.data.fftSize || 1024,
+      e.data.overlap || 0,
+      !!e.data.returnBitmap
+    );
+    if (e.data.returnBitmap) {
+      self.postMessage({ type: 'rendered', bitmap: bmp }, [bmp]);
+    } else {
+      self.postMessage({ type: 'rendered' });
+    }
+  } else if (type === 'drawImage') {
     if (!ctx) return;
-    renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0);
+    const img = e.data.image;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    if (img.close) {
+      img.close();
+    }
   }
 };
 
-function renderSpectrogram(signal, sr, fftSize, overlapPct) {
+function renderSpectrogram(signal, sr, fftSize, overlapPct, returnBitmap = false) {
   const hop = Math.max(1, Math.floor(fftSize * (1 - overlapPct / 100)));
   const width = Math.max(1, Math.ceil((signal.length - fftSize) / hop));
   const height = fftSize / 2;
@@ -41,7 +65,10 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
     }
   }
   ctx.putImageData(img, 0, 0);
-  self.postMessage({ type: 'rendered' });
+  if (returnBitmap) {
+    return canvas.transferToImageBitmap();
+  }
+  return null;
 }
 
 function hannWindow(N) {
