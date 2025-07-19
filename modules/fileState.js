@@ -1,7 +1,5 @@
 // modules/fileState.js
 
-import { clearCache } from './cacheManager.js';
-
 let fileList = [];
 let currentIndex = -1;
 let fileIcons = {}; // { index: { trash: bool, star: bool, question: bool } }
@@ -14,7 +12,6 @@ export function setFileList(list, index = 0) {
   fileIcons = {};
   fileNotes = {};
   fileMetadata = {};
-  clearCache();
 }
 
 export function addFilesToList(list, index = 0) {
@@ -71,7 +68,6 @@ export function clearFileList() {
   fileIcons = {};
   fileNotes = {};
   fileMetadata = {};
-  clearCache();
 }
 
 export function setFileNote(index, note) {

@@ -3,7 +3,6 @@
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { getWavSampleRate, getWavDuration } from './fileLoader.js';
 import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
-import { preloadNeighbors, getAudioBuffer, preloadFile } from './cacheManager.js';
 import { showMessageBox } from './messageBox.js';
 import { importKmlFile } from './mapPopup.js';
 
@@ -62,9 +61,7 @@ export function initDragDropLoader({
   async function loadFile(file) {
     if (!file) return;
 
-    const idx = getCurrentIndex();
-    const cachedAudio = getAudioBuffer(idx);
-    const detectedSampleRate = cachedAudio ? cachedAudio.sampleRate : await getWavSampleRate(file);
+    const detectedSampleRate = await getWavSampleRate(file);
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
     }    
@@ -87,18 +84,11 @@ export function initDragDropLoader({
       guanoOutput.textContent = '(Error reading GUANO metadata)';
     }
 
-    if (cachedAudio) {
-      if (lastObjectUrl) {
-        URL.revokeObjectURL(lastObjectUrl);
-        lastObjectUrl = null;
-      }
-      await wavesurfer.loadDecodedBuffer(cachedAudio);
-    } else {
-      const fileUrl = URL.createObjectURL(file);
-      if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
-      lastObjectUrl = fileUrl;
-      await wavesurfer.load(fileUrl);
-    }
+    const fileUrl = URL.createObjectURL(file);
+    if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
+    lastObjectUrl = fileUrl;
+
+    await wavesurfer.load(fileUrl);
 
     if (typeof onPluginReplaced === 'function') {
       onPluginReplaced();
@@ -116,8 +106,6 @@ export function initDragDropLoader({
       onAfterLoad();
     }
     document.dispatchEvent(new Event('file-loaded'));
-    preloadFile(getCurrentIndex(), file, { audioCtx: wavesurfer.backend.ac });
-    preloadNeighbors(getCurrentIndex(), getFileList(), { audioCtx: wavesurfer.backend.ac });
   }
 
   let pendingKmlFile = null;
