@@ -33,7 +33,6 @@ export function initFrequencyHover({
   let isOverTooltip = false;
   let isResizing = false;
   let isDrawing = false;
-  let isOverBtnGroup = false;
   let startX = 0, startY = 0;
   let selectionRect = null;
   let lastClientX = null, lastClientY = null;
@@ -47,7 +46,7 @@ export function initFrequencyHover({
   const updateHoverDisplay = (e) => {
     lastClientX = e.clientX;
     lastClientY = e.clientY;    
-    if (suppressHover || isResizing || isOverBtnGroup) {
+    if (suppressHover || isResizing) {
       hideAll();
       return;
     }
@@ -196,7 +195,7 @@ export function initFrequencyHover({
 
   viewer.addEventListener('contextmenu', (e) => {
     if (!persistentLinesEnabled || disablePersistentLinesForScrollbar || isOverTooltip) return;
-    if (e.target.closest('.selection-expand-btn') || e.target.closest('.selection-btn-group')) return;
+    if (e.target.closest('.selection-expand-btn')) return;
     e.preventDefault();
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
@@ -257,7 +256,6 @@ export function initFrequencyHover({
           selections.splice(index, 1);
         }
         suppressHover = false;
-        isOverBtnGroup = false;
       });
       closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
       closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
@@ -274,10 +272,6 @@ export function initFrequencyHover({
       });
       expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
-      btnGroup.addEventListener('mouseenter', () => { isOverBtnGroup = true; hideAll(); });
-      btnGroup.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
-      btnGroup.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
 
       btnGroup.appendChild(closeBtn);
       btnGroup.appendChild(expandBtn);
@@ -348,8 +342,8 @@ export function initFrequencyHover({
   
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
-      if (isDrawing || resizing || isOverBtnGroup) return;
-      if (e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn') || e.target.closest('.selection-btn-group')) {
+      if (isDrawing || resizing) return;
+      if (e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn')) {
         rect.style.cursor = 'default';
         return;
       }
@@ -380,7 +374,7 @@ export function initFrequencyHover({
     // mousedown 時一次性決定 edge
     rect.addEventListener('mousedown', (e) => {
       if (resizing) return;
-      if (e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn') || e.target.closest('.selection-btn-group')) return;
+      if (e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn')) return;
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
@@ -515,7 +509,6 @@ export function initFrequencyHover({
               selections.splice(index, 1);
             }
             suppressHover = false;
-            isOverBtnGroup = false;
           });
           closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
           closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
@@ -532,10 +525,6 @@ export function initFrequencyHover({
           });
           expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
           expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
-          group.addEventListener('mouseenter', () => { isOverBtnGroup = true; hideAll(); });
-          group.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
-          group.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
 
           group.appendChild(closeBtn);
           group.appendChild(expandBtn);
