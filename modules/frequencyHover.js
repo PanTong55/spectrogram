@@ -93,7 +93,7 @@ export function initFrequencyHover({
     freqLabel.style.left = labelLeft;
     freqLabel.style.display = 'block';
     const freqText = Number(freq.toFixed(1)).toString();
-    freqLabel.textContent = `${freqText}   ${(time * 1000).toFixed(1)} ms`;
+    freqLabel.textContent = `${freqText} kHz  ${(time * 1000).toFixed(1)} ms`;
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay, { passive: true });
