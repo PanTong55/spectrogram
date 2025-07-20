@@ -178,13 +178,19 @@ export function initDragDropLoader({
 
   let dragCounter = 0;
 
+  function isFileDrag(e) {
+    return Array.from(e.dataTransfer?.types || []).includes('Files');
+  }
+
   dropArea.addEventListener('dragenter', e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter++;
     showOverlay();
   });
 
   dropArea.addEventListener('dragleave', e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter--;
     if (dragCounter === 0) {
@@ -193,6 +199,7 @@ export function initDragDropLoader({
   });
 
   dropArea.addEventListener('dragover', e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   });
@@ -236,6 +243,7 @@ export function initDragDropLoader({
   }
 
   dropArea.addEventListener('drop', async e => {
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter = 0;
     hideOverlay();
