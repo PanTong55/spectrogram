@@ -196,7 +196,7 @@ export function initFrequencyHover({
 
   viewer.addEventListener('contextmenu', (e) => {
     if (!persistentLinesEnabled || disablePersistentLinesForScrollbar || isOverTooltip) return;
-    if (e.target.closest('.selection-expand-btn') || e.target.closest('.selection-fit-btn') || e.target.closest('.selection-btn-group')) return;
+    if (e.target.closest('.selection-expand-btn') || e.target.closest('.selection-btn-group')) return;
     e.preventDefault();
     const rect = fixedOverlay.getBoundingClientRect();
     const y = e.clientY - rect.top;
@@ -311,25 +311,6 @@ export function initFrequencyHover({
     expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
     expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
 
-    const fitBtn = document.createElement('i');
-    fitBtn.className = 'fa-solid fa-up-right-and-down-left-from-center selection-fit-btn';
-    fitBtn.title = 'Fit to window';
-    fitBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      viewer.dispatchEvent(new CustomEvent('fit-window-selection', {
-        detail: {
-          startTime: sel.data.startTime,
-          endTime: sel.data.endTime,
-          Flow: sel.data.Flow,
-          Fhigh: sel.data.Fhigh,
-        }
-      }));
-      suppressHover = false;
-      isOverBtnGroup = false;
-    });
-    fitBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-    fitBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
     group.addEventListener('mouseenter', () => {
       isOverBtnGroup = true;
       hideAll();
@@ -340,13 +321,11 @@ export function initFrequencyHover({
 
     group.appendChild(closeBtn);
     group.appendChild(expandBtn);
-    group.appendChild(fitBtn);
     sel.rect.appendChild(group);
 
     sel.btnGroup = group;
     sel.closeBtn = closeBtn;
     sel.expandBtn = expandBtn;
-    sel.fitBtn = fitBtn;
   }
 
   function enableResize(sel) {
@@ -358,7 +337,7 @@ export function initFrequencyHover({
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
       if (isDrawing || resizing) return;
-      if (isOverBtnGroup || e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn') || e.target.closest('.selection-fit-btn') || e.target.closest('.selection-btn-group')) {
+      if (isOverBtnGroup || e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn') || e.target.closest('.selection-btn-group')) {
         rect.style.cursor = 'default';
         return;
       }
@@ -389,7 +368,7 @@ export function initFrequencyHover({
     // mousedown 時一次性決定 edge
     rect.addEventListener('mousedown', (e) => {
       if (resizing) return;
-      if (isOverBtnGroup || e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn') || e.target.closest('.selection-fit-btn') || e.target.closest('.selection-btn-group')) return;
+      if (isOverBtnGroup || e.target.closest('.selection-close-btn') || e.target.closest('.selection-expand-btn') || e.target.closest('.selection-btn-group')) return;
       const rectBox = rect.getBoundingClientRect();
       const offsetX = e.clientX - rectBox.left;
       const offsetY = e.clientY - rectBox.top;
