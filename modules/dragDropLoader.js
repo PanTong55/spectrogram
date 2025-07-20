@@ -19,6 +19,14 @@ export function initDragDropLoader({
 }) {
   const dropArea = document.getElementById(targetElementId);
   const overlay = document.getElementById('drop-overlay');
+  const spectrogram = document.getElementById('spectrogram-only');
+
+  const isOverSpectrogram = (e) => {
+    if (!spectrogram) return false;
+    const rect = spectrogram.getBoundingClientRect();
+    return e.clientX >= rect.left && e.clientX <= rect.right &&
+           e.clientY >= rect.top && e.clientY <= rect.bottom;
+  };
   const uploadOverlay = document.getElementById('upload-overlay');
   const uploadProgressBar = document.getElementById('upload-progress-bar');
   const uploadProgressText = document.getElementById('upload-progress-text');
@@ -180,12 +188,14 @@ export function initDragDropLoader({
 
   dropArea.addEventListener('dragenter', e => {
     e.preventDefault();
+    if (isOverSpectrogram(e)) return;
     dragCounter++;
     showOverlay();
   });
 
   dropArea.addEventListener('dragleave', e => {
     e.preventDefault();
+    if (isOverSpectrogram(e)) return;
     dragCounter--;
     if (dragCounter === 0) {
       hideOverlay();
@@ -194,6 +204,10 @@ export function initDragDropLoader({
 
   dropArea.addEventListener('dragover', e => {
     e.preventDefault();
+    if (isOverSpectrogram(e)) {
+      e.dataTransfer.dropEffect = 'none';
+      return;
+    }
     e.dataTransfer.dropEffect = 'move';
   });
 
@@ -239,6 +253,7 @@ export function initDragDropLoader({
     e.preventDefault();
     dragCounter = 0;
     hideOverlay();
+    if (isOverSpectrogram(e)) return;
     const files = await getFilesFromDataTransfer(e.dataTransfer);
     handleFiles(files);
   });
