@@ -137,10 +137,6 @@ html, body {
 #fixed-overlay > * {
   pointer-events: none;
 }
-#fixed-overlay > .freq-marker {
-  pointer-events: auto;
-  cursor: move !important;
-}
 #progress-line {
   pointer-events: auto;
 }
@@ -645,8 +641,7 @@ input[type="file"]:hover {
 .freq-marker {
   position: absolute;
   transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: move !important;
+  pointer-events: none;
   z-index: 30;
 }
 
