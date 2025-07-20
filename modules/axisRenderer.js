@@ -94,7 +94,7 @@ export function drawFrequencyGrid({
     const label = document.createElement('div');
     label.className = 'freq-label-static freq-axis-label';
     label.style.top = `${y - 1}px`;
-    label.textContent = `${f + offsetKHz}kHz`;
+    label.textContent = `${(f + offsetKHz).toFixed(1)}kHz`;
     labelContainer.appendChild(label);
   }
 
