@@ -481,13 +481,36 @@ viewer.addEventListener('expand-selection', async (e) => {
     const base = currentExpandBlob || getCurrentFile();
     const blob = await cropWavBlob(base, startTime, endTime);
     if (blob) {
-      expandHistory.push(base);
+      expandHistory.push({ src: base, freqMin: currentFreqMin, freqMax: currentFreqMax });
       await getWavesurfer().loadBlob(blob);
       currentExpandBlob = blob;
       selectionExpandMode = true;
       zoomControl.setZoomLevel(0);
       sampleRateBtn.disabled = true;
       renderAxes();
+      freqHoverControl?.hideHover();
+      freqHoverControl?.clearSelections();
+      updateExpandBackBtn();
+    }
+  }
+});
+
+viewer.addEventListener('fit-window-selection', async (e) => {
+  const { startTime, endTime, Flow, Fhigh } = e.detail;
+  if (endTime > startTime) {
+    freqHoverControl?.hideHover();
+    const base = currentExpandBlob || getCurrentFile();
+    const blob = await cropWavBlob(base, startTime, endTime);
+    if (blob) {
+      expandHistory.push({ src: base, freqMin: currentFreqMin, freqMax: currentFreqMax });
+      await getWavesurfer().loadBlob(blob);
+      currentExpandBlob = blob;
+      selectionExpandMode = true;
+      zoomControl.setZoomLevel(0);
+      sampleRateBtn.disabled = true;
+      freqMinInput.value = Flow.toFixed(1);
+      freqMaxInput.value = Fhigh.toFixed(1);
+      updateFrequencyRange(Flow, Fhigh);
       freqHoverControl?.hideHover();
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
@@ -890,35 +913,43 @@ fileLoaderControl.loadFileAtIndex(idx);
 });
 
 expandBackBtn.addEventListener('click', async () => {
-if (expandHistory.length === 0) return;
-const wasSingle = expandHistory.length === 1;
-const prev = expandHistory.pop();
+  if (expandHistory.length === 0) return;
+  const wasSingle = expandHistory.length === 1;
+  const prevState = expandHistory.pop();
+  const prev = prevState.src;
+  const prevMin = prevState.freqMin;
+  const prevMax = prevState.freqMax;
 
-if (prev && prev.name !== undefined) {
-if (wasSingle) {
-await getWavesurfer().loadBlob(prev);
-duration = getWavesurfer().getDuration();
-currentExpandBlob = null;
-selectionExpandMode = false;
-sampleRateBtn.disabled = false;
-zoomControl.setZoomLevel(0);
-renderAxes();
-freqHoverControl?.clearSelections();
-expandHistory = [];
-} else {
-currentExpandBlob = null;
-await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
-}
-} else if (prev) {
-await getWavesurfer().loadBlob(prev);
-currentExpandBlob = prev;
-selectionExpandMode = true;
-zoomControl.setZoomLevel(0);
-sampleRateBtn.disabled = true;
-renderAxes();
-freqHoverControl?.clearSelections();
-}
-updateExpandBackBtn();
+  if (prev && prev.name !== undefined) {
+    if (wasSingle) {
+      await getWavesurfer().loadBlob(prev);
+      duration = getWavesurfer().getDuration();
+      currentExpandBlob = null;
+      selectionExpandMode = false;
+      sampleRateBtn.disabled = false;
+      zoomControl.setZoomLevel(0);
+      renderAxes();
+      freqHoverControl?.clearSelections();
+      expandHistory = [];
+    } else {
+      currentExpandBlob = null;
+      await fileLoaderControl.loadFileAtIndex(getCurrentIndex());
+    }
+  } else if (prev) {
+    await getWavesurfer().loadBlob(prev);
+    currentExpandBlob = prev;
+    selectionExpandMode = true;
+    zoomControl.setZoomLevel(0);
+    sampleRateBtn.disabled = true;
+    renderAxes();
+    freqHoverControl?.clearSelections();
+  }
+
+  freqMinInput.value = prevMin.toFixed(1);
+  freqMaxInput.value = prevMax.toFixed(1);
+  updateFrequencyRange(prevMin, prevMax);
+
+  updateExpandBackBtn();
 });
 
 document.addEventListener('keydown', (e) => {
