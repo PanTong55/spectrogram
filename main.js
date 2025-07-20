@@ -908,9 +908,7 @@ initMapPopup();
 autoIdControl = initAutoIdPanel({
   spectrogramHeight,
   getDuration,
-  getFreqRange: () => ({ min: currentFreqMin, max: currentFreqMax }),
-  hideHover: () => freqHoverControl?.hideHover(),
-  refreshHover: () => freqHoverControl?.refreshHover()
+  getFreqRange: () => ({ min: currentFreqMin, max: currentFreqMax })
 });
 document.addEventListener('hide-spectrogram-hover', () => {
   freqHoverControl?.hideHover();
