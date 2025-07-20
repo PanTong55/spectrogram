@@ -33,7 +33,7 @@ const timeAxis = document.getElementById('time-axis');
 const timeWrapper = document.getElementById('time-axis-wrapper');
 const timeLabel = document.getElementById('time-label');
 const freqGrid = document.getElementById('freq-grid');
-const freqLabelContainer = document.getElementById('freq-labels');
+const freqAxisContainer = document.getElementById('freq-axis');
 const hoverLineElem = document.getElementById('hover-line');
 const hoverLineVElem = document.getElementById('hover-line-vertical');
 const progressLineElem = document.getElementById('progress-line');
@@ -399,7 +399,7 @@ const renderAxes = () => {
 
 drawFrequencyGrid({
 gridCanvas: freqGrid,
-labelContainer: freqLabelContainer,
+labelContainer: freqAxisContainer,
 containerElement: container,
 spectrogramHeight,
 maxFrequency: currentFreqMax - currentFreqMin,
