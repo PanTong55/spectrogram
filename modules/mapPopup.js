@@ -234,6 +234,13 @@ export function initMapPopup({
     const hkVectorGroup = L.layerGroup([hkVectorBase, hkVectorLabel]);
     const hkImageryGroup = L.layerGroup([hkImageryLayer, hkImageryLabel]);
 
+    map.on('zoomend', () => {
+      const currentZoom = map.getZoom();
+      if (currentZoom > 19 && map.hasLayer(hkImageryGroup)) {
+        map.setZoom(19);
+      }
+    });
+
     const baseLayers = {
       'OpenStreetMap': streets,
       'Esri Satellite': esriSatellite,
