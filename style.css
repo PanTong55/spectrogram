@@ -641,8 +641,7 @@ input[type="file"]:hover {
 .freq-marker {
   position: absolute;
   transform: translate(-50%, -50%);
-  pointer-events: auto;
-  cursor: move !important;
+  pointer-events: none;
   z-index: 30;
 }
 

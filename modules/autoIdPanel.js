@@ -60,7 +60,6 @@ export function initAutoIdPanel({
   let active = null;
   let startTime = null;
   let endTime = null;
-  let draggingKey = null;
 
   Object.entries(inputs).forEach(([key, el]) => {
     if (!el) return;
@@ -88,15 +87,6 @@ export function initAutoIdPanel({
     const el = document.createElement('i');
     el.className = `fa-solid fa-xmark freq-marker marker-${key}`;
     el.style.color = markerColors[key];
-    el.dataset.key = key;
-    el.title = `${key.charAt(0).toUpperCase() + key.slice(1)} freq. marker`;
-    el.addEventListener('mousedown', (ev) => {
-      ev.stopPropagation();
-      draggingKey = key;
-      document.addEventListener('mousemove', onMarkerDrag, { passive: true });
-      document.addEventListener('mouseup', stopMarkerDrag, { once: true });
-    });
-    el.addEventListener('click', (ev) => ev.stopPropagation());
     overlay.appendChild(el);
     return el;
   }
@@ -116,33 +106,6 @@ export function initAutoIdPanel({
       m.el.style.top = `${y}px`;
       m.el.style.display = 'block';
     });
-  }
-
-  function onMarkerDrag(e) {
-    if (!draggingKey) return;
-    const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const scrollLeft = viewer.scrollLeft || 0;
-    const { min, max } = getFreqRange();
-    const freq = (1 - y / spectrogramHeight) * (max - min) + min;
-    const time = ((x + scrollLeft) / container.scrollWidth) * getDuration();
-    const input = inputs[draggingKey];
-    if (input) {
-      input.value = freq.toFixed(1);
-      input.dataset.time = time;
-      if (input === inputs.start) startTime = time;
-      if (input === inputs.end) endTime = time;
-    }
-    markers[draggingKey].freq = freq;
-    markers[draggingKey].time = time;
-    updateDerived();
-    updateMarkers();
-  }
-
-  function stopMarkerDrag() {
-    draggingKey = null;
-    document.removeEventListener('mousemove', onMarkerDrag);
   }
 
   function reset() {
