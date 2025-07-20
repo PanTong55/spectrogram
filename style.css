@@ -352,6 +352,43 @@ input[type="file"]:hover {
   box-shadow: 3px 3px 8px rgba(0,0,0,0.4);
 }
 
+/* Tooltip used for Auto ID panel */
+.auto-id-panel {
+  width: 170px;
+}
+
+.auto-id-panel .autoid-row {
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.auto-id-panel label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.auto-id-panel input,
+.auto-id-panel select {
+  width: 70px;
+  font-size: 12px;
+}
+
+.auto-id-panel input[readonly] {
+  cursor: pointer;
+}
+
+.capture-tooltip {
+  position: absolute;
+  z-index: 40;
+  pointer-events: none;
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
 /* === Selection Button Group === */
 .selection-btn-group {
   position: absolute;
