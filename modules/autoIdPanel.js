@@ -26,12 +26,12 @@ export function initAutoIdPanel({
     startTime: null,
     endTime: null,
     markers: {
-      start: { freq: null, time: null },
-      end: { freq: null, time: null },
-      high: { freq: null, time: null },
-      low: { freq: null, time: null },
-      knee: { freq: null, time: null },
-      heel: { freq: null, time: null }
+      start: { el: null, freq: null, time: null },
+      end: { el: null, freq: null, time: null },
+      high: { el: null, freq: null, time: null },
+      low: { el: null, freq: null, time: null },
+      knee: { el: null, freq: null, time: null },
+      heel: { el: null, freq: null, time: null }
     }
   }));
   let currentTab = 0;
@@ -79,14 +79,7 @@ export function initAutoIdPanel({
     heel: '#16a085'
   };
 
-  const markers = {
-    start: { el: null, freq: null, time: null },
-    end: { el: null, freq: null, time: null },
-    high: { el: null, freq: null, time: null },
-    low: { el: null, freq: null, time: null },
-    knee: { el: null, freq: null, time: null },
-    heel: { el: null, freq: null, time: null }
-  };
+  let markers = tabData[currentTab].markers;
 
   let active = null;
   let startTime = null;
@@ -101,13 +94,12 @@ export function initAutoIdPanel({
     data.endTime = endTime;
     Object.keys(inputs).forEach(k => {
       data.inputs[k] = inputs[k].value;
-      data.markers[k].freq = markers[k].freq;
-      data.markers[k].time = markers[k].time;
     });
   }
 
   function loadTab(idx) {
     const data = tabData[idx];
+    markers = data.markers;
     callTypeDropdown.select(data.callType);
     harmonicDropdown.select(data.harmonic);
     Object.keys(inputs).forEach(k => {
@@ -117,8 +109,6 @@ export function initAutoIdPanel({
       } else {
         delete inputs[k].dataset.time;
       }
-      markers[k].freq = data.markers[k].freq;
-      markers[k].time = data.markers[k].time;
     });
     startTime = data.startTime;
     endTime = data.endTime;
@@ -166,11 +156,12 @@ export function initAutoIdPanel({
     }
   }
 
-  function createMarkerEl(key) {
+  function createMarkerEl(key, tabIdx) {
     const el = document.createElement('i');
     el.className = `fa-solid fa-xmark freq-marker marker-${key}`;
     el.style.color = markerColors[key];
     el.dataset.key = key;
+    el.dataset.tab = tabIdx;
     el.title = `${key.charAt(0).toUpperCase() + key.slice(1)} freq. marker`;
     el.addEventListener('mouseenter', hideHover);
     el.addEventListener('mouseleave', refreshHover);
@@ -190,17 +181,21 @@ export function initAutoIdPanel({
   function updateMarkers() {
     const { min, max } = getFreqRange();
     const actualWidth = container.scrollWidth;
-    Object.entries(markers).forEach(([key, m]) => {
-      if (!m.el) m.el = createMarkerEl(key);
-      if (m.freq == null || m.time == null) {
-        m.el.style.display = 'none';
-        return;
-      }
-      const x = (m.time / getDuration()) * actualWidth - viewer.scrollLeft;
-      const y = (1 - (m.freq - min) / (max - min)) * spectrogramHeight;
-      m.el.style.left = `${x}px`;
-      m.el.style.top = `${y}px`;
-      m.el.style.display = 'block';
+    tabData.forEach((tab, idx) => {
+      Object.entries(tab.markers).forEach(([key, m]) => {
+        if (!m.el) m.el = createMarkerEl(key, idx);
+        if (m.freq == null || m.time == null) {
+          m.el.style.display = 'none';
+          return;
+        }
+        const x = (m.time / getDuration()) * actualWidth - viewer.scrollLeft;
+        const y = (1 - (m.freq - min) / (max - min)) * spectrogramHeight;
+        m.el.style.left = `${x}px`;
+        m.el.style.top = `${y}px`;
+        m.el.style.display = 'block';
+        m.el.style.pointerEvents = idx === currentTab ? 'auto' : 'none';
+        m.el.style.opacity = idx === currentTab ? '1' : '0.5';
+      });
     });
   }
 
@@ -224,8 +219,6 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     markers[draggingKey].freq = freq;
     markers[draggingKey].time = time;
-    tabData[currentTab].markers[draggingKey].freq = freq;
-    tabData[currentTab].markers[draggingKey].time = time;
     updateDerived();
     updateMarkers();
   }
@@ -257,10 +250,12 @@ export function initAutoIdPanel({
     durationEl.textContent = '-';
     startTime = null;
     endTime = null;
-    Object.values(markers).forEach(m => {
-      m.freq = null;
-      m.time = null;
-      if (m.el) m.el.style.display = 'none';
+    tabData.forEach(tab => {
+      Object.values(tab.markers).forEach(m => {
+        m.freq = null;
+        m.time = null;
+        if (m.el) m.el.style.display = 'none';
+      });
     });
     active = null;
     setMarkerInteractivity(true);
@@ -284,8 +279,6 @@ export function initAutoIdPanel({
     if (active === inputs.end) endTime = time;
     tabData[currentTab].startTime = startTime;
     tabData[currentTab].endTime = endTime;
-    tabData[currentTab].markers[key].freq = freq;
-    tabData[currentTab].markers[key].time = time;
     active.classList.remove('active-get');
     active = null;
     setMarkerInteractivity(true);
