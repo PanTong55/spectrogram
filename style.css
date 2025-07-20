@@ -47,6 +47,7 @@ html, body {
 #freq-label {
   width: 20px;
   font-size: 12px;
+  margin-right: -10px;
   display: flex;
   align-items: center;
   justify-content: center;
