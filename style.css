@@ -573,81 +573,6 @@ input[type="file"]:hover {
   height: 0;
 }
 
-#auto-id-panel {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 30px);
-  transform: translateX(-50%) scale(0.9);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px;
-  width: 260px;
-  background-color: #fff;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #eee;
-  font-family: 'Noto Sans HK', sans-serif;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-#auto-id-panel.open {
-  opacity: 1;
-  pointer-events: auto;
-  z-index: 100;
-}
-
-#auto-id-panel .panel-title {
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-#auto-id-panel .autoid-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-}
-
-#auto-id-panel .autoid-label {
-  width: 90px;
-}
-
-#auto-id-panel .autoid-field {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-#auto-id-panel .autoid-input {
-  width: 40px;
-  padding: 2px 4px;
-}
-
-#auto-id-panel .active-get {
-  background-color: #ddd;
-}
-
-.autoid-marker {
-  margin-left: 4px;
-}
-
-.freq-marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 30;
-}
-
-.marker-start { color: #e74c3c; }
-.marker-end { color: #27ae60; }
-.marker-high { color: #3498db; }
-.marker-low { color: #9b59b6; }
-.marker-knee { color: #f39c12; }
-.marker-heel { color: #16a085; }
-
 /* === Sidebar Button === */
 .sidebar-button {
   width: 30px;
@@ -876,10 +801,6 @@ body.settings-open #setting {
 }
 
 body.map-open #mapBtn {
-  background-color: #007bff;
-}
-
-body.autoid-open #autoIdBtn {
   background-color: #007bff;
 }
 
