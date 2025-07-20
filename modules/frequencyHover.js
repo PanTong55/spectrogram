@@ -37,6 +37,11 @@ export function initFrequencyHover({
   let startX = 0, startY = 0;
   let selectionRect = null;
   let lastClientX = null, lastClientY = null;
+  let captureInfo = null;
+  const captureTooltip = document.createElement('div');
+  captureTooltip.className = 'capture-tooltip';
+  captureTooltip.style.display = 'none';
+  viewer.appendChild(captureTooltip);
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -44,9 +49,29 @@ export function initFrequencyHover({
     freqLabel.style.display = 'none';
   };
 
+  const startCapture = (sel, inputEl, label, isTime) => {
+    captureInfo = { sel, inputEl, label, isTime };
+    captureTooltip.textContent = label;
+    captureTooltip.style.display = 'block';
+    suppressHover = true;
+    hideAll();
+  };
+
+  const stopCapture = () => {
+    captureInfo = null;
+    captureTooltip.style.display = 'none';
+    suppressHover = false;
+  };
+
   const updateHoverDisplay = (e) => {
     lastClientX = e.clientX;
     lastClientY = e.clientY;    
+    if (captureInfo) {
+      const rect = viewer.getBoundingClientRect();
+      captureTooltip.style.left = `${e.clientX - rect.left + 10}px`;
+      captureTooltip.style.top = `${e.clientY - rect.top - 10}px`;
+      return;
+    }
     if (suppressHover || isResizing || isOverBtnGroup) {
       hideAll();
       return;
@@ -124,6 +149,10 @@ export function initFrequencyHover({
   }
 
   viewer.addEventListener('mousedown', (e) => {
+    if (captureInfo) {
+      e.stopPropagation();
+      return;
+    }
     if (isOverTooltip || isResizing) return;
     if (e.button !== 0) return;
     const rect = viewer.getBoundingClientRect();
@@ -195,6 +224,22 @@ export function initFrequencyHover({
     suppressHover = false;
   });
 
+  viewer.addEventListener('click', (e) => {
+    if (!captureInfo) return;
+    e.stopPropagation();
+    if (isDrawing || isResizing) { stopCapture(); return; }
+    const rect = viewer.getBoundingClientRect();
+    const x = e.clientX - rect.left + viewer.scrollLeft;
+    const y = e.clientY - rect.top;
+    const freq = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+    const actualWidth = getDuration() * getZoomLevel();
+    const time = (x / actualWidth) * getDuration();
+    captureInfo.inputEl.value = freq.toFixed(1);
+    if (captureInfo.isTime) captureInfo.inputEl.dataset.time = time;
+    updateAutoIdValues(captureInfo.sel);
+    stopCapture();
+  });
+
   viewer.addEventListener('contextmenu', (e) => {
     if (!persistentLinesEnabled || disablePersistentLinesForScrollbar || isOverTooltip) return;
     if (e.target.closest('.selection-expand-btn') || e.target.closest('.selection-fit-btn') || e.target.closest('.selection-btn-group')) return;
@@ -224,6 +269,7 @@ export function initFrequencyHover({
 
     if (Duration * 1000 <= 100) {
       selObj.tooltip = buildTooltip(selObj, left, top, width);
+      createInfoGroup(selObj);
     }
 
     const durationLabel = document.createElement('div');
@@ -246,6 +292,7 @@ export function initFrequencyHover({
     if (index !== -1) {
       viewer.removeChild(selections[index].rect);
       if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
+      if (selections[index].infoGroup) selections[index].rect.removeChild(selections[index].infoGroup);
       selections.splice(index, 1);
     }
   }
@@ -276,6 +323,107 @@ export function initFrequencyHover({
     viewer.appendChild(tooltip);
     enableDrag(tooltip);
     return tooltip;
+  }
+
+  function buildAutoIdTooltip(sel, left, top, width) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'draggable-tooltip freq-tooltip auto-id-panel';
+    tooltip.style.left = `${left + width + 10}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.innerHTML = getAutoIdHtml();
+    tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
+    tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
+    tooltip.querySelector('.tooltip-close-btn').addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleAutoId(sel);
+      isOverTooltip = false;
+      suppressHover = false;
+    });
+    viewer.appendChild(tooltip);
+    enableDrag(tooltip);
+    setupAutoIdListeners(sel);
+    return tooltip;
+  }
+
+  function getAutoIdHtml() {
+    return `
+      <div class="autoid-row"><b>Auto ID Panel</b></div>
+      <div class="autoid-row"><label>Call type:<select class="autoid-calltype">
+        <option>CF-FM</option><option>FM-CF-FM</option><option>FM</option><option>FM-QCF</option><option>QCF</option>
+      </select></label></div>
+      <div class="autoid-row"><label>Harmonic no.:<select class="autoid-harmonic">
+        <option>0</option><option>1</option><option>2</option><option>3</option>
+      </select></label></div>
+      <div class="autoid-row"><label>Start. freq.:<input type="text" readonly class="autoid-start"></label></div>
+      <div class="autoid-row"><label>End. freq.:<input type="text" readonly class="autoid-end"></label></div>
+      <div class="autoid-row"><label>H.freq.:<input type="text" readonly class="autoid-hfreq"></label></div>
+      <div class="autoid-row"><label>L.freq.:<input type="text" readonly class="autoid-lfreq"></label></div>
+      <div class="autoid-row"><label>knee freq.:<input type="text" readonly class="autoid-knee"></label></div>
+      <div class="autoid-row"><label>heel freq.:<input type="text" readonly class="autoid-heel"></label></div>
+      <div class="autoid-row"><b>Bandwidth:</b> <span class="autoid-bandwidth">-</span></div>
+      <div class="autoid-row"><b>Duration:</b> <span class="autoid-duration">-</span></div>
+      <div class="tooltip-close-btn">×</div>
+    `;
+  }
+
+  function setupAutoIdListeners(sel) {
+    const t = sel.tooltip;
+    if (!t) return;
+    const startInput = t.querySelector('.autoid-start');
+    const endInput = t.querySelector('.autoid-end');
+    const hInput = t.querySelector('.autoid-hfreq');
+    const lInput = t.querySelector('.autoid-lfreq');
+    const kneeInput = t.querySelector('.autoid-knee');
+    const heelInput = t.querySelector('.autoid-heel');
+
+    const inputs = [startInput, endInput, hInput, lInput, kneeInput, heelInput];
+    inputs.forEach(inp => {
+      if (!inp) return;
+      inp.addEventListener('blur', () => {
+        setTimeout(() => {
+          if (captureInfo && captureInfo.inputEl === inp) stopCapture();
+        }, 0);
+      });
+    });
+
+    startInput.addEventListener('focus', () => startCapture(sel, startInput, 'Start.freq', true));
+    endInput.addEventListener('focus', () => startCapture(sel, endInput, 'End.freq', true));
+    hInput.addEventListener('focus', () => startCapture(sel, hInput, 'H.freq', false));
+    lInput.addEventListener('focus', () => startCapture(sel, lInput, 'L.freq', false));
+    kneeInput.addEventListener('focus', () => startCapture(sel, kneeInput, 'knee freq', false));
+    heelInput.addEventListener('focus', () => startCapture(sel, heelInput, 'heel freq', false));
+
+  }
+
+  function updateAutoIdValues(sel) {
+    if (!sel.tooltip || !sel.tooltip.classList.contains('auto-id-panel')) return;
+    const t = sel.tooltip;
+    const hVal = parseFloat(t.querySelector('.autoid-hfreq').value);
+    const lVal = parseFloat(t.querySelector('.autoid-lfreq').value);
+    const bwSpan = t.querySelector('.autoid-bandwidth');
+    if (!isNaN(hVal) && !isNaN(lVal)) bwSpan.textContent = (hVal - lVal).toFixed(1);
+    else bwSpan.textContent = '-';
+    const sTime = parseFloat(t.querySelector('.autoid-start').dataset.time);
+    const eTime = parseFloat(t.querySelector('.autoid-end').dataset.time);
+    const durSpan = t.querySelector('.autoid-duration');
+    if (!isNaN(sTime) && !isNaN(eTime)) durSpan.textContent = ((eTime - sTime) * 1000).toFixed(1);
+    else durSpan.textContent = '-';
+  }
+
+  function toggleAutoId(sel) {
+    const rectBox = sel.rect.getBoundingClientRect();
+    const viewerRect = viewer.getBoundingClientRect();
+    const left = rectBox.left - viewerRect.left + viewer.scrollLeft;
+    const top = rectBox.top - viewerRect.top;
+    const width = rectBox.width;
+    if (captureInfo) stopCapture();
+    if (sel.tooltip && sel.tooltip.classList.contains('auto-id-panel')) {
+      viewer.removeChild(sel.tooltip);
+      sel.tooltip = buildTooltip(sel, left, top, width);
+    } else {
+      if (sel.tooltip) viewer.removeChild(sel.tooltip);
+      sel.tooltip = buildAutoIdTooltip(sel, left, top, width);
+    }
   }
 
   function createBtnGroup(sel) {
@@ -348,6 +496,31 @@ export function initFrequencyHover({
     sel.closeBtn = closeBtn;
     sel.expandBtn = expandBtn;
     sel.fitBtn = fitBtn;
+  }
+
+  function createInfoGroup(sel) {
+    const group = document.createElement('div');
+    group.className = 'selection-btn-group';
+
+    const infoBtn = document.createElement('i');
+    infoBtn.className = 'fa-solid fa-info selection-info-btn';
+    infoBtn.title = 'Auto ID panel';
+    infoBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleAutoId(sel);
+      suppressHover = false;
+      isOverBtnGroup = false;
+    });
+    infoBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+    infoBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+    group.addEventListener('mouseenter', () => { isOverBtnGroup = true; hideAll(); sel.rect.style.cursor = 'default'; });
+    group.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
+    group.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
+
+    group.appendChild(infoBtn);
+    sel.rect.appendChild(group);
+    sel.infoGroup = group;
   }
 
   function enableResize(sel) {
@@ -498,14 +671,18 @@ export function initFrequencyHover({
       const durationMs = (endTime - startTime) * 1000;
       if (durationMs <= 100) {
         if (sel.btnGroup) sel.btnGroup.style.display = 'none';
+        if (sel.infoGroup) sel.infoGroup.style.display = '';
         if (!sel.tooltip) {
           sel.tooltip = buildTooltip(sel, left, top, width);
+          createInfoGroup(sel);
         }
       } else {
         if (sel.tooltip) {
           viewer.removeChild(sel.tooltip);
           sel.tooltip = null;
         }
+
+        if (sel.infoGroup) sel.infoGroup.style.display = 'none';
 
         if (sel.btnGroup) {
           sel.btnGroup.style.display = '';
