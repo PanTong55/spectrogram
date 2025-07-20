@@ -495,6 +495,29 @@ viewer.addEventListener('expand-selection', async (e) => {
   }
 });
 
+viewer.addEventListener('fit-window-selection', async (e) => {
+  const { startTime, endTime, Flow, Fhigh } = e.detail;
+  if (endTime > startTime) {
+    freqHoverControl?.hideHover();
+    const base = currentExpandBlob || getCurrentFile();
+    const blob = await cropWavBlob(base, startTime, endTime);
+    if (blob) {
+      expandHistory.push(base);
+      await getWavesurfer().loadBlob(blob);
+      currentExpandBlob = blob;
+      selectionExpandMode = true;
+      zoomControl.setZoomLevel(0);
+      sampleRateBtn.disabled = true;
+      freqMinInput.value = Flow.toFixed(1);
+      freqMaxInput.value = Fhigh.toFixed(1);
+      updateFrequencyRange(Flow, Fhigh);
+      freqHoverControl?.hideHover();
+      freqHoverControl?.clearSelections();
+      updateExpandBackBtn();
+    }
+  }
+});
+
 initBrightnessControl({
 brightnessSliderId: 'brightnessSlider',
 gainSliderId: 'gainSlider',
