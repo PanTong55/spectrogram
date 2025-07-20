@@ -22,6 +22,7 @@ import { initSidebar } from './modules/sidebar.js';
 import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
+import { initAutoIdPanel } from './modules/autoIdPanel.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
 const spectrogramHeight = 800;
@@ -53,6 +54,7 @@ let currentFftSize = 1024;
 let currentOverlap = 'auto';
 let overlapWarningShown = false;
 let freqHoverControl = null;
+let autoIdControl = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
 let selectionExpandMode = false;
 let expandHistory = [];
@@ -232,9 +234,10 @@ function hideDropOverlay() {
 overlay.style.display = 'none';
 overlay.style.pointerEvents = 'none';
 hoverLineElem.style.display = 'block';
-hoverLineVElem.style.display = 'block';
-freqHoverControl?.setPersistentLinesEnabled(true);
-freqHoverControl?.refreshHover();
+  hoverLineVElem.style.display = 'block';
+  freqHoverControl?.setPersistentLinesEnabled(true);
+  freqHoverControl?.refreshHover();
+  autoIdControl?.updateMarkers();
 }
 
 showDropOverlay();
@@ -272,6 +275,7 @@ updateExpandBackBtn();
       loadingOverlay.style.display = 'none';
     }
     freqHoverControl?.refreshHover();
+    autoIdControl?.updateMarkers();
     drawColorBar(getCurrentColorMap());
     updateSpectrogramSettingsText();
   },
@@ -363,10 +367,11 @@ currentFreqMax,
 getOverlapPercent(),
 () => {
 duration = getWavesurfer().getDuration();
-zoomControl.applyZoom();
-renderAxes();
-freqHoverControl?.refreshHover();
-}
+    zoomControl.applyZoom();
+    renderAxes();
+    freqHoverControl?.refreshHover();
+    autoIdControl?.updateMarkers();
+  }
 );
 updateSpectrogramSettingsText();
 }
@@ -429,6 +434,7 @@ getZoomLevel: () => zoomControl.getZoomLevel(),
   });
   } else {
     freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+    autoIdControl?.updateMarkers();
   }
   updateProgressLine(getWavesurfer().getCurrentTime());
 };
@@ -441,7 +447,7 @@ getDuration,
 renderAxes,
 wrapper,
 () => { freqHoverControl?.hideHover(); },
-() => { freqHoverControl?.refreshHover(); },
+() => { freqHoverControl?.refreshHover(); autoIdControl?.updateMarkers(); },
 () => selectionExpandMode
 );
 
@@ -456,6 +462,7 @@ viewer.addEventListener('scroll', () => {
   const ws = getWavesurfer();
   if (!ws) return;
   updateProgressLine(ws.getCurrentTime());
+  autoIdControl?.updateMarkers();
 });
 
 progressLineElem.addEventListener('mousedown', (e) => {
@@ -542,9 +549,10 @@ currentFreqMax,
 getOverlapPercent(),
 () => {
 duration = getWavesurfer().getDuration();
-zoomControl.applyZoom();
-renderAxes();
+    zoomControl.applyZoom();
+    renderAxes();
   freqHoverControl?.refreshHover();
+  autoIdControl?.updateMarkers();
   }
   );
   drawColorBar(colorMap);
@@ -574,6 +582,7 @@ freqHoverControl?.clearSelections();
       loadingOverlay.style.display = 'none';
     }
     freqHoverControl?.refreshHover();
+    autoIdControl?.updateMarkers();
     drawColorBar(getCurrentColorMap());
     updateSpectrogramSettingsText();
   },
@@ -596,6 +605,7 @@ getPlugin()?.render();
 requestAnimationFrame(() => {
 renderAxes();
 freqHoverControl?.refreshHover();
+autoIdControl?.updateMarkers();
 });
 });
 
@@ -606,6 +616,7 @@ progressLineElem.style.display = 'none';
 updateProgressLine(0);
 renderAxes();
 freqHoverControl?.refreshHover();
+autoIdControl?.updateMarkers();
 });
 
 document.body.addEventListener('touchstart', () => {
@@ -737,8 +748,9 @@ getOverlapPercent(),
 () => {
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
-renderAxes();
-freqHoverControl?.refreshHover();
+  renderAxes();
+  freqHoverControl?.refreshHover();
+  autoIdControl?.updateMarkers();
 },
 currentFftSize
 );
@@ -757,6 +769,7 @@ getOverlapPercent()
 );
 
 freqHoverControl?.refreshHover();
+autoIdControl?.updateMarkers();
 
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
@@ -779,6 +792,7 @@ getOverlapPercent()
 );
 
 freqHoverControl?.refreshHover();
+autoIdControl?.updateMarkers();
 
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
@@ -786,6 +800,7 @@ renderAxes();
 
 if (freqHoverControl) {
 freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+autoIdControl?.updateMarkers();
 }
 updateSpectrogramSettingsText();
 }
@@ -890,6 +905,11 @@ document.body.classList.toggle('settings-open', isOpen);
 initExportCsv();
 initTrashProgram();
 initMapPopup();
+autoIdControl = initAutoIdPanel({
+  spectrogramHeight,
+  getDuration,
+  getFreqRange: () => ({ min: currentFreqMin, max: currentFreqMax })
+});
 document.addEventListener('hide-spectrogram-hover', () => {
   freqHoverControl?.hideHover();
 });
@@ -956,6 +976,7 @@ expandBackBtn.addEventListener('click', async () => {
   updateFrequencyRange(prevMin, prevMax);
 
   updateExpandBackBtn();
+  autoIdControl?.reset();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -1007,5 +1028,6 @@ window.addEventListener('resize', () => {
   if (container.clientWidth !== prevWidth) {
     renderAxes();
     freqHoverControl?.refreshHover();
+    autoIdControl?.updateMarkers();
   }
 });

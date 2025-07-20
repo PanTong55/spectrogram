@@ -68,6 +68,7 @@
         <button id="prevBtn" title="Previous file (↑)" class="sidebar-button"><i class="fas fa-arrow-up"></i></button>
         <button id="nextBtn" title="Next file (↓)" class="sidebar-button"><i class="fas fa-arrow-down"></i></button>
         <button id="toggleTagModeBtn" title="Tag mode" class="sidebar-button"><i class="fa-solid fa-tags"></i></button>
+        <button id="autoIdBtn" title="Auto ID panel" class="sidebar-button"><i class="fa-solid fa-circle-info"></i></button>
         <button id="playPauseBtn" title="Play/Pause (Ctrl+P)" class="sidebar-button"><i class="fa-solid fa-play"></i></button>
         <button id="stopBtn" title="Stop" class="sidebar-button"><i class="fa-solid fa-stop"></i></button>
         <button id="exportBtn" title="Export" class="sidebar-button"><i class="fa-solid fa-file-export"></i></button>
@@ -114,6 +115,75 @@
             <span class="slider round"></span>
           </label>
         </label>
+      </div>
+      <div id="auto-id-panel">
+        <div class="panel-title">Auto ID Panel</div>
+        <div class="autoid-row">
+          <span class="autoid-label">Call type:</span>
+          <div class="autoid-field">
+            <button id="callTypeInput" class="dropdown-button">CF-FM</button>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Harmonic no.:</span>
+          <div class="autoid-field">
+            <button id="harmonicInput" class="dropdown-button">0</button>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Start freq.:</span>
+          <div class="autoid-field">
+            <input id="startFreqInput" class="autoid-input" type="text" readonly>
+            <i class="fa-solid fa-xmark autoid-marker marker-start"></i>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">End freq.:</span>
+          <div class="autoid-field">
+            <input id="endFreqInput" class="autoid-input" type="text" readonly>
+            <i class="fa-solid fa-xmark autoid-marker marker-end"></i>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">High.freq.:</span>
+          <div class="autoid-field">
+            <input id="highFreqInput" class="autoid-input" type="text" readonly>
+            <i class="fa-solid fa-xmark autoid-marker marker-high"></i>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Low.freq.:</span>
+          <div class="autoid-field">
+            <input id="lowFreqInput" class="autoid-input" type="text" readonly>
+            <i class="fa-solid fa-xmark autoid-marker marker-low"></i>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Knee freq.:</span>
+          <div class="autoid-field">
+            <input id="kneeFreqInput" class="autoid-input" type="text" readonly>
+            <i class="fa-solid fa-xmark autoid-marker marker-knee"></i>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Heel freq.:</span>
+          <div class="autoid-field">
+            <input id="heelFreqInput" class="autoid-input" type="text" readonly>
+            <i class="fa-solid fa-xmark autoid-marker marker-heel"></i>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Bandwidth:</span>
+          <div class="autoid-field">
+            <span id="bandwidthVal">-</span>
+          </div>
+        </div>
+        <div class="autoid-row">
+          <span class="autoid-label">Duration:</span>
+          <div class="autoid-field">
+            <span id="durationVal">-</span>
+          </div>
+        </div>
       </div>
     </div>
 <!-------- Spectrogram Start -------->
