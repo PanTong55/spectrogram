@@ -620,6 +620,24 @@ input[type="file"]:hover {
   background-color: #ddd;
 }
 
+.autoid-marker {
+  margin-left: 4px;
+}
+
+.freq-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 30;
+}
+
+.marker-start { color: #e74c3c; }
+.marker-end { color: #27ae60; }
+.marker-high { color: #3498db; }
+.marker-low { color: #9b59b6; }
+.marker-knee { color: #f39c12; }
+.marker-heel { color: #16a085; }
+
 /* === Sidebar Button === */
 .sidebar-button {
   width: 30px;
