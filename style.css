@@ -33,11 +33,25 @@ html, body {
   align-items: flex-start;
   position: relative;
 }
-#freq-labels {
+#freq-axis-wrapper {
+  display: flex;
+  height: 820px;
+}
+#freq-axis {
   width: 45px;
   height: 820px;
   position: relative;
   flex-shrink: 0;
+  pointer-events: none;
+}
+#freq-label {
+  width: 20px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-90deg);
+  transform-origin: center;
   pointer-events: none;
 }
 .freq-label-static {
@@ -131,7 +145,7 @@ html, body {
 /* === 時間軸 === */
 #time-axis-wrapper {
   overflow: hidden;
-  margin-left: 45px;
+  margin-left: 65px;
 }
 #time-axis {
   height: 20px;
@@ -142,7 +156,7 @@ html, body {
 }
 #time-label {
   font-size: 12px;
-  margin: -5px 0px 0px 45px;
+  margin: -5px 0px 0px 65px;
   text-align: center;
 }
 
@@ -1369,7 +1383,7 @@ input.tag-button.editing {
 
 #spectrogram-settings {
   padding: 0 0 2px;
-  margin-left: 45px;
+  margin-left: 65px;
   font-size: 12px;
   font-family: 'Noto Sans HK', sans-serif;
   z-index: 10;
