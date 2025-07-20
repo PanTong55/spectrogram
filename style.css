@@ -643,12 +643,13 @@ input[type="file"]:hover {
 #autoid-tabs {
   display: flex;
   flex-direction: column;
-  margin-right: 6px;
+  margin-right: 15px;
 }
 #autoid-tabs button {
   margin-bottom: 4px;
   padding: 2px 4px;
   width: 70px;
+  height: 25px;
   cursor: pointer;
   background-color: #eee;
   border: 1px solid #ccc;
