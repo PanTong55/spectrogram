@@ -219,104 +219,37 @@ export function initFrequencyHover({
   });
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
-    let tooltip = null;
+    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip: null, expandBtn: null, closeBtn: null, btnGroup: null, durationLabel: null };
+
     if (Duration * 1000 <= 100) {
-      tooltip = document.createElement('div');
-      tooltip.className = 'draggable-tooltip freq-tooltip';
-      tooltip.style.left = `${left + width + 10}px`;
-      tooltip.style.top = `${top}px`;
-      tooltip.innerHTML = `
-        <div><b>F.high:</b> <span class="fhigh">${Fhigh.toFixed(1)}</span> kHz</div>
-        <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
-        <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
-        <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
-        <div class="tooltip-close-btn">×</div>
-      `;
-      tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
-      tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
-      viewer.appendChild(tooltip);
+      selObj.tooltip = buildTooltip(selObj, left, top, width);
     }
 
-    let expandBtn = null;
-    let closeBtn = null;
-    let btnGroup = null;
-    let durationLabel = null;
-    if (Duration * 1000 > 100) {
-      btnGroup = document.createElement('div');
-      btnGroup.className = 'selection-btn-group';
-
-      closeBtn = document.createElement('i');
-      closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
-      closeBtn.title = 'Close selection';
-      closeBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        const index = selections.findIndex(sel => sel.rect === rectObj);
-        if (index !== -1) {
-          viewer.removeChild(selections[index].rect);
-          if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
-          selections.splice(index, 1);
-        }
-        suppressHover = false;
-        isOverBtnGroup = false;
-        if (lastClientX !== null && lastClientY !== null) {
-          updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
-        }
-      });
-      closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
-      closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-      closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
-      expandBtn = document.createElement('i');
-      expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
-      expandBtn.title = 'Crop and expand this session';
-      expandBtn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        viewer.dispatchEvent(new CustomEvent('expand-selection', {
-          detail: { startTime, endTime }
-        }));
-        suppressHover = false;
-        isOverBtnGroup = false;
-      });
-      expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-      expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
-      btnGroup.addEventListener('mouseenter', () => {
-        isOverBtnGroup = true;
-        hideAll();
-        rectObj.style.cursor = 'default';
-      });
-      btnGroup.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
-      btnGroup.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
-
-      btnGroup.appendChild(closeBtn);
-      btnGroup.appendChild(expandBtn);
-      rectObj.appendChild(btnGroup);
-    }
-
-    durationLabel = document.createElement('div');
+    const durationLabel = document.createElement('div');
     durationLabel.className = 'selection-duration';
     durationLabel.textContent = `${(Duration * 1000).toFixed(1)} ms`;
     rectObj.appendChild(durationLabel);
+    selObj.durationLabel = durationLabel;
 
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip, expandBtn, closeBtn, btnGroup, durationLabel };
     selections.push(selObj);
-    if (tooltip) {
-      enableDrag(tooltip);
-      tooltip.querySelector('.tooltip-close-btn').addEventListener('click', () => {
-        const index = selections.findIndex(sel => sel.tooltip === tooltip);
-        if (index !== -1) {
-          viewer.removeChild(selections[index].rect);
-          viewer.removeChild(selections[index].tooltip);
-          selections.splice(index, 1);
-        }
-        isOverTooltip = false;
-        suppressHover = false;
-      });
+
+    if (Duration * 1000 > 100) {
+      createBtnGroup(selObj);
     }
+
     enableResize(selObj);
   }
 
-  function addTooltipForSelection(sel, left, top, width, height) {
+  function removeSelection(sel) {
+    const index = selections.indexOf(sel);
+    if (index !== -1) {
+      viewer.removeChild(selections[index].rect);
+      if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
+      selections.splice(index, 1);
+    }
+  }
+
+  function buildTooltip(sel, left, top, width) {
     const { Flow, Fhigh, startTime, endTime } = sel.data;
     const Bandwidth = Fhigh - Flow;
     const Duration = (endTime - startTime);
@@ -334,19 +267,65 @@ export function initFrequencyHover({
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
     tooltip.addEventListener('mouseleave', () => { isOverTooltip = false; suppressHover = false; });
-    viewer.appendChild(tooltip);
-    enableDrag(tooltip);
     tooltip.querySelector('.tooltip-close-btn').addEventListener('click', () => {
-      const index = selections.findIndex(s => s === sel);
-      if (index !== -1) {
-        viewer.removeChild(selections[index].rect);
-        viewer.removeChild(selections[index].tooltip);
-        selections.splice(index, 1);
-      }
+      removeSelection(sel);
       isOverTooltip = false;
       suppressHover = false;
     });
-    sel.tooltip = tooltip;
+    viewer.appendChild(tooltip);
+    enableDrag(tooltip);
+    return tooltip;
+  }
+
+  function createBtnGroup(sel) {
+    const group = document.createElement('div');
+    group.className = 'selection-btn-group';
+
+    const closeBtn = document.createElement('i');
+    closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
+    closeBtn.title = 'Close selection';
+    closeBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      removeSelection(sel);
+      suppressHover = false;
+      isOverBtnGroup = false;
+      if (lastClientX !== null && lastClientY !== null) {
+        updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+      }
+    });
+    closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
+    closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+    closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+    const expandBtn = document.createElement('i');
+    expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+    expandBtn.title = 'Crop and expand this session';
+    expandBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      viewer.dispatchEvent(new CustomEvent('expand-selection', {
+        detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
+      }));
+      suppressHover = false;
+      isOverBtnGroup = false;
+    });
+    expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+    expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+    group.addEventListener('mouseenter', () => {
+      isOverBtnGroup = true;
+      hideAll();
+      sel.rect.style.cursor = 'default';
+    });
+    group.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
+    group.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
+
+    group.appendChild(closeBtn);
+    group.appendChild(expandBtn);
+    sel.rect.appendChild(group);
+
+    sel.btnGroup = group;
+    sel.closeBtn = closeBtn;
+    sel.expandBtn = expandBtn;
   }
 
   function enableResize(sel) {
@@ -498,7 +477,7 @@ export function initFrequencyHover({
       if (durationMs <= 100) {
         if (sel.btnGroup) sel.btnGroup.style.display = 'none';
         if (!sel.tooltip) {
-          addTooltipForSelection(sel, left, top, width, height);
+          sel.tooltip = buildTooltip(sel, left, top, width);
         }
       } else {
         if (sel.tooltip) {
@@ -509,59 +488,7 @@ export function initFrequencyHover({
         if (sel.btnGroup) {
           sel.btnGroup.style.display = '';
         } else {
-          const group = document.createElement('div');
-          group.className = 'selection-btn-group';
-
-          const closeBtn = document.createElement('i');
-          closeBtn.className = 'fa-solid fa-xmark selection-close-btn';
-          closeBtn.title = 'Close selection';
-          closeBtn.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            const index = selections.findIndex(s => s.rect === sel.rect);
-            if (index !== -1) {
-              viewer.removeChild(selections[index].rect);
-              if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
-              selections.splice(index, 1);
-            }
-            suppressHover = false;
-            isOverBtnGroup = false;
-            if (lastClientX !== null && lastClientY !== null) {
-              updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
-            }
-          });
-          closeBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
-          closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-          closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
-          const expandBtn = document.createElement('i');
-          expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
-          expandBtn.title = 'Crop and expand this session';
-          expandBtn.addEventListener('click', (ev) => {
-            ev.stopPropagation();
-            viewer.dispatchEvent(new CustomEvent('expand-selection', {
-              detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
-            }));
-            suppressHover = false;
-            isOverBtnGroup = false;
-          });
-          expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-          expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
-
-          group.addEventListener('mouseenter', () => {
-            isOverBtnGroup = true;
-            hideAll();
-            sel.rect.style.cursor = 'default';
-          });
-          group.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
-          group.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
-
-          group.appendChild(closeBtn);
-          group.appendChild(expandBtn);
-          sel.rect.appendChild(group);
-
-          sel.btnGroup = group;
-          sel.closeBtn = closeBtn;
-          sel.expandBtn = expandBtn;
+          createBtnGroup(sel);
         }
       }
 
