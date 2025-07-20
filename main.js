@@ -58,13 +58,19 @@ let selectionExpandMode = false;
 let expandHistory = [];
 let currentExpandBlob = null;
 const expandBackBtn = document.getElementById('expandBackBtn');
+const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
 const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 function updateExpandBackBtn() {
-expandBackBtn.style.display = expandHistory.length > 0 ? 'inline-flex' : 'none';
+  const count = expandHistory.length;
+  expandBackBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+  if (expandBackCount) {
+    expandBackCount.textContent = String(count);
+    expandBackCount.style.display = count > 0 ? 'flex' : 'none';
+  }
 }
 let stopBtnRafId = null;
 function showStopButton() {
