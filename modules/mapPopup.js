@@ -224,8 +224,15 @@ export function initMapPopup({
       { attribution: false, maxZoom: 20, minZoom: 0 }
     );
 
+    // separate label layer is required for the imagery group so that
+    // changing basemaps does not inadvertently remove the shared label layer
+    const hkImageryLabel = L.tileLayer(
+      'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/tc/wgs84/{z}/{x}/{y}.png',
+      { attribution: false, maxZoom: 20, minZoom: 0 }
+    );
+
     const hkVectorGroup = L.layerGroup([hkVectorBase, hkVectorLabel]);
-    const hkImageryGroup = L.layerGroup([hkImageryLayer, hkVectorLabel]);
+    const hkImageryGroup = L.layerGroup([hkImageryLayer, hkImageryLabel]);
 
     const baseLayers = {
       'OpenStreetMap': streets,
