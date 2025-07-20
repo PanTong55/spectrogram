@@ -276,9 +276,6 @@ export function initFrequencyHover({
         }));
         suppressHover = false;
         isOverBtnGroup = false;
-        if (lastClientX !== null && lastClientY !== null) {
-          updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
-        }
       });
       expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
       expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
@@ -546,9 +543,6 @@ export function initFrequencyHover({
             }));
             suppressHover = false;
             isOverBtnGroup = false;
-            if (lastClientX !== null && lastClientY !== null) {
-              updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
-            }
           });
           expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
           expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });

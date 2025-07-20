@@ -475,22 +475,24 @@ document.addEventListener('mouseup', () => {
 });
 
 viewer.addEventListener('expand-selection', async (e) => {
-const { startTime, endTime } = e.detail;
-if (endTime > startTime) {
-const base = currentExpandBlob || getCurrentFile();
-const blob = await cropWavBlob(base, startTime, endTime);
-if (blob) {
-expandHistory.push(base);
-await getWavesurfer().loadBlob(blob);
-currentExpandBlob = blob;
-selectionExpandMode = true;
-zoomControl.setZoomLevel(0);
-sampleRateBtn.disabled = true;
-renderAxes();
-freqHoverControl?.clearSelections();
-updateExpandBackBtn();
-}
-}
+  const { startTime, endTime } = e.detail;
+  if (endTime > startTime) {
+    freqHoverControl?.hideHover();
+    const base = currentExpandBlob || getCurrentFile();
+    const blob = await cropWavBlob(base, startTime, endTime);
+    if (blob) {
+      expandHistory.push(base);
+      await getWavesurfer().loadBlob(blob);
+      currentExpandBlob = blob;
+      selectionExpandMode = true;
+      zoomControl.setZoomLevel(0);
+      sampleRateBtn.disabled = true;
+      renderAxes();
+      freqHoverControl?.hideHover();
+      freqHoverControl?.clearSelections();
+      updateExpandBackBtn();
+    }
+  }
 });
 
 initBrightnessControl({
