@@ -504,6 +504,7 @@ viewer.addEventListener('expand-selection', async (e) => {
       freqHoverControl?.hideHover();
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
+      autoIdControl?.reset();
     }
   }
 });
@@ -527,6 +528,7 @@ viewer.addEventListener('fit-window-selection', async (e) => {
       freqHoverControl?.hideHover();
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
+      autoIdControl?.reset();
     }
   }
 });
@@ -1006,6 +1008,7 @@ document.addEventListener("file-loaded", async () => {
   expandHistory = [];
   currentExpandBlob = null;
   updateExpandBackBtn();
+  autoIdControl?.reset();
   if (currentFile) {
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
