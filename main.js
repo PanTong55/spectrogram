@@ -22,6 +22,7 @@ import { initSidebar } from './modules/sidebar.js';
 import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
+import { initAutoIdPanel } from './modules/autoIdPanel.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
 const spectrogramHeight = 800;
@@ -890,6 +891,11 @@ document.body.classList.toggle('settings-open', isOpen);
 initExportCsv();
 initTrashProgram();
 initMapPopup();
+initAutoIdPanel({
+  spectrogramHeight,
+  getDuration,
+  getFreqRange: () => ({ min: currentFreqMin, max: currentFreqMax })
+});
 document.addEventListener('hide-spectrogram-hover', () => {
   freqHoverControl?.hideHover();
 });
