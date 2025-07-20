@@ -586,7 +586,7 @@ input[type="file"]:hover {
   flex-direction: column;
   gap: 6px;
   padding: 8px 12px;
-  width: 260px;
+  width: 300px;
   background-color: #fff;
   border-radius: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -636,6 +636,31 @@ input[type="file"]:hover {
 
 #auto-id-panel .active-get {
   background-color: #ddd;
+}
+#auto-id-panel .autoid-body {
+  display: flex;
+}
+#autoid-tabs {
+  display: flex;
+  flex-direction: column;
+  margin-right: 6px;
+}
+#autoid-tabs button {
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  width: 70px;
+  cursor: pointer;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+#autoid-tabs button.active {
+  background-color: #ccc;
+}
+#autoid-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .autoid-marker {

@@ -17,6 +17,24 @@ export function initAutoIdPanel({
   const viewer = document.getElementById(viewerId);
   const container = document.getElementById(containerId);
   const overlay = document.getElementById(overlayId);
+  const tabsContainer = document.getElementById("autoid-tabs");
+  const tabs = [];
+  const tabData = Array.from({ length: 10 }, () => ({
+    callType: 0,
+    harmonic: 0,
+    inputs: { start: "", end: "", high: "", low: "", knee: "", heel: "" },
+    startTime: null,
+    endTime: null,
+    markers: {
+      start: { freq: null, time: null },
+      end: { freq: null, time: null },
+      high: { freq: null, time: null },
+      low: { freq: null, time: null },
+      knee: { freq: null, time: null },
+      heel: { freq: null, time: null }
+    }
+  }));
+  let currentTab = 0;
 
   if (!btn || !panel || !viewer) return;
 
@@ -29,6 +47,17 @@ export function initAutoIdPanel({
   callTypeDropdown.select(0);
   const harmonicDropdown = initDropdown('harmonicInput', ['0','1','2','3']);
   harmonicDropdown.select(0);
+  if (tabsContainer) {
+    for (let i = 0; i < 10; i++) {
+      const t = document.createElement("button");
+      t.textContent = `Signal ${i + 1}`;
+      t.className = "tab-btn";
+      if (i === 0) t.classList.add("active");
+      t.addEventListener("click", () => switchTab(i));
+      tabsContainer.appendChild(t);
+      tabs.push(t);
+    }
+  }
 
   const inputs = {
     start: document.getElementById('startFreqInput'),
@@ -64,6 +93,47 @@ export function initAutoIdPanel({
   let endTime = null;
   let draggingKey = null;
   let markersEnabled = true;
+  function saveCurrentTab() {
+    const data = tabData[currentTab];
+    data.callType = callTypeDropdown.selectedIndex;
+    data.harmonic = harmonicDropdown.selectedIndex;
+    data.startTime = startTime;
+    data.endTime = endTime;
+    Object.keys(inputs).forEach(k => {
+      data.inputs[k] = inputs[k].value;
+      data.markers[k].freq = markers[k].freq;
+      data.markers[k].time = markers[k].time;
+    });
+  }
+
+  function loadTab(idx) {
+    const data = tabData[idx];
+    callTypeDropdown.select(data.callType);
+    harmonicDropdown.select(data.harmonic);
+    Object.keys(inputs).forEach(k => {
+      inputs[k].value = data.inputs[k] || "" ;
+      if (data.markers[k].time != null) {
+        inputs[k].dataset.time = data.markers[k].time;
+      } else {
+        delete inputs[k].dataset.time;
+      }
+      markers[k].freq = data.markers[k].freq;
+      markers[k].time = data.markers[k].time;
+    });
+    startTime = data.startTime;
+    endTime = data.endTime;
+    updateDerived();
+    updateMarkers();
+  }
+
+  function switchTab(idx) {
+    if (idx === currentTab) return;
+    saveCurrentTab();
+    if (tabs[currentTab]) tabs[currentTab].classList.remove("active");
+    currentTab = idx;
+    if (tabs[currentTab]) tabs[currentTab].classList.add("active");
+    loadTab(idx);
+  }
 
   function setMarkerInteractivity(enabled) {
     markersEnabled = enabled;
@@ -71,6 +141,7 @@ export function initAutoIdPanel({
   }
 
   setMarkerInteractivity(true);
+  loadTab(0);
 
   Object.entries(inputs).forEach(([key, el]) => {
     if (!el) return;
@@ -149,8 +220,12 @@ export function initAutoIdPanel({
       if (input === inputs.start) startTime = time;
       if (input === inputs.end) endTime = time;
     }
+    tabData[currentTab].startTime = startTime;
+    tabData[currentTab].endTime = endTime;
     markers[draggingKey].freq = freq;
     markers[draggingKey].time = time;
+    tabData[currentTab].markers[draggingKey].freq = freq;
+    tabData[currentTab].markers[draggingKey].time = time;
     updateDerived();
     updateMarkers();
   }
@@ -162,9 +237,19 @@ export function initAutoIdPanel({
   }
 
   function reset() {
+    tabData.forEach(d => {
+      d.callType = 0;
+      d.harmonic = 0;
+      Object.keys(d.inputs).forEach(k => { d.inputs[k] = ""; });
+      d.startTime = null;
+      d.endTime = null;
+      Object.keys(d.markers).forEach(k => { d.markers[k].freq = null; d.markers[k].time = null; });
+    });
+    callTypeDropdown.select(0);
+    harmonicDropdown.select(0);
     Object.values(inputs).forEach(el => {
       if (!el) return;
-      el.value = '';
+      el.value = "";
       delete el.dataset.time;
       el.classList.remove('active-get');
     });
@@ -179,8 +264,8 @@ export function initAutoIdPanel({
     });
     active = null;
     setMarkerInteractivity(true);
+    loadTab(currentTab);
   }
-
   viewer.addEventListener('click', (e) => {
     if (!active) return;
     const rect = viewer.getBoundingClientRect();
@@ -197,6 +282,10 @@ export function initAutoIdPanel({
     markers[key].time = time;
     if (active === inputs.start) startTime = time;
     if (active === inputs.end) endTime = time;
+    tabData[currentTab].startTime = startTime;
+    tabData[currentTab].endTime = endTime;
+    tabData[currentTab].markers[key].freq = freq;
+    tabData[currentTab].markers[key].time = time;
     active.classList.remove('active-get');
     active = null;
     setMarkerInteractivity(true);
