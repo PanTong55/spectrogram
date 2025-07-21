@@ -632,6 +632,9 @@ input[type="file"]:hover {
   color: #aaa;
   cursor: not-allowed;
 }
+#auto-id-panel .autoid-input.invalid {
+  background-color: #fdd;
+}
 
 #auto-id-panel .autoid-unit {
   margin-left: 2px;

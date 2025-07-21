@@ -112,6 +112,16 @@ export function initAutoIdPanel({
   const pulseIdBtn = document.getElementById('pulseIdBtn');
   const sequenceIdBtn = document.getElementById('sequenceIdBtn');
   const resultEl = document.getElementById('autoIdResult');
+  const bandwidthWarning = document.getElementById('bandwidth-warning');
+
+  function updateBandwidthWarning(bw) {
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const show = callType === 'QCF' && bw != null && bw > 5;
+    ['high', 'low'].forEach(k => {
+      if (inputs[k]) inputs[k].classList.toggle('invalid', show);
+    });
+    if (bandwidthWarning) bandwidthWarning.style.display = show ? 'flex' : 'none';
+  }
 
   const markerColors = {
     start: '#e74c3c',
@@ -226,6 +236,7 @@ export function initAutoIdPanel({
       if (btn) btn.disabled = disable;
       if (disable) resetField(k);
     });
+    updateDerived();
   }
 
   callTypeDropdown.onChange = handleCallTypeChange;
@@ -236,14 +247,19 @@ export function initAutoIdPanel({
   function updateDerived() {
     const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
+    let bandwidth = null;
     if (!isNaN(high) && !isNaN(low)) {
-      bandwidthEl.textContent = (high - low).toFixed(1);
+      bandwidth = high - low;
+      bandwidthEl.textContent = bandwidth.toFixed(1);
+    } else {
+      bandwidthEl.textContent = '-';
     }
     if (startTime != null && endTime != null) {
       durationEl.textContent = ((endTime - startTime) * 1000).toFixed(1);
     } else if (markers.high.time != null && markers.low.time != null) {
       durationEl.textContent = ((markers.low.time - markers.high.time) * 1000).toFixed(1);
     }
+    updateBandwidthWarning(bandwidth);
   }
 
   function createMarkerEl(key, tabIdx) {
