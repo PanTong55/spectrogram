@@ -587,7 +587,7 @@ input[type="file"]:hover {
 
 #auto-id-panel {
   display: none;
-  width: 400px;
+  width: 420px;
   height: auto;
 }
 
@@ -635,6 +635,7 @@ input[type="file"]:hover {
 #auto-id-panel .autoid-body {
   display: flex;
   flex-direction: column;
+  padding: 10px;
 }
 #autoid-tabs {
   display: flex;
