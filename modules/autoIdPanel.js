@@ -436,11 +436,18 @@ export function initAutoIdPanel({
   function runPulseId() {
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const high = parseFloat(inputs.high.value);
-    if (isNaN(high)) {
+    const low = parseFloat(inputs.low.value);
+    let valid = true;
+    if (callType === 'CF-FM' || callType === 'FM-CF-FM') {
+      valid = !isNaN(high);
+    } else if (callType === 'QCF') {
+      valid = !isNaN(low);
+    }
+    if (!valid) {
       if (resultEl) resultEl.textContent = "-";
       return;
     }
-    const res = autoIdHK({ callType, highFreq: high });
+    const res = autoIdHK({ callType, highFreq: high, lowFreq: low });
     if (resultEl) resultEl.innerHTML = formatSpeciesResult(res);
   }
 
