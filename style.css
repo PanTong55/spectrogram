@@ -1318,6 +1318,18 @@ input.tag-button.editing {
   background: transparent;
 }
 
+#bandwidth-warning {
+  display: none;
+  top: 40px;
+  left: 50%;
+  bottom: auto;
+  height: 20px;
+  width: max-content;
+  transform: translateX(-50%);
+  background: rgb(16 16 16 / 60%);
+  color: white;
+}
+
 .map-marker-other i{
   font-size: 28px;
   line-height: 28px;
