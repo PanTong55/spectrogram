@@ -14,6 +14,8 @@ export function initAutoIdPanel({
 } = {}) {
   const btn = document.getElementById(buttonId);
   const panel = document.getElementById(panelId);
+  const dragBar = panel.querySelector('.popup-drag-bar');
+  const closeBtn = panel.querySelector('.popup-close-btn');
   const viewer = document.getElementById(viewerId);
   const container = document.getElementById(containerId);
   const overlay = document.getElementById(overlayId);
@@ -40,9 +42,39 @@ export function initAutoIdPanel({
 
   if (!btn || !panel || !viewer) return;
 
-  btn.addEventListener('click', () => {
-    const isOpen = panel.classList.toggle('open');
-    document.body.classList.toggle('autoid-open', isOpen);
+  function togglePanel() {
+    const isVisible = panel.style.display === 'block';
+    panel.style.display = isVisible ? 'none' : 'block';
+    document.body.classList.toggle('autoid-open', !isVisible);
+  }
+
+  btn.addEventListener('click', togglePanel);
+  closeBtn?.addEventListener('click', togglePanel);
+
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  function onDrag(e) {
+    if (!dragging) return;
+    panel.style.left = `${e.clientX - offsetX}px`;
+    panel.style.top = `${e.clientY - offsetY}px`;
+  }
+
+  function stopDrag() {
+    dragging = false;
+    document.removeEventListener('mousemove', onDrag);
+    refreshHover();
+  }
+
+  dragBar?.addEventListener('mousedown', (e) => {
+    dragging = true;
+    offsetX = e.clientX - panel.offsetLeft;
+    offsetY = e.clientY - panel.offsetTop;
+    hideHover();
+    document.addEventListener('mousemove', onDrag, { passive: true });
+    document.addEventListener('mouseup', stopDrag, { once: true });
+    e.preventDefault();
   });
 
   resetTabBtn?.addEventListener('click', resetCurrentTab);

@@ -586,43 +586,16 @@ input[type="file"]:hover {
 }
 
 #auto-id-panel {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 30px);
-  transform: translateX(-50%) scale(0.9);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px;
+  display: none;
   width: 400px;
-  background-color: #fff;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #eee;
-  font-family: 'Noto Sans HK', sans-serif;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-#auto-id-panel.open {
-  opacity: 1;
-  pointer-events: auto;
-  z-index: 100;
-}
-
-#auto-id-panel .panel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-  margin-bottom: 4px;
+  height: auto;
 }
 
 #auto-id-panel .panel-reset-btn {
   background: none;
   border: none;
   cursor: pointer;
+  margin-left: auto;
 }
 
 #auto-id-panel .panel-reset-btn i {
