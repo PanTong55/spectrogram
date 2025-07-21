@@ -19,7 +19,8 @@ export function initAutoIdPanel({
   const overlay = document.getElementById(overlayId);
   const tabsContainer = document.getElementById("autoid-tabs");
   const tabs = [];
-  const tabData = Array.from({ length: 10 }, () => ({
+  const TAB_COUNT = 5;
+  const tabData = Array.from({ length: TAB_COUNT }, () => ({
     callType: 0,
     harmonic: 0,
     inputs: { start: "", end: "", high: "", low: "", knee: "", heel: "" },
@@ -48,9 +49,9 @@ export function initAutoIdPanel({
   const harmonicDropdown = initDropdown('harmonicInput', ['0','1','2','3']);
   harmonicDropdown.select(0);
   if (tabsContainer) {
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < TAB_COUNT; i++) {
       const t = document.createElement("button");
-      t.textContent = `Signal ${i + 1}`;
+      t.textContent = `${i + 1}`;
       t.className = "tab-btn";
       if (i === 0) t.classList.add("active");
       t.addEventListener("click", () => switchTab(i));
