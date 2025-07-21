@@ -683,6 +683,10 @@ input[type="file"]:hover {
 
 .autoid-marker {
   margin-left: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
 }
 
 .freq-marker {

@@ -149,6 +149,35 @@ export function initAutoIdPanel({
     });
   });
 
+  function resetField(key) {
+    const input = inputs[key];
+    if (!input) return;
+    input.value = '';
+    delete input.dataset.time;
+    input.classList.remove('active-get');
+    markers[key].freq = null;
+    markers[key].time = null;
+    if (markers[key].el) markers[key].el.style.display = 'none';
+    if (key === 'start') startTime = null;
+    if (key === 'end') endTime = null;
+    tabData[currentTab].inputs[key] = '';
+    tabData[currentTab].markers[key].freq = null;
+    tabData[currentTab].markers[key].time = null;
+    tabData[currentTab].startTime = startTime;
+    tabData[currentTab].endTime = endTime;
+    updateDerived();
+    updateMarkers();
+  }
+
+  const resetButtons = panel.querySelectorAll('.autoid-marker[data-key]');
+  resetButtons.forEach(btn => {
+    const key = btn.dataset.key;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      resetField(key);
+    });
+  });
+
   function updateDerived() {
     const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
