@@ -682,19 +682,21 @@ input[type="file"]:hover {
 .autoid-action-btn {
   padding: 4px 8px;
   height: 25px;
-  background-color: #555;
-  color: #fff;
+  background-color: #ffea7a;
+  color: #222;
+  font-weight: bold;
   border: none;
   border-radius: 6px;
   cursor: pointer;
 }
 
 .autoid-action-btn:hover {
-  background-color: #333;
+  background-color: #ffd700;
 }
 
 .autoid-result-label {
   margin-left: auto;
+  font-size: 14px;
 }
 
 .autoid-marker {
