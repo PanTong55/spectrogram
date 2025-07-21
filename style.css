@@ -427,7 +427,7 @@ input[type="file"]:hover {
 /* === 主區與側邊欄 === */
 #mainarea {
   flex-grow: 1;
-  overflow: visible;
+  overflow-x: hidden;
   padding-left: 2px;
   padding-top: 10px;
 }
