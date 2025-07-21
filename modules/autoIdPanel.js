@@ -108,6 +108,9 @@ export function initAutoIdPanel({
   };
   const bandwidthEl = document.getElementById('bandwidthVal');
   const durationEl = document.getElementById('durationVal');
+  const pulseIdBtn = document.getElementById('pulseIdBtn');
+  const sequenceIdBtn = document.getElementById('sequenceIdBtn');
+  const resultEl = document.getElementById('autoIdResult');
 
   const markerColors = {
     start: '#e74c3c',
@@ -405,6 +408,13 @@ export function initAutoIdPanel({
   });
 
   viewer.addEventListener('scroll', updateMarkers);
+
+  function showPlaceholderResult() {
+    if (resultEl) resultEl.textContent = '-';
+  }
+
+  pulseIdBtn?.addEventListener('click', showPlaceholderResult);
+  sequenceIdBtn?.addEventListener('click', showPlaceholderResult);
 
   return { updateMarkers, reset, resetCurrentTab };
 }

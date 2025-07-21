@@ -672,6 +672,30 @@ input[type="file"]:hover {
   column-gap: 8px;
   row-gap: 6px;
 }
+.autoid-action-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.autoid-action-btn {
+  padding: 4px 8px;
+  height: 25px;
+  background-color: #555;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.autoid-action-btn:hover {
+  background-color: #333;
+}
+
+.autoid-result-label {
+  margin-left: auto;
+}
 
 .autoid-marker {
   margin-left: 4px;
