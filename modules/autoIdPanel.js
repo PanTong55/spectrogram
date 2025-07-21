@@ -17,6 +17,7 @@ export function initAutoIdPanel({
   const viewer = document.getElementById(viewerId);
   const container = document.getElementById(containerId);
   const overlay = document.getElementById(overlayId);
+  const resetTabBtn = document.getElementById('autoIdTabResetBtn');
   const tabsContainer = document.getElementById("autoid-tabs");
   const tabs = [];
   const TAB_COUNT = 5;
@@ -43,6 +44,8 @@ export function initAutoIdPanel({
     const isOpen = panel.classList.toggle('open');
     document.body.classList.toggle('autoid-open', isOpen);
   });
+
+  resetTabBtn?.addEventListener('click', resetCurrentTab);
 
   const callTypeDropdown = initDropdown('callTypeInput', ['CF-FM','FM-CF-FM','FM','FM-QCF','QCF']);
   callTypeDropdown.select(0);
@@ -232,6 +235,38 @@ export function initAutoIdPanel({
     refreshHover();
   }
 
+  function resetTabData(tab) {
+    tab.callType = 0;
+    tab.harmonic = 0;
+    Object.keys(tab.inputs).forEach(k => { tab.inputs[k] = ""; });
+    tab.startTime = null;
+    tab.endTime = null;
+    Object.values(tab.markers).forEach(m => {
+      m.freq = null;
+      m.time = null;
+      if (m.el) m.el.style.display = 'none';
+    });
+  }
+
+  function resetCurrentTab() {
+    resetTabData(tabData[currentTab]);
+    callTypeDropdown.select(0);
+    harmonicDropdown.select(0);
+    Object.values(inputs).forEach(el => {
+      if (!el) return;
+      el.value = "";
+      delete el.dataset.time;
+      el.classList.remove('active-get');
+    });
+    bandwidthEl.textContent = '-';
+    durationEl.textContent = '-';
+    startTime = null;
+    endTime = null;
+    active = null;
+    setMarkerInteractivity(true);
+    loadTab(currentTab);
+  }
+
   function reset() {
     tabData.forEach(d => {
       d.callType = 0;
@@ -291,5 +326,5 @@ export function initAutoIdPanel({
 
   viewer.addEventListener('scroll', updateMarkers);
 
-  return { updateMarkers, reset };
+  return { updateMarkers, reset, resetCurrentTab };
 }
