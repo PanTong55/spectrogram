@@ -19,6 +19,10 @@ export function initAutoIdPanel({
   const overlay = document.getElementById(overlayId);
   const resetTabBtn = document.getElementById('autoIdTabResetBtn');
   const tabsContainer = document.getElementById("autoid-tabs");
+  const dragBar = panel.querySelector('.popup-drag-bar');
+  const closeBtn = panel.querySelector('.popup-close-btn');
+  const controlBar = document.getElementById('control-bar');
+  const sidebar = document.getElementById('sidebar');
   const tabs = [];
   const TAB_COUNT = 5;
   const tabData = Array.from({ length: TAB_COUNT }, () => ({
@@ -40,10 +44,214 @@ export function initAutoIdPanel({
 
   if (!btn || !panel || !viewer) return;
 
-  btn.addEventListener('click', () => {
-    const isOpen = panel.classList.toggle('open');
-    document.body.classList.toggle('autoid-open', isOpen);
+  function togglePanel() {
+    if (panel.style.display === 'block') {
+      panel.style.display = 'none';
+      document.body.classList.remove('autoid-open');
+    } else {
+      panel.style.display = 'block';
+      document.body.classList.add('autoid-open');
+    }
+  }
+
+  btn.addEventListener('click', togglePanel);
+  closeBtn?.addEventListener('click', togglePanel);
+
+  const edgeThreshold = 5;
+
+  function getEdgeState(clientX, clientY) {
+    const rect = panel.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    const withinVertical = y >= -edgeThreshold && y <= rect.height + edgeThreshold;
+    const withinHorizontal = x >= -edgeThreshold && x <= rect.width + edgeThreshold;
+
+    const onLeft   = Math.abs(x - 0) <= edgeThreshold && withinVertical;
+    const onRight  = Math.abs(x - rect.width) <= edgeThreshold && withinVertical;
+    const onTop    = Math.abs(y - 0) <= edgeThreshold && withinHorizontal;
+    const onBottom = Math.abs(y - rect.height) <= edgeThreshold && withinHorizontal;
+
+    return { onLeft, onRight, onTop, onBottom };
+  }
+
+  function edgeCursor(state) {
+    const { onLeft, onRight, onTop, onBottom } = state;
+    let cursor = '';
+    if ((onLeft && onTop) || (onRight && onBottom)) {
+      cursor = 'nwse-resize';
+    } else if ((onRight && onTop) || (onLeft && onBottom)) {
+      cursor = 'nesw-resize';
+    } else if (onLeft || onRight) {
+      cursor = 'ew-resize';
+    } else if (onTop || onBottom) {
+      cursor = 'ns-resize';
+    }
+    return cursor;
+  }
+
+  let panelWidth = parseInt(localStorage.getItem('autoIdPanelWidth'), 10);
+  let panelHeight = parseInt(localStorage.getItem('autoIdPanelHeight'), 10);
+  if (isNaN(panelWidth) || panelWidth <= 0) panelWidth = 400;
+  if (isNaN(panelHeight) || panelHeight <= 0) panelHeight = panel.offsetHeight;
+  panel.style.width = `${panelWidth}px`;
+  panel.style.height = `${panelHeight}px`;
+
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+  let resizing = false;
+  let resizeLeft = false;
+  let resizeRight = false;
+  let resizeTop = false;
+  let resizeBottom = false;
+  let startX = 0;
+  let startY = 0;
+  let startWidth = 0;
+  let startHeight = 0;
+  let startLeft = 0;
+  let startTop = 0;
+
+  function disableUiPointerEvents() {
+    if (viewer) {
+      viewer.style.pointerEvents = 'none';
+      viewer.classList.remove('hide-cursor');
+    }
+    if (controlBar) controlBar.style.pointerEvents = 'none';
+    if (sidebar) sidebar.style.pointerEvents = 'none';
+  }
+
+  function enableUiPointerEvents() {
+    if (viewer) viewer.style.pointerEvents = '';
+    if (controlBar) controlBar.style.pointerEvents = '';
+    if (sidebar) sidebar.style.pointerEvents = '';
+  }
+
+  if (dragBar) {
+    dragBar.addEventListener('mousedown', (e) => {
+      dragging = true;
+      offsetX = e.clientX - panel.offsetLeft;
+      offsetY = e.clientY - panel.offsetTop;
+      disableUiPointerEvents();
+      document.dispatchEvent(new Event('hide-spectrogram-hover'));
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  }
+
+  panel.addEventListener('mousemove', (e) => {
+    if (dragging || resizing) {
+      e.stopPropagation();
+      return;
+    }
+    const state = getEdgeState(e.clientX, e.clientY);
+    const cursor = edgeCursor(state) || 'default';
+    panel.style.cursor = cursor;
+    if (cursor !== 'default') {
+      document.body.style.cursor = cursor;
+      disableUiPointerEvents();
+      document.dispatchEvent(new Event('hide-spectrogram-hover'));
+      e.stopPropagation();
+    } else {
+      document.body.style.cursor = '';
+      enableUiPointerEvents();
+    }
   });
+
+  panel.addEventListener('mousedown', (e) => {
+    if (e.target === dragBar || dragBar.contains(e.target)) return;
+    const state = getEdgeState(e.clientX, e.clientY);
+    if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
+      resizing = true;
+      resizeLeft = state.onLeft;
+      resizeRight = state.onRight;
+      resizeTop = state.onTop;
+      resizeBottom = state.onBottom;
+      const cursor = edgeCursor(state) || 'default';
+      panel.style.cursor = cursor;
+      document.body.style.cursor = cursor;
+      disableUiPointerEvents();
+      document.dispatchEvent(new Event('hide-spectrogram-hover'));
+      startX = e.clientX;
+      startY = e.clientY;
+      startWidth = panel.offsetWidth;
+      startHeight = panel.offsetHeight;
+      startLeft = panel.offsetLeft;
+      startTop = panel.offsetTop;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  document.addEventListener('mousemove', (e) => {
+    if (panel.style.display !== 'block') return;
+    if (dragging || resizing) {
+      e.stopPropagation();
+      return;
+    }
+    const state = getEdgeState(e.clientX, e.clientY);
+    const cursor = edgeCursor(state);
+    if (cursor) {
+      document.body.style.cursor = cursor;
+      disableUiPointerEvents();
+      document.dispatchEvent(new Event('hide-spectrogram-hover'));
+      e.stopPropagation();
+    } else {
+      document.body.style.cursor = '';
+      enableUiPointerEvents();
+    }
+  }, true);
+
+  window.addEventListener('mousemove', (e) => {
+    if (dragging) {
+      panel.style.left = `${e.clientX - offsetX}px`;
+      panel.style.top = `${e.clientY - offsetY}px`;
+      e.stopPropagation();
+      return;
+    }
+    if (resizing) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      document.body.style.cursor = panel.style.cursor;
+      disableUiPointerEvents();
+      if (resizeRight) {
+        panelWidth = Math.max(200, startWidth + dx);
+        panel.style.width = `${panelWidth}px`;
+      }
+      if (resizeBottom) {
+        panelHeight = Math.max(200, startHeight + dy);
+        panel.style.height = `${panelHeight}px`;
+      }
+      if (resizeLeft) {
+        panelWidth = Math.max(200, startWidth - dx);
+        panel.style.width = `${panelWidth}px`;
+        panel.style.left = `${startLeft + dx}px`;
+      }
+      if (resizeTop) {
+        panelHeight = Math.max(200, startHeight - dy);
+        panel.style.height = `${panelHeight}px`;
+        panel.style.top = `${startTop + dy}px`;
+      }
+      e.stopPropagation();
+    }
+  }, true);
+
+  window.addEventListener('mouseup', (e) => {
+    if (dragging) {
+      dragging = false;
+      enableUiPointerEvents();
+      e.stopPropagation();
+    }
+    if (resizing) {
+      resizing = false;
+      localStorage.setItem('autoIdPanelWidth', panelWidth);
+      localStorage.setItem('autoIdPanelHeight', panelHeight);
+      document.body.style.cursor = '';
+      panel.style.cursor = '';
+      enableUiPointerEvents();
+      e.stopPropagation();
+    }
+  }, true);
 
   resetTabBtn?.addEventListener('click', resetCurrentTab);
 
