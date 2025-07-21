@@ -624,6 +624,11 @@ input[type="file"]:hover {
   height: 23px;
   padding: 2px 6px;
 }
+#auto-id-panel .autoid-input:disabled {
+  background-color: #eee;
+  color: #aaa;
+  cursor: not-allowed;
+}
 
 #auto-id-panel .autoid-unit {
   margin-left: 2px;
@@ -674,6 +679,10 @@ input[type="file"]:hover {
   border: none;
   cursor: pointer;
   padding: 0;
+}
+#auto-id-panel .autoid-marker:disabled {
+  color: #aaa;
+  cursor: not-allowed;
 }
 
 .freq-marker {
