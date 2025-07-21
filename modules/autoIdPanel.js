@@ -44,14 +44,7 @@ export function initAutoIdPanel({
 
   function togglePanel() {
     const isVisible = panel.style.display === 'block';
-    if (isVisible) {
-      panel.style.display = 'none';
-    } else {
-      panel.style.display = 'block';
-      const viewerRect = viewer.getBoundingClientRect();
-      const left = viewerRect.left + (viewerRect.width - panel.offsetWidth) / 2;
-      panel.style.left = `${left}px`;
-    }
+    panel.style.display = isVisible ? 'none' : 'block';
     document.body.classList.toggle('autoid-open', !isVisible);
   }
 
