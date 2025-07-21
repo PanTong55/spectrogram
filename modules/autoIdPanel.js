@@ -1,4 +1,5 @@
-import { initDropdown } from './dropdown.js';
+import { initDropdown } from "./dropdown.js";
+import { autoIdHK } from "./autoid_HK.js";
 
 export function initAutoIdPanel({
   buttonId = 'autoIdBtn',
@@ -412,8 +413,19 @@ export function initAutoIdPanel({
   function showPlaceholderResult() {
     if (resultEl) resultEl.textContent = '-';
   }
+  function runPulseId() {
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const high = parseFloat(inputs.high.value);
+    if (isNaN(high)) {
+      if (resultEl) resultEl.textContent = "-";
+      return;
+    }
+    const res = autoIdHK({ callType, highFreq: high });
+    if (resultEl) resultEl.textContent = res;
+  }
 
-  pulseIdBtn?.addEventListener('click', showPlaceholderResult);
+
+  pulseIdBtn?.addEventListener('click', runPulseId);
   sequenceIdBtn?.addEventListener('click', showPlaceholderResult);
 
   return { updateMarkers, reset, resetCurrentTab };
