@@ -7,6 +7,14 @@ html, body {
   font-family: 'Noto Sans HK', sans-serif;
 }
 
+/* Disable text selection globally */
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 /* === Viewer 結構 === */
 #viewer-wrapper {
   position: relative;
