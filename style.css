@@ -586,7 +586,7 @@ input[type="file"]:hover {
   flex-direction: column;
   gap: 6px;
   padding: 8px 12px;
-  width: 380px;
+  width: 400px;
   background-color: #fff;
   border-radius: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -677,7 +677,7 @@ input[type="file"]:hover {
 #autoid-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  column-gap: 12px;
+  column-gap: 8px;
   row-gap: 6px;
 }
 
