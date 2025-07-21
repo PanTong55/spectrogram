@@ -595,7 +595,7 @@ input[type="file"]:hover {
   background: none;
   border: none;
   cursor: pointer;
-  margin-left: auto;
+  margin-left: 4px;
 }
 
 #auto-id-panel .panel-reset-btn i {
@@ -640,6 +640,11 @@ input[type="file"]:hover {
 #autoid-tabs {
   display: flex;
   flex-direction: row;
+}
+
+.autoid-tabs-row {
+  display: flex;
+  align-items: center;
   margin-bottom: 8px;
 }
 #autoid-tabs button {
