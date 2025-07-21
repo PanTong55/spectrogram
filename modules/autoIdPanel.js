@@ -19,6 +19,11 @@ export function initAutoIdPanel({
   const viewer = document.getElementById(viewerId);
   const container = document.getElementById(containerId);
   const overlay = document.getElementById(overlayId);
+
+  const layout = document.getElementById('layout');
+  if (layout && panel && panel.parentElement !== layout) {
+    layout.appendChild(panel);
+  }
   const resetTabBtn = document.getElementById('autoIdTabResetBtn');
   const tabsContainer = document.getElementById("autoid-tabs");
   const tabs = [];
