@@ -589,6 +589,8 @@ input[type="file"]:hover {
   display: none;
   width: 420px;
   height: auto;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 #auto-id-panel .panel-reset-btn {
@@ -623,6 +625,7 @@ input[type="file"]:hover {
   width: 30px;
   height: 23px;
   padding: 2px 6px;
+  cursor: pointer;
 }
 #auto-id-panel .autoid-input:disabled {
   background-color: #eee;
