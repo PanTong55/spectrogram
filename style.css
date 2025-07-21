@@ -678,8 +678,15 @@ input[type="file"]:hover {
 .autoid-action-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   margin-top: 6px;
+}
+
+.autoid-result-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
 }
 
 .autoid-action-btn {
@@ -698,7 +705,6 @@ input[type="file"]:hover {
 }
 
 .autoid-result-label {
-  margin-left: auto;
   font-size: 14px;
 }
 
