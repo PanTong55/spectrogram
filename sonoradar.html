@@ -116,19 +116,80 @@
           </label>
         </label>
       </div>
-      <div id="auto-id-panel" class="map-popup">
-        <div class="popup-drag-bar">
-          <span class="popup-title">Auto ID Panel</span>
-          <button class="popup-close-btn" title="Close">&times;</button>
+      </div>
+    </div>
+<!-------- Spectrogram Start -------->
+    <div id="spectrogram-wrapper">
+      <div id="tag-panel">
+        <div class="tag-title">
+          <span>Species Tags&nbsp;</span><i class="fas fa-tags"></i>
         </div>
-        <div class="autoid-body">
-          <div class="autoid-tabs-row">
-            <div id="autoid-tabs"></div>
-            <button id="autoIdTabResetBtn" class="panel-reset-btn" title="Reset active tab">
-              <i class="fa-solid fa-rotate-left"></i>
-            </button>
+      </div>
+      <div id="whole-spectrogram">
+      <div id="spectrogram-settings">
+        <span id="spectrogram-settings-text"></span>
+        <canvas id="color-bar" width="600" height="20"></canvas>
+      </div>
+      <div class="viewer-row">
+        <div id="freq-axis-wrapper">
+          <div id="freq-label">Frequency (kHz)</div>
+          <div id="freq-axis"></div>
+        </div>
+          <div id="viewer-wrapper">
+          <div id="drop-overlay">
+            <div class="drop-border"></div>
+            <div class="drop-message">
+              <i class="fas fa-cloud-arrow-up drop-icon"></i>
+              <div>Drop WAV file(s) or folder here</div>
+            </div>
+            </div>
+            <div id="loading-overlay" class="loading-overlay">
+              <div class="spinner"></div>
+            </div>
+            <div id="upload-overlay" class="upload-overlay">
+              <div class="spinner"></div>
+              <div class="progress-container">
+                <div class="progress-bar" id="upload-progress-bar"></div>
+              </div>
+              <div id="upload-progress-text" class="progress-text">0/0</div>
+            </div>
+            <div id="viewer-container">
+            <div id="spectrogram-only"><canvas id="spectrogram-canvas"></canvas></div>
+            <canvas id="freq-grid"></canvas>
           </div>
-          <div id="autoid-fields">
+          <div id="fixed-overlay">
+          <div id="hover-line" class="hover-line-horizontal"></div>
+          <div id="hover-line-vertical" class="hover-line-vertical"></div>
+          <div id="progress-line" class="progress-line"></div>
+          <div id="hover-label">-</div>
+            <div id="zoom-controls">
+              <button class="zoom-button" id="zoom-in" title="zoom-in (CTRL+↑)">+</button>
+              <button class="zoom-button" id="zoom-out" title="zoom-out (CTRL+↓)">−</button>
+              <button id="expand-btn" class="zoom-button" title="Fit to Window (CTRL+0)"><i class="fas fa-expand"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    <div id="time-axis-wrapper">
+      <div id="time-axis"></div>
+    </div>
+    <div id="time-label">Time (ms)</div>
+  </div>
+    </div>
+<!-------- Spectrogram End -------->
+  <div id="auto-id-panel" class="map-popup">
+    <div class="popup-drag-bar">
+      <span class="popup-title">Auto ID Panel</span>
+      <button class="popup-close-btn" title="Close">&times;</button>
+    </div>
+    <div class="autoid-body">
+      <div class="autoid-tabs-row">
+        <div id="autoid-tabs"></div>
+        <button id="autoIdTabResetBtn" class="panel-reset-btn" title="Reset active tab">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+      </div>
+      <div id="autoid-fields">
         <div class="autoid-row">
           <span class="autoid-label">Call type:</span>
           <div class="autoid-field">
@@ -215,69 +276,9 @@
             <span class="autoid-unit">ms</span>
           </div>
         </div>
-        </div>
-      </div>
       </div>
     </div>
-<!-------- Spectrogram Start -------->
-    <div id="spectrogram-wrapper">
-      <div id="tag-panel">
-        <div class="tag-title">
-          <span>Species Tags&nbsp;</span><i class="fas fa-tags"></i>
-        </div>
-      </div>
-      <div id="whole-spectrogram">
-      <div id="spectrogram-settings">
-        <span id="spectrogram-settings-text"></span>
-        <canvas id="color-bar" width="600" height="20"></canvas>
-      </div>
-      <div class="viewer-row">
-        <div id="freq-axis-wrapper">
-          <div id="freq-label">Frequency (kHz)</div>
-          <div id="freq-axis"></div>
-        </div>
-          <div id="viewer-wrapper">
-          <div id="drop-overlay">
-            <div class="drop-border"></div>
-            <div class="drop-message">
-              <i class="fas fa-cloud-arrow-up drop-icon"></i>
-              <div>Drop WAV file(s) or folder here</div>
-            </div>
-            </div>
-            <div id="loading-overlay" class="loading-overlay">
-              <div class="spinner"></div>
-            </div>
-            <div id="upload-overlay" class="upload-overlay">
-              <div class="spinner"></div>
-              <div class="progress-container">
-                <div class="progress-bar" id="upload-progress-bar"></div>
-              </div>
-              <div id="upload-progress-text" class="progress-text">0/0</div>
-            </div>
-            <div id="viewer-container">
-            <div id="spectrogram-only"><canvas id="spectrogram-canvas"></canvas></div>
-            <canvas id="freq-grid"></canvas>
-          </div>
-          <div id="fixed-overlay">
-          <div id="hover-line" class="hover-line-horizontal"></div>
-          <div id="hover-line-vertical" class="hover-line-vertical"></div>
-          <div id="progress-line" class="progress-line"></div>
-          <div id="hover-label">-</div>
-            <div id="zoom-controls">
-              <button class="zoom-button" id="zoom-in" title="zoom-in (CTRL+↑)">+</button>
-              <button class="zoom-button" id="zoom-out" title="zoom-out (CTRL+↓)">−</button>
-              <button id="expand-btn" class="zoom-button" title="Fit to Window (CTRL+0)"><i class="fas fa-expand"></i></button>
-            </div>
-          </div>
-        </div>
-      </div>
-    <div id="time-axis-wrapper">
-      <div id="time-axis"></div>
-    </div>
-    <div id="time-label">Time (ms)</div>
   </div>
-    </div>
-<!-------- Spectrogram End -------->
   <div id="mapPopup" class="map-popup">
     <div class="popup-drag-bar">
       <button class="popup-close-btn" title="Close">&times;</button>
