@@ -108,9 +108,6 @@ export function initAutoIdPanel({
   };
   const bandwidthEl = document.getElementById('bandwidthVal');
   const durationEl = document.getElementById('durationVal');
-  const pulseIdBtn = document.getElementById('pulseIdBtn');
-  const sequenceIdBtn = document.getElementById('sequenceIdBtn');
-  const autoIdResultEl = document.getElementById('autoIdResult');
 
   const markerColors = {
     start: '#e74c3c',
@@ -173,13 +170,6 @@ export function initAutoIdPanel({
   }
 
   setMarkerInteractivity(true);
-
-  pulseIdBtn?.addEventListener('click', () => {
-    autoIdResultEl.textContent = 'TBD';
-  });
-  sequenceIdBtn?.addEventListener('click', () => {
-    autoIdResultEl.textContent = 'TBD';
-  });
 
   Object.entries(inputs).forEach(([key, el]) => {
     if (!el) return;
