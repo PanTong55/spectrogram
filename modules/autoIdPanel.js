@@ -218,7 +218,7 @@ export function initAutoIdPanel({
   });
 
   function handleCallTypeChange(value, idx) {
-    const disable = idx <= 1;
+    const disable = ['CF-FM', 'FM-CF-FM', 'QCF'].includes(value);
     ['knee', 'heel'].forEach(k => {
       if (!inputs[k]) return;
       inputs[k].disabled = disable;
