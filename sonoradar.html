@@ -116,10 +116,12 @@
           </label>
         </label>
       </div>
-      <div id="auto-id-panel" class="map-popup">
-        <div class="popup-drag-bar">
-          <span class="popup-title">Auto ID Panel</span>
-          <button class="popup-close-btn" title="Close">&times;</button>
+      <div id="auto-id-panel">
+        <div class="panel-title">
+          <span>Auto ID Panel</span>
+          <button id="autoIdTabResetBtn" class="panel-reset-btn" title="Reset active tab">
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
         </div>
         <div class="autoid-body">
           <div id="autoid-tabs"></div>
@@ -208,9 +210,6 @@
           <div class="autoid-field">
             <span id="durationVal">-</span>
             <span class="autoid-unit">ms</span>
-            <button id="autoIdTabResetBtn" class="panel-reset-btn" title="Reset active tab">
-              <i class="fa-solid fa-rotate-left"></i>
-            </button>
           </div>
         </div>
         </div>
