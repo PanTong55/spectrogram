@@ -258,6 +258,8 @@ export function initAutoIdPanel({
       durationEl.textContent = ((endTime - startTime) * 1000).toFixed(1);
     } else if (markers.high.time != null && markers.low.time != null) {
       durationEl.textContent = ((markers.low.time - markers.high.time) * 1000).toFixed(1);
+    } else {
+      durationEl.textContent = '-';
     }
     updateBandwidthWarning(bandwidth);
   }
