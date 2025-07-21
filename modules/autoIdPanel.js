@@ -80,9 +80,7 @@ export function initAutoIdPanel({
   resetTabBtn?.addEventListener('click', resetCurrentTab);
 
   const callTypeDropdown = initDropdown('callTypeInput', ['CF-FM','FM-CF-FM','FM','FM-QCF','QCF']);
-  callTypeDropdown.select(0);
   const harmonicDropdown = initDropdown('harmonicInput', ['0','1','2','3']);
-  harmonicDropdown.select(0);
   if (tabsContainer) {
     for (let i = 0; i < TAB_COUNT; i++) {
       const t = document.createElement("button");
@@ -167,7 +165,6 @@ export function initAutoIdPanel({
   }
 
   setMarkerInteractivity(true);
-  loadTab(0);
 
   Object.entries(inputs).forEach(([key, el]) => {
     if (!el) return;
@@ -201,14 +198,31 @@ export function initAutoIdPanel({
     updateMarkers();
   }
 
-  const resetButtons = panel.querySelectorAll('.autoid-marker[data-key]');
-  resetButtons.forEach(btn => {
+  const resetButtons = {};
+  panel.querySelectorAll('.autoid-marker[data-key]').forEach(btn => {
     const key = btn.dataset.key;
+    resetButtons[key] = btn;
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       resetField(key);
     });
   });
+
+  function handleCallTypeChange(value, idx) {
+    const disable = idx <= 1;
+    ['knee', 'heel'].forEach(k => {
+      if (!inputs[k]) return;
+      inputs[k].disabled = disable;
+      const btn = resetButtons[k];
+      if (btn) btn.disabled = disable;
+      if (disable) resetField(k);
+    });
+  }
+
+  callTypeDropdown.onChange = handleCallTypeChange;
+  harmonicDropdown.select(0);
+  callTypeDropdown.select(0);
+  loadTab(0);
 
   function updateDerived() {
     const high = parseFloat(inputs.high.value);
