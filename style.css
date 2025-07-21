@@ -653,8 +653,8 @@ input[type="file"]:hover {
   height: 25px;
   cursor: pointer;
   background-color: #eee;
-  border: 1px solid #ccc;
-  border-radius: 6px 6px 0 0;
+  border: 0px;
+  border-radius: 6px;
   transition: background-color 0.25s ease;
 }
 #autoid-tabs button.active {
