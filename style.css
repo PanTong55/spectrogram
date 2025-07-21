@@ -639,21 +639,23 @@ input[type="file"]:hover {
 }
 #auto-id-panel .autoid-body {
   display: flex;
+  flex-direction: column;
 }
 #autoid-tabs {
   display: flex;
-  flex-direction: column;
-  margin-right: 15px;
+  flex-direction: row;
+  margin-bottom: 8px;
 }
 #autoid-tabs button {
-  margin-bottom: 4px;
+  margin-right: 4px;
   padding: 2px 4px;
   width: 70px;
   height: 25px;
   cursor: pointer;
   background-color: #eee;
   border: 1px solid #ccc;
-  border-radius: 6px;
+  border-radius: 6px 6px 0 0;
+  transition: background-color 0.25s ease;
 }
 #autoid-tabs button.active {
   background-color: #ccc;
