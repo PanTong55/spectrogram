@@ -410,6 +410,26 @@ export function initAutoIdPanel({
 
   viewer.addEventListener('scroll', updateMarkers);
 
+  function formatSpeciesResult(res) {
+    const italicSpecies = new Set([
+      'Hipposideros armiger',
+      'Hipposideros gentilis',
+      'Rhinolophus affinis',
+      'Rhinolophus pusillus',
+      'Rhinolophus sinicus'
+    ]);
+    if (italicSpecies.has(res)) {
+      return `<i>${res}</i>`;
+    }
+    if (res === 'Hipposideros sp.') {
+      return '<i>Hipposideros</i> sp.';
+    }
+    if (res === 'Rhinolophus sp.') {
+      return '<i>Rhinolophus</i> sp.';
+    }
+    return res;
+  }
+
   function showPlaceholderResult() {
     if (resultEl) resultEl.textContent = '-';
   }
@@ -421,7 +441,7 @@ export function initAutoIdPanel({
       return;
     }
     const res = autoIdHK({ callType, highFreq: high });
-    if (resultEl) resultEl.textContent = res;
+    if (resultEl) resultEl.innerHTML = formatSpeciesResult(res);
   }
 
 
