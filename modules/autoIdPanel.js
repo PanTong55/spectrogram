@@ -113,14 +113,18 @@ export function initAutoIdPanel({
   const sequenceIdBtn = document.getElementById('sequenceIdBtn');
   const resultEl = document.getElementById('autoIdResult');
   const bandwidthWarning = document.getElementById('bandwidth-warning');
+  const freqOrderWarning = document.getElementById('freq-order-warning');
 
-  function updateBandwidthWarning(bw) {
+  function updateWarnings(high, low, bw) {
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
-    const show = callType === 'QCF' && bw != null && bw > 5;
+    const showBandwidth = callType === 'QCF' && bw != null && bw > 5;
+    const showOrder = !isNaN(high) && !isNaN(low) && low > high;
+    const invalid = showBandwidth || showOrder;
     ['high', 'low'].forEach(k => {
-      if (inputs[k]) inputs[k].classList.toggle('invalid', show);
+      if (inputs[k]) inputs[k].classList.toggle('invalid', invalid);
     });
-    if (bandwidthWarning) bandwidthWarning.style.display = show ? 'flex' : 'none';
+    if (bandwidthWarning) bandwidthWarning.style.display = showBandwidth ? 'flex' : 'none';
+    if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
   }
 
   const markerColors = {
@@ -261,7 +265,7 @@ export function initAutoIdPanel({
     } else {
       durationEl.textContent = '-';
     }
-    updateBandwidthWarning(bandwidth);
+    updateWarnings(high, low, bandwidth);
   }
 
   function createMarkerEl(key, tabIdx) {
