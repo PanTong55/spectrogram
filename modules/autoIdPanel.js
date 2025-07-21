@@ -154,7 +154,7 @@ export function initAutoIdPanel({
     if (startTime != null && endTime != null) {
       durationEl.textContent = ((endTime - startTime) * 1000).toFixed(1);
     } else if (markers.high.time != null && markers.low.time != null) {
-      durationEl.textContent = ((markers.high.time - markers.low.time) * 1000).toFixed(1);
+      durationEl.textContent = ((markers.low.time - markers.high.time) * 1000).toFixed(1);
     }
   }
 
