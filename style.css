@@ -619,22 +619,6 @@ input[type="file"]:hover {
   gap: 4px;
 }
 
-#auto-id-panel .autoid-action-btn {
-  padding: 2px 8px;
-  background-color: #eee;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-#auto-id-panel .autoid-action-btn:hover {
-  background-color: #d5d5d5;
-}
-
-#auto-id-panel .autoid-result {
-  margin-left: 8px;
-}
-
 #auto-id-panel .autoid-input {
   width: 30px;
   height: 23px;
