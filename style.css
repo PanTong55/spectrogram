@@ -604,8 +604,21 @@ input[type="file"]:hover {
 }
 
 #auto-id-panel .panel-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-weight: bold;
   margin-bottom: 4px;
+}
+
+#auto-id-panel .panel-reset-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+#auto-id-panel .panel-reset-btn i {
+  color: #555;
 }
 
 #auto-id-panel .autoid-row {
