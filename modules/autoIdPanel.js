@@ -424,7 +424,19 @@ export function initAutoIdPanel({
         cp2x = Math.min(cp2x, p2.x);
       }
   
-      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+      // 判斷是否為 L 形條件（最後一段彎入且點距小）
+      const isLShape = (Math.abs(p2.x - p1.x) < 10) && (Math.abs(p2.y - p1.y) < 10);
+      
+      if (isLShape) {
+        // 強制用近乎水平的 L 形結尾（手動定義控制點）
+        const lcp1x = p1.x + 10;  // 向右偏一點
+        const lcp1y = p1.y;
+        const lcp2x = p2.x - 10;  // 向左偏一點
+        const lcp2y = p2.y;
+        d += ` C ${lcp1x} ${lcp1y} ${lcp2x} ${lcp2y} ${p2.x} ${p2.y}`;
+      } else {
+        d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+      }
     }
   
     return d;
