@@ -400,7 +400,7 @@ export function initAutoIdPanel({
   function makeRoundedPath(points, tension = 0.5) {
     if (points.length < 2) return '';
     let d = `M ${points[0].x} ${points[0].y}`;
-    const maxVerticalOffset = 40;  // 全域最大垂直偏移限制（可調整）
+    const maxVerticalOffset = 10;  // 全域最大垂直偏移限制（可調整）
   
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[i - 1] || points[i];
