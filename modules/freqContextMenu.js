@@ -52,9 +52,15 @@ export function initFreqContextMenu({
       el.classList.toggle('disabled', !enabled);
       el.style.display = enabled ? 'block' : 'none';
     });
+    menu.style.display = 'block';
     menu.style.left = `${clientX}px`;
     menu.style.top = `${clientY}px`;
-    menu.style.display = 'block';
+    const menuRect = menu.getBoundingClientRect();
+    const viewerRect = viewer.getBoundingClientRect();
+    if (menuRect.right > viewerRect.right) {
+      const newLeft = clientX - menuRect.width;
+      menu.style.left = `${Math.max(viewerRect.left, newLeft)}px`;
+    }
   }
 
   function hide() {
