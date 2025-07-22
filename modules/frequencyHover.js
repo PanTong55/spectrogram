@@ -275,6 +275,8 @@ export function initFrequencyHover({
     });
     viewer.appendChild(tooltip);
     enableDrag(tooltip);
+    // Wait for DOM to update so tooltip width is accurate before repositioning
+    requestAnimationFrame(() => repositionTooltip(sel, left, top, width));
     return tooltip;
   }
 
@@ -363,6 +365,22 @@ export function initFrequencyHover({
       group.style.right = 'auto';
       group.style.left = '-35px';
     }
+  }
+
+  function repositionTooltip(sel, left, top, width) {
+    if (!sel.tooltip) return;
+    const tooltip = sel.tooltip;
+    const tooltipWidth = tooltip.offsetWidth;
+    const viewerLeft = viewer.scrollLeft || 0;
+    const viewerRight = viewerLeft + viewer.clientWidth;
+
+    let tooltipLeft = left + width + 10;
+    if (tooltipLeft + tooltipWidth > viewerRight) {
+      tooltipLeft = left - tooltipWidth - 10;
+    }
+
+    tooltip.style.left = `${tooltipLeft}px`;
+    tooltip.style.top = `${top}px`;
   }
 
   function enableResize(sel) {
@@ -529,11 +547,7 @@ export function initFrequencyHover({
         }
       }
 
-      if (sel.tooltip) {
-        const tooltipLeft = left + width + 10;
-        sel.tooltip.style.left = `${tooltipLeft}px`;
-        sel.tooltip.style.top = `${top}px`;
-      }
+      repositionTooltip(sel, left, top, width);
 
       updateTooltipValues(sel, left, top, width, height);
       repositionBtnGroup(sel);
