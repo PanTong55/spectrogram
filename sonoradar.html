@@ -135,19 +135,39 @@
             </button>
           </div>
           <div id="autoid-fields">
-        <div class="autoid-row">
+        <div class="autoid-row" id="callTypeRow">
           <span class="autoid-label">Call type:</span>
           <div class="autoid-field">
             <button id="callTypeInput" class="dropdown-button">CF-FM</button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="harmonicRow">
           <span class="autoid-label">Harmonic:</span>
           <div class="autoid-field">
             <button id="harmonicInput" class="dropdown-button">0</button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="cfStartFreqRow">
+          <span class="autoid-label">CF start:</span>
+          <div class="autoid-field">
+            <input id="cfStartFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire CF Start Frequency">
+            <span class="autoid-unit">kHz</span>
+            <button class="autoid-marker marker-cfstart" data-key="cfStart" title="Reset CF start freq.">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+        <div class="autoid-row" id="cfEndFreqRow">
+          <span class="autoid-label">CF end:</span>
+          <div class="autoid-field">
+            <input id="cfEndFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire CF End Frequency">
+            <span class="autoid-unit">kHz</span>
+            <button class="autoid-marker marker-cfend" data-key="cfEnd" title="Reset CF end freq.">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+        <div class="autoid-row" id="startFreqRow">
           <span class="autoid-label">Start freq.:</span>
           <div class="autoid-field">
             <input id="startFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire Start Frequency">
@@ -157,7 +177,7 @@
             </button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="endFreqRow">
           <span class="autoid-label">End freq.:</span>
           <div class="autoid-field">
             <input id="endFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire End Frequency">
@@ -167,7 +187,7 @@
             </button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="highFreqRow">
           <span class="autoid-label">High freq.:</span>
           <div class="autoid-field">
             <input id="highFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire Highest Frequency">
@@ -177,7 +197,7 @@
             </button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="lowFreqRow">
           <span class="autoid-label">Low freq.:</span>
           <div class="autoid-field">
             <input id="lowFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire Lowest Frequency">
@@ -187,7 +207,7 @@
             </button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="kneeFreqRow">
           <span class="autoid-label">Knee freq.:</span>
           <div class="autoid-field">
             <input id="kneeFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire Knee Frequency">
@@ -197,7 +217,7 @@
             </button>
           </div>
         </div>
-        <div class="autoid-row">
+        <div class="autoid-row" id="heelFreqRow">
           <span class="autoid-label">Heel freq.:</span>
           <div class="autoid-field">
             <input id="heelFreqInput" class="autoid-input" type="text" readonly title="Click on spectrogram to acquire Heel Frequency">

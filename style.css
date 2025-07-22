@@ -756,6 +756,8 @@ body.markers-disabled .freq-marker {
 .marker-low { color: #9b59b6; }
 .marker-knee { color: #f39c12; }
 .marker-heel { color: #16a085; }
+.marker-cfstart { color: #e67e22; }
+.marker-cfend { color: #1abc9c; }
 
 /* === Sidebar Button === */
 .sidebar-button {

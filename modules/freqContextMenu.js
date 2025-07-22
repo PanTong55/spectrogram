@@ -19,7 +19,9 @@ export function initFreqContextMenu({
     high: 'High freq.',
     low: 'Low freq.',
     knee: 'Knee freq.',
-    heel: 'Heel freq.'
+    heel: 'Heel freq.',
+    cfStart: 'CF start',
+    cfEnd: 'CF end'
   };
   const keys = Object.keys(labels);
   keys.forEach(key => {
@@ -48,6 +50,7 @@ export function initFreqContextMenu({
       const el = menu.querySelector(`[data-key="${k}"]`);
       const enabled = !autoId || (typeof autoId.isFieldEnabled === 'function' && autoId.isFieldEnabled(k));
       el.classList.toggle('disabled', !enabled);
+      el.style.display = enabled ? 'block' : 'none';
     });
     menu.style.left = `${clientX}px`;
     menu.style.top = `${clientY}px`;
