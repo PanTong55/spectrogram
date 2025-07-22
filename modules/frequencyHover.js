@@ -360,7 +360,7 @@ export function initFrequencyHover({
     const groupRect = group.getBoundingClientRect();
     const containerRect = container.getBoundingClientRect();
     if (groupRect.right > containerRect.right) {
-      group.style.right = '';
+      group.style.right = 'auto';
       group.style.left = '-35px';
     }
   }
