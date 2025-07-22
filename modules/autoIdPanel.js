@@ -411,6 +411,7 @@ export function initAutoIdPanel({
       let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
       if (p2.key !== 'cfStart' && p2.key !== 'end') {
         cp2y = Math.min(cp2y, p2.y);
+        cp2y = Math.max(cp2y, p3.y);
         cp2x = Math.max(cp2x, p2.x);
       }
       d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
