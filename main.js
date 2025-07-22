@@ -23,6 +23,7 @@ import { initTagControl } from './modules/tagControl.js';
 import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { initAutoIdPanel } from './modules/autoIdPanel.js';
+import { initFreqContextMenu } from './modules/freqContextMenu.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
 const spectrogramHeight = 800;
@@ -55,6 +56,7 @@ let currentOverlap = 'auto';
 let overlapWarningShown = false;
 let freqHoverControl = null;
 let autoIdControl = null;
+let freqMenuControl = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
 let selectionExpandMode = false;
 let expandHistory = [];
@@ -913,6 +915,21 @@ autoIdControl = initAutoIdPanel({
   getFreqRange: () => ({ min: currentFreqMin, max: currentFreqMax }),
   hideHover: () => freqHoverControl?.hideHover(),
   refreshHover: () => freqHoverControl?.refreshHover()
+});
+freqMenuControl = initFreqContextMenu({
+  viewerId: 'viewer-container',
+  containerId: 'spectrogram-only',
+  spectrogramHeight,
+  getDuration,
+  getFreqRange: () => ({ min: currentFreqMin, max: currentFreqMax }),
+  autoId: autoIdControl
+});
+document.addEventListener('autoid-open', () => {
+  freqHoverControl?.setPersistentLinesEnabled(false);
+});
+document.addEventListener('autoid-close', () => {
+  freqHoverControl?.setPersistentLinesEnabled(true);
+  freqMenuControl?.hide();
 });
 document.addEventListener('hide-spectrogram-hover', () => {
   freqHoverControl?.hideHover();

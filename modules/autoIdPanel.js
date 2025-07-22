@@ -52,6 +52,7 @@ export function initAutoIdPanel({
     const isVisible = panel.style.display === 'block';
     panel.style.display = isVisible ? 'none' : 'block';
     document.body.classList.toggle('autoid-open', !isVisible);
+    document.dispatchEvent(new Event(isVisible ? 'autoid-close' : 'autoid-open'));
   }
 
   btn.addEventListener('click', togglePanel);
@@ -341,6 +342,26 @@ export function initAutoIdPanel({
     refreshHover();
   }
 
+  function setMarkerAt(key, freq, time) {
+    const input = inputs[key];
+    if (!input) return;
+    input.value = freq.toFixed(1);
+    input.dataset.time = time;
+    markers[key].freq = freq;
+    markers[key].time = time;
+    if (key === 'start') startTime = time;
+    if (key === 'end') endTime = time;
+    tabData[currentTab].startTime = startTime;
+    tabData[currentTab].endTime = endTime;
+    updateDerived();
+    updateMarkers();
+  }
+
+  function isFieldEnabled(key) {
+    const input = inputs[key];
+    return input && !input.disabled;
+  }
+
   function resetTabData(tab) {
     tab.callType = 0;
     tab.harmonic = 0;
@@ -477,5 +498,14 @@ export function initAutoIdPanel({
   pulseIdBtn?.addEventListener('click', runPulseId);
   sequenceIdBtn?.addEventListener('click', showPlaceholderResult);
 
-  return { updateMarkers, reset, resetCurrentTab };
+  return {
+    updateMarkers,
+    reset,
+    resetCurrentTab,
+    setMarkerAt,
+    isFieldEnabled,
+    getFreqRange,
+    getDuration: () => getDuration(),
+    spectrogramHeight
+  };
 }
