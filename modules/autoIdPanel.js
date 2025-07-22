@@ -376,13 +376,13 @@ export function initAutoIdPanel({
         tab.line.dataset.tab = idx;
         linesSvg.appendChild(tab.line);
       }
-      const points = Object.values(tab.markers)
-        .filter(m => m.freq != null && m.time != null)
-        .sort((a, b) => a.time - b.time)
-        .map(m => {
+      const points = Object.entries(tab.markers)
+        .filter(([_, m]) => m.freq != null && m.time != null)
+        .sort((a, b) => a[1].time - b[1].time)
+        .map(([key, m]) => {
           const x = (m.time / getDuration()) * actualWidth - viewer.scrollLeft;
           const y = (1 - (m.freq - min) / (max - min)) * spectrogramHeight;
-          return [x, y];
+          return { x, y, key };
         });
       if (points.length < 2) {
         tab.line.setAttribute('d', '');
@@ -399,17 +399,20 @@ export function initAutoIdPanel({
 
   function makeRoundedPath(points, tension = 0.5) {
     if (points.length < 2) return '';
-    let d = `M ${points[0][0]} ${points[0][1]}`;
+    let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[i - 1] || points[i];
       const p1 = points[i];
       const p2 = points[i + 1];
       const p3 = points[i + 2] || p2;
-      const cp1x = p1[0] + (p2[0] - p0[0]) * tension / 6;
-      const cp1y = p1[1] + (p2[1] - p0[1]) * tension / 6;
-      const cp2x = p2[0] - (p3[0] - p1[0]) * tension / 6;
-      const cp2y = p2[1] - (p3[1] - p1[1]) * tension / 6;
-      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2[0]} ${p2[1]}`;
+      const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+      const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+      const cp2x = p2.x - (p3.x - p1.x) * tension / 6;
+      let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
+      if (p2.key !== 'cfStart' && p2.key !== 'end') {
+        cp2y = Math.min(cp2y, p2.y);
+      }
+      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
     }
     return d;
   }
