@@ -70,7 +70,7 @@ export function initAutoIdPanel({
   function stopDrag() {
     dragging = false;
     document.removeEventListener('mousemove', onDrag);
-    refreshHover();
+    hideHover();
   }
 
   dragBar?.addEventListener('mousedown', (e) => {
