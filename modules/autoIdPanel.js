@@ -407,10 +407,11 @@ export function initAutoIdPanel({
       const p3 = points[i + 2] || p2;
       const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
       const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
-      const cp2x = p2.x - (p3.x - p1.x) * tension / 6;
+      let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
       let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
       if (p2.key !== 'cfStart' && p2.key !== 'end') {
         cp2y = Math.min(cp2y, p2.y);
+        cp2x = Math.max(cp2x, p2.x);
       }
       d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
     }
