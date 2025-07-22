@@ -21,6 +21,11 @@ export function initAutoIdPanel({
   const container = document.getElementById(containerId);
   const overlay = document.getElementById(overlayId);
 
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const linesSvg = document.createElementNS(svgNS, 'svg');
+  linesSvg.id = 'autoid-lines';
+  overlay.appendChild(linesSvg);
+
   const layout = document.getElementById('layout');
   if (layout && panel && panel.parentElement !== layout) {
     layout.appendChild(panel);
@@ -42,7 +47,8 @@ export function initAutoIdPanel({
       low: { el: null, freq: null, time: null },
       knee: { el: null, freq: null, time: null },
       heel: { el: null, freq: null, time: null }
-    }
+    },
+    line: null
   }));
   let currentTab = 0;
 
@@ -241,7 +247,9 @@ export function initAutoIdPanel({
       if (btn) btn.disabled = disable;
       if (disable) resetField(k);
     });
+    tabData[currentTab].callType = idx;
     updateDerived();
+    updateLines();
   }
 
   callTypeDropdown.onChange = handleCallTypeChange;
@@ -310,6 +318,63 @@ export function initAutoIdPanel({
         m.el.style.opacity = idx === currentTab ? '1' : '0.5';
       });
     });
+    updateLines();
+  }
+
+  function updateLines() {
+    const { min, max } = getFreqRange();
+    const actualWidth = container.scrollWidth;
+    tabData.forEach((tab, idx) => {
+      if (!tab.line) {
+        tab.line = document.createElementNS(svgNS, 'path');
+        tab.line.dataset.tab = idx;
+        linesSvg.appendChild(tab.line);
+      }
+      const points = Object.values(tab.markers)
+        .filter(m => m.freq != null && m.time != null)
+        .sort((a, b) => a.time - b.time)
+        .map(m => {
+          const x = (m.time / getDuration()) * actualWidth - viewer.scrollLeft;
+          const y = (1 - (m.freq - min) / (max - min)) * spectrogramHeight;
+          return [x, y];
+        });
+      if (points.length < 2) {
+        tab.line.setAttribute('d', '');
+        tab.line.style.display = 'none';
+        return;
+      }
+      const callType = callTypeDropdown.items[tab.callType];
+      const smoothTypes = new Set(['FM-QCF', 'FM', 'QCF']);
+      let d;
+      if (smoothTypes.has(callType)) {
+        d = makeRoundedPath(points);
+        tab.line.setAttribute('stroke-linejoin', 'round');
+      } else {
+        d = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`)
+          .join(' ');
+        tab.line.setAttribute('stroke-linejoin', 'miter');
+      }
+      tab.line.setAttribute('d', d);
+      tab.line.style.display = 'block';
+      tab.line.style.opacity = idx === currentTab ? '1' : '0.5';
+    });
+  }
+
+  function makeRoundedPath(points, tension = 0.5) {
+    if (points.length < 2) return '';
+    let d = `M ${points[0][0]} ${points[0][1]}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+      const cp1x = p1[0] + (p2[0] - p0[0]) * tension / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) * tension / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) * tension / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) * tension / 6;
+      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2[0]} ${p2[1]}`;
+    }
+    return d;
   }
 
   function onMarkerDrag(e) {
@@ -373,6 +438,10 @@ export function initAutoIdPanel({
       m.time = null;
       if (m.el) m.el.style.display = 'none';
     });
+    if (tab.line) {
+      tab.line.setAttribute('d', '');
+      tab.line.style.display = 'none';
+    }
   }
 
   function resetCurrentTab() {
@@ -402,6 +471,10 @@ export function initAutoIdPanel({
       d.startTime = null;
       d.endTime = null;
       Object.keys(d.markers).forEach(k => { d.markers[k].freq = null; d.markers[k].time = null; });
+      if (d.line) {
+        d.line.setAttribute('d', '');
+        d.line.style.display = 'none';
+      }
     });
     callTypeDropdown.select(0);
     harmonicDropdown.select(0);
