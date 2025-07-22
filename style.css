@@ -1697,3 +1697,39 @@ input.tag-button.editing {
   display: inline-flex;
   width: 30px;
 }
+
+/* === Frequency Context Menu === */
+.freq-context-menu {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  padding: 4px 0;
+  z-index: 1000;
+  font-family: 'Noto Sans HK', sans-serif;
+  user-select: none;
+  display: none;
+}
+
+.freq-menu-item {
+  padding: 6px 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.freq-menu-item:hover {
+  background-color: rgba(0,0,0,0.1);
+}
+
+.freq-menu-item.disabled {
+  color: #aaa;
+  cursor: default;
+}
+
+.freq-menu-item.disabled:hover {
+  background-color: transparent;
+}
