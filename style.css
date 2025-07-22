@@ -1733,10 +1733,10 @@ input.tag-button.editing {
 }
 
 .freq-menu-item {
-  padding: 6px 20px;
+  padding: 3px 14px;
   cursor: pointer;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .freq-menu-item:hover {
