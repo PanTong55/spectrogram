@@ -348,6 +348,21 @@ export function initFrequencyHover({
     sel.closeBtn = closeBtn;
     sel.expandBtn = expandBtn;
     sel.fitBtn = fitBtn;
+
+    repositionBtnGroup(sel);
+  }
+
+  function repositionBtnGroup(sel) {
+    if (!sel.btnGroup) return;
+    const group = sel.btnGroup;
+    group.style.left = '';
+    group.style.right = '-35px';
+    const groupRect = group.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    if (groupRect.right > containerRect.right) {
+      group.style.right = '';
+      group.style.left = '-35px';
+    }
   }
 
   function enableResize(sel) {
@@ -521,6 +536,7 @@ export function initFrequencyHover({
       }
 
       updateTooltipValues(sel, left, top, width, height);
+      repositionBtnGroup(sel);
     });
   }
 
