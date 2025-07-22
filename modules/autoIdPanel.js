@@ -37,7 +37,16 @@ export function initAutoIdPanel({
   const tabData = Array.from({ length: TAB_COUNT }, () => ({
     callType: 3,
     harmonic: 0,
-    inputs: { start: "", end: "", high: "", low: "", knee: "", heel: "" },
+    inputs: {
+      start: "",
+      end: "",
+      high: "",
+      low: "",
+      knee: "",
+      heel: "",
+      cfStart: "",
+      cfEnd: ""
+    },
     startTime: null,
     endTime: null,
     markers: {
@@ -46,7 +55,9 @@ export function initAutoIdPanel({
       high: { el: null, freq: null, time: null },
       low: { el: null, freq: null, time: null },
       knee: { el: null, freq: null, time: null },
-      heel: { el: null, freq: null, time: null }
+      heel: { el: null, freq: null, time: null },
+      cfStart: { el: null, freq: null, time: null },
+      cfEnd: { el: null, freq: null, time: null }
     },
     line: null
   }));
@@ -113,6 +124,18 @@ export function initAutoIdPanel({
     low: document.getElementById('lowFreqInput'),
     knee: document.getElementById('kneeFreqInput'),
     heel: document.getElementById('heelFreqInput'),
+    cfStart: document.getElementById('cfStartFreqInput'),
+    cfEnd: document.getElementById('cfEndFreqInput'),
+  };
+  const rows = {
+    start: document.getElementById('startFreqRow'),
+    end: document.getElementById('endFreqRow'),
+    high: document.getElementById('highFreqRow'),
+    low: document.getElementById('lowFreqRow'),
+    knee: document.getElementById('kneeFreqRow'),
+    heel: document.getElementById('heelFreqRow'),
+    cfStart: document.getElementById('cfStartFreqRow'),
+    cfEnd: document.getElementById('cfEndFreqRow'),
   };
   const bandwidthEl = document.getElementById('bandwidthVal');
   const durationEl = document.getElementById('durationVal');
@@ -140,7 +163,9 @@ export function initAutoIdPanel({
     high: '#3498db',
     low: '#9b59b6',
     knee: '#f39c12',
-    heel: '#16a085'
+    heel: '#16a085',
+    cfStart: '#e67e22',
+    cfEnd: '#1abc9c'
   };
 
   let markers = tabData[currentTab].markers;
@@ -238,15 +263,26 @@ export function initAutoIdPanel({
     });
   });
 
+  function toggleRow(key, show) {
+    const row = rows[key];
+    if (!row) return;
+    row.style.display = show ? 'flex' : 'none';
+    if (inputs[key]) inputs[key].disabled = !show;
+    const btn = resetButtons[key];
+    if (btn) btn.disabled = !show;
+    if (!show) resetField(key);
+  }
+
   function handleCallTypeChange(value, idx) {
-    const disable = ['CF-FM', 'FM-CF-FM', 'QCF'].includes(value);
-    ['knee', 'heel'].forEach(k => {
-      if (!inputs[k]) return;
-      inputs[k].disabled = disable;
-      const btn = resetButtons[k];
-      if (btn) btn.disabled = disable;
-      if (disable) resetField(k);
-    });
+    const hideHighLow = ['CF-FM', 'FM-CF-FM'].includes(value);
+    const hideKneeHeel = ['CF-FM', 'FM-CF-FM', 'QCF'].includes(value);
+    const hideCf = ['QCF', 'FM-QCF', 'FM'].includes(value);
+    toggleRow('high', !hideHighLow);
+    toggleRow('low', !hideHighLow);
+    toggleRow('knee', !hideKneeHeel);
+    toggleRow('heel', !hideKneeHeel);
+    toggleRow('cfStart', !hideCf);
+    toggleRow('cfEnd', !hideCf);
     tabData[currentTab].callType = idx;
     updateDerived();
     updateLines();
@@ -258,10 +294,20 @@ export function initAutoIdPanel({
   loadTab(0);
 
   function updateDerived() {
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
+    const cfStartVal = parseFloat(inputs.cfStart.value);
+    const endVal = parseFloat(inputs.end.value);
     let bandwidth = null;
-    if (!isNaN(high) && !isNaN(low)) {
+    if (['FM-CF-FM', 'CF-FM'].includes(callType)) {
+      if (!isNaN(cfStartVal) && !isNaN(endVal)) {
+        bandwidth = cfStartVal - endVal;
+        bandwidthEl.textContent = bandwidth.toFixed(1);
+      } else {
+        bandwidthEl.textContent = '-';
+      }
+    } else if (!isNaN(high) && !isNaN(low)) {
       bandwidth = high - low;
       bandwidthEl.textContent = bandwidth.toFixed(1);
     } else {
