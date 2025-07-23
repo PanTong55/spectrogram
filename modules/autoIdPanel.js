@@ -239,6 +239,7 @@ export function initAutoIdPanel({
     input.value = '';
     delete input.dataset.time;
     input.classList.remove('active-get');
+    input.classList.remove('invalid');
     markers[key].freq = null;
     markers[key].time = null;
     if (markers[key].el) markers[key].el.style.display = 'none';
@@ -613,27 +614,54 @@ export function initAutoIdPanel({
   function showPlaceholderResult() {
     if (resultEl) resultEl.textContent = '-';
   }
-  function runPulseId() {
+
+  function validateMandatoryInputs() {
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
-    const high = parseFloat(inputs.high.value);
-    const low = parseFloat(inputs.low.value);
-    let valid = true;
-    if (callType === 'CF-FM' || callType === 'FM-CF-FM') {
-      valid = !isNaN(high);
-    } else if (callType === 'QCF') {
-      valid = !isNaN(low);
-    }
-    if (!valid) {
+    const requiredMap = {
+      'CF-FM': ['cfStart', 'cfEnd'],
+      'FM-CF-FM': ['cfStart', 'cfEnd'],
+      'FM': ['high', 'low'],
+      'FM-QCF': ['high', 'low', 'knee'],
+      'QCF': ['high', 'low'],
+    };
+    const required = requiredMap[callType] || [];
+    let allValid = true;
+    Object.entries(inputs).forEach(([key, el]) => {
+      if (!el) return;
+      if (required.includes(key)) {
+        const val = parseFloat(el.value);
+        const isValid = !isNaN(val);
+        el.classList.toggle('invalid', !isValid);
+        if (!isValid) allValid = false;
+      } else {
+        el.classList.remove('invalid');
+      }
+    });
+    return allValid;
+  }
+  function runPulseId() {
+    if (!validateMandatoryInputs()) {
       if (resultEl) resultEl.textContent = "-";
       return;
     }
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const high = parseFloat(inputs.high.value);
+    const low = parseFloat(inputs.low.value);
     const res = autoIdHK({ callType, highFreq: high, lowFreq: low });
     if (resultEl) resultEl.innerHTML = formatSpeciesResult(res);
   }
 
 
+  function runSequenceId() {
+    if (!validateMandatoryInputs()) {
+      if (resultEl) resultEl.textContent = '-';
+      return;
+    }
+    showPlaceholderResult();
+  }
+
   pulseIdBtn?.addEventListener('click', runPulseId);
-  sequenceIdBtn?.addEventListener('click', showPlaceholderResult);
+  sequenceIdBtn?.addEventListener('click', runSequenceId);
 
   return {
     updateMarkers,
