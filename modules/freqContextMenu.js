@@ -1,5 +1,6 @@
 export function initFreqContextMenu({
   viewerId,
+  wrapperId = 'viewer-wrapper',
   containerId = 'spectrogram-only',
   spectrogramHeight = 800,
   getDuration,
@@ -7,8 +8,9 @@ export function initFreqContextMenu({
   autoId
 }) {
   const viewer = document.getElementById(viewerId);
+  const wrapper = document.getElementById(wrapperId);
   const container = document.getElementById(containerId);
-  if (!viewer) return null;
+  if (!viewer || !wrapper) return null;
   const menu = document.createElement('div');
   menu.id = 'freq-context-menu';
   menu.className = 'freq-context-menu';
@@ -24,6 +26,7 @@ export function initFreqContextMenu({
     cfEnd: 'CF end'
   };
   const keys = Object.keys(labels);
+  let deleteKey = null;
   keys.forEach(key => {
     const item = document.createElement('div');
     item.className = 'freq-menu-item';
@@ -31,8 +34,13 @@ export function initFreqContextMenu({
     item.dataset.key = key;
     item.addEventListener('click', () => {
       if (item.classList.contains('disabled')) return;
+      const isDelete = deleteKey === key;
       hide();
-      if (autoId && typeof autoId.setMarkerAt === 'function') {
+      if (isDelete) {
+        if (autoId && typeof autoId.removeMarker === 'function') {
+          autoId.removeMarker(key);
+        }
+      } else if (autoId && typeof autoId.setMarkerAt === 'function') {
         autoId.setMarkerAt(key, currentFreq, currentTime);
       }
     });
@@ -43,42 +51,59 @@ export function initFreqContextMenu({
   let currentFreq = 0;
   let currentTime = 0;
 
-  function show(clientX, clientY, freq, time) {
+  function show(clientX, clientY, freq, time, delKey = null) {
     currentFreq = freq;
     currentTime = time;
+    deleteKey = delKey;
     keys.forEach(k => {
       const el = menu.querySelector(`[data-key="${k}"]`);
       const enabled = !autoId || (typeof autoId.isFieldEnabled === 'function' && autoId.isFieldEnabled(k));
       el.classList.toggle('disabled', !enabled);
       el.style.display = enabled ? 'block' : 'none';
+      if (k === deleteKey) {
+        el.textContent = `Delete ${labels[k]}`;
+        el.classList.add('delete');
+      } else {
+        el.textContent = labels[k];
+        el.classList.remove('delete');
+      }
     });
     menu.style.display = 'block';
     menu.style.left = `${clientX}px`;
     menu.style.top = `${clientY}px`;
     const menuRect = menu.getBoundingClientRect();
-    const viewerRect = viewer.getBoundingClientRect();
-    if (menuRect.right > viewerRect.right) {
+    const wrapperRect = wrapper.getBoundingClientRect();
+    if (menuRect.right > wrapperRect.right) {
       const newLeft = clientX - menuRect.width;
-      menu.style.left = `${Math.max(viewerRect.left, newLeft)}px`;
+      menu.style.left = `${Math.max(wrapperRect.left, newLeft)}px`;
     }
   }
 
   function hide() {
     menu.style.display = 'none';
+    deleteKey = null;
   }
 
-  viewer.addEventListener('contextmenu', (e) => {
+  wrapper.addEventListener('contextmenu', (e) => {
     if (!document.body.classList.contains('autoid-open')) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const scrollLeft = viewer.scrollLeft || 0;
-    const { min, max } = getFreqRange();
-    const freq = (1 - y / spectrogramHeight) * (max - min) + min;
-    const time = ((x + scrollLeft) / container.scrollWidth) * getDuration();
-    show(e.clientX, e.clientY, freq, time);
+
+    let freq, time, delKey = null;
+    if (e.target.classList.contains('freq-marker')) {
+      delKey = e.target.dataset.key;
+      freq = parseFloat(e.target.dataset.freq);
+      time = parseFloat(e.target.dataset.time);
+    } else {
+      const rect = wrapper.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const scrollLeft = viewer.scrollLeft || 0;
+      const { min, max } = getFreqRange();
+      freq = (1 - y / spectrogramHeight) * (max - min) + min;
+      time = ((x + scrollLeft) / container.scrollWidth) * getDuration();
+    }
+    show(e.clientX, e.clientY, freq, time, delKey);
   });
 
   document.addEventListener('mousedown', (ev) => {
