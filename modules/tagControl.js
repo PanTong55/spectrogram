@@ -6,17 +6,6 @@ export function initTagControl() {
   const toggleTagModeBtn = document.getElementById('toggleTagModeBtn');
   const tagPanel = document.getElementById('tag-panel');
 
-  // Debounced resize dispatcher to sync spectrogram width with tag panel changes.
-  const dispatchResize = (() => {
-    let timer;
-    return () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-      }, 50);
-    };
-  })();
-
   const editTagsBtn = document.createElement('button');
   editTagsBtn.id = 'editTagsBtn';
   editTagsBtn.textContent = 'Edit Tags';
@@ -123,8 +112,6 @@ export function initTagControl() {
       document.getElementById('toggleEditBtn').click();
     }
     updateTagButtonStates();
-    // Notify layout changes when tag panel shifts spectrogram padding.
-    dispatchResize();
   }
 
   function exitTagMode() {
@@ -133,8 +120,6 @@ export function initTagControl() {
     if (!wasSidebarEdit && document.getElementById('sidebar').classList.contains('edit-mode')) {
       document.getElementById('toggleEditBtn').click();
     }
-    // Ensure spectrogram width recalculates after tag panel closes.
-    dispatchResize();
   }
 
   toggleTagModeBtn.addEventListener('click', () => {
