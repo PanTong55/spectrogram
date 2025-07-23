@@ -101,22 +101,7 @@ export function initFrequencyHover({
   viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
   viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
 
-  const cancelDrawing = () => {
-    if (!isDrawing) return;
-    isDrawing = false;
-    if (selectionRect && viewer.contains(selectionRect)) {
-      viewer.removeChild(selectionRect);
-    }
-    selectionRect = null;
-    suppressHover = false;
-  };
-
-  viewer.addEventListener('mouseleave', (e) => {
-    if (isDrawing) {
-      cancelDrawing();
-      hideAll();
-    }
-  });
+  const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
   if (zoomControls) {
     zoomControls.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
@@ -136,63 +121,58 @@ export function initFrequencyHover({
     selectionRect = document.createElement('div');
     selectionRect.className = 'selection-rect';
     viewer.appendChild(selectionRect);
-  });
 
-  viewer.addEventListener('mousemove', (e) => {
-    if (!isDrawing) return;
-    const rect = viewer.getBoundingClientRect();
+    const moveHandler = (ev) => {
+      if (!isDrawing) return;
+      const viewerRect = viewer.getBoundingClientRect();
+      let currentX = ev.clientX - viewerRect.left + viewer.scrollLeft;
+      let currentY = ev.clientY - viewerRect.top;
+      currentX = clamp(currentX, 0, viewer.scrollWidth);
+      currentY = clamp(currentY, 0, viewer.clientHeight - getScrollbarThickness());
+      const x = Math.min(currentX, startX);
+      const y = Math.min(currentY, startY);
+      const width = Math.abs(currentX - startX);
+      const height = Math.abs(currentY - startY);
+      selectionRect.style.left = `${x}px`;
+      selectionRect.style.top = `${y}px`;
+      selectionRect.style.width = `${width}px`;
+      selectionRect.style.height = `${height}px`;
+    };
 
-    const insideX = e.clientX >= rect.left && e.clientX <= rect.right;
-    const insideY = e.clientY >= rect.top && e.clientY <= (rect.bottom - getScrollbarThickness());
-    if (!insideX || !insideY) {
-      // Cancel drawing when cursor leaves the spectrogram area
-      viewer.removeChild(selectionRect);
-      selectionRect = null;
+    const upHandler = (ev) => {
+      if (!isDrawing) return;
       isDrawing = false;
-      suppressHover = false;
-      hideAll();
-      return;
-    }
+      window.removeEventListener('mousemove', moveHandler);
+      window.removeEventListener('mouseup', upHandler);
 
-    const currentX = e.clientX - rect.left + viewer.scrollLeft;
-    const currentY = e.clientY - rect.top;
-    const x = Math.min(currentX, startX);
-    const y = Math.min(currentY, startY);
-    const width = Math.abs(currentX - startX);
-    const height = Math.abs(currentY - startY);
-    selectionRect.style.left = `${x}px`;
-    selectionRect.style.top = `${y}px`;
-    selectionRect.style.width = `${width}px`;
-    selectionRect.style.height = `${height}px`;
-  }, { passive: true });
-
-  viewer.addEventListener('mouseup', (e) => {
-    if (!isDrawing) return;
-    isDrawing = false;
-    const rect = selectionRect.getBoundingClientRect();
-    const viewerRect = viewer.getBoundingClientRect();
-    const left = rect.left - viewerRect.left + viewer.scrollLeft;
-    const top = rect.top - viewerRect.top;
-    const width = rect.width;
-    const height = rect.height;
-    const minThreshold = 3;
-    if (width <= minThreshold || height <= minThreshold) {
-      viewer.removeChild(selectionRect);
+      const rect = selectionRect.getBoundingClientRect();
+      const viewerRect = viewer.getBoundingClientRect();
+      const left = rect.left - viewerRect.left + viewer.scrollLeft;
+      const top = rect.top - viewerRect.top;
+      const width = rect.width;
+      const height = rect.height;
+      const minThreshold = 3;
+      if (width <= minThreshold || height <= minThreshold) {
+        viewer.removeChild(selectionRect);
+        selectionRect = null;
+        suppressHover = false;
+        updateHoverDisplay(ev);
+        return;
+      }
+      const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+      const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
+      const Bandwidth = Fhigh - Flow;
+      const actualWidth = getDuration() * getZoomLevel();
+      const startTime = (left / actualWidth) * getDuration();
+      const endTime = ((left + width) / actualWidth) * getDuration();
+      const Duration = endTime - startTime;
+      createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
       selectionRect = null;
       suppressHover = false;
-      updateHoverDisplay(e);
-      return;
-    }
-    const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-    const Bandwidth = Fhigh - Flow;
-    const actualWidth = getDuration() * getZoomLevel();
-    const startTime = (left / actualWidth) * getDuration();
-    const endTime = ((left + width) / actualWidth) * getDuration();
-    const Duration = endTime - startTime;
-    createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
-    selectionRect = null;
-    suppressHover = false;
+    };
+
+    window.addEventListener('mousemove', moveHandler, { passive: true });
+    window.addEventListener('mouseup', upHandler);
   });
 
   viewer.addEventListener('contextmenu', (e) => {
