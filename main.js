@@ -918,6 +918,7 @@ autoIdControl = initAutoIdPanel({
 });
 freqMenuControl = initFreqContextMenu({
   viewerId: 'viewer-container',
+  wrapperId: 'viewer-wrapper',
   containerId: 'spectrogram-only',
   spectrogramHeight,
   getDuration,
