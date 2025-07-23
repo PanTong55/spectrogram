@@ -21,31 +21,15 @@ export function initSidebar({ onFileSelected } = {}) {
 
   let isEditMode = false;
 
-  // Debounced helper to avoid flooding resize events when sidebar width changes.
-  const dispatchResize = (() => {
-    let timer;
-    return () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        // Triggering window resize recalculates spectrogram width and min zoom.
-        window.dispatchEvent(new Event('resize'));
-      }, 50);
-    };
-  })();
-
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('collapsed');
     const isCollapsed = sidebar.classList.contains('collapsed');
     toggleBtn.title = isCollapsed ? 'Open File List' : 'Collapse File List';
-    // Inform spectrogram to recompute layout when sidebar width changes.
-    dispatchResize();
   });
 
   editBtn.addEventListener('click', () => {
     isEditMode = !isEditMode;
     sidebar.classList.toggle('edit-mode', isEditMode);
-    // Resize ensures spectrogram width updates when edit panel appears.
-    dispatchResize();
   });
 
   searchInput.addEventListener('input', () => {
