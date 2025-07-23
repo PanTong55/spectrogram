@@ -43,6 +43,7 @@ const hoverLabelElem = document.getElementById('hover-label');
 const zoomControlsElem = document.getElementById('zoom-controls');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const stopBtn = document.getElementById('stopBtn');
+let containerWidth = container.clientWidth;
 let isDraggingProgress = false;
 let manualSeekTime = null;
 let duration = 0;
@@ -289,6 +290,17 @@ fileLoaderControl.loadFileAtIndex(index);
 hideDropOverlay();
 }
 });
+const sidebarElem = document.getElementById('sidebar');
+sidebarElem.addEventListener('sidebar-toggle', () => {
+  setTimeout(() => {
+    if (container.clientWidth !== containerWidth) {
+      containerWidth = container.clientWidth;
+      renderAxes();
+      freqHoverControl?.refreshHover();
+      autoIdControl?.updateMarkers();
+    }
+  }, 310);
+});
 const tagControl = initTagControl();
 
 (async () => {
@@ -402,8 +414,9 @@ updateSpectrogramSettingsText();
 }
 
 const renderAxes = () => {
+  containerWidth = container.clientWidth;
   drawTimeAxis({
-    containerWidth: container.scrollWidth,
+    containerWidth,
     duration,
     zoomLevel: zoomControl.getZoomLevel(),
     axisElement: timeAxis,
@@ -427,7 +440,7 @@ hoverLineId: 'hover-line',
 hoverLineVId: 'hover-line-vertical',
 freqLabelId: 'hover-label',
 spectrogramHeight,
-spectrogramWidth: container.scrollWidth,
+    spectrogramWidth: containerWidth,
 maxFrequency: currentFreqMax,
 minFrequency: currentFreqMin,
 totalDuration: duration,
@@ -1046,9 +1059,9 @@ updateExpandBackBtn();
 });
 
 window.addEventListener('resize', () => {
-  const prevWidth = container.clientWidth;
   zoomControl.applyZoom();
-  if (container.clientWidth !== prevWidth) {
+  if (container.clientWidth !== containerWidth) {
+    containerWidth = container.clientWidth;
     renderAxes();
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
