@@ -25,11 +25,6 @@ export function initSidebar({ onFileSelected } = {}) {
     sidebar.classList.toggle('collapsed');
     const isCollapsed = sidebar.classList.contains('collapsed');
     toggleBtn.title = isCollapsed ? 'Open File List' : 'Collapse File List';
-    const evt = new CustomEvent('sidebar-toggle', {
-      bubbles: true,
-      detail: { collapsed: isCollapsed }
-    });
-    sidebar.dispatchEvent(evt);
   });
 
   editBtn.addEventListener('click', () => {
