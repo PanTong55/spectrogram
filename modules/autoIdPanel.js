@@ -362,8 +362,6 @@ export function initAutoIdPanel({
         m.el.style.display = 'block';
         m.el.style.pointerEvents = idx === currentTab ? 'auto' : 'none';
         m.el.style.opacity = idx === currentTab ? '1' : '0.5';
-        m.el.dataset.freq = m.freq;
-        m.el.dataset.time = m.time;
       });
     });
     updateLines();
@@ -480,10 +478,6 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     updateDerived();
     updateMarkers();
-  }
-
-  function removeMarker(key) {
-    resetField(key);
   }
 
   function isFieldEnabled(key) {
@@ -640,7 +634,6 @@ export function initAutoIdPanel({
     reset,
     resetCurrentTab,
     setMarkerAt,
-    removeMarker,
     isFieldEnabled,
     getFreqRange,
     getDuration: () => getDuration(),
