@@ -175,7 +175,6 @@ export function initAutoIdPanel({
   let endTime = null;
   let draggingKey = null;
   let markersEnabled = true;
-  let showValidation = false;
   function saveCurrentTab() {
     const data = tabData[currentTab];
     data.callType = callTypeDropdown.selectedIndex;
@@ -240,7 +239,6 @@ export function initAutoIdPanel({
     input.value = '';
     delete input.dataset.time;
     input.classList.remove('active-get');
-    input.classList.remove('invalid');
     markers[key].freq = null;
     markers[key].time = null;
     if (markers[key].el) markers[key].el.style.display = 'none';
@@ -253,7 +251,6 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     updateDerived();
     updateMarkers();
-    validateMandatoryInputs();
   }
 
   const resetButtons = {};
@@ -274,7 +271,6 @@ export function initAutoIdPanel({
     const btn = resetButtons[key];
     if (btn) btn.disabled = !show;
     if (!show) resetField(key);
-    validateMandatoryInputs();
   }
 
   function handleCallTypeChange(value, idx) {
@@ -290,7 +286,6 @@ export function initAutoIdPanel({
     tabData[currentTab].callType = idx;
     updateDerived();
     updateLines();
-    validateMandatoryInputs();
   }
 
   callTypeDropdown.onChange = handleCallTypeChange;
@@ -470,7 +465,6 @@ export function initAutoIdPanel({
     draggingKey = null;
     document.removeEventListener('mousemove', onMarkerDrag);
     refreshHover();
-    validateMandatoryInputs();
   }
 
   function setMarkerAt(key, freq, time) {
@@ -486,7 +480,6 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     updateDerived();
     updateMarkers();
-    validateMandatoryInputs();
   }
 
   function removeMarker(key) {
@@ -524,7 +517,6 @@ export function initAutoIdPanel({
       el.value = "";
       delete el.dataset.time;
       el.classList.remove('active-get');
-      el.classList.remove('invalid');
     });
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
@@ -533,7 +525,6 @@ export function initAutoIdPanel({
     active = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
-    showValidation = false;
   }
 
   function reset() {
@@ -556,7 +547,6 @@ export function initAutoIdPanel({
       el.value = "";
       delete el.dataset.time;
       el.classList.remove('active-get');
-      el.classList.remove('invalid');
     });
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
@@ -572,7 +562,6 @@ export function initAutoIdPanel({
     active = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
-    showValidation = false;
   }
   viewer.addEventListener('click', (e) => {
     if (!active) return;
@@ -624,57 +613,27 @@ export function initAutoIdPanel({
   function showPlaceholderResult() {
     if (resultEl) resultEl.textContent = '-';
   }
-
-  function validateMandatoryInputs(forceShow = false) {
-    if (forceShow) showValidation = true;
-    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
-    const requiredMap = {
-      'CF-FM': ['cfStart', 'cfEnd'],
-      'FM-CF-FM': ['cfStart', 'cfEnd'],
-      'FM': ['high', 'low'],
-      'FM-QCF': ['high', 'low', 'knee'],
-      'QCF': ['high', 'low'],
-    };
-    const required = requiredMap[callType] || [];
-    let allValid = true;
-    Object.entries(inputs).forEach(([key, el]) => {
-      if (!el) return;
-      if (required.includes(key)) {
-        const val = parseFloat(el.value);
-        const isValid = !isNaN(val);
-        if (showValidation) {
-          el.classList.toggle('invalid', !isValid);
-        }
-        if (!isValid) allValid = false;
-      } else if (showValidation) {
-        el.classList.remove('invalid');
-      }
-    });
-    return allValid;
-  }
   function runPulseId() {
-    if (!validateMandatoryInputs(true)) {
-      if (resultEl) resultEl.textContent = "-";
-      return;
-    }
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
+    let valid = true;
+    if (callType === 'CF-FM' || callType === 'FM-CF-FM') {
+      valid = !isNaN(high);
+    } else if (callType === 'QCF') {
+      valid = !isNaN(low);
+    }
+    if (!valid) {
+      if (resultEl) resultEl.textContent = "-";
+      return;
+    }
     const res = autoIdHK({ callType, highFreq: high, lowFreq: low });
     if (resultEl) resultEl.innerHTML = formatSpeciesResult(res);
   }
 
 
-  function runSequenceId() {
-    if (!validateMandatoryInputs(true)) {
-      if (resultEl) resultEl.textContent = '-';
-      return;
-    }
-    showPlaceholderResult();
-  }
-
   pulseIdBtn?.addEventListener('click', runPulseId);
-  sequenceIdBtn?.addEventListener('click', runSequenceId);
+  sequenceIdBtn?.addEventListener('click', showPlaceholderResult);
 
   return {
     updateMarkers,
