@@ -447,11 +447,15 @@ export function initFrequencyHover({
 
         const viewerRect = viewer.getBoundingClientRect();
         const scrollLeft = viewer.scrollLeft || 0;
-        const mouseX = e.clientX - viewerRect.left + scrollLeft;
-        const mouseY = e.clientY - viewerRect.top;
+        let mouseX = e.clientX - viewerRect.left + scrollLeft;
+        let mouseY = e.clientY - viewerRect.top;
 
         const actualWidth = getDuration() * getZoomLevel();
         const freqRange = maxFrequency - minFrequency;
+
+        // Clamp to spectrogram bounds
+        mouseX = Math.min(Math.max(mouseX, 0), actualWidth);
+        mouseY = Math.min(Math.max(mouseY, 0), spectrogramHeight);
 
         if (lockedHorizontal === 'left') {
           let newStartTime = (mouseX / actualWidth) * getDuration();
