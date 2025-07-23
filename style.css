@@ -1751,7 +1751,3 @@ input.tag-button.editing {
 .freq-menu-item.disabled:hover {
   background-color: transparent;
 }
-
-.freq-menu-item.delete {
-  color: red;
-}
