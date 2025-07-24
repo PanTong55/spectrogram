@@ -69,6 +69,25 @@ const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
+
+const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+if (isMobileDevice) {
+  alert('SonoRadar is optimized for desktop use. Android devices support viewer functionality only.');
+  [
+    'toggleSidebarBtn',
+    'toggleTagModeBtn',
+    'autoIdBtn',
+    'exportBtn',
+    'mapBtn',
+    'setting',
+    'spectrogram-settings',
+    'sidebar'
+  ]
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('mobile-hidden');
+    });
+}
 function updateExpandBackBtn() {
   const count = expandHistory.length;
   expandBackBtn.style.display = count > 0 ? 'inline-flex' : 'none';
