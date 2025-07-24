@@ -37,6 +37,7 @@ export function initAutoIdPanel({
   const tabData = Array.from({ length: TAB_COUNT }, () => ({
     callType: 3,
     harmonic: 0,
+    result: null,
     inputs: {
       start: "",
       end: "",
@@ -105,6 +106,11 @@ export function initAutoIdPanel({
 
   const callTypeDropdown = initDropdown('callTypeInput', ['CF-FM','FM-CF-FM','FM','FM-QCF','QCF']);
   const harmonicDropdown = initDropdown('harmonicInput', ['0','1','2','3']);
+  function handleHarmonicChange(value, idx) {
+    tabData[currentTab].harmonic = idx;
+    if (!suppressResultReset) clearResult();
+  }
+  harmonicDropdown.onChange = handleHarmonicChange;
   if (tabsContainer) {
     for (let i = 0; i < TAB_COUNT; i++) {
       const t = document.createElement("button");
@@ -176,6 +182,25 @@ export function initAutoIdPanel({
   let draggingKey = null;
   let markersEnabled = true;
   let showValidation = false;
+  let suppressResultReset = false;
+
+  function updateResultDisplay() {
+    const res = tabData[currentTab].result;
+    if (resultEl) {
+      if (res) {
+        resultEl.innerHTML = formatSpeciesResult(res);
+      } else {
+        resultEl.textContent = '-';
+      }
+    }
+  }
+
+  function clearResult() {
+    if (tabData[currentTab].result != null) {
+      tabData[currentTab].result = null;
+      updateResultDisplay();
+    }
+  }
   function saveCurrentTab() {
     const data = tabData[currentTab];
     data.callType = callTypeDropdown.selectedIndex;
@@ -190,8 +215,10 @@ export function initAutoIdPanel({
   function loadTab(idx) {
     const data = tabData[idx];
     markers = data.markers;
+    suppressResultReset = true;
     callTypeDropdown.select(data.callType);
     harmonicDropdown.select(data.harmonic);
+    suppressResultReset = false;
     Object.keys(inputs).forEach(k => {
       inputs[k].value = data.inputs[k] || "" ;
       if (data.markers[k].time != null) {
@@ -204,6 +231,7 @@ export function initAutoIdPanel({
     endTime = data.endTime;
     updateDerived();
     updateMarkers();
+    updateResultDisplay();
   }
 
   function switchTab(idx) {
@@ -253,6 +281,7 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     updateDerived();
     updateMarkers();
+    clearResult();
     validateMandatoryInputs();
   }
 
@@ -288,6 +317,7 @@ export function initAutoIdPanel({
     toggleRow('cfStart', !hideCf);
     toggleRow('cfEnd', !hideCf);
     tabData[currentTab].callType = idx;
+    if (!suppressResultReset) clearResult();
     updateDerived();
     updateLines();
     validateMandatoryInputs();
@@ -474,6 +504,7 @@ export function initAutoIdPanel({
     document.removeEventListener('mousemove', onMarkerDrag);
     refreshHover();
     validateMandatoryInputs();
+    clearResult();
   }
 
   function setMarkerAt(key, freq, time) {
@@ -489,6 +520,7 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     updateDerived();
     updateMarkers();
+    clearResult();
     validateMandatoryInputs();
   }
 
@@ -504,6 +536,7 @@ export function initAutoIdPanel({
   function resetTabData(tab) {
     tab.callType = 3;
     tab.harmonic = 0;
+    tab.result = null;
     Object.keys(tab.inputs).forEach(k => { tab.inputs[k] = ""; });
     tab.startTime = null;
     tab.endTime = null;
@@ -535,6 +568,7 @@ export function initAutoIdPanel({
     startTime = null;
     endTime = null;
     active = null;
+    tabData[currentTab].result = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
   }
@@ -544,6 +578,7 @@ export function initAutoIdPanel({
     tabData.forEach(d => {
       d.callType = 3;
       d.harmonic = 0;
+      d.result = null;
       Object.keys(d.inputs).forEach(k => { d.inputs[k] = ""; });
       d.startTime = null;
       d.endTime = null;
@@ -600,6 +635,7 @@ export function initAutoIdPanel({
     setMarkerInteractivity(true);
     updateDerived();
     updateMarkers();
+    clearResult();
   });
 
   viewer.addEventListener('scroll', updateMarkers);
@@ -625,7 +661,7 @@ export function initAutoIdPanel({
   }
 
   function showPlaceholderResult() {
-    if (resultEl) resultEl.textContent = '-';
+    updateResultDisplay();
   }
 
   function validateMandatoryInputs(forceShow = false) {
@@ -670,7 +706,8 @@ export function initAutoIdPanel({
       duration = (markers.low.time - markers.high.time) * 1000;
     }
     const res = autoIdHK({ callType, cfStart, duration, lowFreq: low });
-    if (resultEl) resultEl.innerHTML = formatSpeciesResult(res);
+    tabData[currentTab].result = res;
+    updateResultDisplay();
   }
 
 
@@ -679,6 +716,7 @@ export function initAutoIdPanel({
       if (resultEl) resultEl.textContent = '-';
       return;
     }
+    tabData[currentTab].result = null;
     showPlaceholderResult();
   }
 
