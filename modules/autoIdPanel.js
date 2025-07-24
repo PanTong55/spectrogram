@@ -256,6 +256,12 @@ export function initAutoIdPanel({
     el.dataset.key = key;
     el.readOnly = true;
     el.addEventListener('click', () => {
+      if (active === el) {
+        el.classList.remove('active-get');
+        active = null;
+        setMarkerInteractivity(true);
+        return;
+      }
       if (active) active.classList.remove('active-get');
       active = el;
       el.classList.add('active-get');
