@@ -88,7 +88,9 @@ if (isMobileDevice) {
       if (el) el.classList.add('mobile-hidden');
     });
   requestAnimationFrame(() => {
-    alert('SonoRadar is optimized for desktop use. Android devices support viewer functionality only.');
+    requestAnimationFrame(() => {
+      alert('SonoRadar is optimized for desktop use. Android devices support viewer functionality only.');
+    });
   });
 }
 function updateExpandBackBtn() {
