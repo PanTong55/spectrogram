@@ -418,7 +418,10 @@ export function initAutoIdPanel({
       const isLastSegment = (i === points.length - 2);
       const yDiff = Math.abs(p1.y - p2.y);
   
-      if (isLastSegment && yDiff < 5) {
+      if (p1.key === 'cfStart' && p2.key === 'cfEnd') {
+        // CF start到CF end間保持直線，無弧度
+        d += ` L ${p2.x} ${p2.y}`;
+      } else if (isLastSegment && yDiff < 5) {
         // 最後一段且Y差小於5px → 使用L形直線
         d += ` L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
       } else {
