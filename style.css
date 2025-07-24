@@ -15,11 +15,6 @@ html, body {
   user-select: none;
 }
 
-/* Hide elements on mobile devices */
-.mobile-hidden {
-  display: none !important;
-}
-
 /* === Viewer 結構 === */
 #viewer-wrapper {
   position: relative;
