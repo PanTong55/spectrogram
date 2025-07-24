@@ -661,9 +661,15 @@ export function initAutoIdPanel({
       return;
     }
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
-    const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
-    const res = autoIdHK({ callType, highFreq: high, lowFreq: low });
+    const cfStart = parseFloat(inputs.cfStart.value);
+    let duration = null;
+    if (startTime != null && endTime != null) {
+      duration = (endTime - startTime) * 1000;
+    } else if (markers.high.time != null && markers.low.time != null) {
+      duration = (markers.low.time - markers.high.time) * 1000;
+    }
+    const res = autoIdHK({ callType, cfStart, duration, lowFreq: low });
     if (resultEl) resultEl.innerHTML = formatSpeciesResult(res);
   }
 

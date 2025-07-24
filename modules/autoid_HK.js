@@ -1,16 +1,25 @@
 // modules/autoid_HK.js
 
-export function autoIdHK({ callType, highFreq, lowFreq }) {
+export function autoIdHK({ callType, cfStart, duration, lowFreq }) {
   let result = '-';
   if (callType === 'CF-FM') {
-    if (highFreq >= 120 && highFreq <= 130) result = 'Hipposideros gentilis';
-    else if (highFreq >= 60 && highFreq <= 70) result = 'Hipposideros armiger';
-    else result = 'Hipposideros sp.';
+    if (cfStart >= 120 && cfStart <= 130 && duration >= 5 && duration <= 10) {
+      result = 'Hipposideros gentilis';
+    } else if (cfStart >= 60 && cfStart <= 70 && duration >= 10 && duration <= 18) {
+      result = 'Hipposideros armiger';
+    } else {
+      result = 'Hipposideros sp.';
+    }
   } else if (callType === 'FM-CF-FM') {
-    if (highFreq >= 100 && highFreq <= 110) result = 'Rhinolophus pusillus';
-    else if (highFreq >= 75 && highFreq <= 85) result = 'Rhinolophus sinicus';
-    else if (highFreq >= 65 && highFreq <= 75) result = 'Rhinolophus affinis';
-    else result = 'Rhinolophus sp.';
+    if (cfStart >= 100 && cfStart <= 110 && duration >= 30 && duration <= 70) {
+      result = 'Rhinolophus pusillus';
+    } else if (cfStart >= 75 && cfStart <= 87 && duration >= 30 && duration <= 70) {
+      result = 'Rhinolophus sinicus';
+    } else if (cfStart >= 68 && cfStart <= 75 && duration >= 30 && duration <= 80) {
+      result = 'Rhinolophus affinis';
+    } else {
+      result = 'Rhinolophus sp.';
+    }
   } else if (callType === 'QCF') {
     if (lowFreq >= 39 && lowFreq <= 42) result = '<i>Pipistrellus tenuis</i>';
     else if (lowFreq >= 44 && lowFreq <= 46) result = '<i>Pipistrellus abramus</i>';
