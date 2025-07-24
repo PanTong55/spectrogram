@@ -38,6 +38,7 @@ export function initAutoIdPanel({
     callType: 3,
     harmonic: 0,
     result: null,
+    showValidation: false,
     inputs: {
       start: "",
       end: "",
@@ -181,7 +182,6 @@ export function initAutoIdPanel({
   let endTime = null;
   let draggingKey = null;
   let markersEnabled = true;
-  let showValidation = false;
   let suppressResultReset = false;
 
   function updateResultDisplay() {
@@ -232,6 +232,7 @@ export function initAutoIdPanel({
     updateDerived();
     updateMarkers();
     updateResultDisplay();
+    validateMandatoryInputs();
   }
 
   function switchTab(idx) {
@@ -537,6 +538,7 @@ export function initAutoIdPanel({
     tab.callType = 3;
     tab.harmonic = 0;
     tab.result = null;
+    tab.showValidation = false;
     Object.keys(tab.inputs).forEach(k => { tab.inputs[k] = ""; });
     tab.startTime = null;
     tab.endTime = null;
@@ -552,7 +554,7 @@ export function initAutoIdPanel({
   }
 
   function resetCurrentTab() {
-    showValidation = false;
+    tabData[currentTab].showValidation = false;
     resetTabData(tabData[currentTab]);
     callTypeDropdown.select(3);
     harmonicDropdown.select(0);
@@ -574,8 +576,8 @@ export function initAutoIdPanel({
   }
 
   function reset() {
-    showValidation = false;
     tabData.forEach(d => {
+      d.showValidation = false;
       d.callType = 3;
       d.harmonic = 0;
       d.result = null;
@@ -665,7 +667,9 @@ export function initAutoIdPanel({
   }
 
   function validateMandatoryInputs(forceShow = false) {
-    if (forceShow) showValidation = true;
+    const tab = tabData[currentTab];
+    if (forceShow) tab.showValidation = true;
+    const showValidation = tab.showValidation;
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const requiredMap = {
       'CF-FM': ['cfStart', 'cfEnd'],
@@ -683,9 +687,11 @@ export function initAutoIdPanel({
         const isValid = !isNaN(val);
         if (showValidation) {
           el.classList.toggle('invalid', !isValid);
+        } else {
+          el.classList.remove('invalid');
         }
         if (!isValid) allValid = false;
-      } else if (showValidation) {
+      } else {
         el.classList.remove('invalid');
       }
     });
