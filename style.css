@@ -619,6 +619,9 @@ input[type="file"]:hover {
   cursor: pointer;
   margin-left: 4px;
 }
+#auto-id-panel .panel-reset-btn:hover i {
+  color: #000;
+}
 
 #auto-id-panel .panel-reset-btn i {
   color: #555;
@@ -646,6 +649,10 @@ input[type="file"]:hover {
   height: 23px;
   padding: 2px 6px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+#auto-id-panel .autoid-input:hover {
+  background-color: #f0f0f0;
 }
 #auto-id-panel .autoid-input:disabled {
   background-color: #eee;
@@ -737,6 +744,9 @@ input[type="file"]:hover {
   border: none;
   cursor: pointer;
   padding: 0;
+}
+#auto-id-panel .autoid-marker:hover {
+  color: #000;
 }
 #auto-id-panel .autoid-marker:disabled {
   color: #aaa;
@@ -1013,6 +1023,7 @@ input.tag-button {
   text-align: center;
   cursor: pointer;
   padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Hover effect for tag buttons */
