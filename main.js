@@ -694,16 +694,16 @@ const fftSizeDropdown = initDropdown('fftSizeInput', [
 fftSizeDropdown.select(1);
 
 const windowTypeDropdown = initDropdown('windowTypeInput', [
-  { label: 'bartlett', value: 'bartlett' },
-  { label: 'bartlettHann', value: 'bartlettHann' },
-  { label: 'blackman', value: 'blackman' },
-  { label: 'cosine', value: 'cosine' },
-  { label: 'gauss', value: 'gauss' },
-  { label: 'hamming', value: 'hamming' },
-  { label: 'hann', value: 'hann' },
-  { label: 'lanczoz', value: 'lanczoz' },
-  { label: 'rectangular', value: 'rectangular' },
-  { label: 'triangular', value: 'triangular' },
+  { label: 'Bartlett', value: 'bartlett' },
+  { label: 'BartlettHann', value: 'bartlettHann' },
+  { label: 'Blackman', value: 'blackman' },
+  { label: 'Cosine', value: 'cosine' },
+  { label: 'Gauss', value: 'gauss' },
+  { label: 'Hamming', value: 'hamming' },
+  { label: 'Hann', value: 'hann' },
+  { label: 'Lanczoz', value: 'lanczoz' },
+  { label: 'Rectangular', value: 'rectangular' },
+  { label: 'Triangular', value: 'triangular' },
 ], { onChange: (item) => handleWindowType(item.value) });
 windowTypeDropdown.select(6);
 
