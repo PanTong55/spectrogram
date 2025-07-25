@@ -701,7 +701,7 @@ const windowTypeDropdown = initDropdown('windowTypeInput', [
   { label: 'Rectangular', value: 'rectangular' },
   { label: 'Triangular', value: 'triangular' },
 ], { onChange: (item) => handleWindowType(item.value) });
-windowTypeDropdown.select(6);
+windowTypeDropdown.select(3);
 
 const overlapInput = document.getElementById('overlapInput');
 overlapInput.value = '';
