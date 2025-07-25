@@ -563,8 +563,8 @@ viewer.addEventListener('fit-window-selection', async (e) => {
       selectionExpandMode = true;
       zoomControl.setZoomLevel(0);
       sampleRateBtn.disabled = true;
-      freqMinInput.value = Flow.toFixed(1);
-      freqMaxInput.value = Fhigh.toFixed(1);
+      freqMinInput.value = formatFreqValue(Flow);
+      freqMaxInput.value = formatFreqValue(Fhigh);
       updateFrequencyRange(Flow, Fhigh);
       freqHoverControl?.hideHover();
       freqHoverControl?.clearSelections();
@@ -759,6 +759,12 @@ function getOverlapPercent() {
 if (currentOverlap === 'auto') return null;
 const parsed = parseInt(currentOverlap, 10);
 return isNaN(parsed) ? null : parsed;
+}
+
+function formatFreqValue(value) {
+  return Math.abs(value - Math.round(value)) < 0.001
+    ? String(Math.round(value))
+    : value.toFixed(1);
 }
 
 applyFreqRangeBtn.addEventListener('click', () => {
@@ -1032,8 +1038,8 @@ expandBackBtn.addEventListener('click', async () => {
     freqHoverControl?.clearSelections();
   }
 
-  freqMinInput.value = prevMin.toFixed(1);
-  freqMaxInput.value = prevMax.toFixed(1);
+  freqMinInput.value = formatFreqValue(prevMin);
+  freqMaxInput.value = formatFreqValue(prevMax);
   updateFrequencyRange(prevMin, prevMax);
 
   updateExpandBackBtn();
