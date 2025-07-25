@@ -704,6 +704,8 @@ const windowTypeDropdown = initDropdown('windowTypeInput', [
   { label: 'Lanczoz', value: 'lanczoz' },
   { label: 'Rectangular', value: 'rectangular' },
   { label: 'Triangular', value: 'triangular' },
+  { label: 'Blackman-Harris (7-term)', value: 'blackmanHarris7' },
+  { label: 'Flattop', value: 'flattop' },
 ], { onChange: (item) => handleWindowType(item.value) });
 windowTypeDropdown.select(6);
 
