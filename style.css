@@ -1127,6 +1127,7 @@ input.tag-button.editing {
 /* Set fixed width for Window Type dropdown */
 #windowTypeInput.dropdown-button {
   width: 100px;
+  text-align: left;
   display: inline-block;
   overflow: hidden;
   white-space: nowrap;
