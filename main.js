@@ -53,6 +53,7 @@ let currentFreqMax = 128;
 let currentSampleRate = 256000;
 let selectedSampleRate = 'auto';
 let currentFftSize = 1024;
+let currentWindowType = 'hann';
 let currentOverlap = 'auto';
 let overlapWarningShown = false;
 let freqHoverControl = null;
@@ -692,6 +693,20 @@ const fftSizeDropdown = initDropdown('fftSizeInput', [
 ], { onChange: (item) => handleFftSize(item.value) });
 fftSizeDropdown.select(1);
 
+const windowTypeDropdown = initDropdown('windowTypeInput', [
+  { label: 'bartlett', value: 'bartlett' },
+  { label: 'bartlettHann', value: 'bartlettHann' },
+  { label: 'blackman', value: 'blackman' },
+  { label: 'cosine', value: 'cosine' },
+  { label: 'gauss', value: 'gauss' },
+  { label: 'hamming', value: 'hamming' },
+  { label: 'hann', value: 'hann' },
+  { label: 'lanczoz', value: 'lanczoz' },
+  { label: 'rectangular', value: 'rectangular' },
+  { label: 'triangular', value: 'triangular' },
+], { onChange: (item) => handleWindowType(item.value) });
+windowTypeDropdown.select(6);
+
 const overlapInput = document.getElementById('overlapInput');
 overlapInput.value = '';
 overlapInput.addEventListener('change', () => {
@@ -732,7 +747,7 @@ function updateSpectrogramSettingsText() {
   const sampleRate = currentSampleRate;
   const fftSize = currentFftSize;
   const overlap = getOverlapPercent();
-  const windowType = 'Hanning';
+  const windowType = currentWindowType.charAt(0).toUpperCase() + currentWindowType.slice(1);
 
   const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
   if (textElem) {
@@ -785,25 +800,49 @@ document.getElementById('fileInput').click();
 });
 
 function handleFftSize(size) {
-currentFftSize = size;
-const colorMap = getCurrentColorMap();
-freqHoverControl?.hideHover();
-replacePlugin(
-colorMap,
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
-() => {
-duration = getWavesurfer().getDuration();
-zoomControl.applyZoom();
-  renderAxes();
-  freqHoverControl?.refreshHover();
-  autoIdControl?.updateMarkers();
-},
-currentFftSize
-);
-updateSpectrogramSettingsText();
+  currentFftSize = size;
+  const colorMap = getCurrentColorMap();
+  freqHoverControl?.hideHover();
+  replacePlugin(
+    colorMap,
+    spectrogramHeight,
+    currentFreqMin,
+    currentFreqMax,
+    getOverlapPercent(),
+    () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+      freqHoverControl?.refreshHover();
+      autoIdControl?.updateMarkers();
+    },
+    currentFftSize,
+    currentWindowType
+  );
+  updateSpectrogramSettingsText();
+}
+
+function handleWindowType(type) {
+  currentWindowType = type;
+  const colorMap = getCurrentColorMap();
+  freqHoverControl?.hideHover();
+  replacePlugin(
+    colorMap,
+    spectrogramHeight,
+    currentFreqMin,
+    currentFreqMax,
+    getOverlapPercent(),
+    () => {
+      duration = getWavesurfer().getDuration();
+      zoomControl.applyZoom();
+      renderAxes();
+      freqHoverControl?.refreshHover();
+      autoIdControl?.updateMarkers();
+    },
+    currentFftSize,
+    currentWindowType
+  );
+  updateSpectrogramSettingsText();
 }
 
 function handleOverlapChange() {
