@@ -7,6 +7,7 @@ let ws = null;
 let plugin = null;
 let currentColorMap = null;
 let currentFftSize = 1024;
+let currentWindowType = 'hann';
 
 export function initWavesurfer({
   container,
@@ -32,6 +33,7 @@ export function createSpectrogramPlugin({
   frequencyMax = 128,
   fftSamples = 1024,
   noverlap = null,
+  windowFunc = 'hann',
 }) {
   const baseOptions = {
     labels: false,
@@ -40,7 +42,7 @@ export function createSpectrogramPlugin({
     frequencyMin: frequencyMin * 1000,
     frequencyMax: frequencyMax * 1000,
     scale: 'linear',
-    windowFunc: 'hann',
+    windowFunc,
     colorMap,
   };
 
@@ -58,7 +60,8 @@ export function replacePlugin(
   frequencyMax = 128,
   overlapPercent = null,
   onRendered = null,  // ✅ 傳入 callback
-  fftSamples = currentFftSize
+  fftSamples = currentFftSize,
+  windowFunc = currentWindowType
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
@@ -71,6 +74,7 @@ export function replacePlugin(
   currentColorMap = colorMap;
 
   currentFftSize = fftSamples;
+  currentWindowType = windowFunc;
   const noverlap = overlapPercent !== null
     ? Math.floor(fftSamples * (overlapPercent / 100))
     : null;
@@ -82,6 +86,7 @@ export function replacePlugin(
     frequencyMax,
     fftSamples,
     noverlap,
+    windowFunc,
   });
 
   ws.registerPlugin(plugin);
@@ -110,6 +115,10 @@ export function getCurrentColorMap() {
 
 export function getCurrentFftSize() {
   return currentFftSize;
+}
+
+export function getCurrentWindowType() {
+  return currentWindowType;
 }
 
 export function initScrollSync({
