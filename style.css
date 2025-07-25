@@ -1124,6 +1124,15 @@ input.tag-button.editing {
   border-top: 6px solid #333;
 }
 
+/* Set fixed width for Window Type dropdown */
+#windowTypeInput.dropdown-button {
+  width: 100px;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .dropdown-menu {
   position: absolute;
   display: none;
