@@ -37,6 +37,7 @@ export function initFrequencyHover({
   let startX = 0, startY = 0;
   let selectionRect = null;
   let lastClientX = null, lastClientY = null;
+  let isCursorInside = false;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -45,8 +46,9 @@ export function initFrequencyHover({
   };
 
   const updateHoverDisplay = (e) => {
+    isCursorInside = true;
     lastClientX = e.clientX;
-    lastClientY = e.clientY;    
+    lastClientY = e.clientY;
     if (suppressHover || isResizing || isOverBtnGroup) {
       hideAll();
       return;
@@ -97,9 +99,9 @@ export function initFrequencyHover({
   };
 
   viewer.addEventListener('mousemove', updateHoverDisplay, { passive: true });
-  wrapper.addEventListener('mouseleave', hideAll);
-  viewer.addEventListener('mouseenter', () => viewer.classList.add('hide-cursor'));
-  viewer.addEventListener('mouseleave', () => viewer.classList.remove('hide-cursor'));
+  wrapper.addEventListener('mouseleave', () => { isCursorInside = false; hideAll(); });
+  viewer.addEventListener('mouseenter', () => { viewer.classList.add('hide-cursor'); isCursorInside = true; });
+  viewer.addEventListener('mouseleave', () => { viewer.classList.remove('hide-cursor'); isCursorInside = false; });
 
   const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
@@ -576,7 +578,7 @@ export function initFrequencyHover({
     },
     hideHover: hideAll,
     refreshHover: () => {
-      if (lastClientX !== null && lastClientY !== null) {
+      if (lastClientX !== null && lastClientY !== null && isCursorInside) {
         updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
       }
     },
