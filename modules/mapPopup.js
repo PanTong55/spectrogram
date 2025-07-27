@@ -19,6 +19,18 @@ export function initMapPopup({
   if (!btn || !popup || !mapDiv) return;
   mapDiv.style.cursor = 'default';
 
+  function stopMapInteractions(e) {
+    if (e.target.closest('button') ||
+        e.target.closest('a') ||
+        e.target.closest('.coord-scale-wrapper')) {
+      e.stopPropagation();
+    }
+  }
+  mapDiv.addEventListener('pointerdown', stopMapInteractions, true);
+  mapDiv.addEventListener('click', stopMapInteractions, true);
+  mapDiv.addEventListener('dblclick', stopMapInteractions, true);
+  mapDiv.addEventListener('contextmenu', stopMapInteractions, true);
+
   const edgeThreshold = 5;
 
   function getEdgeState(clientX, clientY) {
