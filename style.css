@@ -1508,22 +1508,6 @@ input.tag-button.editing {
   color: #363636;
 }
 
-/* Export button */
-.leaflet-export-control a {
-  width: 26px;
-  height: 26px;
-  line-height: 26px;
-  text-align: center;
-}
-
-.leaflet-export-control {
-  margin-top: 1px !important;
-}
-
-.leaflet-export-control a i {
-  color: #363636;
-}
-
 /* Text label style */
 .map-text-icon {
   background: none !important;
