@@ -316,6 +316,9 @@ export function initMapPopup({
         toggle.title = 'Route options';
         toggle.innerHTML = '<i class="fa-solid fa-route"></i>';
         routeToggleBtn = toggle;
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(container, 'mousedown', L.DomEvent.stopPropagation);
+        L.DomEvent.on(container, 'dblclick', L.DomEvent.stopPropagation);
 
         routeBtnGroup = L.DomUtil.create('div', 'route-button-group', container);
         routeBtnGroup.style.display = 'none';
@@ -326,6 +329,8 @@ export function initMapPopup({
         createLink.innerHTML = '<i class="fa-solid fa-eye"></i>';
         routeBtn = createLink;
         L.DomEvent.on(createLink, 'click', L.DomEvent.stop)
+          .on(createLink, 'mousedown', L.DomEvent.stopPropagation)
+          .on(createLink, 'dblclick', L.DomEvent.stopPropagation)
           .on(createLink, 'click', toggleRoute);
 
         const importLink = L.DomUtil.create('a', '', routeBtnGroup);
@@ -334,6 +339,8 @@ export function initMapPopup({
         importLink.innerHTML = '<i class="fa-solid fa-file-import"></i>';
         importBtn = importLink;
         L.DomEvent.on(importLink, 'click', L.DomEvent.stop)
+          .on(importLink, 'mousedown', L.DomEvent.stopPropagation)
+          .on(importLink, 'dblclick', L.DomEvent.stopPropagation)
           .on(importLink, 'click', () => { kmlInput.value = ''; kmlInput.click(); });
 
         const clearLink = L.DomUtil.create('a', '', routeBtnGroup);
@@ -342,9 +349,13 @@ export function initMapPopup({
         clearLink.innerHTML = '<i class="fa-solid fa-trash"></i>';
         clearKmlBtn = clearLink;
         L.DomEvent.on(clearLink, 'click', L.DomEvent.stop)
+          .on(clearLink, 'mousedown', L.DomEvent.stopPropagation)
+          .on(clearLink, 'dblclick', L.DomEvent.stopPropagation)
           .on(clearLink, 'click', clearKmlRoute);
 
         L.DomEvent.on(toggle, 'click', L.DomEvent.stop)
+          .on(toggle, 'mousedown', L.DomEvent.stopPropagation)
+          .on(toggle, 'dblclick', L.DomEvent.stopPropagation)
           .on(toggle, 'click', () => {
             const visible = routeBtnGroup.style.display === 'flex';
             routeBtnGroup.style.display = visible ? 'none' : 'flex';
@@ -365,7 +376,12 @@ export function initMapPopup({
         link.title = 'Text';
         link.innerHTML = '<i class="fa-solid fa-font"></i>';
         textBtn = link;
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(container, 'mousedown', L.DomEvent.stopPropagation);
+        L.DomEvent.on(container, 'dblclick', L.DomEvent.stopPropagation);
         L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'mousedown', L.DomEvent.stopPropagation)
+          .on(link, 'dblclick', L.DomEvent.stopPropagation)
           .on(link, 'click', toggleTextMode);
         return container;
       }
@@ -381,7 +397,12 @@ export function initMapPopup({
         link.title = 'Export Map';
         link.innerHTML = '<i class="fa-solid fa-file-export"></i>';
         exportBtn = link;
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(container, 'mousedown', L.DomEvent.stopPropagation);
+        L.DomEvent.on(container, 'dblclick', L.DomEvent.stopPropagation);
         L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'mousedown', L.DomEvent.stopPropagation)
+          .on(link, 'dblclick', L.DomEvent.stopPropagation)
           .on(link, 'click', exportMap);
         return container;
       }
@@ -397,7 +418,12 @@ export function initMapPopup({
         link.title = 'Draw';
         link.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
         drawBtn = link;
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(container, 'mousedown', L.DomEvent.stopPropagation);
+        L.DomEvent.on(container, 'dblclick', L.DomEvent.stopPropagation);
         L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'mousedown', L.DomEvent.stopPropagation)
+          .on(link, 'dblclick', L.DomEvent.stopPropagation)
           .on(link, 'click', toggleDrawControl);
         return container;
       }
