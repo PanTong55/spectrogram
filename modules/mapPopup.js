@@ -296,12 +296,22 @@ export function initMapPopup({
       });
 
     drawnItems = new L.FeatureGroup().addTo(map);
+    const canvasRenderer = L.canvas();
     drawControl = new L.Control.Draw({
       position: 'topleft',
       edit: { featureGroup: drawnItems },
-      draw: { circlemarker: false }
+      draw: {
+        circlemarker: false,
+        polyline: { shapeOptions: { renderer: canvasRenderer } },
+        polygon: { shapeOptions: { renderer: canvasRenderer } },
+        rectangle: { shapeOptions: { renderer: canvasRenderer } },
+        circle: { shapeOptions: { renderer: canvasRenderer } }
+      }
     });
     map.on(L.Draw.Event.CREATED, (e) => {
+      if (e.layer && e.layer instanceof L.Path) {
+        e.layer.options.renderer = canvasRenderer;
+      }
       drawnItems.addLayer(e.layer);
     });
 
