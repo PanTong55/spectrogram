@@ -1223,7 +1223,7 @@ input.tag-button.editing {
   line-height: 30px;
   border: none;
   background: transparent;
-  font-size: 18px;
+  font-size: 12px;
   cursor: pointer;
 }
 .popup-max-btn:hover {
