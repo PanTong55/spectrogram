@@ -842,8 +842,8 @@ export function initMapPopup({
       prevTop = popup.offsetTop;
       popup.style.left = '0px';
       popup.style.top = '0px';
-      popup.style.width = `${window.innerWidth}px`;
-      popup.style.height = `${window.innerHeight}px`;
+      popup.style.width = `${window.innerWidth -2}px`;
+      popup.style.height = `${window.innerHeight -2}px`;
       maxBtn.innerHTML = '<i class="fa-regular fa-clone"></i>';
       isMaximized = true;
     } else {
