@@ -68,7 +68,6 @@ export function initMapPopup({
   let clearKmlBtn = null;
   let drawBtn = null;
   let textBtn = null;
-  let exportBtn = null;
   let textMode = false;
   let textMarkers = [];
   let activeTextInput = null;
@@ -204,55 +203,34 @@ export function initMapPopup({
     const imageryAttr = { attribution: '&copy; HKSAR Government' };
     const landsdAttr = { attribution: '&copy; HKSAR Government' };
 
-    const streets = L.tileLayer(
-      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      { ...osmAttr, crossOrigin: 'anonymous' }
-    ).addTo(map);
-    const esriSatellite = L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-      { ...esriAttr, crossOrigin: 'anonymous' }
-    );
-    const cartoLight = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      { ...cartoAttr, crossOrigin: 'anonymous' }
-    );
-    const cartoDark = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      { ...cartoAttr, crossOrigin: 'anonymous' }
-    );
-    const googleStreets = L.tileLayer(
-      'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-      { ...googleAttr, crossOrigin: 'anonymous' }
-    );
-    const googleSatellite = L.tileLayer(
-      'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
-      { ...googleAttr, crossOrigin: 'anonymous' }
-    );
-    const googleHybrid = L.tileLayer(
-      'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-      { ...googleAttr, crossOrigin: 'anonymous' }
-    );
+    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', osmAttr).addTo(map);
+    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', esriAttr);
+    const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', cartoAttr);
+    const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', cartoAttr);
+    const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', googleAttr);
+    const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', googleAttr);
+    const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', googleAttr);
 
     const hkImageryLayer = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/imagery/wgs84/{z}/{x}/{y}.png',
-      { ...imageryAttr, minZoom: 0, maxZoom: 19, crossOrigin: 'anonymous' }
+      { ...imageryAttr, minZoom: 0, maxZoom: 19 }
     );
 
     const hkVectorBase = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/wgs84/{z}/{x}/{y}.png',
-      { ...landsdAttr, maxZoom: 20, minZoom: 10, crossOrigin: 'anonymous' }
+      { ...landsdAttr, maxZoom: 20, minZoom: 10 }
     );
 
     const hkVectorLabel = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/tc/wgs84/{z}/{x}/{y}.png',
-      { attribution: false, maxZoom: 20, minZoom: 0, crossOrigin: 'anonymous' }
+      { attribution: false, maxZoom: 20, minZoom: 0 }
     );
 
     // separate label layer is required for the imagery group so that
     // changing basemaps does not inadvertently remove the shared label layer
     const hkImageryLabel = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/tc/wgs84/{z}/{x}/{y}.png',
-      { attribution: false, maxZoom: 20, minZoom: 0, crossOrigin: 'anonymous' }
+      { attribution: false, maxZoom: 20, minZoom: 0 }
     );
 
     const hkVectorGroup = L.layerGroup([hkVectorBase, hkVectorLabel]);
@@ -370,22 +348,6 @@ export function initMapPopup({
       }
     });
     map.addControl(new TextToggleControl());
-
-    const ExportControl = L.Control.extend({
-      options: { position: 'topleft' },
-      onAdd() {
-        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-export-control');
-        const link = L.DomUtil.create('a', '', container);
-        link.href = '#';
-        link.title = 'Export Map';
-        link.innerHTML = '<i class="fa-solid fa-file-export"></i>';
-        exportBtn = link;
-        L.DomEvent.on(link, 'click', L.DomEvent.stop)
-          .on(link, 'click', exportMap);
-        return container;
-      }
-    });
-    map.addControl(new ExportControl());
 
     const DrawToggleControl = L.Control.extend({
       options: { position: 'topleft' },
@@ -585,31 +547,6 @@ export function initMapPopup({
       drawBtn?.classList.add('active');
       drawControlVisible = true;
     }
-  }
-
-  function exportMap() {
-    if (!map) return;
-    const container = map.getContainer();
-    const width = container.offsetWidth;
-    const height = container.offsetHeight;
-    const clone = container.cloneNode(true);
-    const wrapper = document.createElement('div');
-    wrapper.appendChild(clone);
-    const serialized = new XMLSerializer().serializeToString(wrapper);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${serialized}</foreignObject></svg>`;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = 'map.png';
-      a.click();
-    };
-    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
   function escapeHtml(str) {
