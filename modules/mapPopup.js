@@ -68,6 +68,7 @@ export function initMapPopup({
   let clearKmlBtn = null;
   let drawBtn = null;
   let textBtn = null;
+  let exportBtn = null;
   let textMode = false;
   let textMarkers = [];
   let activeTextInput = null;
@@ -203,34 +204,55 @@ export function initMapPopup({
     const imageryAttr = { attribution: '&copy; HKSAR Government' };
     const landsdAttr = { attribution: '&copy; HKSAR Government' };
 
-    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', osmAttr).addTo(map);
-    const esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', esriAttr);
-    const cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', cartoAttr);
-    const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', cartoAttr);
-    const googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', googleAttr);
-    const googleSatellite = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', googleAttr);
-    const googleHybrid = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', googleAttr);
+    const streets = L.tileLayer(
+      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      { ...osmAttr, crossOrigin: 'anonymous' }
+    ).addTo(map);
+    const esriSatellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { ...esriAttr, crossOrigin: 'anonymous' }
+    );
+    const cartoLight = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      { ...cartoAttr, crossOrigin: 'anonymous' }
+    );
+    const cartoDark = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      { ...cartoAttr, crossOrigin: 'anonymous' }
+    );
+    const googleStreets = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+      { ...googleAttr, crossOrigin: 'anonymous' }
+    );
+    const googleSatellite = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+      { ...googleAttr, crossOrigin: 'anonymous' }
+    );
+    const googleHybrid = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+      { ...googleAttr, crossOrigin: 'anonymous' }
+    );
 
     const hkImageryLayer = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/imagery/wgs84/{z}/{x}/{y}.png',
-      { ...imageryAttr, minZoom: 0, maxZoom: 19 }
+      { ...imageryAttr, minZoom: 0, maxZoom: 19, crossOrigin: 'anonymous' }
     );
 
     const hkVectorBase = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/basemap/wgs84/{z}/{x}/{y}.png',
-      { ...landsdAttr, maxZoom: 20, minZoom: 10 }
+      { ...landsdAttr, maxZoom: 20, minZoom: 10, crossOrigin: 'anonymous' }
     );
 
     const hkVectorLabel = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/tc/wgs84/{z}/{x}/{y}.png',
-      { attribution: false, maxZoom: 20, minZoom: 0 }
+      { attribution: false, maxZoom: 20, minZoom: 0, crossOrigin: 'anonymous' }
     );
 
     // separate label layer is required for the imagery group so that
     // changing basemaps does not inadvertently remove the shared label layer
     const hkImageryLabel = L.tileLayer(
       'https://mapapi.geodata.gov.hk/gs/api/v1.0.0/xyz/label/hk/tc/wgs84/{z}/{x}/{y}.png',
-      { attribution: false, maxZoom: 20, minZoom: 0 }
+      { attribution: false, maxZoom: 20, minZoom: 0, crossOrigin: 'anonymous' }
     );
 
     const hkVectorGroup = L.layerGroup([hkVectorBase, hkVectorLabel]);
@@ -349,6 +371,22 @@ export function initMapPopup({
     });
     map.addControl(new TextToggleControl());
 
+    const ExportControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd() {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-export-control');
+        const link = L.DomUtil.create('a', '', container);
+        link.href = '#';
+        link.title = 'Export Map';
+        link.innerHTML = '<i class="fa-solid fa-file-export"></i>';
+        exportBtn = link;
+        L.DomEvent.on(link, 'click', L.DomEvent.stop)
+          .on(link, 'click', exportMap);
+        return container;
+      }
+    });
+    map.addControl(new ExportControl());
+
     const DrawToggleControl = L.Control.extend({
       options: { position: 'topleft' },
       onAdd() {
@@ -449,7 +487,12 @@ export function initMapPopup({
     clearKmlRoute();
     const allCoords = [];
     lines.forEach(coords => {
-      const line = L.polyline(coords, { color: 'deeppink', weight: 2, opacity: 0.8 }).addTo(map);
+      const line = L.polyline(coords, {
+        color: 'deeppink',
+        weight: 2,
+        opacity: 0.8,
+        renderer: L.canvas()
+      }).addTo(map);
       kmlPolylines.push(line);
       allCoords.push(...coords);
     });
@@ -510,14 +553,28 @@ export function initMapPopup({
       if (prev) {
         const dist = map.distance([prev.lat, prev.lon], [p.lat, p.lon]);
         if (dist >= 1000) {
-          if (current.length > 1) polylines.push(L.polyline(current, { color: 'black', weight: 2, opacity: 0.8 }).addTo(map));
+          if (current.length > 1) {
+            polylines.push(L.polyline(current, {
+              color: 'black',
+              weight: 2,
+              opacity: 0.8,
+              renderer: L.canvas()
+            }).addTo(map));
+          }
           current = [];
         }
       }
       current.push([p.lat, p.lon]);
       prev = p;
     });
-    if (current.length > 1) polylines.push(L.polyline(current, { color: 'black', weight: 2, opacity: 0.8 }).addTo(map));
+    if (current.length > 1) {
+      polylines.push(L.polyline(current, {
+        color: 'black',
+        weight: 2,
+        opacity: 0.8,
+        renderer: L.canvas()
+      }).addTo(map));
+    }
   }
 
   function toggleRoute() {
@@ -547,6 +604,31 @@ export function initMapPopup({
       drawBtn?.classList.add('active');
       drawControlVisible = true;
     }
+  }
+
+  function exportMap() {
+    if (!map || !window.html2canvas) return;
+    const container = map.getContainer();
+
+    const controlContainer = container.querySelector('.leaflet-control-container');
+    const controls = [];
+    if (controlContainer) {
+      controls.push(controlContainer);
+    }
+    if (coordScaleWrapper) {
+      controls.push(coordScaleWrapper);
+    }
+    controls.forEach(el => { el.style.display = 'none'; });
+
+    html2canvas(container, { useCORS: true }).then(canvas => {
+      controls.forEach(el => { el.style.display = ''; });
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = 'map.png';
+      a.click();
+    }).catch(() => {
+      controls.forEach(el => { el.style.display = ''; });
+    });
   }
 
   function escapeHtml(str) {
