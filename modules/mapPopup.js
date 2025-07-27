@@ -15,6 +15,7 @@ export function initMapPopup({
   const sidebar = document.getElementById('sidebar');
   const dragBar = popup.querySelector('.popup-drag-bar');
   const closeBtn = popup.querySelector('.popup-close-btn');
+  const maxBtn = popup.querySelector('.popup-max-btn');
   if (!btn || !popup || !mapDiv) return;
   mapDiv.style.cursor = 'default';
 
@@ -816,6 +817,7 @@ export function initMapPopup({
 
   function togglePopup() {
     if (popup.style.display === 'block') {
+      if (isMaximized) toggleMaximize();
       popup.style.display = 'none';
       document.body.classList.remove('map-open');
       if (textMode) toggleTextMode();
@@ -832,6 +834,29 @@ export function initMapPopup({
     }
   }
 
+  function toggleMaximize() {
+    if (!isMaximized) {
+      prevWidth = popup.offsetWidth;
+      prevHeight = popup.offsetHeight;
+      prevLeft = popup.offsetLeft;
+      prevTop = popup.offsetTop;
+      popup.style.left = '0px';
+      popup.style.top = '0px';
+      popup.style.width = `${window.innerWidth}px`;
+      popup.style.height = `${window.innerHeight}px`;
+      maxBtn.innerHTML = '<i class="fa-regular fa-clone"></i>';
+      isMaximized = true;
+    } else {
+      popup.style.width = `${prevWidth}px`;
+      popup.style.height = `${prevHeight}px`;
+      popup.style.left = `${prevLeft}px`;
+      popup.style.top = `${prevTop}px`;
+      maxBtn.innerHTML = '<i class="fa-regular fa-square"></i>';
+      isMaximized = false;
+    }
+    map?.invalidateSize();
+  }
+
   let dragging = false;
   let offsetX = 0;
   let offsetY = 0;
@@ -846,6 +871,11 @@ export function initMapPopup({
   let startHeight = 0;
   let startLeft = 0;
   let startTop = 0;
+  let isMaximized = false;
+  let prevWidth = 0;
+  let prevHeight = 0;
+  let prevLeft = 0;
+  let prevTop = 0;
 
   function disableUiPointerEvents() {
     if (viewer) {
@@ -864,6 +894,7 @@ export function initMapPopup({
 
   if (dragBar) {
     dragBar.addEventListener('mousedown', (e) => {
+      if (isMaximized) return;
       dragging = true;
       offsetX = e.clientX - popup.offsetLeft;
       offsetY = e.clientY - popup.offsetTop;
@@ -876,6 +907,7 @@ export function initMapPopup({
   }
 
   popup.addEventListener('mousemove', (e) => {
+    if (isMaximized) return;
     if (dragging || resizing) {
       e.stopPropagation();
       return;
@@ -898,6 +930,7 @@ export function initMapPopup({
   });
 
   popup.addEventListener('mousedown', (e) => {
+    if (isMaximized) return;
     if (e.target === dragBar || dragBar.contains(e.target)) return;
     const state = getEdgeState(e.clientX, e.clientY);
     if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
@@ -925,7 +958,7 @@ export function initMapPopup({
   });
 
   document.addEventListener('mousemove', (e) => {
-    if (popup.style.display !== 'block') return;
+    if (popup.style.display !== 'block' || isMaximized) return;
     if (dragging || resizing) {
       e.stopPropagation();
       return;
@@ -947,7 +980,7 @@ export function initMapPopup({
   }, true);
 
   document.addEventListener('mousedown', (e) => {
-    if (popup.style.display !== 'block') return;
+    if (popup.style.display !== 'block' || isMaximized) return;
     if (dragging || resizing) {
       e.stopPropagation();
       e.preventDefault();
@@ -980,6 +1013,7 @@ export function initMapPopup({
   }, true);
 
   window.addEventListener('mousemove', (e) => {
+    if (isMaximized) return;
     if (dragging) {
       popup.style.left = `${e.clientX - offsetX}px`;
       popup.style.top = `${e.clientY - offsetY}px`;
@@ -1016,6 +1050,7 @@ export function initMapPopup({
   }, true);
 
   window.addEventListener('mouseup', (e) => {
+    if (isMaximized) return;
     if (dragging) {
       dragging = false;
       map?.dragging.enable();
@@ -1038,9 +1073,17 @@ export function initMapPopup({
   }, true);
 
   btn.addEventListener('click', togglePopup);
+  maxBtn?.addEventListener('click', toggleMaximize);
   if (closeBtn) {
     closeBtn.addEventListener('click', togglePopup);
   }
+  window.addEventListener('resize', () => {
+    if (isMaximized) {
+      popup.style.width = `${window.innerWidth}px`;
+      popup.style.height = `${window.innerHeight}px`;
+      map?.invalidateSize();
+    }
+  });
   document.addEventListener('file-loaded', updateMap);
   document.addEventListener('file-list-cleared', () => refreshMarkers());
   document.addEventListener('file-list-changed', () => refreshMarkers());
