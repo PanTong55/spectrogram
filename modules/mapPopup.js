@@ -432,6 +432,9 @@ export function initMapPopup({
     polylines.forEach(l => l.remove());
     polylines = [];
     routeBtn?.classList.remove('active');
+    if (routeBtn) {
+      routeBtn.innerHTML = '<i class="fa-solid fa-eye"></i>';
+    }
   }
 
   function clearKmlRoute() {
@@ -523,6 +526,9 @@ export function initMapPopup({
     } else {
       drawRoute();
       routeBtn?.classList.add('active');
+      if (routeBtn) {
+        routeBtn.innerHTML = '<i class="fa-solid fa-eye-slash"></i>';
+      }
     }
   }
 
