@@ -1217,13 +1217,13 @@ input.tag-button.editing {
 .popup-max-btn {
   position: absolute;
   top: 0;
-  right: 30px;
+  right: 20px;
   width: 30px;
   height: 30px;
   line-height: 30px;
   border: none;
   background: transparent;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
 }
 .popup-max-btn:hover {
