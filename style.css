@@ -1446,10 +1446,14 @@ input.tag-button.editing {
   white-space: nowrap;
 }
 
-/* Route button style */
-.leaflet-route-control a,
-.leaflet-import-kml-control a,
-.leaflet-clear-kml-control a,
+/* Route toggle and buttons */
+.leaflet-route-toggle-control {
+  display: flex;
+  align-items: center;
+}
+
+.leaflet-route-toggle-control > a,
+.leaflet-route-toggle-control .route-button-group a,
 .leaflet-draw-toggle-control a {
   width: 26px;
   height: 26px;
@@ -1457,21 +1461,24 @@ input.tag-button.editing {
   text-align: center;
 }
 
-.leaflet-route-control a.active {
+.leaflet-route-toggle-control > a.active {
   background-color: #e6e6e6;
 }
 
-.leaflet-import-kml-control,
-.leaflet-clear-kml-control,
-.leaflet-draw-toggle-control {
-  margin-top: 1px !important;
+.leaflet-route-toggle-control .route-button-group {
+  display: none;
+  margin-left: 1px;
+  gap: 1px;
 }
 
-.leaflet-route-control a i,
-.leaflet-import-kml-control a i,
-.leaflet-clear-kml-control a i,
+.leaflet-route-toggle-control .route-button-group a i,
+.leaflet-route-toggle-control > a i,
 .leaflet-draw-toggle-control a i {
   color: #363636;
+}
+
+.leaflet-draw-toggle-control {
+  margin-top: 1px !important;
 }
 
 .leaflet-div-icon {

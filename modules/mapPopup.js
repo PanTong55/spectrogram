@@ -61,6 +61,8 @@ export function initMapPopup({
   let markers = [];
   let polylines = [];
   let routeBtn = null;
+  let routeToggleBtn = null;
+  let routeBtnGroup = null;
   let kmlPolylines = [];
   let importBtn = null;
   let clearKmlBtn = null;
@@ -280,53 +282,56 @@ export function initMapPopup({
       drawnItems.addLayer(e.layer);
     });
 
-    const RouteControl = L.Control.extend({
+    const RouteToggleControl = L.Control.extend({
       options: { position: 'topleft' },
       onAdd() {
-        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-route-control');
-        const link = L.DomUtil.create('a', '', container);
-        link.href = '#';
-        link.title = 'Route';
-        link.innerHTML = '<i class="fa-solid fa-route"></i>';
-        routeBtn = link;
-        L.DomEvent.on(link, 'click', L.DomEvent.stop)
-          .on(link, 'click', toggleRoute);
-        return container;
-      }
-    });
-    map.addControl(new RouteControl());
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-route-toggle-control');
+        container.style.display = 'flex';
 
-    const ImportControl = L.Control.extend({
-      options: { position: 'topleft' },
-      onAdd() {
-        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-import-kml-control');
-        const link = L.DomUtil.create('a', '', container);
-        link.href = '#';
-        link.title = 'Import KML';
-        link.innerHTML = '<i class="fa-solid fa-file-import"></i>';
-        importBtn = link;
-        L.DomEvent.on(link, 'click', L.DomEvent.stop)
-          .on(link, 'click', () => { kmlInput.value = ''; kmlInput.click(); });
-        return container;
-      }
-    });
-    map.addControl(new ImportControl());
+        const toggle = L.DomUtil.create('a', '', container);
+        toggle.href = '#';
+        toggle.title = 'Route options';
+        toggle.innerHTML = '<i class="fa-solid fa-route"></i>';
+        routeToggleBtn = toggle;
 
-    const ClearKmlControl = L.Control.extend({
-      options: { position: 'topleft' },
-      onAdd() {
-        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-clear-kml-control');
-        const link = L.DomUtil.create('a', '', container);
-        link.href = '#';
-        link.title = 'Clear KML';
-        link.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        clearKmlBtn = link;
-        L.DomEvent.on(link, 'click', L.DomEvent.stop)
-          .on(link, 'click', clearKmlRoute);
+        routeBtnGroup = L.DomUtil.create('div', 'route-button-group', container);
+        routeBtnGroup.style.display = 'none';
+
+        const createLink = L.DomUtil.create('a', '', routeBtnGroup);
+        createLink.href = '#';
+        createLink.title = 'Create Route';
+        createLink.innerHTML = '<i class="fa-solid fa-eye"></i>';
+        routeBtn = createLink;
+        L.DomEvent.on(createLink, 'click', L.DomEvent.stop)
+          .on(createLink, 'click', toggleRoute);
+
+        const importLink = L.DomUtil.create('a', '', routeBtnGroup);
+        importLink.href = '#';
+        importLink.title = 'Import KML';
+        importLink.innerHTML = '<i class="fa-solid fa-file-import"></i>';
+        importBtn = importLink;
+        L.DomEvent.on(importLink, 'click', L.DomEvent.stop)
+          .on(importLink, 'click', () => { kmlInput.value = ''; kmlInput.click(); });
+
+        const clearLink = L.DomUtil.create('a', '', routeBtnGroup);
+        clearLink.href = '#';
+        clearLink.title = 'Clear KML';
+        clearLink.innerHTML = '<i class="fa-solid fa-trash"></i>';
+        clearKmlBtn = clearLink;
+        L.DomEvent.on(clearLink, 'click', L.DomEvent.stop)
+          .on(clearLink, 'click', clearKmlRoute);
+
+        L.DomEvent.on(toggle, 'click', L.DomEvent.stop)
+          .on(toggle, 'click', () => {
+            const visible = routeBtnGroup.style.display === 'flex';
+            routeBtnGroup.style.display = visible ? 'none' : 'flex';
+            toggle.classList.toggle('active', !visible);
+          });
+
         return container;
       }
     });
-    map.addControl(new ClearKmlControl());
+    map.addControl(new RouteToggleControl());
 
     const TextToggleControl = L.Control.extend({
       options: { position: 'topleft' },
