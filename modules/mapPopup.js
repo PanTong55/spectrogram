@@ -1079,8 +1079,8 @@ export function initMapPopup({
   }
   window.addEventListener('resize', () => {
     if (isMaximized) {
-      popup.style.width = `${window.innerWidth}px`;
-      popup.style.height = `${window.innerHeight}px`;
+      popup.style.width = `${window.innerWidth -2}px`;
+      popup.style.height = `${window.innerHeight -2}px`;
       map?.invalidateSize();
     }
   });
