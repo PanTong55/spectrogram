@@ -869,8 +869,7 @@ body.markers-disabled .freq-marker {
 
 /* Hover effect for file names in the sidebar */
 .sidebar-left:hover .fileNameText {
-  color: #007bff;
-  text-decoration: underline;
+  font-weight: bold;
 }
 
 /* === Loading Overlay === */
