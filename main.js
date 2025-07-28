@@ -261,8 +261,7 @@ freqHoverControl?.setPersistentLinesEnabled(false);
 function hideDropOverlay() {
 overlay.style.display = 'none';
 overlay.style.pointerEvents = 'none';
-hoverLineElem.style.display = 'block';
-  hoverLineVElem.style.display = 'block';
+  freqHoverControl?.hideHover();
   freqHoverControl?.setPersistentLinesEnabled(true);
   freqHoverControl?.refreshHover();
   autoIdControl?.updateMarkers();
