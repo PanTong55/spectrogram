@@ -87,10 +87,6 @@ export function initMapPopup({
   let copyMsgTimer = null;
   let scaleControl = null;
   let isMapDragging = false;
-  let layersControlContainer = null;
-  let zoomControlContainer = null;
-  let routeToggleContainer = null;
-  let exportControlContainer = null;
   const kmlInput = document.createElement('input');
   kmlInput.type = 'file';
   kmlInput.accept = '.kml';
@@ -174,7 +170,6 @@ export function initMapPopup({
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
-    zoomControlContainer = map.zoomControl.getContainer();
     map.on('dragstart', () => { isMapDragging = true; updateCursor(); });
     map.on('dragend', () => { isMapDragging = false; updateCursor(); });
     updateCursor();
@@ -285,7 +280,6 @@ export function initMapPopup({
     };
 
     layersControl = L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
-    layersControlContainer = layersControl.getContainer();
 
     fetch("https://raw.githubusercontent.com/PanTong55/spectrogram/main/hkgrid.geojson")
       .then((r) => r.json())
@@ -382,9 +376,7 @@ export function initMapPopup({
         return container;
       }
     });
-    const routeControl = new RouteToggleControl();
-    map.addControl(routeControl);
-    routeToggleContainer = routeControl.getContainer();
+    map.addControl(new RouteToggleControl());
 
     const TextToggleControl = L.Control.extend({
       options: { position: 'topleft' },
@@ -405,8 +397,7 @@ export function initMapPopup({
         return container;
       }
     });
-    const textControl = new TextToggleControl();
-    map.addControl(textControl);
+    map.addControl(new TextToggleControl());
 
     const ExportControl = L.Control.extend({
       options: { position: 'topleft' },
@@ -427,9 +418,7 @@ export function initMapPopup({
         return container;
       }
     });
-    const exportControl = new ExportControl();
-    map.addControl(exportControl);
-    exportControlContainer = exportControl.getContainer();
+    map.addControl(new ExportControl());
 
     const DrawToggleControl = L.Control.extend({
       options: { position: 'topleft' },
@@ -450,8 +439,7 @@ export function initMapPopup({
         return container;
       }
     });
-    const drawToggle = new DrawToggleControl();
-    map.addControl(drawToggle);
+    map.addControl(new DrawToggleControl());
   }
 
   function refreshMarkers() {
@@ -919,11 +907,6 @@ export function initMapPopup({
       popup.style.width = '290px';
       popup.style.height = '360px';
       minBtn.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
-      if (layersControlContainer) layersControlContainer.style.display = 'none';
-      if (zoomControlContainer) zoomControlContainer.style.display = 'none';
-      if (routeToggleContainer) routeToggleContainer.style.display = 'none';
-      if (exportControlContainer) exportControlContainer.style.display = 'none';
-      if (coordScaleWrapper) coordScaleWrapper.style.display = 'none';
       isMinimized = true;
     } else {
       popup.style.width = `${minPrevWidth}px`;
@@ -931,11 +914,6 @@ export function initMapPopup({
       popup.style.left = `${minPrevLeft}px`;
       popup.style.top = `${minPrevTop}px`;
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
-      if (layersControlContainer) layersControlContainer.style.display = '';
-      if (zoomControlContainer) zoomControlContainer.style.display = '';
-      if (routeToggleContainer) routeToggleContainer.style.display = '';
-      if (exportControlContainer) exportControlContainer.style.display = '';
-      if (coordScaleWrapper) coordScaleWrapper.style.display = '';
       isMinimized = false;
     }
     map?.invalidateSize();
