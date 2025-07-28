@@ -917,7 +917,7 @@ export function initMapPopup({
       minPrevLeft = popup.offsetLeft;
       minPrevTop = popup.offsetTop;
       popup.style.left = '0px';
-      popup.style.top = `${window.innerHeight - 360}px`;
+      popup.style.top = `${window.innerHeight - 358}px`;
       popup.style.width = '290px';
       popup.style.height = '360px';
       minBtn.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
