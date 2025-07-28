@@ -973,82 +973,35 @@ export function initMapPopup({
     });
   }
 
-  popup.addEventListener('mousemove', (e) => {
-    if (isMaximized) return;
+  function handleEdgeMove(e) {
+    const fromDocument = e.currentTarget !== popup;
+    if ((fromDocument && popup.style.display !== 'block') || isMaximized) return;
     if (dragging || resizing) {
       e.stopPropagation();
       return;
     }
     const state = getEdgeState(e.clientX, e.clientY);
-    const cursor = edgeCursor(state) || 'default';
-    popup.style.cursor = cursor;
-    if (cursor !== 'default') {
-      mapDiv.style.cursor = cursor;
-      document.body.style.cursor = cursor;
-      disableUiPointerEvents();
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
-      e.stopPropagation();
-    } else {
-      mapDiv.style.cursor = '';
-      document.body.style.cursor = '';
-      enableUiPointerEvents();
-      updateCursor();
-    }
-  });
-
-  popup.addEventListener('mousedown', (e) => {
-    if (isMaximized) return;
-    if (e.target === dragBar || dragBar.contains(e.target)) return;
-    const state = getEdgeState(e.clientX, e.clientY);
-    if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
-      resizing = true;
-      resizeLeft = state.onLeft;
-      resizeRight = state.onRight;
-      resizeTop = state.onTop;
-      resizeBottom = state.onBottom;
-      const cursor = edgeCursor(state) || 'default';
-      popup.style.cursor = cursor;
-      mapDiv.style.cursor = cursor;
-      document.body.style.cursor = cursor;
-      disableUiPointerEvents();
-      document.dispatchEvent(new Event('hide-spectrogram-hover'));
-      startX = e.clientX;
-      startY = e.clientY;
-      startWidth = popup.offsetWidth;
-      startHeight = popup.offsetHeight;
-      startLeft = popup.offsetLeft;
-      startTop = popup.offsetTop;
-      map?.dragging.disable();
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (popup.style.display !== 'block' || isMaximized) return;
-    if (dragging || resizing) {
-      e.stopPropagation();
-      return;
-    }
-    const state = getEdgeState(e.clientX, e.clientY);
-    const cursor = edgeCursor(state);
+    const cursor = edgeCursor(state) || (fromDocument ? '' : 'default');
     if (cursor) {
-      document.body.style.cursor = cursor;
+      popup.style.cursor = cursor;
       mapDiv.style.cursor = cursor;
+      document.body.style.cursor = cursor;
       disableUiPointerEvents();
       document.dispatchEvent(new Event('hide-spectrogram-hover'));
       e.stopPropagation();
-    } else {
-      document.body.style.cursor = '';
+    } else if (!fromDocument) {
+      popup.style.cursor = 'default';
       mapDiv.style.cursor = '';
+      document.body.style.cursor = '';
       enableUiPointerEvents();
       updateCursor();
     }
-  }, true);
+  }
 
-  document.addEventListener('mousedown', (e) => {
-    if (popup.style.display !== 'block' || isMaximized) return;
-    if (dragging || resizing) {
+  function handleEdgeDown(e) {
+    const fromDocument = e.currentTarget !== popup;
+    if ((fromDocument && popup.style.display !== 'block') || isMaximized) return;
+    if (fromDocument && (dragging || resizing)) {
       e.stopPropagation();
       e.preventDefault();
       return;
@@ -1077,7 +1030,12 @@ export function initMapPopup({
       e.preventDefault();
       e.stopPropagation();
     }
-  }, true);
+  }
+
+  popup.addEventListener('mousemove', handleEdgeMove);
+  document.addEventListener('mousemove', handleEdgeMove, true);
+  popup.addEventListener('mousedown', handleEdgeDown);
+  document.addEventListener('mousedown', handleEdgeDown, true);
 
   window.addEventListener('mousemove', (e) => {
     if (isMaximized) return;
