@@ -15,6 +15,7 @@ export function initMapPopup({
   const sidebar = document.getElementById('sidebar');
   const dragBar = popup.querySelector('.popup-drag-bar');
   const closeBtn = popup.querySelector('.popup-close-btn');
+  const minBtn = popup.querySelector('.popup-min-btn');
   const maxBtn = popup.querySelector('.popup-max-btn');
   if (!btn || !popup || !mapDiv) return;
   mapDiv.style.cursor = 'default';
@@ -854,6 +855,7 @@ export function initMapPopup({
   function togglePopup() {
     if (popup.style.display === 'block') {
       if (isMaximized) toggleMaximize();
+      if (isMinimized) toggleMinimize();
       popup.style.display = 'none';
       document.body.classList.remove('map-open');
       if (textMode) toggleTextMode();
@@ -893,6 +895,30 @@ export function initMapPopup({
     map?.invalidateSize();
   }
 
+  function toggleMinimize() {
+    if (!isMinimized) {
+      if (isMaximized) toggleMaximize();
+      minPrevWidth = popup.offsetWidth;
+      minPrevHeight = popup.offsetHeight;
+      minPrevLeft = popup.offsetLeft;
+      minPrevTop = popup.offsetTop;
+      popup.style.left = '0px';
+      popup.style.top = `${window.innerHeight - 360}px`;
+      popup.style.width = '290px';
+      popup.style.height = '360px';
+      minBtn.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
+      isMinimized = true;
+    } else {
+      popup.style.width = `${minPrevWidth}px`;
+      popup.style.height = `${minPrevHeight}px`;
+      popup.style.left = `${minPrevLeft}px`;
+      popup.style.top = `${minPrevTop}px`;
+      minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
+      isMinimized = false;
+    }
+    map?.invalidateSize();
+  }
+
   let dragging = false;
   let offsetX = 0;
   let offsetY = 0;
@@ -908,10 +934,15 @@ export function initMapPopup({
   let startLeft = 0;
   let startTop = 0;
   let isMaximized = false;
+  let isMinimized = false;
   let prevWidth = 0;
   let prevHeight = 0;
   let prevLeft = 0;
   let prevTop = 0;
+  let minPrevWidth = 0;
+  let minPrevHeight = 0;
+  let minPrevLeft = 0;
+  let minPrevTop = 0;
 
   function disableUiPointerEvents() {
     if (viewer) {
@@ -1110,6 +1141,7 @@ export function initMapPopup({
 
   btn.addEventListener('click', togglePopup);
   maxBtn?.addEventListener('click', toggleMaximize);
+  minBtn?.addEventListener('click', toggleMinimize);
   if (closeBtn) {
     closeBtn.addEventListener('click', togglePopup);
   }
@@ -1118,6 +1150,8 @@ export function initMapPopup({
       popup.style.width = `${window.innerWidth -2}px`;
       popup.style.height = `${window.innerHeight -2}px`;
       map?.invalidateSize();
+    } else if (isMinimized) {
+      popup.style.top = `${window.innerHeight - 360}px`;
     }
   });
   document.addEventListener('file-loaded', updateMap);
