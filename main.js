@@ -67,16 +67,9 @@ const expandBackBtn = document.getElementById('expandBackBtn');
 const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
 const canvasElem = document.getElementById("spectrogram-canvas");
-let specWorker = null;
-
-function restartSpecWorker() {
-  if (specWorker) specWorker.terminate();
-  const offscreen = canvasElem.transferControlToOffscreen();
-  specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
-  specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
-}
-
-restartSpecWorker();
+const offscreen = canvasElem.transferControlToOffscreen();
+const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
+specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
@@ -283,8 +276,8 @@ fileLoaderControl = initFileLoader({
 fileInputId: 'fileInput',
 wavesurfer: getWavesurfer(),
 spectrogramHeight,
-  colorMap: [],
-  onPluginReplaced: resetSpectrogram,
+colorMap: [],
+onPluginReplaced: () => {},
 onFileLoaded: (file) => {
 hideDropOverlay();
 zoomControlsElem.style.display = 'flex';
@@ -612,9 +605,9 @@ duration = getWavesurfer().getDuration();
 initDragDropLoader({
 targetElementId: 'viewer-wrapper',
 wavesurfer: getWavesurfer(),
-  spectrogramHeight,
-  colorMap: [],
-  onPluginReplaced: resetSpectrogram,
+spectrogramHeight,
+colorMap: [],
+onPluginReplaced: () => {},
 onFileLoaded: (file) => {
 hideDropOverlay();
 zoomControlsElem.style.display = 'flex';
@@ -895,27 +888,6 @@ autoIdControl?.updateMarkers();
 updateSpectrogramSettingsText();
 }
 
-function resetSpectrogram() {
-  const colorMap = getCurrentColorMap();
-  freqHoverControl?.hideHover();
-  replacePlugin(
-    colorMap,
-    spectrogramHeight,
-    currentFreqMin,
-    currentFreqMax,
-    getOverlapPercent(),
-    () => {
-      duration = getWavesurfer().getDuration();
-      zoomControl.applyZoom();
-      renderAxes();
-      freqHoverControl?.refreshHover();
-      autoIdControl?.updateMarkers();
-    }
-  );
-  drawColorBar(colorMap);
-  updateSpectrogramSettingsText();
-}
-
 const clearAllBtn = document.getElementById('clearAllBtn');
 clearAllBtn.addEventListener('click', () => {
 clearFileList();
@@ -1135,7 +1107,6 @@ document.addEventListener("file-loaded", async () => {
   updateExpandBackBtn();
   autoIdControl?.reset();
   if (currentFile) {
-    restartSpecWorker();
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
