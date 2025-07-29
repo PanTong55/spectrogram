@@ -133,17 +133,21 @@ export function initDragDropLoader({
     }
 
     let skippedLong = 0;
+    let skippedSmall = 0;
     const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
     const filteredList = [];
     const metaList = [];
     for (let i = 0; i < sortedList.length; i++) {
-      const dur = await getWavDuration(sortedList[i]);
-      if (dur > 20) {
+      const fileItem = sortedList[i];
+      const dur = await getWavDuration(fileItem);
+      if (fileItem.size < 200 * 1024) {
+        skippedSmall++;
+      } else if (dur > 20) {
         skippedLong++;
       } else {
-        filteredList.push(sortedList[i]);
+        filteredList.push(fileItem);
         try {
-          const txt = await extractGuanoMetadata(sortedList[i]);
+          const txt = await extractGuanoMetadata(fileItem);
           metaList.push(parseGuanoMetadata(txt));
         } catch (err) {
           metaList.push({ date: '', time: '', latitude: '', longitude: '' });
@@ -172,6 +176,12 @@ export function initDragDropLoader({
       showMessageBox({
         title: 'Warning',
         message: `.wav files longer than 20 seconds are not supported and a total of (${skippedLong}) such files were skipped during the loading process. Please trim or preprocess these files to meet the duration requirement before loading.`
+      });
+    }
+    if (skippedSmall > 0) {
+      showMessageBox({
+        title: 'Warning',
+        message: `${skippedSmall} wav files were skipped due to small file size (<200kb).`
       });
     }
   }
