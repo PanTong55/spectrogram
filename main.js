@@ -66,10 +66,26 @@ let currentExpandBlob = null;
 const expandBackBtn = document.getElementById('expandBackBtn');
 const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
-const canvasElem = document.getElementById("spectrogram-canvas");
-const offscreen = canvasElem.transferControlToOffscreen();
-const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
-specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
+let canvasElem = document.getElementById('spectrogram-canvas');
+let specWorker = null;
+
+function initSpecWorker() {
+  if (specWorker) {
+    specWorker.terminate();
+  }
+  const container = document.getElementById('spectrogram-only');
+  if (canvasElem) {
+    container.removeChild(canvasElem);
+  }
+  canvasElem = document.createElement('canvas');
+  canvasElem.id = 'spectrogram-canvas';
+  container.appendChild(canvasElem);
+  const offscreen = canvasElem.transferControlToOffscreen();
+  specWorker = new Worker('./spectrogramWorker.js', { type: 'module' });
+  specWorker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+}
+
+initSpecWorker();
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
@@ -1089,6 +1105,7 @@ expandBackBtn.click();
 });
 
 document.addEventListener("file-loaded", async () => {
+  initSpecWorker();
   const currentFile = getCurrentFile();
   duration = getWavesurfer().getDuration();
   zoomControl.setZoomLevel(0);
@@ -1115,7 +1132,8 @@ document.addEventListener("file-loaded", async () => {
 });
 
 document.addEventListener('file-list-cleared', () => {
-selectionExpandMode = false;
+  initSpecWorker();
+  selectionExpandMode = false;
 sampleRateBtn.disabled = false;
 expandHistory = [];
 currentExpandBlob = null;
