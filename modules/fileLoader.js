@@ -1,13 +1,71 @@
-// modules/dragDropLoader.js
+// modules/fileLoader.js
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
-import { getWavSampleRate, getWavDuration } from './fileLoader.js';
-import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
+import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
 import { showMessageBox } from './messageBox.js';
-import { importKmlFile } from './mapPopup.js';
 
-export function initDragDropLoader({
-  targetElementId,
+export async function getWavSampleRate(file) {
+  if (!file) return 256000;
+  const buffer = await file.arrayBuffer();
+  const view = new DataView(buffer);
+  let pos = 12;
+  while (pos < view.byteLength - 8) {
+    const chunkId = String.fromCharCode(
+      view.getUint8(pos),
+      view.getUint8(pos + 1),
+      view.getUint8(pos + 2),
+      view.getUint8(pos + 3)
+    );
+    const chunkSize = view.getUint32(pos + 4, true);
+    if (chunkId === 'fmt ') {
+      return view.getUint32(pos + 12, true);
+    }
+    pos += 8 + chunkSize;
+    if (chunkSize % 2 === 1) pos += 1; // word alignment
+  }
+  return 256000;
+}
+
+export async function getWavDuration(file) {
+  if (!file) return 0;
+  const buffer = await file.arrayBuffer();
+  const view = new DataView(buffer);
+  let pos = 12;
+  let sampleRate = 0;
+  let numChannels = 1;
+  let bitsPerSample = 16;
+  let dataSize = 0;
+  while (pos < view.byteLength - 8) {
+    const chunkId = String.fromCharCode(
+      view.getUint8(pos),
+      view.getUint8(pos + 1),
+      view.getUint8(pos + 2),
+      view.getUint8(pos + 3)
+    );
+    const chunkSize = view.getUint32(pos + 4, true);
+    if (chunkId === 'fmt ') {
+      numChannels = view.getUint16(pos + 10, true);
+      sampleRate = view.getUint32(pos + 12, true);
+      bitsPerSample = view.getUint16(pos + 22, true);
+    } else if (chunkId === 'data') {
+      dataSize = chunkSize;
+      break;
+    }
+    pos += 8 + chunkSize;
+    if (chunkSize % 2 === 1) pos += 1;
+  }
+  if (sampleRate > 0 && dataSize > 0) {
+    const bytesPerSample = (bitsPerSample / 8) * numChannels;
+    const numSamples = dataSize / bytesPerSample;
+    return numSamples / sampleRate;
+  }
+  return 0;
+}
+
+let lastObjectUrl = null;
+
+export function initFileLoader({
+  fileInputId,
   wavesurfer,
   spectrogramHeight,
   colorMap,
@@ -17,28 +75,19 @@ export function initDragDropLoader({
   onAfterLoad,
   onSampleRateDetected
 }) {
-  const dropArea = document.getElementById(targetElementId);
-  const overlay = document.getElementById('drop-overlay');
-  const uploadOverlay = document.getElementById('upload-overlay');
-  const uploadProgressBar = document.getElementById('upload-progress-bar');
-  const uploadProgressText = document.getElementById('upload-progress-text');
+  const fileInput = document.getElementById(fileInputId);
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
   const fileNameElem = document.getElementById('fileNameText');
   const guanoOutput = document.getElementById('guano-output');
   const spectrogramSettingsText = document.getElementById('spectrogram-settings-text');
-  let lastObjectUrl = null;
-
-  function showOverlay() {
-    overlay.style.display = 'flex';
-    document.dispatchEvent(new Event('drop-overlay-show'));
-  }
-
-  function hideOverlay() {
-    overlay.style.display = 'none';
-    document.dispatchEvent(new Event('drop-overlay-hide'));
-  }
+  const uploadOverlay = document.getElementById('upload-overlay');
+  const uploadProgressBar = document.getElementById('upload-progress-bar');
+  const uploadProgressText = document.getElementById('upload-progress-text');
 
   function showUploadOverlay(total) {
     if (!uploadOverlay) return;
+    document.dispatchEvent(new Event('drop-overlay-hide'));
     if (uploadProgressBar) uploadProgressBar.style.width = '0%';
     if (uploadProgressText) uploadProgressText.textContent = `0/${total}`;
     uploadOverlay.style.display = 'flex';
@@ -60,20 +109,24 @@ export function initDragDropLoader({
 
   async function loadFile(file) {
     if (!file) return;
-
     const detectedSampleRate = await getWavSampleRate(file);
+
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
-    }    
+    }
 
     if (typeof onFileLoaded === 'function') {
       onFileLoaded(file);
-    }    
+    }
 
+    if (typeof onSampleRateDetected === 'function') {
+      await onSampleRateDetected(detectedSampleRate, true);
+    }
+    
     if (fileNameElem) {
       fileNameElem.textContent = file.name;
     }
-    
+
     try {
       const result = await extractGuanoMetadata(file);
       guanoOutput.textContent = result || '(No GUANO metadata found)';
@@ -94,39 +147,22 @@ export function initDragDropLoader({
       onPluginReplaced();
     }
 
-      const sampleRate = detectedSampleRate || wavesurfer?.options?.sampleRate || 256000;
-
-    if (typeof onSampleRateDetected === 'function') {
-      await onSampleRateDetected(sampleRate);
-    }
-
-
+    const sampleRate = detectedSampleRate || wavesurfer?.options?.sampleRate || 256000;
 
     if (typeof onAfterLoad === 'function') {
       onAfterLoad();
     }
     document.dispatchEvent(new Event('file-loaded'));
+    
   }
 
-  let pendingKmlFile = null;
+  fileInput.addEventListener('change', async (event) => {
+    const files = Array.from(event.target.files);
+    const selectedFile = files[0];
+    if (!selectedFile) return;
 
-  async function handleFiles(files) {
-    const kmlFile = Array.from(files).find(f => f.name.toLowerCase().endsWith('.kml'));
-    if (kmlFile) {
-      pendingKmlFile = kmlFile;
-    }
-
-    const validFiles = Array.from(files).filter(file => file.type === 'audio/wav' || file.name.endsWith('.wav'));
-    if (validFiles.length === 0) {
-      showMessageBox({
-        title: 'Reminder',
-        message: 'Only .wav files are supported.'
-      });
-      showOverlay();
-      return;
-    }
-
-    showUploadOverlay(validFiles.length);
+    const sameDirFiles = files.filter(f => f.name.endsWith('.wav'));
+    showUploadOverlay(sameDirFiles.length);
 
     if (typeof onBeforeLoad === 'function') {
       onBeforeLoad();
@@ -134,7 +170,7 @@ export function initDragDropLoader({
 
     let skippedLong = 0;
     let skippedSmall = 0;
-    const sortedList = validFiles.sort((a, b) => a.name.localeCompare(b.name));
+    const sortedList = sameDirFiles.sort((a, b) => a.name.localeCompare(b.name));
     const filteredList = [];
     const metaList = [];
     for (let i = 0; i < sortedList.length; i++) {
@@ -147,7 +183,7 @@ export function initDragDropLoader({
       } else {
         filteredList.push(fileItem);
         try {
-          const txt = await extractGuanoMetadata(fileItem);
+          const txt = await extractGuanoMetadata(sortedList[i]);
           metaList.push(parseGuanoMetadata(txt));
         } catch (err) {
           metaList.push({ date: '', time: '', latitude: '', longitude: '' });
@@ -156,22 +192,22 @@ export function initDragDropLoader({
       updateUploadOverlay(i + 1, sortedList.length);
     }
 
+    const index = filteredList.findIndex(f => f.name === selectedFile.name);
+
     removeFilesByName('demo_recording.wav');
     const startIdx = getFileList().length;
     if (filteredList.length > 0) {
-      addFilesToList(filteredList, 0);
+      addFilesToList(filteredList, index >= 0 ? index : 0);
       for (let i = 0; i < filteredList.length; i++) {
         setFileMetadata(startIdx + i, metaList[i]);
       }
     }
     hideUploadOverlay();
     if (filteredList.length > 0) {
-      await loadFile(filteredList[0]);
-      if (pendingKmlFile) {
-        await importKmlFile(pendingKmlFile);
-        pendingKmlFile = null;
-      }
+      await loadFile(filteredList[index >= 0 ? index : 0]);
     }
+    // reset value so that selecting the same file again triggers change
+    fileInput.value = '';
     if (skippedLong > 0) {
       showMessageBox({
         title: 'Warning',
@@ -184,80 +220,45 @@ export function initDragDropLoader({
         message: `${skippedSmall} wav files were skipped due to small file size (<200kb).`
       });
     }
-  }
-
-  let dragCounter = 0;
-
-  function isFileDrag(e) {
-    return Array.from(e.dataTransfer?.types || []).includes('Files');
-  }
-
-  dropArea.addEventListener('dragenter', e => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    dragCounter++;
-    showOverlay();
   });
 
-  dropArea.addEventListener('dragleave', e => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    dragCounter--;
-    if (dragCounter === 0) {
-      hideOverlay();
+  prevBtn.addEventListener('click', () => {
+    const index = getCurrentIndex();
+    if (index > 0) {
+      setCurrentIndex(index - 1);
+      const file = getFileList()[index - 1];
+      loadFile(file);
     }
   });
 
-  dropArea.addEventListener('dragover', e => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  nextBtn.addEventListener('click', () => {
+    const index = getCurrentIndex();
+    const files = getFileList();
+    if (index < files.length - 1) {
+      setCurrentIndex(index + 1);
+      const file = files[index + 1];
+      loadFile(file);
+    }
   });
 
-  async function getFilesFromDataTransfer(dt) {
-    if (!dt.items) return Array.from(dt.files);
-
-    const traverse = async (entry) => {
-      if (entry.isFile) {
-        return new Promise((resolve) => {
-          entry.file(f => resolve([f]), () => resolve([]));
-        });
-      }
-      if (entry.isDirectory) {
-        const reader = entry.createReader();
-        const entries = [];
-        const readEntries = () => new Promise((resolve) => {
-          reader.readEntries(async (results) => {
-            if (!results.length) {
-              const children = await Promise.all(entries.map(traverse));
-              resolve(children.flat());
-            } else {
-              entries.push(...results);
-              resolve(await readEntries());
-            }
-          }, () => resolve([]));
-        });
-        return readEntries();
-      }
-      return [];
-    };
-
-    const entries = Array.from(dt.items)
-      .map(item => item.webkitGetAsEntry && item.webkitGetAsEntry())
-      .filter(Boolean);
-
-    if (!entries.length) return Array.from(dt.files);
-
-    const fileArrays = await Promise.all(entries.map(traverse));
-    return fileArrays.flat();
-  }
-
-  dropArea.addEventListener('drop', async e => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    dragCounter = 0;
-    hideOverlay();
-    const files = await getFilesFromDataTransfer(e.dataTransfer);
-    handleFiles(files);
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey) return; // avoid conflict with zoom shortcuts
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      prevBtn.click();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      nextBtn.click();
+    }
   });
+
+  return {
+    loadFileAtIndex: async (index) => {
+      const files = getFileList();
+      if (index >= 0 && index < files.length) {
+        setCurrentIndex(index);
+        await loadFile(files[index]);
+      }
+    }
+  };  
 }
