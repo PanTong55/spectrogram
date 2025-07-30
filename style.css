@@ -1401,29 +1401,8 @@ input.tag-button.editing {
   background: transparent;
 }
 
-#bandwidth-warning {
-  display: none;
-  top: 38px;
-  left: 50%;
-  bottom: auto;
-  height: 20px;
-  width: max-content;
-  transform: translateX(-50%);
-  background: rgb(16 16 16 / 60%);
-  color: white;
-}
-
-#freq-order-warning {
-  display: none;
-  top: 38px;
-  left: 50%;
-  bottom: auto;
-  height: 20px;
-  width: max-content;
-  transform: translateX(-50%);
-  background: rgb(16 16 16 / 60%);
-  color: white;
-}
+#bandwidth-warning,
+#freq-order-warning,
 #knee-order-warning {
   display: none;
   top: 38px;
