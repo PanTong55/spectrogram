@@ -152,18 +152,23 @@ export function initAutoIdPanel({
   const bandwidthWarning = document.getElementById('bandwidth-warning');
   const freqOrderWarning = document.getElementById('freq-order-warning');
   const kneeOrderWarning = document.getElementById('knee-order-warning');
+  const timeOrderWarning = document.getElementById('time-order-warning');
 
-  function updateWarnings(high, low, knee, bw) {
+  function updateWarnings(high, low, knee, bw, startT, endT) {
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const showBandwidth = callType === 'QCF' && bw != null && bw > 5;
     const showOrder = !isNaN(high) && !isNaN(low) && low > high;
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
+    const showTimeOrder = startT != null && endT != null && endT < startT;
     if (inputs.high) inputs.high.classList.toggle('warning', showBandwidth || showOrder);
     if (inputs.low) inputs.low.classList.toggle('warning', showBandwidth || showOrder || showKneeOrder);
     if (inputs.knee) inputs.knee.classList.toggle('warning', showKneeOrder);
+    if (inputs.start) inputs.start.classList.toggle('warning', showTimeOrder);
+    if (inputs.end) inputs.end.classList.toggle('warning', showTimeOrder);
     if (bandwidthWarning) bandwidthWarning.style.display = showBandwidth ? 'flex' : 'none';
     if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
     if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
+    if (timeOrderWarning) timeOrderWarning.style.display = showTimeOrder ? 'flex' : 'none';
   }
 
   const markerColors = {
@@ -366,7 +371,7 @@ export function initAutoIdPanel({
     } else {
       durationEl.textContent = '-';
     }
-    updateWarnings(high, low, knee, bandwidth);
+    updateWarnings(high, low, knee, bandwidth, startTime, endTime);
   }
 
   function createMarkerEl(key, tabIdx) {
