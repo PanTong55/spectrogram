@@ -1403,7 +1403,8 @@ input.tag-button.editing {
 
 #bandwidth-warning,
 #freq-order-warning,
-#knee-order-warning {
+#knee-order-warning,
+#time-order-warning {
   display: none;
   top: 38px;
   left: 50%;
