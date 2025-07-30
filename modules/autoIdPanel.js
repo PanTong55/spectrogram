@@ -156,9 +156,9 @@ export function initAutoIdPanel({
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const showBandwidth = callType === 'QCF' && bw != null && bw > 5;
     const showOrder = !isNaN(high) && !isNaN(low) && low > high;
-    const invalid = showBandwidth || showOrder;
+    const warn = showBandwidth || showOrder;
     ['high', 'low'].forEach(k => {
-      if (inputs[k]) inputs[k].classList.toggle('invalid', invalid);
+      if (inputs[k]) inputs[k].classList.toggle('warning', warn);
     });
     if (bandwidthWarning) bandwidthWarning.style.display = showBandwidth ? 'flex' : 'none';
     if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
@@ -276,6 +276,7 @@ export function initAutoIdPanel({
     delete input.dataset.time;
     input.classList.remove('active-get');
     input.classList.remove('invalid');
+    input.classList.remove('warning');
     markers[key].freq = null;
     markers[key].time = null;
     if (markers[key].el) markers[key].el.style.display = 'none';
@@ -570,6 +571,7 @@ export function initAutoIdPanel({
       delete el.dataset.time;
       el.classList.remove('active-get');
       el.classList.remove('invalid');
+      el.classList.remove('warning');
     });
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
@@ -604,6 +606,7 @@ export function initAutoIdPanel({
       delete el.dataset.time;
       el.classList.remove('active-get');
       el.classList.remove('invalid');
+      el.classList.remove('warning');
     });
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
