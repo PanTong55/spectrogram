@@ -151,17 +151,19 @@ export function initAutoIdPanel({
   const resultEl = document.getElementById('autoIdResult');
   const bandwidthWarning = document.getElementById('bandwidth-warning');
   const freqOrderWarning = document.getElementById('freq-order-warning');
+  const kneeOrderWarning = document.getElementById('knee-order-warning');
 
-  function updateWarnings(high, low, bw) {
+  function updateWarnings(high, low, knee, bw) {
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const showBandwidth = callType === 'QCF' && bw != null && bw > 5;
     const showOrder = !isNaN(high) && !isNaN(low) && low > high;
-    const warn = showBandwidth || showOrder;
-    ['high', 'low'].forEach(k => {
-      if (inputs[k]) inputs[k].classList.toggle('warning', warn);
-    });
+    const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
+    if (inputs.high) inputs.high.classList.toggle('warning', showBandwidth || showOrder);
+    if (inputs.low) inputs.low.classList.toggle('warning', showBandwidth || showOrder || showKneeOrder);
+    if (inputs.knee) inputs.knee.classList.toggle('warning', showKneeOrder);
     if (bandwidthWarning) bandwidthWarning.style.display = showBandwidth ? 'flex' : 'none';
     if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
+    if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
   }
 
   const markerColors = {
@@ -340,6 +342,7 @@ export function initAutoIdPanel({
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
+    const knee = parseFloat(inputs.knee.value);
     const cfStartVal = parseFloat(inputs.cfStart.value);
     const endVal = parseFloat(inputs.end.value);
     let bandwidth = null;
@@ -363,7 +366,7 @@ export function initAutoIdPanel({
     } else {
       durationEl.textContent = '-';
     }
-    updateWarnings(high, low, bandwidth);
+    updateWarnings(high, low, knee, bandwidth);
   }
 
   function createMarkerEl(key, tabIdx) {
