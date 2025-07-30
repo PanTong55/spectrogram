@@ -173,7 +173,7 @@ export function initAutoIdPanel({
 
   const markerColors = {
     start: '#e74c3c',
-    end: '#27ae60',
+    end: '#004cff',
     high: '#3498db',
     low: '#9b59b6',
     knee: '#f39c12',
