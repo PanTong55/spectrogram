@@ -38,6 +38,9 @@ export function initFrequencyHover({
   let selectionRect = null;
   let lastClientX = null, lastClientY = null;
   let isCursorInside = false;
+  let lastTapTime = 0;
+  let tapTimer = null;
+  const doubleTapDelay = 300;
 
   const hideAll = () => {
     hoverLine.style.display = 'none';
@@ -110,12 +113,10 @@ export function initFrequencyHover({
     zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
   }
 
-  viewer.addEventListener('mousedown', (e) => {
-    if (isOverTooltip || isResizing) return;
-    if (e.button !== 0) return;
+  function startSelection(clientX, clientY, type) {
     const rect = viewer.getBoundingClientRect();
-    startX = e.clientX - rect.left + viewer.scrollLeft;
-    startY = e.clientY - rect.top;
+    startX = clientX - rect.left + viewer.scrollLeft;
+    startY = clientY - rect.top;
     if (startY > (viewer.clientHeight - getScrollbarThickness())) return;
     isDrawing = true;
     suppressHover = true;
@@ -124,11 +125,16 @@ export function initFrequencyHover({
     selectionRect.className = 'selection-rect';
     viewer.appendChild(selectionRect);
 
+    const moveEv = type === 'touch' ? 'touchmove' : 'mousemove';
+    const upEv = type === 'touch' ? 'touchend' : 'mouseup';
+
     const moveHandler = (ev) => {
       if (!isDrawing) return;
       const viewerRect = viewer.getBoundingClientRect();
-      let currentX = ev.clientX - viewerRect.left + viewer.scrollLeft;
-      let currentY = ev.clientY - viewerRect.top;
+      const cx = type === 'touch' ? ev.touches[0].clientX : ev.clientX;
+      const cy = type === 'touch' ? ev.touches[0].clientY : ev.clientY;
+      let currentX = cx - viewerRect.left + viewer.scrollLeft;
+      let currentY = cy - viewerRect.top;
       currentX = clamp(currentX, 0, viewer.scrollWidth);
       currentY = clamp(currentY, 0, viewer.clientHeight - getScrollbarThickness());
       const x = Math.min(currentX, startX);
@@ -144,8 +150,8 @@ export function initFrequencyHover({
     const upHandler = (ev) => {
       if (!isDrawing) return;
       isDrawing = false;
-      window.removeEventListener('mousemove', moveHandler);
-      window.removeEventListener('mouseup', upHandler);
+      window.removeEventListener(moveEv, moveHandler);
+      window.removeEventListener(upEv, upHandler);
 
       const rect = selectionRect.getBoundingClientRect();
       const viewerRect = viewer.getBoundingClientRect();
@@ -158,7 +164,13 @@ export function initFrequencyHover({
         viewer.removeChild(selectionRect);
         selectionRect = null;
         suppressHover = false;
-        updateHoverDisplay(ev);
+        if (type === 'touch') {
+          const cx = ev.changedTouches ? ev.changedTouches[0].clientX : ev.clientX;
+          const cy = ev.changedTouches ? ev.changedTouches[0].clientY : ev.clientY;
+          updateHoverDisplay({ clientX: cx, clientY: cy });
+        } else {
+          updateHoverDisplay(ev);
+        }
         return;
       }
       const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
@@ -173,8 +185,28 @@ export function initFrequencyHover({
       suppressHover = false;
     };
 
-    window.addEventListener('mousemove', moveHandler, { passive: true });
-    window.addEventListener('mouseup', upHandler);
+    window.addEventListener(moveEv, moveHandler, { passive: type === 'touch' ? false : true });
+    window.addEventListener(upEv, upHandler);
+  }
+
+  viewer.addEventListener('mousedown', (e) => {
+    if (isOverTooltip || isResizing) return;
+    if (e.button !== 0) return;
+    startSelection(e.clientX, e.clientY, 'mouse');
+  });
+
+  viewer.addEventListener('touchstart', (e) => {
+    if (isOverTooltip || isResizing) return;
+    if (e.touches.length !== 1) return;
+    const now = Date.now();
+    if (now - lastTapTime < doubleTapDelay) {
+      clearTimeout(tapTimer);
+      e.preventDefault();
+      startSelection(e.touches[0].clientX, e.touches[0].clientY, 'touch');
+    } else {
+      lastTapTime = now;
+      tapTimer = setTimeout(() => { lastTapTime = 0; }, doubleTapDelay);
+    }
   });
 
   viewer.addEventListener('contextmenu', (e) => {
