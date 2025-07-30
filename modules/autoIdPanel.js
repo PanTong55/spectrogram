@@ -151,17 +151,37 @@ export function initAutoIdPanel({
   const resultEl = document.getElementById('autoIdResult');
   const bandwidthWarning = document.getElementById('bandwidth-warning');
   const freqOrderWarning = document.getElementById('freq-order-warning');
+  const kneeOrderWarning = document.getElementById('knee-order-warning');
 
-  function updateWarnings(high, low, bw) {
+  function updateWarnings(high, low, knee, bw) {
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const showBandwidth = callType === 'QCF' && bw != null && bw > 5;
     const showOrder = !isNaN(high) && !isNaN(low) && low > high;
-    const invalid = showBandwidth || showOrder;
-    ['high', 'low'].forEach(k => {
-      if (inputs[k]) inputs[k].classList.toggle('invalid', invalid);
-    });
+    const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
+
+    const invalidHigh = showBandwidth || showOrder;
+    const invalidLow = invalidHigh || showKneeOrder;
+    const invalidKnee = showKneeOrder;
+
+    if (inputs.high) {
+      inputs.high.classList.toggle('invalid', invalidHigh);
+      if (invalidHigh) inputs.high.dataset.warnFreq = '1';
+      else delete inputs.high.dataset.warnFreq;
+    }
+    if (inputs.low) {
+      inputs.low.classList.toggle('invalid', invalidLow);
+      if (invalidLow) inputs.low.dataset.warnFreq = '1';
+      else delete inputs.low.dataset.warnFreq;
+    }
+    if (inputs.knee) {
+      inputs.knee.classList.toggle('invalid', invalidKnee);
+      if (invalidKnee) inputs.knee.dataset.warnFreq = '1';
+      else delete inputs.knee.dataset.warnFreq;
+    }
+
     if (bandwidthWarning) bandwidthWarning.style.display = showBandwidth ? 'flex' : 'none';
     if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
+    if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
   }
 
   const markerColors = {
@@ -276,6 +296,7 @@ export function initAutoIdPanel({
     delete input.dataset.time;
     input.classList.remove('active-get');
     input.classList.remove('invalid');
+    delete input.dataset.warnFreq;
     markers[key].freq = null;
     markers[key].time = null;
     if (markers[key].el) markers[key].el.style.display = 'none';
@@ -339,6 +360,7 @@ export function initAutoIdPanel({
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
+    const knee = parseFloat(inputs.knee.value);
     const cfStartVal = parseFloat(inputs.cfStart.value);
     const endVal = parseFloat(inputs.end.value);
     let bandwidth = null;
@@ -362,7 +384,7 @@ export function initAutoIdPanel({
     } else {
       durationEl.textContent = '-';
     }
-    updateWarnings(high, low, bandwidth);
+    updateWarnings(high, low, knee, bandwidth);
   }
 
   function createMarkerEl(key, tabIdx) {
@@ -570,6 +592,7 @@ export function initAutoIdPanel({
       delete el.dataset.time;
       el.classList.remove('active-get');
       el.classList.remove('invalid');
+      delete el.dataset.warnFreq;
     });
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
@@ -604,6 +627,7 @@ export function initAutoIdPanel({
       delete el.dataset.time;
       el.classList.remove('active-get');
       el.classList.remove('invalid');
+      delete el.dataset.warnFreq;
     });
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
@@ -688,15 +712,15 @@ export function initAutoIdPanel({
     let allValid = true;
     Object.entries(inputs).forEach(([key, el]) => {
       if (!el) return;
-      if (required.includes(key)) {
-        const val = parseFloat(el.value);
-        const isValid = !isNaN(val);
-        if (showValidation) {
-          el.classList.toggle('invalid', !isValid);
-        } else {
-          el.classList.remove('invalid');
-        }
-        if (!isValid) allValid = false;
+      const val = parseFloat(el.value);
+      const isValid = !isNaN(val);
+      const isRequired = required.includes(key);
+      if (isRequired && !isValid) allValid = false;
+
+      if (showValidation && isRequired) {
+        el.classList.toggle('invalid', !isValid || el.dataset.warnFreq);
+      } else if (el.dataset.warnFreq) {
+        el.classList.add('invalid');
       } else {
         el.classList.remove('invalid');
       }
