@@ -482,14 +482,24 @@ getZoomLevel: () => zoomControl.getZoomLevel(),
 
 const wrapper = document.getElementById('viewer-wrapper');
 const zoomControl = initZoomControls(
-getWavesurfer(),
-container,
-getDuration,
-renderAxes,
-wrapper,
-() => { freqHoverControl?.hideHover(); },
-() => { freqHoverControl?.refreshHover(); autoIdControl?.updateMarkers(); },
-() => selectionExpandMode
+  getWavesurfer(),
+  container,
+  getDuration,
+  renderAxes,
+  wrapper,
+  () => { freqHoverControl?.hideHover(); },
+  () => { freqHoverControl?.refreshHover(); autoIdControl?.updateMarkers(); },
+  () => selectionExpandMode,
+  () => {
+    const sel = freqHoverControl?.getHoveredSelection?.();
+    if (sel) {
+      viewer.dispatchEvent(new CustomEvent('expand-selection', {
+        detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
+      }));
+      return true;
+    }
+    return false;
+  }
 );
 
 function updateProgressLine(time) {

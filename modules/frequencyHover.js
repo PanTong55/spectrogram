@@ -22,6 +22,7 @@ export function initFrequencyHover({
   const container = document.getElementById('spectrogram-only');
   const persistentLines = [];
   const selections = [];
+  let hoveredSelection = null;
   let persistentLinesEnabled = true;
   let disablePersistentLinesForScrollbar = false;
   const defaultScrollbarThickness = 20;
@@ -253,6 +254,8 @@ export function initFrequencyHover({
     }
 
     enableResize(selObj);
+    selObj.rect.addEventListener('mouseenter', () => { hoveredSelection = selObj; });
+    selObj.rect.addEventListener('mouseleave', () => { if (hoveredSelection === selObj) hoveredSelection = null; });
   }
 
   function removeSelection(sel) {
@@ -261,6 +264,7 @@ export function initFrequencyHover({
       viewer.removeChild(selections[index].rect);
       if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
       selections.splice(index, 1);
+      if (hoveredSelection === sel) hoveredSelection = null;
     }
   }
 
@@ -578,6 +582,7 @@ export function initFrequencyHover({
       if (sel.tooltip) viewer.removeChild(sel.tooltip);
     });
     selections.length = 0;
+    hoveredSelection = null;
   }
 
   function enableDrag(element) {
@@ -614,6 +619,7 @@ export function initFrequencyHover({
         updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
       }
     },
-    setPersistentLinesEnabled: (val) => { persistentLinesEnabled = val; }
+    setPersistentLinesEnabled: (val) => { persistentLinesEnabled = val; },
+    getHoveredSelection: () => (selections.includes(hoveredSelection) ? hoveredSelection : null)
   };
 }

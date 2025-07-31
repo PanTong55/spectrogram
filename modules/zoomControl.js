@@ -2,7 +2,8 @@
 
 export function initZoomControls(ws, container, duration, applyZoomCallback,
                                 wrapperElement, onBeforeZoom = null,
-                                onAfterZoom = null, isSelectionExpandMode = () => false) {
+                                onAfterZoom = null, isSelectionExpandMode = () => false,
+                                onCtrlArrowUp = null) {
   const zoomInBtn = document.getElementById('zoom-in');
   const zoomOutBtn = document.getElementById('zoom-out');
   const expandBtn = document.getElementById('expand-btn');
@@ -89,6 +90,14 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
 
   document.addEventListener('keydown', (e) => {
     if (!e.ctrlKey) return;  // 只監聽 Ctrl + *
+
+    if (e.key === 'ArrowUp' && typeof onCtrlArrowUp === 'function') {
+      const handled = onCtrlArrowUp();
+      if (handled) {
+        e.preventDefault();
+        return;
+      }
+    }
 
     switch (e.key) {
       case 'ArrowUp':
