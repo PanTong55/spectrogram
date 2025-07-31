@@ -1300,6 +1300,11 @@ input.tag-button.editing {
   border: 1px solid black;
   background-color: rgba(0,0,0,0.05);
   z-index: 20;
+  transition: background-color 0.2s;
+}
+
+.selection-rect:hover {
+  background-color: rgba(0,0,0,0.1);
 }
 
 .persistent-line {
