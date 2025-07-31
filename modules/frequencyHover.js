@@ -22,6 +22,7 @@ export function initFrequencyHover({
   const container = document.getElementById('spectrogram-only');
   const persistentLines = [];
   const selections = [];
+  let hoveredSelection = null;
   let persistentLinesEnabled = true;
   let disablePersistentLinesForScrollbar = false;
   const defaultScrollbarThickness = 20;
@@ -180,9 +181,17 @@ export function initFrequencyHover({
       const startTime = (left / actualWidth) * getDuration();
       const endTime = ((left + width) / actualWidth) * getDuration();
       const Duration = endTime - startTime;
-      createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
+      const newSel = createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
       selectionRect = null;
       suppressHover = false;
+
+      if (lastClientX !== null && lastClientY !== null) {
+        const box = newSel.rect.getBoundingClientRect();
+        if (lastClientX >= box.left && lastClientX <= box.right &&
+            lastClientY >= box.top && lastClientY <= box.bottom) {
+          hoveredSelection = newSel;
+        }
+      }
     };
 
     window.addEventListener(moveEv, moveHandler, { passive: type === 'touch' ? false : true });
@@ -253,6 +262,9 @@ export function initFrequencyHover({
     }
 
     enableResize(selObj);
+    selObj.rect.addEventListener('mouseenter', () => { hoveredSelection = selObj; });
+    selObj.rect.addEventListener('mouseleave', () => { if (hoveredSelection === selObj) hoveredSelection = null; });
+    return selObj;
   }
 
   function removeSelection(sel) {
@@ -261,6 +273,7 @@ export function initFrequencyHover({
       viewer.removeChild(selections[index].rect);
       if (selections[index].tooltip) viewer.removeChild(selections[index].tooltip);
       selections.splice(index, 1);
+      if (hoveredSelection === sel) hoveredSelection = null;
     }
   }
 
@@ -578,6 +591,7 @@ export function initFrequencyHover({
       if (sel.tooltip) viewer.removeChild(sel.tooltip);
     });
     selections.length = 0;
+    hoveredSelection = null;
   }
 
   function enableDrag(element) {
@@ -614,6 +628,7 @@ export function initFrequencyHover({
         updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
       }
     },
-    setPersistentLinesEnabled: (val) => { persistentLinesEnabled = val; }
+    setPersistentLinesEnabled: (val) => { persistentLinesEnabled = val; },
+    getHoveredSelection: () => (selections.includes(hoveredSelection) ? hoveredSelection : null)
   };
 }
