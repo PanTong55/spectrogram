@@ -600,26 +600,6 @@ export function initFrequencyHover({
     window.addEventListener('mouseup', () => { isDragging = false; });
   }
 
-  document.addEventListener('keydown', (e) => {
-    if (!(e.ctrlKey && e.key === 'ArrowUp')) return;
-    if (!isCursorInside || isDrawing || isResizing) return;
-    if (lastClientX === null || lastClientY === null) return;
-
-    for (let i = selections.length - 1; i >= 0; i--) {
-      const sel = selections[i];
-      const rect = sel.rect.getBoundingClientRect();
-      if (lastClientX >= rect.left && lastClientX <= rect.right &&
-          lastClientY >= rect.top && lastClientY <= rect.bottom) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        viewer.dispatchEvent(new CustomEvent('expand-selection', {
-          detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
-        }));
-        break;
-      }
-    }
-  });
-
   return {
     updateSelections,
     clearSelections,
