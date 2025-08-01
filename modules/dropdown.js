@@ -32,10 +32,12 @@ export class Dropdown {
 
   _bindButton() {
     this.button.addEventListener('click', (e) => {
+      if (this.button.disabled) return;
       e.stopPropagation();
       this.toggle();
     });
     this.button.addEventListener('keydown', (e) => {
+      if (this.button.disabled) return;
       if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         this.open();
