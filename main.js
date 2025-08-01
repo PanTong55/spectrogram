@@ -751,9 +751,7 @@ quickPresetBtn.addEventListener('click', () => {
     fftSizeBtn.disabled = true;
     sampleRateDropdown.select(3);
     sampleRateBtn.disabled = true;
-    quickPresetBtn.style.color = 'rgb(249, 203, 45)';
-    quickPresetBtn.style.textShadow =
-      '0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000, 1px 0 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+    quickPresetBtn.style.color = 'rgb(249, 191, 0)';
     quickPresetBtn.title = 'Exit Quick Screening Mode';
     quickPresetActive = true;
   } else {
