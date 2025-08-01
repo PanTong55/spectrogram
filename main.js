@@ -60,6 +60,7 @@ let freqHoverControl = null;
 let autoIdControl = null;
 let freqMenuControl = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
+const fftSizeBtn = document.getElementById('fftSizeInput');
 let selectionExpandMode = false;
 let expandHistory = [];
 let currentExpandBlob = null;
@@ -739,12 +740,35 @@ handleOverlapChange();
 });
 
 const quickPresetBtn = document.getElementById('quickPresetBtn');
+let quickPresetActive = false;
+let prevSampleRateIndex = null;
+let prevFftSizeIndex = null;
 quickPresetBtn.addEventListener('click', () => {
-  fftSizeDropdown.select(0);
+  if (!quickPresetActive) {
+    prevSampleRateIndex = sampleRateDropdown.selectedIndex;
+    prevFftSizeIndex = fftSizeDropdown.selectedIndex;
+    fftSizeDropdown.select(0);
+    fftSizeBtn.disabled = true;
+    sampleRateDropdown.select(3);
+    sampleRateBtn.disabled = true;
+    quickPresetBtn.style.color = 'rgb(249, 203, 45)';
+    quickPresetBtn.style.textShadow =
+      '0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000, 1px 0 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+    quickPresetBtn.title = 'Exit Quick Screening Mode';
+    quickPresetActive = true;
+  } else {
+    sampleRateBtn.disabled = false;
+    fftSizeBtn.disabled = false;
+    if (prevFftSizeIndex != null) fftSizeDropdown.select(prevFftSizeIndex);
+    if (prevSampleRateIndex != null) sampleRateDropdown.select(prevSampleRateIndex);
+    quickPresetBtn.style.color = '';
+    quickPresetBtn.style.textShadow = '';
+    quickPresetBtn.title = 'Quick Screening Mode';
+    quickPresetActive = false;
+  }
   overlapInput.value = '';
   currentOverlap = 'auto';
   handleOverlapChange();
-  sampleRateDropdown.select(3);
 });
 
 function updateSpectrogramSettingsText() {
@@ -1111,7 +1135,8 @@ document.addEventListener("file-loaded", async () => {
   updateProgressLine(0);
   lastLoadedFileName = currentFile ? currentFile.name : null;
   selectionExpandMode = false;
-  sampleRateBtn.disabled = false;
+  sampleRateBtn.disabled = quickPresetActive ? true : false;
+  fftSizeBtn.disabled = quickPresetActive ? true : false;
   expandHistory = [];
   currentExpandBlob = null;
   updateExpandBackBtn();
@@ -1126,7 +1151,8 @@ document.addEventListener("file-loaded", async () => {
 
 document.addEventListener('file-list-cleared', () => {
 selectionExpandMode = false;
-sampleRateBtn.disabled = false;
+  sampleRateBtn.disabled = quickPresetActive ? true : false;
+  fftSizeBtn.disabled = quickPresetActive ? true : false;
 expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
