@@ -175,6 +175,8 @@ export function initMapPopup({
 
   function createMap(lat, lon) {
     map = L.map(mapDiv).setView([lat, lon], 13);
+    map.createPane('annotationPane');
+    map.getPane('annotationPane').style.zIndex = 650;
     zoomControlContainer = map.zoomControl.getContainer();
     map.on('dragstart', () => { isMapDragging = true; updateCursor(); });
     map.on('dragend', () => { isMapDragging = false; updateCursor(); });
@@ -304,21 +306,22 @@ export function initMapPopup({
       });
 
     drawnItems = new L.FeatureGroup().addTo(map);
-    const canvasRenderer = L.canvas();
+    const canvasRenderer = L.canvas({ pane: 'annotationPane' });
     drawControl = new L.Control.Draw({
       position: 'topleft',
       edit: { featureGroup: drawnItems },
       draw: {
         circlemarker: false,
-        polyline: { shapeOptions: { renderer: canvasRenderer } },
-        polygon: { shapeOptions: { renderer: canvasRenderer } },
-        rectangle: { shapeOptions: { renderer: canvasRenderer } },
-        circle: { shapeOptions: { renderer: canvasRenderer } }
+        polyline: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } },
+        polygon: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } },
+        rectangle: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } },
+        circle: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } }
       }
     });
     map.on(L.Draw.Event.CREATED, (e) => {
       if (e.layer && e.layer instanceof L.Path) {
         e.layer.options.renderer = canvasRenderer;
+        e.layer.options.pane = 'annotationPane';
       }
       drawnItems.addLayer(e.layer);
     });
@@ -755,7 +758,12 @@ export function initMapPopup({
   }
 
   function createTextMarker(latlng, text) {
-    const marker = L.marker(latlng, { icon: createTextIcon(text, textMode), draggable: textMode });
+    const marker = L.marker(latlng, {
+      icon: createTextIcon(text, textMode),
+      draggable: textMode,
+      pane: 'annotationPane',
+      zIndexOffset: 1000
+    });
     marker.text = text;
     marker.on('dblclick', () => { if (textMode) editTextMarker(marker); });
     marker.on('click', (e) => {
@@ -779,6 +787,7 @@ export function initMapPopup({
       else m.dragging.disable();
       const txt = m.text || '';
       m.setIcon(createTextIcon(txt, textMode));
+      m.setZIndexOffset(1000);
     });
   }
 
