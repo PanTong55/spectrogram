@@ -827,7 +827,7 @@ export function initMapPopup({
     navigator.geolocation.getCurrentPosition((pos) => {
       const { latitude: lat, longitude: lon } = pos.coords;
       const icon = L.divIcon({
-        html: '<i class="fa-solid fa-location-crosshairs"></i>',
+        html: '<i class="fa-solid fa-location-pin"></i>',
         className: 'map-marker-device',
         iconSize: [28, 28],
         iconAnchor: [14, 28]
