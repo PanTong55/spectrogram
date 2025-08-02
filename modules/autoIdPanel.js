@@ -160,6 +160,7 @@ export function initAutoIdPanel({
     const showOrder = !isNaN(high) && !isNaN(low) && low > high;
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
     const showTimeOrder = startT != null && endT != null && endT < startT;
+    const hasWarnings = showBandwidth || showOrder || showKneeOrder || showTimeOrder;
     if (inputs.high) inputs.high.classList.toggle('warning', showBandwidth || showOrder);
     if (inputs.low) inputs.low.classList.toggle('warning', showBandwidth || showOrder || showKneeOrder);
     if (inputs.knee) inputs.knee.classList.toggle('warning', showKneeOrder);
@@ -169,6 +170,8 @@ export function initAutoIdPanel({
     if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
     if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
     if (timeOrderWarning) timeOrderWarning.style.display = showTimeOrder ? 'flex' : 'none';
+    if (pulseIdBtn) pulseIdBtn.disabled = hasWarnings;
+    if (sequenceIdBtn) sequenceIdBtn.disabled = hasWarnings;
   }
 
   const markerColors = {
