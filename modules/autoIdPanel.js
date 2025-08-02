@@ -185,17 +185,6 @@ export function initAutoIdPanel({
     cfEnd: '#1abc9c'
   };
 
-  const markerTitles = {
-    start: 'Start freq.',
-    end: 'End freq.',
-    high: 'High freq.',
-    low: 'Low freq.',
-    knee: 'Knee freq.',
-    heel: 'Heel freq.',
-    cfStart: 'CF start',
-    cfEnd: 'CF end'
-  };
-
   let markers = tabData[currentTab].markers;
 
   let active = null;
@@ -394,9 +383,7 @@ export function initAutoIdPanel({
     el.style.color = markerColors[key];
     el.dataset.key = key;
     el.dataset.tab = tabIdx;
-    const title = markerTitles[key] || key;
-    el.dataset.title = title;
-    el.setAttribute('aria-label', title);
+    el.title = `${key.charAt(0).toUpperCase() + key.slice(1)} freq. marker`;
     el.addEventListener('mouseenter', hideHover);
     el.addEventListener('mouseleave', refreshHover);
     el.addEventListener('mousedown', (ev) => {
