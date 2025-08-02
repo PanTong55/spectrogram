@@ -745,6 +745,13 @@ input[type="file"]:hover {
   background-color: #ffd700;
 }
 
+.autoid-action-btn:disabled,
+.autoid-action-btn:disabled:hover {
+  background-color: #e0e0e0;
+  color: #777;
+  cursor: not-allowed;
+}
+
 .autoid-result-label {
   font-size: 14px;
 }
