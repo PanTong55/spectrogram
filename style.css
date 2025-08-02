@@ -778,6 +778,9 @@ input[type="file"]:hover {
   cursor: move !important;
   z-index: 30;
 }
+.freq-marker[data-title] {
+  z-index: 31;
+}
 .freq-marker[data-title]:hover::after {
   content: attr(data-title);
   position: absolute;
