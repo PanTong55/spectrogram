@@ -786,8 +786,8 @@ input[type="file"]:hover {
   transform: translate(-50%, -4px);
   background: #333;
   color: #fff;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 3px 6px 5px 6px;
+  border-radius: 10px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 10;
