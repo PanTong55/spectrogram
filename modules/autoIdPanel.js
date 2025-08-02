@@ -668,7 +668,7 @@ export function initAutoIdPanel({
         const genus = name.replace(' sp.', '');
         return `<i>${genus}</i> sp.`;
       }
-      if (name === 'TBC' || name === '-') return name;
+      if (name === 'TBC' || name === '-' || name === 'No species matched') return name;
       return `<i>${name}</i>`;
     }).join(' / ');
   }
@@ -744,9 +744,14 @@ export function initAutoIdPanel({
     const kneeLowBandwidth = !isNaN(knee) && !isNaN(low) ? knee - low : null;
     const heelLowBandwidth = !isNaN(heel) && !isNaN(low) ? heel - low : null;
     const kneeHeelBandwidth = !isNaN(knee) && !isNaN(heel) ? knee - heel : null;
+    const harmonic = parseInt(
+      harmonicDropdown.items[harmonicDropdown.selectedIndex],
+      10
+    );
 
     const res = autoIdHK({
       callType,
+      harmonic,
       highestFreq: high,
       lowestFreq: low,
       kneeFreq: knee,
@@ -766,14 +771,8 @@ export function initAutoIdPanel({
     updateResultDisplay();
   }
 
-
   function runSequenceId() {
-    if (!validateMandatoryInputs(true)) {
-      if (resultEl) resultEl.textContent = '-';
-      return;
-    }
-    tabData[currentTab].result = null;
-    showPlaceholderResult();
+    runPulseId();
   }
 
   pulseIdBtn?.addEventListener('click', runPulseId);
