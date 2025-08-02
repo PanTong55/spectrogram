@@ -90,7 +90,6 @@ function inRange(val, range) {
 }
 
 export function autoIdHK(data = {}) {
-  if (data.callType === 'FM' || data.callType === 'FM-QCF') return 'TBC';
   const matches = speciesRules.filter(rule => {
     if (rule.callType && rule.callType !== data.callType) return false;
     if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
