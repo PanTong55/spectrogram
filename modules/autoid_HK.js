@@ -90,7 +90,7 @@ function inRange(val, range) {
 }
 
 export function autoIdHK(data = {}) {
-  const matches = speciesRules.filter(rule => {
+  const matches = [...new Set(speciesRules.filter(rule => {
     if (rule.callType && rule.callType !== data.callType) return false;
     if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
     const fields = [
@@ -100,6 +100,6 @@ export function autoIdHK(data = {}) {
       'heelLowBandwidth', 'kneeHeelBandwidth'
     ];
     return fields.every(f => !rule[f] || inRange(data[f], rule[f]));
-  }).map(r => r.name);
+  }).map(r => r.name))];
   return matches.length ? matches.join(' / ') : 'No species matched';
 }
