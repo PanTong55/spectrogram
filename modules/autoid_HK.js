@@ -1,35 +1,93 @@
 // modules/autoid_HK.js
 
-export function autoIdHK({ callType, cfStart, duration, lowFreq }) {
-  let result = '-';
-  if (callType === 'CF-FM') {
-    if (cfStart >= 120 && cfStart <= 130 && duration >= 5 && duration <= 10) {
-      result = 'Hipposideros gentilis';
-    } else if (cfStart >= 60 && cfStart <= 70 && duration >= 10 && duration <= 18) {
-      result = 'Hipposideros armiger';
-    } else {
-      result = 'Hipposideros sp.';
-    }
-  } else if (callType === 'FM-CF-FM') {
-    if (cfStart >= 100 && cfStart <= 110 && duration >= 30 && duration <= 70) {
-      result = 'Rhinolophus pusillus';
-    } else if (cfStart >= 75 && cfStart <= 87 && duration >= 30 && duration <= 70) {
-      result = 'Rhinolophus sinicus';
-    } else if (cfStart >= 68 && cfStart <= 75 && duration >= 30 && duration <= 80) {
-      result = 'Rhinolophus affinis';
-    } else {
-      result = 'Rhinolophus sp.';
-    }
-  } else if (callType === 'QCF') {
-    if (lowFreq >= 39 && lowFreq <= 42) result = '<i>Pipistrellus tenuis</i>';
-    else if (lowFreq >= 44 && lowFreq <= 46) result = '<i>Pipistrellus abramus</i>';
-    else if (lowFreq >= 32 && lowFreq <= 36) result = '<i>Hypsugo pulveratus</i>';
-    else if (lowFreq >= 30 && lowFreq < 32) result = '<i>Pipistrellus ceylonicus</i>';
-    else if (lowFreq >= 17.5 && lowFreq <= 21) result = '<i>Nyctalus plancyi</i> / <i>Mops plicatus</i>';
-    else if (lowFreq >= 24.5 && lowFreq <= 26) result = '<i>Taphozous melanopogon</i>';
-    else if (lowFreq >= 13 && lowFreq <= 16.5) result = '<i>Mops plicatus</i>';
-  } else if (callType === 'FM' || callType === 'FM-QCF') {
-    result = 'TBC';
+const speciesRules = [
+  {
+    name: 'Hipposideros gentilis',
+    callType: 'CF-FM',
+    cfStart: [120, 130],
+    duration: [5, 10]
+  },
+  {
+    name: 'Hipposideros armiger',
+    callType: 'CF-FM',
+    cfStart: [60, 70],
+    duration: [10, 18]
+  },
+  {
+    name: 'Rhinolophus pusillus',
+    callType: 'FM-CF-FM',
+    cfStart: [100, 110],
+    duration: [30, 70]
+  },
+  {
+    name: 'Rhinolophus sinicus',
+    callType: 'FM-CF-FM',
+    cfStart: [75, 87],
+    duration: [30, 70]
+  },
+  {
+    name: 'Rhinolophus affinis',
+    callType: 'FM-CF-FM',
+    cfStart: [68, 75],
+    duration: [30, 80]
+  },
+  {
+    name: 'Pipistrellus tenuis',
+    callType: 'QCF',
+    lowestFreq: [39, 42]
+  },
+  {
+    name: 'Pipistrellus abramus',
+    callType: 'QCF',
+    lowestFreq: [44, 46]
+  },
+  {
+    name: 'Hypsugo pulveratus',
+    callType: 'QCF',
+    lowestFreq: [32, 36]
+  },
+  {
+    name: 'Pipistrellus ceylonicus',
+    callType: 'QCF',
+    lowestFreq: [30, 32]
+  },
+  {
+    name: 'Nyctalus plancyi',
+    callType: 'QCF',
+    lowestFreq: [17.5, 21]
+  },
+  {
+    name: 'Mops plicatus',
+    callType: 'QCF',
+    lowestFreq: [[17.5, 21], [13, 16.5]]
+  },
+  {
+    name: 'Taphozous melanopogon',
+    callType: 'QCF',
+    lowestFreq: [24.5, 26]
   }
-  return result;
+];
+
+function inRange(val, range) {
+  if (val == null || isNaN(val)) return false;
+  if (Array.isArray(range[0])) return range.some(r => inRange(val, r));
+  const [min, max] = range;
+  return val >= min && val <= max;
+}
+
+export function autoIdHK(data = {}) {
+  if (data.callType === 'FM' || data.callType === 'FM-QCF') return 'TBC';
+  const matches = speciesRules.filter(rule => {
+    if (rule.callType && rule.callType !== data.callType) return false;
+    const fields = [
+      'highestFreq', 'lowestFreq', 'kneeFreq', 'heelFreq',
+      'startFreq', 'endFreq', 'cfStart', 'cfEnd', 'duration',
+      'bandwidth', 'kneeLowTime', 'kneeLowBandwidth',
+      'heelLowBandwidth', 'kneeHeelBandwidth'
+    ];
+    return fields.every(f => !rule[f] || inRange(data[f], rule[f]));
+  }).map(r => r.name);
+  if (matches.length) return matches.join(' / ');
+  const fallback = { 'CF-FM': 'Hipposideros sp.', 'FM-CF-FM': 'Rhinolophus sp.' };
+  return fallback[data.callType] || '-';
 }

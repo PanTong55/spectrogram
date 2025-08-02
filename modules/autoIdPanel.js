@@ -660,23 +660,14 @@ export function initAutoIdPanel({
   viewer.addEventListener('scroll', updateMarkers);
 
   function formatSpeciesResult(res) {
-    const italicSpecies = new Set([
-      'Hipposideros armiger',
-      'Hipposideros gentilis',
-      'Rhinolophus affinis',
-      'Rhinolophus pusillus',
-      'Rhinolophus sinicus'
-    ]);
-    if (italicSpecies.has(res)) {
-      return `<i>${res}</i>`;
-    }
-    if (res === 'Hipposideros sp.') {
-      return '<i>Hipposideros</i> sp.';
-    }
-    if (res === 'Rhinolophus sp.') {
-      return '<i>Rhinolophus</i> sp.';
-    }
-    return res;
+    return res.split(' / ').map(name => {
+      if (name.endsWith('sp.')) {
+        const genus = name.replace(' sp.', '');
+        return `<i>${genus}</i> sp.`;
+      }
+      if (name === 'TBC' || name === '-') return name;
+      return `<i>${name}</i>`;
+    }).join(' / ');
   }
 
   function showPlaceholderResult() {
@@ -720,15 +711,54 @@ export function initAutoIdPanel({
       return;
     }
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const high = parseFloat(inputs.high.value);
     const low = parseFloat(inputs.low.value);
+    const knee = parseFloat(inputs.knee.value);
+    const heel = parseFloat(inputs.heel.value);
+    const start = parseFloat(inputs.start.value);
+    const end = parseFloat(inputs.end.value);
     const cfStart = parseFloat(inputs.cfStart.value);
+    const cfEnd = parseFloat(inputs.cfEnd.value);
+
     let duration = null;
     if (startTime != null && endTime != null) {
       duration = (endTime - startTime) * 1000;
     } else if (markers.high.time != null && markers.low.time != null) {
       duration = (markers.low.time - markers.high.time) * 1000;
     }
-    const res = autoIdHK({ callType, cfStart, duration, lowFreq: low });
+
+    let bandwidth = null;
+    if (["FM-CF-FM", "CF-FM"].includes(callType)) {
+      if (!isNaN(cfStart) && !isNaN(end)) bandwidth = cfStart - end;
+    } else if (!isNaN(high) && !isNaN(low)) {
+      bandwidth = high - low;
+    }
+
+    const kneeLowTime =
+      markers.knee.time != null && markers.low.time != null
+        ? (markers.knee.time - markers.low.time) * 1000
+        : null;
+    const kneeLowBandwidth = !isNaN(knee) && !isNaN(low) ? knee - low : null;
+    const heelLowBandwidth = !isNaN(heel) && !isNaN(low) ? heel - low : null;
+    const kneeHeelBandwidth = !isNaN(knee) && !isNaN(heel) ? knee - heel : null;
+
+    const res = autoIdHK({
+      callType,
+      highestFreq: high,
+      lowestFreq: low,
+      kneeFreq: knee,
+      heelFreq: heel,
+      startFreq: start,
+      endFreq: end,
+      cfStart,
+      cfEnd,
+      duration,
+      bandwidth,
+      kneeLowTime,
+      kneeLowBandwidth,
+      heelLowBandwidth,
+      kneeHeelBandwidth
+    });
     tabData[currentTab].result = res;
     updateResultDisplay();
   }
