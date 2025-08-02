@@ -34,7 +34,9 @@ const speciesRules = [
   {
     name: 'Pipistrellus tenuis',
     callType: 'QCF',
-    lowestFreq: [39, 42]
+    lowestFreq: [39, 42],
+    bandwidth: [1, 5],
+    duration: [5, 10]
   },
   {
     name: 'Pipistrellus abramus',
