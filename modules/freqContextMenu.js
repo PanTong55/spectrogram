@@ -86,6 +86,13 @@ export function initFreqContextMenu({
 
   wrapper.addEventListener('contextmenu', (e) => {
     if (!document.body.classList.contains('autoid-open')) return;
+    if (e.target.closest('#zoom-controls')) return;
+    const rect = viewer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const overHScrollbar = viewer.scrollWidth > viewer.clientWidth && y > viewer.clientHeight;
+    const overVScrollbar = viewer.scrollHeight > viewer.clientHeight && x > viewer.clientWidth;
+    if (overHScrollbar || overVScrollbar) return;
     e.preventDefault();
     e.stopImmediatePropagation();
 
@@ -95,9 +102,6 @@ export function initFreqContextMenu({
       freq = parseFloat(e.target.dataset.freq);
       time = parseFloat(e.target.dataset.time);
     } else {
-      const rect = wrapper.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
       const scrollLeft = viewer.scrollLeft || 0;
       const { min, max } = getFreqRange();
       freq = (1 - y / spectrogramHeight) * (max - min) + min;
