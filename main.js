@@ -59,6 +59,7 @@ let overlapWarningShown = false;
 let freqHoverControl = null;
 let autoIdControl = null;
 let freqMenuControl = null;
+let demoFetchController = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
 const fftSizeBtn = document.getElementById('fftSizeInput');
 let selectionExpandMode = false;
@@ -285,17 +286,21 @@ zoomControlsElem.style.display = 'flex';
 sidebarControl.refresh(file.name);
 },
 onBeforeLoad: () => {
+if (demoFetchController) {
+  demoFetchController.abort();
+  demoFetchController = null;
+}
 if (uploadOverlay.style.display !== 'flex') {
-loadingOverlay.style.display = 'flex';
+  loadingOverlay.style.display = 'flex';
 }
 freqHoverControl?.hideHover();
 freqHoverControl?.clearSelections();
 if (selectionExpandMode) {
-selectionExpandMode = false;
-sampleRateBtn.disabled = false;
-expandHistory = [];
-currentExpandBlob = null;
-updateExpandBackBtn();
+  selectionExpandMode = false;
+  sampleRateBtn.disabled = false;
+  expandHistory = [];
+  currentExpandBlob = null;
+  updateExpandBackBtn();
 }
 },
   onAfterLoad: () => {
@@ -331,18 +336,27 @@ sidebarElem.addEventListener('sidebar-toggle', () => {
 const tagControl = initTagControl();
 
 (async () => {
-try {
-const resp = await fetch('https://raw.githubusercontent.com/hkbatradar/SonoRadar/main/recording/demo_recording.wav');
-const blob = await resp.blob();
-const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
-setFileList([demoFile], -1);
-toggleFileIcon(0, 'trash');
-toggleFileIcon(0, 'star');
-toggleFileIcon(0, 'question');
-sidebarControl.refresh(demoFile.name);
-} catch (err) {
-console.error('Failed to preload demo file', err);
-}
+  demoFetchController = new AbortController();
+  try {
+    const resp = await fetch(
+      'https://raw.githubusercontent.com/hkbatradar/SonoRadar/main/recording/demo_recording.wav',
+      { signal: demoFetchController.signal }
+    );
+    const blob = await resp.blob();
+    if (demoFetchController.signal.aborted) return;
+    const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
+    setFileList([demoFile], -1);
+    toggleFileIcon(0, 'trash');
+    toggleFileIcon(0, 'star');
+    toggleFileIcon(0, 'question');
+    sidebarControl.refresh(demoFile.name);
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Failed to preload demo file', err);
+    }
+  } finally {
+    demoFetchController = null;
+  }
 })();
 
 document.addEventListener('keydown', (e) => {
