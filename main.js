@@ -69,8 +69,17 @@ const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
 const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
+const cancelBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT);
+const cancelFlag = new Int32Array(cancelBuffer);
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
-specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
+specWorker.postMessage({ type: "init", canvas: offscreen, cancelBuffer }, [offscreen]);
+let renderTimeoutId = null;
+specWorker.onmessage = (e) => {
+  if (e.data?.type === 'rendered' && renderTimeoutId !== null) {
+    clearTimeout(renderTimeoutId);
+    renderTimeoutId = null;
+  }
+};
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
@@ -1143,6 +1152,18 @@ document.addEventListener("file-loaded", async () => {
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
+    if (renderTimeoutId !== null) {
+      clearTimeout(renderTimeoutId);
+    }
+    Atomics.store(cancelFlag, 0, 0);
+    renderTimeoutId = setTimeout(() => {
+      Atomics.store(cancelFlag, 0, 1);
+      showMessageBox({
+        title: 'Rendering Timeout',
+        message: 'The spectrogram rendering took too long. Please adjust the settings or shorten the recording length.'
+      });
+      renderTimeoutId = null;
+    }, 10000);
     specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
   }
 });
