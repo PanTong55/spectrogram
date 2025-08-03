@@ -403,6 +403,7 @@ export function initAutoIdPanel({
       if (!markersEnabled) return;
       ev.stopPropagation();
       hideHover();
+      viewer.classList.add('hide-cursor');
       draggingKey = key;
       document.addEventListener('mousemove', onMarkerDrag, { passive: true });
       document.addEventListener('mouseup', stopMarkerDrag, { once: true });
@@ -544,6 +545,7 @@ export function initAutoIdPanel({
   function stopMarkerDrag() {
     draggingKey = null;
     document.removeEventListener('mousemove', onMarkerDrag);
+    viewer.classList.remove('hide-cursor');
     refreshHover();
     validateMandatoryInputs();
     clearResult();
