@@ -56,7 +56,19 @@ export function parseGuanoMetadata(text) {
   if (meta['Loc Position']) {
     const [lat, lon] = meta['Loc Position'].split(/\s+/);
     meta._Latitude = lat || '';
-    meta._Longitude = lon || '';
+    if (lon) {
+      let lonNum = parseFloat(lon);
+      if (!Number.isNaN(lonNum)) {
+        if (lonNum < 0 && Math.abs(lonNum) >= 113 && Math.abs(lonNum) <= 115) {
+          lonNum = Math.abs(lonNum);
+        }
+        meta._Longitude = lonNum.toString();
+      } else {
+        meta._Longitude = lon;
+      }
+    } else {
+      meta._Longitude = '';
+    }
   }
 
   return {
