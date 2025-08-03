@@ -69,32 +69,8 @@ const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
 const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
-let specWorker;
-let renderTimerId = null;
-
-function initSpecWorker() {
-  specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
-  specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
-  specWorker.onmessage = (e) => {
-    if (e.data?.type === 'timeout') {
-      if (renderTimerId !== null) {
-        clearTimeout(renderTimerId);
-        renderTimerId = null;
-        showMessageBox({
-          title: 'Rendering Timeout',
-          message: 'The spectrogram rendering took too long. Please adjust the settings or shorten the recording length.'
-        });
-      }
-    } else if (e.data?.type === 'rendered') {
-      if (renderTimerId !== null) {
-        clearTimeout(renderTimerId);
-        renderTimerId = null;
-      }
-    }
-  };
-}
-
-initSpecWorker();
+const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
+specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
@@ -1167,18 +1143,6 @@ document.addEventListener("file-loaded", async () => {
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-    if (renderTimerId !== null) {
-      clearTimeout(renderTimerId);
-      renderTimerId = null;
-    }
-    renderTimerId = setTimeout(() => {
-      renderTimerId = null;
-      specWorker.postMessage({ type: 'abort' });
-      showMessageBox({
-        title: 'Rendering Timeout',
-        message: 'The spectrogram rendering took too long. Please adjust the settings or shorten the recording length.'
-      });
-    }, 10000);
     specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
   }
 });
