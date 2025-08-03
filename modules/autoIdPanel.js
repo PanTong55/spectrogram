@@ -498,7 +498,7 @@ export function initAutoIdPanel({
         if (p1.key === 'high' && p2.key === 'knee') {
           const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
           const nextLen = Math.hypot(p3.x - p2.x, p3.y - p2.y);
-          const factor = currLen ? 1 + (nextLen / currLen) * 3 : 1;
+          const factor = currLen ? 1 + (nextLen / currLen) * 5 : 1;
           cp2x = p2.x - (p3.x - p1.x) * tension / 6 * factor;
           cp2y = p2.y - (p3.y - p1.y) * tension / 6 * factor;
         }
