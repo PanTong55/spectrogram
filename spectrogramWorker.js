@@ -1,5 +1,4 @@
 let canvas, ctx, sampleRate = 44100;
-let cancelFlag;
 
 self.onmessage = (e) => {
   const { type } = e.data;
@@ -7,9 +6,6 @@ self.onmessage = (e) => {
     canvas = e.data.canvas;
     sampleRate = e.data.sampleRate || sampleRate;
     ctx = canvas.getContext('2d');
-    if (e.data.cancelBuffer) {
-      cancelFlag = new Int32Array(e.data.cancelBuffer);
-    }
   } else if (type === 'render') {
     if (!ctx) return;
     renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0);
@@ -27,9 +23,6 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
   const real = new Float32Array(fftSize);
   const imag = new Float32Array(fftSize);
   for (let x = 0, i = 0; i + fftSize <= signal.length; i += hop, x++) {
-    if (cancelFlag && Atomics.load(cancelFlag, 0) === 1) {
-      return;
-    }
     for (let j = 0; j < fftSize; j++) {
       real[j] = signal[i + j] * window[j];
       imag[j] = 0;
