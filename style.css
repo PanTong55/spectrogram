@@ -180,7 +180,7 @@ html, body {
 /* === 時間軸 === */
 #time-axis-wrapper {
   overflow: hidden;
-  margin-left: 65px;
+  margin-left: 55px;
 }
 #time-axis {
   height: 20px;
