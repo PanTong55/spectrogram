@@ -710,7 +710,8 @@ input[type="file"]:hover {
   transition: background-color 0.25s ease;
 }
 #autoid-tabs button.active {
-  background-color: #007bff;
+  background-color: #ffd700;
+  color: black;
 }
 #autoid-fields {
   display: grid;
