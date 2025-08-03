@@ -492,6 +492,16 @@ export function initAutoIdPanel({
   
         let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
         let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
+
+        // 強化 high -> knee 轉折處的入線角度，
+        // 依據下一段線長度調整控制點，影響加強 3 倍
+        if (p1.key === 'high' && p2.key === 'knee') {
+          const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+          const nextLen = Math.hypot(p3.x - p2.x, p3.y - p2.y);
+          const factor = currLen ? 1 + (nextLen / currLen) * 3 : 1;
+          cp2x = p2.x - (p3.x - p1.x) * tension / 6 * factor;
+          cp2y = p2.y - (p3.y - p1.y) * tension / 6 * factor;
+        }
   
         if (p2.key !== 'cfStart' && p2.key !== 'end') {
           const dy = Math.abs(p1.y - p2.y);
