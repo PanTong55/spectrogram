@@ -816,6 +816,11 @@ body.markers-disabled .freq-marker {
   cursor: default !important;
 }
 
+#fixed-overlay > .freq-marker.hide-cursor,
+.freq-marker.hide-cursor {
+  cursor: none !important;
+}
+
 .marker-start { color: #e74c3c; }
 .marker-end { color: #004cff; }
 .marker-high { color: #3498db; }

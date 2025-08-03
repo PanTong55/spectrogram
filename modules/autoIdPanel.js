@@ -202,6 +202,7 @@ export function initAutoIdPanel({
   let startTime = null;
   let endTime = null;
   let draggingKey = null;
+  let draggingEl = null;
   let markersEnabled = true;
   let suppressResultReset = false;
 
@@ -403,7 +404,10 @@ export function initAutoIdPanel({
       if (!markersEnabled) return;
       ev.stopPropagation();
       hideHover();
+      viewer.classList.add('hide-cursor');
+      el.classList.add('hide-cursor');
       draggingKey = key;
+      draggingEl = el;
       document.addEventListener('mousemove', onMarkerDrag, { passive: true });
       document.addEventListener('mouseup', stopMarkerDrag, { once: true });
     });
@@ -543,7 +547,12 @@ export function initAutoIdPanel({
 
   function stopMarkerDrag() {
     draggingKey = null;
+    if (draggingEl) {
+      draggingEl.classList.remove('hide-cursor');
+      draggingEl = null;
+    }
     document.removeEventListener('mousemove', onMarkerDrag);
+    viewer.classList.remove('hide-cursor');
     refreshHover();
     validateMandatoryInputs();
     clearResult();
