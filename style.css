@@ -788,6 +788,11 @@ input[type="file"]:hover {
 .freq-marker[data-title] {
   z-index: 31;
 }
+
+.freq-marker[data-title]:hover {
+  z-index: 32;
+}
+
 .freq-marker[data-title]:hover::after {
   content: attr(data-title);
   position: absolute;
@@ -800,7 +805,7 @@ input[type="file"]:hover {
   border-radius: 10px;
   white-space: nowrap;
   pointer-events: none;
-  z-index: 10;
+  z-index: 33;
   font-size: 12px;
   font-family: 'Noto Sans HK', sans-serif;
   text-transform: none;
