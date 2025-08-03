@@ -1,5 +1,4 @@
 let canvas, ctx, sampleRate = 44100;
-let aborted = false;
 
 self.onmessage = (e) => {
   const { type } = e.data;
@@ -9,10 +8,7 @@ self.onmessage = (e) => {
     ctx = canvas.getContext('2d');
   } else if (type === 'render') {
     if (!ctx) return;
-    aborted = false;
     renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0);
-  } else if (type === 'abort') {
-    aborted = true;
   }
 };
 
@@ -26,13 +22,7 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
   const window = hannWindow(fftSize);
   const real = new Float32Array(fftSize);
   const imag = new Float32Array(fftSize);
-  const startTime = performance.now();
   for (let x = 0, i = 0; i + fftSize <= signal.length; i += hop, x++) {
-    if (aborted || performance.now() - startTime > 10000) {
-      aborted = false;
-      self.postMessage({ type: 'timeout' });
-      return;
-    }
     for (let j = 0; j < fftSize; j++) {
       real[j] = signal[i + j] * window[j];
       imag[j] = 0;
