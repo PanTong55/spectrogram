@@ -22,7 +22,12 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
   const window = hannWindow(fftSize);
   const real = new Float32Array(fftSize);
   const imag = new Float32Array(fftSize);
+  const startTime = performance.now();
   for (let x = 0, i = 0; i + fftSize <= signal.length; i += hop, x++) {
+    if (performance.now() - startTime > 10000) {
+      self.postMessage({ type: 'timeout' });
+      return;
+    }
     for (let j = 0; j < fftSize; j++) {
       real[j] = signal[i + j] * window[j];
       imag[j] = 0;
