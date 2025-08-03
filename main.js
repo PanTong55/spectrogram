@@ -71,6 +71,14 @@ const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
+specWorker.onmessage = (e) => {
+  if (e.data?.type === 'timeout') {
+    showMessageBox({
+      title: 'Rendering Timeout',
+      message: 'The spectrogram rendering took too long. Please adjust the settings or shorten the recording length.'
+    });
+  }
+};
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
