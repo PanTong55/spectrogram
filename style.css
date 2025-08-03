@@ -702,13 +702,15 @@ input[type="file"]:hover {
   width: 72px;
   height: 25px;
   cursor: pointer;
-  background-color: #eee;
+  background-color: #555;
+  font-weight: bold;
+  color: white;
   border: 0px;
   border-radius: 6px;
   transition: background-color 0.25s ease;
 }
 #autoid-tabs button.active {
-  background-color: #ccc;
+  background-color: #007bff;
 }
 #autoid-fields {
   display: grid;
