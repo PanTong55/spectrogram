@@ -24,7 +24,7 @@ import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { initAutoIdPanel } from './modules/autoIdPanel.js';
 import { initFreqContextMenu } from './modules/freqContextMenu.js';
-import { getCurrentIndex, getFileList, addFilesToList, toggleFileIcon, setFileList, setCurrentIndex, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
+import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
 
 const spectrogramHeight = 800;
 let sidebarControl;
@@ -335,21 +335,10 @@ try {
 const resp = await fetch('https://raw.githubusercontent.com/hkbatradar/SonoRadar/main/recording/demo_recording.wav');
 const blob = await resp.blob();
 const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
-const existing = getFileList();
-let demoIndex;
-if (existing.length === 0) {
-  setFileList([demoFile], -1);
-  demoIndex = 0;
-} else {
-  const currentIdx = getCurrentIndex();
-  const startIdx = existing.length;
-  addFilesToList([demoFile]);
-  setCurrentIndex(currentIdx);
-  demoIndex = startIdx;
-}
-toggleFileIcon(demoIndex, 'trash');
-toggleFileIcon(demoIndex, 'star');
-toggleFileIcon(demoIndex, 'question');
+setFileList([demoFile], -1);
+toggleFileIcon(0, 'trash');
+toggleFileIcon(0, 'star');
+toggleFileIcon(0, 'question');
 sidebarControl.refresh(demoFile.name);
 } catch (err) {
 console.error('Failed to preload demo file', err);
