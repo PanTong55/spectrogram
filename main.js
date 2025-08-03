@@ -719,24 +719,40 @@ overlapInput.addEventListener('change', () => {
 const val = overlapInput.value.trim();
 if (val === '') {
 currentOverlap = 'auto';
-} else {
+handleOverlapChange();
+return;
+}
+
 const num = parseInt(val, 10);
 if (!isNaN(num) && num >= 1 && num <= 99) {
+const proceed = () => {
 currentOverlap = num;
+handleOverlapChange();
+};
 if (num >= 80 && !overlapWarningShown) {
 showMessageBox({
 title: 'Reminder',
-message: `Using an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`
-});
+message: `Using an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`,
+confirmText: 'OK',
+cancelText: 'Cancel',
+onConfirm: () => {
 overlapWarningShown = true;
+proceed();
+},
+onCancel: () => {
+overlapInput.value = '';
+currentOverlap = 'auto';
 }
+});
+return;
+}
+proceed();
 } else {
 alert('Overlap must be between 1 and 99.');
 overlapInput.value = '';
 currentOverlap = 'auto';
-}
-}
 handleOverlapChange();
+}
 });
 
 const quickPresetBtn = document.getElementById('quickPresetBtn');
