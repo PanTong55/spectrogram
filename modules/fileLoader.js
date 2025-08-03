@@ -1,7 +1,7 @@
 // modules/fileLoader.js
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
-import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, removeFilesByName, setFileMetadata } from './fileState.js';
+import { addFilesToList, getFileList, getCurrentIndex, setCurrentIndex, setFileMetadata } from './fileState.js';
 import { showMessageBox } from './messageBox.js';
 
 export async function getWavSampleRate(file) {
@@ -194,7 +194,6 @@ export function initFileLoader({
 
     const index = filteredList.findIndex(f => f.name === selectedFile.name);
 
-    removeFilesByName('demo_recording.wav');
     const startIdx = getFileList().length;
     if (filteredList.length > 0) {
       addFilesToList(filteredList, index >= 0 ? index : 0);
