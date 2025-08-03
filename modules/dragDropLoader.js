@@ -2,7 +2,7 @@
 
 import { extractGuanoMetadata, parseGuanoMetadata } from './guanoReader.js';
 import { getWavSampleRate, getWavDuration } from './fileLoader.js';
-import { addFilesToList, removeFilesByName, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
+import { addFilesToList, setFileMetadata, getCurrentIndex, getFileList } from './fileState.js';
 import { showMessageBox } from './messageBox.js';
 import { importKmlFile } from './mapPopup.js';
 
@@ -156,7 +156,6 @@ export function initDragDropLoader({
       updateUploadOverlay(i + 1, sortedList.length);
     }
 
-    removeFilesByName('demo_recording.wav');
     const startIdx = getFileList().length;
     if (filteredList.length > 0) {
       addFilesToList(filteredList, 0);
