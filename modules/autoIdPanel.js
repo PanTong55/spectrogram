@@ -33,7 +33,7 @@ export function initAutoIdPanel({
   const resetTabBtn = document.getElementById('autoIdTabResetBtn');
   const tabsContainer = document.getElementById("autoid-tabs");
   const tabs = [];
-  const TAB_COUNT = 5;
+  const TAB_COUNT = 8;
   const tabData = Array.from({ length: TAB_COUNT }, () => ({
     callType: 3,
     harmonic: 0,
