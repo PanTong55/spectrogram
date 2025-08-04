@@ -426,9 +426,9 @@ duration = getWavesurfer().getDuration();
     renderAxes();
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
+    updateSpectrogramSettingsText();
   }
 );
-updateSpectrogramSettingsText();
 }
 
 async function handleSampleRate(rate) {
@@ -621,6 +621,7 @@ duration = getWavesurfer().getDuration();
     renderAxes();
   freqHoverControl?.refreshHover();
   autoIdControl?.updateMarkers();
+  updateSpectrogramSettingsText();
   }
   );
   drawColorBar(colorMap);
@@ -803,10 +804,14 @@ function updateSpectrogramSettingsText() {
   const textElem = document.getElementById('spectrogram-settings-text');
   const sampleRate = currentSampleRate;
   const fftSize = currentFftSize;
-  const overlap = getOverlapPercent();
+  const overlap = currentOverlap === 'auto'
+    ? getAutoOverlapPercent()
+    : getOverlapPercent();
   const windowType = currentWindowType.charAt(0).toUpperCase() + currentWindowType.slice(1);
 
-  const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
+  const overlapText = currentOverlap === 'auto'
+    ? `Auto${overlap !== null ? ` (${overlap}%)` : ''}`
+    : `${overlap}%`;
   if (textElem) {
     textElem.textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
@@ -828,9 +833,23 @@ function drawColorBar(colorMap) {
 }
 
 function getOverlapPercent() {
-if (currentOverlap === 'auto') return null;
-const parsed = parseInt(currentOverlap, 10);
-return isNaN(parsed) ? null : parsed;
+  if (currentOverlap === 'auto') return null;
+  const parsed = parseInt(currentOverlap, 10);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function getAutoOverlapPercent() {
+  const plugin = getPlugin();
+  const ws = getWavesurfer();
+  const bufferLength = ws?.backend?.buffer?.length;
+  const canvasWidth = plugin?.canvas?.width;
+  const fft = currentFftSize;
+  if (bufferLength && canvasWidth && fft) {
+    const samplesPerCol = bufferLength / canvasWidth;
+    const noverlap = Math.max(0, Math.round(fft - samplesPerCol));
+    return Math.round((noverlap / fft) * 100);
+  }
+  return null;
 }
 
 function formatFreqValue(value) {
@@ -872,11 +891,11 @@ function handleFftSize(size) {
       renderAxes();
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
+      updateSpectrogramSettingsText();
     },
     currentFftSize,
     currentWindowType
   );
-  updateSpectrogramSettingsText();
 }
 
 function handleWindowType(type) {
@@ -895,11 +914,11 @@ function handleWindowType(type) {
       renderAxes();
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
+      updateSpectrogramSettingsText();
     },
     currentFftSize,
     currentWindowType
   );
-  updateSpectrogramSettingsText();
 }
 
 function handleOverlapChange() {
@@ -910,16 +929,16 @@ colorMap,
 spectrogramHeight,
 currentFreqMin,
 currentFreqMax,
-getOverlapPercent()
-);
-
+getOverlapPercent(),
+() => {
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
-
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
 updateSpectrogramSettingsText();
+}
+);
 }
 
 function updateFrequencyRange(freqMin, freqMax) {
@@ -933,21 +952,20 @@ colorMap,
 spectrogramHeight,
 freqMin,
 freqMax,
-getOverlapPercent()
-);
-
+getOverlapPercent(),
+() => {
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
-
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
-
 if (freqHoverControl) {
 freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
 autoIdControl?.updateMarkers();
 }
 updateSpectrogramSettingsText();
+}
+);
 }
 
 const clearAllBtn = document.getElementById('clearAllBtn');
@@ -959,7 +977,10 @@ getCurrentColorMap(),
 spectrogramHeight,
 currentFreqMin,
 currentFreqMax,
-getOverlapPercent()
+getOverlapPercent(),
+() => {
+updateSpectrogramSettingsText();
+}
 );
 showDropOverlay();
 loadingOverlay.style.display = 'none';
@@ -1010,7 +1031,10 @@ clearTrashBtn.addEventListener('click', () => {
             spectrogramHeight,
             currentFreqMin,
             currentFreqMax,
-            getOverlapPercent()
+            getOverlapPercent(),
+            () => {
+              updateSpectrogramSettingsText();
+            }
           );
           showDropOverlay();
           loadingOverlay.style.display = 'none';
@@ -1177,7 +1201,10 @@ document.addEventListener("file-loaded", async () => {
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
+    const workerOverlap = currentOverlap === 'auto'
+      ? getAutoOverlapPercent()
+      : getOverlapPercent();
+    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap }, [audioBuf.getChannelData(0).buffer]);
   }
 });
 
