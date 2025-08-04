@@ -727,15 +727,27 @@ export function initAutoIdPanel({
         curve.cp2El.style.left = `${cp2x}px`;
         curve.cp2El.style.top = `${cp2y}px`;
 
+        const handleRadius = 5;
+
         curve.cp1LineEl.setAttribute('x1', p1.x);
         curve.cp1LineEl.setAttribute('y1', p1.y);
-        curve.cp1LineEl.setAttribute('x2', cp1x);
-        curve.cp1LineEl.setAttribute('y2', cp1y);
+        const dx1 = cp1x - p1.x;
+        const dy1 = cp1y - p1.y;
+        const len1 = Math.hypot(dx1, dy1) || 1;
+        const cp1EdgeX = cp1x - (dx1 / len1) * handleRadius;
+        const cp1EdgeY = cp1y - (dy1 / len1) * handleRadius;
+        curve.cp1LineEl.setAttribute('x2', cp1EdgeX);
+        curve.cp1LineEl.setAttribute('y2', cp1EdgeY);
 
         curve.cp2LineEl.setAttribute('x1', p2.x);
         curve.cp2LineEl.setAttribute('y1', p2.y);
-        curve.cp2LineEl.setAttribute('x2', cp2x);
-        curve.cp2LineEl.setAttribute('y2', cp2y);
+        const dx2 = cp2x - p2.x;
+        const dy2 = cp2y - p2.y;
+        const len2 = Math.hypot(dx2, dy2) || 1;
+        const cp2EdgeX = cp2x - (dx2 / len2) * handleRadius;
+        const cp2EdgeY = cp2y - (dy2 / len2) * handleRadius;
+        curve.cp2LineEl.setAttribute('x2', cp2EdgeX);
+        curve.cp2LineEl.setAttribute('y2', cp2EdgeY);
       } else {
         curve.cp1El?.remove();
         curve.cp2El?.remove();
