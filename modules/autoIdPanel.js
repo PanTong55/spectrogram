@@ -542,11 +542,21 @@ export function initAutoIdPanel({
         // 最後一段且Y差小於5px → 使用L形直線
         d += ` L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
       } else {
-        const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
-        const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
-  
+        let cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+        let cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+
         let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
         let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
+
+        // 依據前一段線長度調整 knee -> low 的出線角度，
+        // 效果比原本弱 5 倍
+        if (p1.key === 'knee' && p2.key === 'low') {
+          const prevLen = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+          const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+          const factor = currLen ? 1 + (prevLen / currLen) : 1;
+          cp1x = p1.x + (p2.x - p0.x) * tension / 6 * factor;
+          cp1y = p1.y + (p2.y - p0.y) * tension / 6 * factor;
+        }
 
         // 強化 high -> knee 轉折處的入線角度，
         // 依據下一段線長度調整控制點，影響加強 3 倍
