@@ -75,6 +75,14 @@ export function initAutoIdPanel({
     document.dispatchEvent(new Event(isVisible ? 'autoid-close' : 'autoid-open'));
   }
 
+  function openPanel() {
+    if (panel.style.display !== 'block') {
+      panel.style.display = 'block';
+      document.body.classList.add('autoid-open');
+      document.dispatchEvent(new Event('autoid-open'));
+    }
+  }
+
   btn.addEventListener('click', togglePanel);
   closeBtn?.addEventListener('click', togglePanel);
 
@@ -426,6 +434,17 @@ export function initAutoIdPanel({
     el.className = 'pulseid-result';
     el.dataset.tab = tabIdx;
     overlay.appendChild(el);
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openPanel();
+      switchTab(tabIdx);
+    });
+    el.addEventListener('mouseenter', hideHover);
+    el.addEventListener('mouseleave', refreshHover);
+    el.addEventListener('contextmenu', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+    });
     return el;
   }
 
@@ -464,7 +483,7 @@ export function initAutoIdPanel({
         rEl.style.left = `${(minX + maxX) / 2}px`;
         rEl.style.top = `${maxY + 20}px`;
         rEl.style.display = 'block';
-        rEl.style.opacity = idx === currentTab ? '1' : '0.5';
+        rEl.classList.toggle('inactive', idx !== currentTab);
       } else {
         rEl.style.display = 'none';
       }
