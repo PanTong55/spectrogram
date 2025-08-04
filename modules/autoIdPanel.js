@@ -37,7 +37,7 @@ export function initAutoIdPanel({
   const tabData = Array.from({ length: TAB_COUNT }, () => ({
     callType: 3,
     harmonic: 0,
-    result: null,
+    autoIdResult: null,
     showValidation: false,
     inputs: {
       start: "",
@@ -207,7 +207,7 @@ export function initAutoIdPanel({
   let suppressResultReset = false;
 
   function updateResultDisplay() {
-    const res = tabData[currentTab].result;
+    const res = tabData[currentTab].autoIdResult;
     if (resultEl) {
       if (res) {
         resultEl.innerHTML = formatSpeciesResult(res);
@@ -218,8 +218,8 @@ export function initAutoIdPanel({
   }
 
   function clearResult() {
-    if (tabData[currentTab].result != null) {
-      tabData[currentTab].result = null;
+    if (tabData[currentTab].autoIdResult != null) {
+      tabData[currentTab].autoIdResult = null;
       updateResultDisplay();
     }
   }
@@ -311,7 +311,7 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     updateDerived();
     updateMarkers();
-    clearResult();
+    if (!suppressResultReset) clearResult();
     validateMandatoryInputs();
   }
 
@@ -587,7 +587,7 @@ export function initAutoIdPanel({
   function resetTabData(tab) {
     tab.callType = 3;
     tab.harmonic = 0;
-    tab.result = null;
+    tab.autoIdResult = null;
     tab.showValidation = false;
     Object.keys(tab.inputs).forEach(k => { tab.inputs[k] = ""; });
     tab.startTime = null;
@@ -621,7 +621,7 @@ export function initAutoIdPanel({
     startTime = null;
     endTime = null;
     active = null;
-    tabData[currentTab].result = null;
+    tabData[currentTab].autoIdResult = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
   }
@@ -631,7 +631,7 @@ export function initAutoIdPanel({
       d.showValidation = false;
       d.callType = 3;
       d.harmonic = 0;
-      d.result = null;
+      d.autoIdResult = null;
       Object.keys(d.inputs).forEach(k => { d.inputs[k] = ""; });
       d.startTime = null;
       d.endTime = null;
@@ -742,6 +742,7 @@ export function initAutoIdPanel({
   }
   function runPulseId() {
     if (!validateMandatoryInputs(true)) {
+      tabData[currentTab].autoIdResult = null;
       if (resultEl) resultEl.textContent = "-";
       return;
     }
@@ -799,7 +800,7 @@ export function initAutoIdPanel({
       heelLowBandwidth,
       kneeHeelBandwidth
     });
-    tabData[currentTab].result = res;
+    tabData[currentTab].autoIdResult = res;
     updateResultDisplay();
   }
 
