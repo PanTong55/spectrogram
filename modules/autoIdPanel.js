@@ -21,6 +21,20 @@ export function initAutoIdPanel({
   const container = document.getElementById(containerId);
   const overlay = document.getElementById(overlayId);
 
+  // Allow bypassing markers when holding the Ctrl key so that
+  // underlying path handles can be selected and dragged even when
+  // markers overlap them.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Control') {
+      overlay.classList.add('ctrl-pressed');
+    }
+  });
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Control') {
+      overlay.classList.remove('ctrl-pressed');
+    }
+  });
+
   const svgNS = 'http://www.w3.org/2000/svg';
   const linesSvg = document.createElementNS(svgNS, 'svg');
   linesSvg.id = 'autoid-lines';
