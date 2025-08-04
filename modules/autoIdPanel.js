@@ -542,9 +542,9 @@ export function initAutoIdPanel({
         // 最後一段且Y差小於5px → 使用L形直線
         d += ` L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
       } else {
-        const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
-        const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
-  
+        let cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+        let cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+
         let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
         let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
 
@@ -557,14 +557,24 @@ export function initAutoIdPanel({
           cp2x = p2.x - (p3.x - p1.x) * tension / 6 * factor;
           cp2y = p2.y - (p3.y - p1.y) * tension / 6 * factor;
         }
-  
+
+        // 減弱 knee -> low 段的控制點影響力，
+        // 依據前一段線長度調整，影響減弱為原來的五分之一
+        if (p1.key === 'knee' && p2.key === 'low') {
+          const prevLen = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+          const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+          const factor = currLen ? 1 + (prevLen / currLen) / 5 : 1;
+          cp1x = p1.x + (p2.x - p0.x) * tension / 6 * factor;
+          cp1y = p1.y + (p2.y - p0.y) * tension / 6 * factor;
+        }
+
         if (p2.key !== 'cfStart' && p2.key !== 'end') {
           const dy = Math.abs(p1.y - p2.y);
           const localMaxOffset = Math.min(maxVerticalOffset, dy * 0.6);
           cp2y = Math.min(cp2y, p2.y + localMaxOffset);
           cp2x = Math.min(cp2x, p2.x);
         }
-  
+
         d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
       }
     }
