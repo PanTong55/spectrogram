@@ -100,32 +100,6 @@ export function initMapPopup({
   const mapDropOverlay = document.getElementById('map-drop-overlay');
   let dropCounter = 0;
 
-  let ctrlPressed = false;
-
-  function updateMarkerPointerEvents() {
-    const all = [...markers, ...textMarkers];
-    all.forEach(m => {
-      const el = m.getElement ? m.getElement() : m._icon;
-      if (el) {
-        el.style.pointerEvents = ctrlPressed ? 'none' : '';
-      }
-    });
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Control' && !ctrlPressed) {
-      ctrlPressed = true;
-      updateMarkerPointerEvents();
-    }
-  });
-
-  document.addEventListener('keyup', (e) => {
-    if (e.key === 'Control' && ctrlPressed) {
-      ctrlPressed = false;
-      updateMarkerPointerEvents();
-    }
-  });
-
   function updateCursor() {
     if (isMapDragging) {
       mapDiv.style.cursor = 'grabbing';
@@ -545,7 +519,6 @@ export function initMapPopup({
       marker.addTo(map);
       markers.push(marker);
     });
-    updateMarkerPointerEvents();
   }
 
   function clearRoute() {
@@ -768,7 +741,6 @@ export function initMapPopup({
         map.removeLayer(marker);
         textMarkers = textMarkers.filter(m => m !== marker);
       }
-      updateMarkerPointerEvents();
     };
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -804,7 +776,6 @@ export function initMapPopup({
       if (textMode && !activeTextInput) {
         map.removeLayer(marker);
         textMarkers = textMarkers.filter(m => m !== marker);
-        updateMarkerPointerEvents();
       }
     });
     return marker;
@@ -818,7 +789,6 @@ export function initMapPopup({
       m.setIcon(createTextIcon(txt, textMode));
       m.setZIndexOffset(1000);
     });
-    updateMarkerPointerEvents();
   }
 
   function onMapTextClick(e) {
@@ -830,7 +800,6 @@ export function initMapPopup({
     const marker = createTextMarker(e.latlng, '');
     marker.addTo(map);
     textMarkers.push(marker);
-    updateMarkerPointerEvents();
     editTextMarker(marker);
   }
 
@@ -871,7 +840,6 @@ export function initMapPopup({
       const marker = L.marker([lat, lon], { icon, zIndexOffset: 1001 });
       marker.addTo(map);
       markers.push(marker);
-      updateMarkerPointerEvents();
     });
   }
 
