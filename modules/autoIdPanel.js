@@ -819,7 +819,7 @@ export function initAutoIdPanel({
     refreshHover();
     validateMandatoryInputs();
     clearResult();
-    if (key) {
+    if (key && markerWasDragged) {
       resetCurvesForMarker(key);
       updateLines();
     }
