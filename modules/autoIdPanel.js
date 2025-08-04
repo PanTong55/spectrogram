@@ -61,8 +61,6 @@ export function initAutoIdPanel({
       cfStart: { el: null, freq: null, time: null },
       cfEnd: { el: null, freq: null, time: null }
     },
-    controlPoints: {},
-    handles: {},
     line: null,
     resultEl: null
   }));
@@ -214,7 +212,6 @@ export function initAutoIdPanel({
   let endTime = null;
   let draggingKey = null;
   let draggingEl = null;
-  let draggingCp = null;
   let markersEnabled = true;
   let suppressResultReset = false;
 
@@ -315,7 +312,6 @@ export function initAutoIdPanel({
     markers[key].freq = null;
     markers[key].time = null;
     if (markers[key].el) markers[key].el.style.display = 'none';
-    clearControlsForMarker(key);
     if (key === 'start') startTime = null;
     if (key === 'end') endTime = null;
     tabData[currentTab].inputs[key] = '';
@@ -433,27 +429,6 @@ export function initAutoIdPanel({
     return el;
   }
 
-  function createHandleEl(segKey, tabIdx, cpKey) {
-    const el = document.createElement('div');
-    el.className = 'bezier-handle';
-    el.dataset.segment = segKey;
-    el.dataset.cp = cpKey;
-    el.dataset.tab = tabIdx;
-    el.addEventListener('mousedown', (ev) => {
-      if (!markersEnabled) return;
-      ev.stopPropagation();
-      hideHover();
-      viewer.classList.add('hide-cursor');
-      el.classList.add('hide-cursor');
-      draggingCp = { segKey, cpKey, el };
-      document.addEventListener('mousemove', onHandleDrag, { passive: true });
-      document.addEventListener('mouseup', stopHandleDrag, { once: true });
-    });
-    el.addEventListener('click', (ev) => ev.stopPropagation());
-    overlay.appendChild(el);
-    return el;
-  }
-
   function createResultEl(tabIdx) {
     const el = document.createElement('div');
     el.className = 'pulseid-result';
@@ -525,7 +500,6 @@ export function initAutoIdPanel({
         tab.line.dataset.tab = idx;
         linesSvg.appendChild(tab.line);
       }
-      if (!tab.handles) tab.handles = {};
       const points = Object.entries(tab.markers)
         .filter(([_, m]) => m.freq != null && m.time != null)
         .sort((a, b) => a[1].time - b[1].time)
@@ -534,157 +508,68 @@ export function initAutoIdPanel({
           const y = (1 - (m.freq - min) / (max - min)) * spectrogramHeight;
           return { x, y, key };
         });
-      Object.values(tab.handles).forEach(h => {
-        h.cp1 && (h.cp1.style.display = 'none');
-        h.cp2 && (h.cp2.style.display = 'none');
-      });
       if (points.length < 2) {
         tab.line.setAttribute('d', '');
         tab.line.style.display = 'none';
         return;
       }
-      const overrides = {};
-      Object.entries(tab.controlPoints).forEach(([segKey, cps]) => {
-        const o = {};
-        if (cps.cp1) {
-          o.cp1x = (cps.cp1.time / getDuration()) * actualWidth - viewer.scrollLeft;
-          o.cp1y = (1 - (cps.cp1.freq - min) / (max - min)) * spectrogramHeight;
-        }
-        if (cps.cp2) {
-          o.cp2x = (cps.cp2.time / getDuration()) * actualWidth - viewer.scrollLeft;
-          o.cp2y = (1 - (cps.cp2.freq - min) / (max - min)) * spectrogramHeight;
-        }
-        overrides[segKey] = o;
-      });
-      const { d, cps } = makeRoundedPath(points, overrides);
+      const d = makeRoundedPath(points);
       tab.line.setAttribute('stroke-linejoin', 'round');
       tab.line.setAttribute('d', d);
       tab.line.style.display = 'block';
       tab.line.style.opacity = idx === currentTab ? '1' : '0.5';
-
-      cps.forEach(({ segKey, cp1x, cp1y, cp2x, cp2y }) => {
-        if (!tab.handles[segKey]) tab.handles[segKey] = { cp1: null, cp2: null };
-        if (!tab.handles[segKey].cp1) tab.handles[segKey].cp1 = createHandleEl(segKey, idx, 'cp1');
-        if (!tab.handles[segKey].cp2) tab.handles[segKey].cp2 = createHandleEl(segKey, idx, 'cp2');
-        const h1 = tab.handles[segKey].cp1;
-        const h2 = tab.handles[segKey].cp2;
-        h1.style.left = `${cp1x}px`;
-        h1.style.top = `${cp1y}px`;
-        h1.style.display = 'block';
-        h1.style.pointerEvents = idx === currentTab ? 'auto' : 'none';
-        h1.style.opacity = idx === currentTab ? '1' : '0.5';
-        h2.style.left = `${cp2x}px`;
-        h2.style.top = `${cp2y}px`;
-        h2.style.display = 'block';
-        h2.style.pointerEvents = idx === currentTab ? 'auto' : 'none';
-        h2.style.opacity = idx === currentTab ? '1' : '0.5';
-      });
     });
   }
 
-  function makeRoundedPath(points, overrides = {}, tension = 0.5) {
-    if (points.length < 2) return { d: '', cps: [] };
+  function makeRoundedPath(points, tension = 0.5) {
+    if (points.length < 2) return '';
     let d = `M ${points[0].x} ${points[0].y}`;
-    const maxVerticalOffset = 10; // 全域最大垂直偏移限制
-    const cps = [];
-
+    const maxVerticalOffset = 10;  // 全域最大垂直偏移限制
+  
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[i - 1] || points[i];
       const p1 = points[i];
       const p2 = points[i + 1];
       const p3 = points[i + 2] || p2;
-
-      const isLastSegment = i === points.length - 2;
+  
+      const isLastSegment = (i === points.length - 2);
       const yDiff = Math.abs(p1.y - p2.y);
-      const segKey = `${p1.key}|${p2.key}`;
-
-      let cp1x = p1.x + (p2.x - p0.x) * tension / 6;
-      let cp1y = p1.y + (p2.y - p0.y) * tension / 6;
-
-      let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
-      let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
-
-      // 強化 high -> knee 轉折處的入線角度，
-      // 依據下一段線長度調整控制點，影響加強 3 倍
-      if (p1.key === 'high' && p2.key === 'knee') {
-        const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-        const nextLen = Math.hypot(p3.x - p2.x, p3.y - p2.y);
-        const factor = currLen ? 1 + (nextLen / currLen) * 5 : 1;
-        cp2x = p2.x - (p3.x - p1.x) * tension / 6 * factor;
-        cp2y = p2.y - (p3.y - p1.y) * tension / 6 * factor;
-      }
-
-      if (p2.key !== 'cfStart' && p2.key !== 'end') {
-        const dy = Math.abs(p1.y - p2.y);
-        const localMaxOffset = Math.min(maxVerticalOffset, dy * 0.6);
-        cp2y = Math.min(cp2y, p2.y + localMaxOffset);
-        cp2x = Math.min(cp2x, p2.x);
-      }
-
-      const override = overrides[segKey] || {};
-      if (override.cp1x != null && override.cp1y != null) {
-        cp1x = override.cp1x;
-        cp1y = override.cp1y;
-      }
-      if (override.cp2x != null && override.cp2y != null) {
-        cp2x = override.cp2x;
-        cp2y = override.cp2y;
-      }
-
-      const hasOverride = override.cp1x != null || override.cp2x != null;
-      if (hasOverride || !(p1.key === 'cfStart' && p2.key === 'cfEnd') && !(isLastSegment && yDiff < 5)) {
-        d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
-      } else if (p1.key === 'cfStart' && p2.key === 'cfEnd') {
+  
+      if (p1.key === 'cfStart' && p2.key === 'cfEnd') {
+        // CF start到CF end間保持直線，無弧度
         d += ` L ${p2.x} ${p2.y}`;
-      } else {
+      } else if (isLastSegment && yDiff < 5) {
+        // 最後一段且Y差小於5px → 使用L形直線
         d += ` L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
-      }
+      } else {
+        const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+        const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+  
+        let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
+        let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
 
-      cps.push({ segKey, cp1x, cp1y, cp2x, cp2y });
-    }
-
-    return { d, cps };
-  }
-
-  function onHandleDrag(e) {
-    if (!draggingCp || !markersEnabled) return;
-    const rect = viewer.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const scrollLeft = viewer.scrollLeft || 0;
-    const { min, max } = getFreqRange();
-    const freq = (1 - y / spectrogramHeight) * (max - min) + min;
-    const time = ((x + scrollLeft) / container.scrollWidth) * getDuration();
-    const segKey = draggingCp.segKey;
-    const cpKey = draggingCp.cpKey;
-    const cpData = tabData[currentTab].controlPoints[segKey] || { cp1: null, cp2: null };
-    cpData[cpKey] = { freq, time };
-    tabData[currentTab].controlPoints[segKey] = cpData;
-    updateMarkers();
-  }
-
-  function stopHandleDrag() {
-    if (draggingCp) {
-      draggingCp.el.classList.remove('hide-cursor');
-      draggingCp = null;
-    }
-    document.removeEventListener('mousemove', onHandleDrag);
-    viewer.classList.remove('hide-cursor');
-    refreshHover();
-  }
-
-  function clearControlsForMarker(key, tabIdx = currentTab) {
-    const tab = tabData[tabIdx];
-    Object.keys(tab.controlPoints).forEach((segKey) => {
-      if (segKey.startsWith(`${key}|`) || segKey.endsWith(`|${key}`)) {
-        delete tab.controlPoints[segKey];
-        const h = tab.handles[segKey];
-        if (h) {
-          h.cp1?.style.display = 'none';
-          h.cp2?.style.display = 'none';
+        // 強化 high -> knee 轉折處的入線角度，
+        // 依據下一段線長度調整控制點，影響加強 3 倍
+        if (p1.key === 'high' && p2.key === 'knee') {
+          const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+          const nextLen = Math.hypot(p3.x - p2.x, p3.y - p2.y);
+          const factor = currLen ? 1 + (nextLen / currLen) * 5 : 1;
+          cp2x = p2.x - (p3.x - p1.x) * tension / 6 * factor;
+          cp2y = p2.y - (p3.y - p1.y) * tension / 6 * factor;
         }
+  
+        if (p2.key !== 'cfStart' && p2.key !== 'end') {
+          const dy = Math.abs(p1.y - p2.y);
+          const localMaxOffset = Math.min(maxVerticalOffset, dy * 0.6);
+          cp2y = Math.min(cp2y, p2.y + localMaxOffset);
+          cp2x = Math.min(cp2x, p2.x);
+        }
+  
+        d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
       }
-    });
+    }
+  
+    return d;
   }
 
   function onMarkerDrag(e) {
@@ -707,7 +592,6 @@ export function initAutoIdPanel({
     tabData[currentTab].endTime = endTime;
     markers[draggingKey].freq = freq;
     markers[draggingKey].time = time;
-    clearControlsForMarker(draggingKey);
     updateDerived();
     updateMarkers();
   }
@@ -732,7 +616,6 @@ export function initAutoIdPanel({
     input.dataset.time = time;
     markers[key].freq = freq;
     markers[key].time = time;
-    clearControlsForMarker(key);
     if (key === 'start') startTime = time;
     if (key === 'end') endTime = time;
     tabData[currentTab].startTime = startTime;
@@ -765,12 +648,6 @@ export function initAutoIdPanel({
       m.time = null;
       if (m.el) m.el.style.display = 'none';
     });
-    Object.values(tab.handles).forEach(h => {
-      h.cp1?.remove();
-      h.cp2?.remove();
-    });
-    tab.handles = {};
-    tab.controlPoints = {};
     if (tab.line) {
       tab.line.setAttribute('d', '');
       tab.line.style.display = 'none';
@@ -810,9 +687,6 @@ export function initAutoIdPanel({
       d.startTime = null;
       d.endTime = null;
       Object.keys(d.markers).forEach(k => { d.markers[k].freq = null; d.markers[k].time = null; });
-      Object.values(d.handles).forEach(h => { h.cp1?.remove(); h.cp2?.remove(); });
-      d.handles = {};
-      d.controlPoints = {};
       if (d.line) {
         d.line.setAttribute('d', '');
         d.line.style.display = 'none';
@@ -838,10 +712,6 @@ export function initAutoIdPanel({
         m.time = null;
         if (m.el) m.el.style.display = 'none';
       });
-      Object.values(tab.handles).forEach(h => {
-        h.cp1?.style.display = 'none';
-        h.cp2?.style.display = 'none';
-      });
     });
     active = null;
     setMarkerInteractivity(true);
@@ -861,7 +731,6 @@ export function initAutoIdPanel({
     active.dataset.time = time;
     markers[key].freq = freq;
     markers[key].time = time;
-    clearControlsForMarker(key);
     if (active === inputs.start) startTime = time;
     if (active === inputs.end) endTime = time;
     tabData[currentTab].startTime = startTime;
