@@ -62,7 +62,8 @@ export function initAutoIdPanel({
       cfEnd: { el: null, freq: null, time: null }
     },
     line: null,
-    resultEl: null
+    resultEl: null,
+    curves: {}
   }));
   let currentTab = 0;
 
@@ -212,8 +213,35 @@ export function initAutoIdPanel({
   let endTime = null;
   let draggingKey = null;
   let draggingEl = null;
+  let draggingHandle = null;
+  let activeMarkerKey = null;
   let markersEnabled = true;
   let suppressResultReset = false;
+
+  function showHandlesForMarker(key) {
+    activeMarkerKey = key;
+    updateHandleVisibility();
+  }
+
+  function hideHandles() {
+    activeMarkerKey = null;
+    updateHandleVisibility();
+  }
+
+  function updateHandleVisibility() {
+    tabData.forEach((tab, idx) => {
+      Object.values(tab.curves || {}).forEach(curve => {
+        const showCp1 = idx === currentTab && activeMarkerKey === curve.p1Key;
+        const showCp2 = idx === currentTab && activeMarkerKey === curve.p2Key;
+        if (curve.cp1El) curve.cp1El.style.display = showCp1 ? 'block' : 'none';
+        if (curve.cp1LineEl) curve.cp1LineEl.style.display = showCp1 ? 'block' : 'none';
+        if (curve.cp2El) curve.cp2El.style.display = showCp2 ? 'block' : 'none';
+        if (curve.cp2LineEl) curve.cp2LineEl.style.display = showCp2 ? 'block' : 'none';
+      });
+    });
+  }
+
+  document.addEventListener('click', hideHandles);
 
   function updateResultDisplay() {
     const res = tabData[currentTab].autoIdResult;
@@ -273,6 +301,7 @@ export function initAutoIdPanel({
     if (tabs[currentTab]) tabs[currentTab].classList.remove("active");
     currentTab = idx;
     if (tabs[currentTab]) tabs[currentTab].classList.add("active");
+    activeMarkerKey = null;
     loadTab(idx);
   }
 
@@ -424,7 +453,32 @@ export function initAutoIdPanel({
       document.addEventListener('mousemove', onMarkerDrag, { passive: true });
       document.addEventListener('mouseup', stopMarkerDrag, { once: true });
     });
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      showHandlesForMarker(key);
+    });
+    overlay.appendChild(el);
+    return el;
+  }
+
+  function createHandleEl(tabIdx, segKey, handleKey) {
+    const el = document.createElement('div');
+    el.className = 'path-handle';
+    el.dataset.tab = tabIdx;
+    el.dataset.seg = segKey;
+    el.dataset.handle = handleKey;
+    el.addEventListener('mousedown', (ev) => {
+      if (!markersEnabled) return;
+      ev.stopPropagation();
+      hideHover();
+      viewer.classList.add('hide-cursor');
+      el.classList.add('hide-cursor');
+      draggingHandle = { tabIdx, segKey, handleKey, el };
+      document.addEventListener('mousemove', onHandleDrag, { passive: true });
+      document.addEventListener('mouseup', stopHandleDrag, { once: true });
+    });
     el.addEventListener('click', (ev) => ev.stopPropagation());
+    el.style.display = 'none';
     overlay.appendChild(el);
     return el;
   }
@@ -491,6 +545,22 @@ export function initAutoIdPanel({
     updateLines();
   }
 
+  function xyToTimeFreq(x, y) {
+    const scrollLeft = viewer.scrollLeft || 0;
+    const { min, max } = getFreqRange();
+    const time = ((x + scrollLeft) / container.scrollWidth) * getDuration();
+    const freq = (1 - y / spectrogramHeight) * (max - min) + min;
+    return { time, freq };
+  }
+
+  function timeFreqToXY(time, freq) {
+    const actualWidth = container.scrollWidth;
+    const { min, max } = getFreqRange();
+    const x = (time / getDuration()) * actualWidth - viewer.scrollLeft;
+    const y = (1 - (freq - min) / (max - min)) * spectrogramHeight;
+    return { x, y };
+  }
+
   function updateLines() {
     const { min, max } = getFreqRange();
     const actualWidth = container.scrollWidth;
@@ -511,45 +581,78 @@ export function initAutoIdPanel({
       if (points.length < 2) {
         tab.line.setAttribute('d', '');
         tab.line.style.display = 'none';
+        Object.values(tab.curves || {}).forEach(c => {
+          c.cp1El?.remove();
+          c.cp2El?.remove();
+          c.cp1LineEl?.remove();
+          c.cp2LineEl?.remove();
+        });
+        tab.curves = {};
         return;
       }
-      const d = makeRoundedPath(points);
+      const d = makeRoundedPath(points, tab, idx);
       tab.line.setAttribute('stroke-linejoin', 'round');
       tab.line.setAttribute('d', d);
       tab.line.style.display = 'block';
       tab.line.style.opacity = idx === currentTab ? '1' : '0.5';
     });
+    updateHandleVisibility();
   }
 
-  function makeRoundedPath(points, tension = 0.5) {
+  function makeRoundedPath(points, tab, tabIdx, tension = 0.5) {
     if (points.length < 2) return '';
     let d = `M ${points[0].x} ${points[0].y}`;
-    const maxVerticalOffset = 10;  // 全域最大垂直偏移限制
-  
+    const maxVerticalOffset = 10; // 全域最大垂直偏移限制
+    const usedSegKeys = [];
+
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[i - 1] || points[i];
       const p1 = points[i];
       const p2 = points[i + 1];
       const p3 = points[i + 2] || p2;
-  
+      const segKey = `${p1.key}-${p2.key}`;
+      usedSegKeys.push(segKey);
+
       const isLastSegment = (i === points.length - 2);
       const yDiff = Math.abs(p1.y - p2.y);
-  
-      if (p1.key === 'cfStart' && p2.key === 'cfEnd') {
-        // CF start到CF end間保持直線，無弧度
-        d += ` L ${p2.x} ${p2.y}`;
-      } else if (isLastSegment && yDiff < 5) {
-        // 最後一段且Y差小於5px → 使用L形直線
-        d += ` L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
-      } else {
-        const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
-        const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
-  
-        let cp2x = p2.x - (p3.x - p1.x) * tension / 6;
-        let cp2y = p2.y - (p3.y - p1.y) * tension / 6;
 
-        // 強化 high -> knee 轉折處的入線角度，
-        // 依據下一段線長度調整控制點，影響加強 3 倍
+      if (p1.key === 'cfStart' && p2.key === 'cfEnd') {
+        if (tab.curves[segKey]) {
+          tab.curves[segKey].cp1El?.remove();
+          tab.curves[segKey].cp2El?.remove();
+          tab.curves[segKey].cp1LineEl?.remove();
+          tab.curves[segKey].cp2LineEl?.remove();
+          delete tab.curves[segKey];
+        }
+        d += ` L ${p2.x} ${p2.y}`;
+        continue;
+      } else if (isLastSegment && yDiff < 5) {
+        if (tab.curves[segKey]) {
+          tab.curves[segKey].cp1El?.remove();
+          tab.curves[segKey].cp2El?.remove();
+          tab.curves[segKey].cp1LineEl?.remove();
+          tab.curves[segKey].cp2LineEl?.remove();
+          delete tab.curves[segKey];
+        }
+        d += ` L ${p1.x} ${p2.y} L ${p2.x} ${p2.y}`;
+        continue;
+      }
+
+      if (!tab.curves[segKey]) tab.curves[segKey] = {};
+      const curve = tab.curves[segKey];
+      curve.p1Key = p1.key;
+      curve.p2Key = p2.key;
+      let cp1x, cp1y, cp2x, cp2y;
+
+      if (curve.cp1 && curve.cp2) {
+        ({ x: cp1x, y: cp1y } = timeFreqToXY(curve.cp1.time, curve.cp1.freq));
+        ({ x: cp2x, y: cp2y } = timeFreqToXY(curve.cp2.time, curve.cp2.freq));
+      } else {
+        cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+        cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+        cp2x = p2.x - (p3.x - p1.x) * tension / 6;
+        cp2y = p2.y - (p3.y - p1.y) * tension / 6;
+
         if (p1.key === 'high' && p2.key === 'knee') {
           const currLen = Math.hypot(p2.x - p1.x, p2.y - p1.y);
           const nextLen = Math.hypot(p3.x - p2.x, p3.y - p2.y);
@@ -557,18 +660,68 @@ export function initAutoIdPanel({
           cp2x = p2.x - (p3.x - p1.x) * tension / 6 * factor;
           cp2y = p2.y - (p3.y - p1.y) * tension / 6 * factor;
         }
-  
+
         if (p2.key !== 'cfStart' && p2.key !== 'end') {
           const dy = Math.abs(p1.y - p2.y);
           const localMaxOffset = Math.min(maxVerticalOffset, dy * 0.6);
           cp2y = Math.min(cp2y, p2.y + localMaxOffset);
           cp2x = Math.min(cp2x, p2.x);
         }
-  
-        d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
+
+        const cp1tf = xyToTimeFreq(cp1x, cp1y);
+        const cp2tf = xyToTimeFreq(cp2x, cp2y);
+        curve.cp1 = cp1tf;
+        curve.cp2 = cp2tf;
       }
+
+      if (!curve.cp1El) curve.cp1El = createHandleEl(tabIdx, segKey, 'cp1');
+      if (!curve.cp2El) curve.cp2El = createHandleEl(tabIdx, segKey, 'cp2');
+      if (!curve.cp1LineEl) {
+        curve.cp1LineEl = document.createElementNS(svgNS, 'line');
+        curve.cp1LineEl.classList.add('handle-connector');
+        curve.cp1LineEl.style.display = 'none';
+        curve.cp1LineEl.setAttribute('stroke', '#4b0082');
+        curve.cp1LineEl.setAttribute('stroke-width', '1');
+        linesSvg.appendChild(curve.cp1LineEl);
+      }
+      if (!curve.cp2LineEl) {
+        curve.cp2LineEl = document.createElementNS(svgNS, 'line');
+        curve.cp2LineEl.classList.add('handle-connector');
+        curve.cp2LineEl.style.display = 'none';
+        curve.cp2LineEl.setAttribute('stroke', '#4b0082');
+        curve.cp2LineEl.setAttribute('stroke-width', '1');
+        linesSvg.appendChild(curve.cp2LineEl);
+      }
+
+      curve.cp1El.style.left = `${cp1x}px`;
+      curve.cp1El.style.top = `${cp1y}px`;
+      curve.cp2El.style.left = `${cp2x}px`;
+      curve.cp2El.style.top = `${cp2y}px`;
+
+      curve.cp1LineEl.setAttribute('x1', p1.x);
+      curve.cp1LineEl.setAttribute('y1', p1.y);
+      curve.cp1LineEl.setAttribute('x2', cp1x);
+      curve.cp1LineEl.setAttribute('y2', cp1y);
+
+      curve.cp2LineEl.setAttribute('x1', p2.x);
+      curve.cp2LineEl.setAttribute('y1', p2.y);
+      curve.cp2LineEl.setAttribute('x2', cp2x);
+      curve.cp2LineEl.setAttribute('y2', cp2y);
+
+      d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
     }
-  
+
+    Object.keys(tab.curves).forEach(k => {
+      if (!usedSegKeys.includes(k)) {
+        const c = tab.curves[k];
+        c.cp1El?.remove();
+        c.cp2El?.remove();
+        c.cp1LineEl?.remove();
+        c.cp2LineEl?.remove();
+        delete tab.curves[k];
+      }
+    });
+
     return d;
   }
 
@@ -606,6 +759,30 @@ export function initAutoIdPanel({
     viewer.classList.remove('hide-cursor');
     refreshHover();
     validateMandatoryInputs();
+    clearResult();
+  }
+
+  function onHandleDrag(e) {
+    if (!draggingHandle || !markersEnabled) return;
+    const rect = viewer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const { time, freq } = xyToTimeFreq(x, y);
+    const { tabIdx, segKey, handleKey } = draggingHandle;
+    const curve = tabData[tabIdx].curves[segKey];
+    if (curve) {
+      curve[handleKey] = { time, freq };
+    }
+    updateLines();
+  }
+
+  function stopHandleDrag() {
+    if (!draggingHandle) return;
+    draggingHandle.el.classList.remove('hide-cursor');
+    draggingHandle = null;
+    document.removeEventListener('mousemove', onHandleDrag);
+    viewer.classList.remove('hide-cursor');
+    refreshHover();
     clearResult();
   }
 
@@ -648,6 +825,13 @@ export function initAutoIdPanel({
       m.time = null;
       if (m.el) m.el.style.display = 'none';
     });
+    Object.values(tab.curves || {}).forEach(c => {
+      c.cp1El?.remove();
+      c.cp2El?.remove();
+      c.cp1LineEl?.remove();
+      c.cp2LineEl?.remove();
+    });
+    tab.curves = {};
     if (tab.line) {
       tab.line.setAttribute('d', '');
       tab.line.style.display = 'none';
@@ -673,6 +857,7 @@ export function initAutoIdPanel({
     endTime = null;
     active = null;
     tabData[currentTab].autoIdResult = null;
+    activeMarkerKey = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
   }
@@ -687,6 +872,8 @@ export function initAutoIdPanel({
       d.startTime = null;
       d.endTime = null;
       Object.keys(d.markers).forEach(k => { d.markers[k].freq = null; d.markers[k].time = null; });
+      Object.values(d.curves || {}).forEach(c => { c.cp1El?.remove(); c.cp2El?.remove(); c.cp1LineEl?.remove(); c.cp2LineEl?.remove(); });
+      d.curves = {};
       if (d.line) {
         d.line.setAttribute('d', '');
         d.line.style.display = 'none';
@@ -714,6 +901,7 @@ export function initAutoIdPanel({
       });
     });
     active = null;
+    activeMarkerKey = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
   }
