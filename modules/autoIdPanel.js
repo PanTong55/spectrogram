@@ -37,7 +37,7 @@ export function initAutoIdPanel({
   const tabData = Array.from({ length: TAB_COUNT }, () => ({
     callType: 3,
     harmonic: 0,
-    autoIdResult: null,
+    result: null,
     showValidation: false,
     inputs: {
       start: "",
@@ -207,7 +207,7 @@ export function initAutoIdPanel({
   let suppressResultReset = false;
 
   function updateResultDisplay() {
-    const res = tabData[currentTab].autoIdResult;
+    const res = tabData[currentTab].result;
     if (resultEl) {
       if (res) {
         resultEl.innerHTML = formatSpeciesResult(res);
@@ -218,8 +218,8 @@ export function initAutoIdPanel({
   }
 
   function clearResult() {
-    if (tabData[currentTab].autoIdResult != null) {
-      tabData[currentTab].autoIdResult = null;
+    if (tabData[currentTab].result != null) {
+      tabData[currentTab].result = null;
       updateResultDisplay();
     }
   }
@@ -587,7 +587,7 @@ export function initAutoIdPanel({
   function resetTabData(tab) {
     tab.callType = 3;
     tab.harmonic = 0;
-    tab.autoIdResult = null;
+    tab.result = null;
     tab.showValidation = false;
     Object.keys(tab.inputs).forEach(k => { tab.inputs[k] = ""; });
     tab.startTime = null;
@@ -621,7 +621,7 @@ export function initAutoIdPanel({
     startTime = null;
     endTime = null;
     active = null;
-    tabData[currentTab].autoIdResult = null;
+    tabData[currentTab].result = null;
     setMarkerInteractivity(true);
     loadTab(currentTab);
   }
@@ -631,7 +631,7 @@ export function initAutoIdPanel({
       d.showValidation = false;
       d.callType = 3;
       d.harmonic = 0;
-      d.autoIdResult = null;
+      d.result = null;
       Object.keys(d.inputs).forEach(k => { d.inputs[k] = ""; });
       d.startTime = null;
       d.endTime = null;
@@ -742,7 +742,6 @@ export function initAutoIdPanel({
   }
   function runPulseId() {
     if (!validateMandatoryInputs(true)) {
-      tabData[currentTab].autoIdResult = null;
       if (resultEl) resultEl.textContent = "-";
       return;
     }
@@ -800,7 +799,7 @@ export function initAutoIdPanel({
       heelLowBandwidth,
       kneeHeelBandwidth
     });
-    tabData[currentTab].autoIdResult = res;
+    tabData[currentTab].result = res;
     updateResultDisplay();
   }
 
