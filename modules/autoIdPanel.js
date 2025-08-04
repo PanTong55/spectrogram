@@ -218,6 +218,7 @@ export function initAutoIdPanel({
   let markersEnabled = true;
   let suppressResultReset = false;
   let markerWasDragged = false;
+  let ctrlPressed = false;
 
   function showHandlesForMarker(key) {
     activeMarkerKey = key;
@@ -533,7 +534,7 @@ export function initAutoIdPanel({
         m.el.style.left = `${x}px`;
         m.el.style.top = `${y}px`;
         m.el.style.display = 'block';
-        m.el.style.pointerEvents = idx === currentTab ? 'auto' : 'none';
+        m.el.style.pointerEvents = (idx === currentTab && !ctrlPressed) ? 'auto' : 'none';
         m.el.style.opacity = idx === currentTab ? '1' : '0.5';
         m.el.dataset.freq = m.freq;
         m.el.dataset.time = m.time;
@@ -556,6 +557,20 @@ export function initAutoIdPanel({
     });
     updateLines();
   }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Control' && !ctrlPressed) {
+      ctrlPressed = true;
+      updateMarkers();
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'Control' && ctrlPressed) {
+      ctrlPressed = false;
+      updateMarkers();
+    }
+  });
 
   function xyToTimeFreq(x, y) {
     const scrollLeft = viewer.scrollLeft || 0;
