@@ -79,9 +79,9 @@ const speciesRules = [
       {
         callType: 'FM-QCF',
         lowestFreq: [46, 50],
-        highestFreq: [70, 100],
-        kneeFreq: [46, 50],
-        kneeLowBandwidth: [0, 2.5],
+        highestFreq: [60, 100],
+        kneeFreq: [46, 53],
+        kneeLowBandwidth: [0, 5],
         duration: [3, 6],
         harmonic: [0, 1, 2]
       }
