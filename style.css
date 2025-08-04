@@ -154,10 +154,6 @@ html, body {
   pointer-events: auto;
   cursor: move !important;
 }
-#fixed-overlay > .bezier-handle {
-  pointer-events: auto;
-  cursor: move;
-}
 #autoid-lines {
   position: absolute;
   top: 0;
@@ -179,16 +175,6 @@ html, body {
 }
 .hide-cursor {
   cursor: none !important;
-}
-
-.bezier-handle {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(0, 123, 255, 0.8);
-  border: 1px solid #fff;
-  transform: translate(-50%, -50%);
 }
 
 /* === 時間軸 === */
