@@ -154,6 +154,18 @@ html, body {
   pointer-events: auto;
   cursor: move !important;
 }
+#fixed-overlay > .path-handle {
+  pointer-events: auto;
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-top: -5px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: rgba(0, 0, 255, 0.6);
+  cursor: move !important;
+}
 #autoid-lines {
   position: absolute;
   top: 0;
@@ -169,6 +181,10 @@ html, body {
   stroke-width: 3px;
   stroke-linecap: round;
   fill: none;
+}
+#autoid-lines line.handle-connector {
+  stroke: #4b0082;
+  stroke-width: 1px;
 }
 #progress-line {
   pointer-events: auto;
