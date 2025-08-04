@@ -670,8 +670,9 @@ export function initAutoIdPanel({
       curve.p1Key = p1.key;
       curve.p2Key = p2.key;
       let cp1x, cp1y, cp2x, cp2y;
+      const isDraggingSeg = draggingKey && (p1.key === draggingKey || p2.key === draggingKey);
 
-      if (curve.cp1 && curve.cp2) {
+      if (!isDraggingSeg && curve.cp1 && curve.cp2) {
         ({ x: cp1x, y: cp1y } = timeFreqToXY(curve.cp1.time, curve.cp1.freq));
         ({ x: cp2x, y: cp2y } = timeFreqToXY(curve.cp2.time, curve.cp2.freq));
       } else {
@@ -701,39 +702,50 @@ export function initAutoIdPanel({
         curve.cp2 = cp2tf;
       }
 
-      if (!curve.cp1El) curve.cp1El = createHandleEl(tabIdx, segKey, 'cp1');
-      if (!curve.cp2El) curve.cp2El = createHandleEl(tabIdx, segKey, 'cp2');
-      if (!curve.cp1LineEl) {
-        curve.cp1LineEl = document.createElementNS(svgNS, 'line');
-        curve.cp1LineEl.classList.add('handle-connector');
-        curve.cp1LineEl.style.display = 'none';
-        curve.cp1LineEl.setAttribute('stroke', '#4b0082');
-        curve.cp1LineEl.setAttribute('stroke-width', '1');
-        linesSvg.appendChild(curve.cp1LineEl);
+      if (!isDraggingSeg) {
+        if (!curve.cp1El) curve.cp1El = createHandleEl(tabIdx, segKey, 'cp1');
+        if (!curve.cp2El) curve.cp2El = createHandleEl(tabIdx, segKey, 'cp2');
+        if (!curve.cp1LineEl) {
+          curve.cp1LineEl = document.createElementNS(svgNS, 'line');
+          curve.cp1LineEl.classList.add('handle-connector');
+          curve.cp1LineEl.style.display = 'none';
+          curve.cp1LineEl.setAttribute('stroke', '#4b0082');
+          curve.cp1LineEl.setAttribute('stroke-width', '1');
+          linesSvg.appendChild(curve.cp1LineEl);
+        }
+        if (!curve.cp2LineEl) {
+          curve.cp2LineEl = document.createElementNS(svgNS, 'line');
+          curve.cp2LineEl.classList.add('handle-connector');
+          curve.cp2LineEl.style.display = 'none';
+          curve.cp2LineEl.setAttribute('stroke', '#4b0082');
+          curve.cp2LineEl.setAttribute('stroke-width', '1');
+          linesSvg.appendChild(curve.cp2LineEl);
+        }
+
+        curve.cp1El.style.left = `${cp1x}px`;
+        curve.cp1El.style.top = `${cp1y}px`;
+        curve.cp2El.style.left = `${cp2x}px`;
+        curve.cp2El.style.top = `${cp2y}px`;
+
+        curve.cp1LineEl.setAttribute('x1', p1.x);
+        curve.cp1LineEl.setAttribute('y1', p1.y);
+        curve.cp1LineEl.setAttribute('x2', cp1x);
+        curve.cp1LineEl.setAttribute('y2', cp1y);
+
+        curve.cp2LineEl.setAttribute('x1', p2.x);
+        curve.cp2LineEl.setAttribute('y1', p2.y);
+        curve.cp2LineEl.setAttribute('x2', cp2x);
+        curve.cp2LineEl.setAttribute('y2', cp2y);
+      } else {
+        curve.cp1El?.remove();
+        curve.cp2El?.remove();
+        curve.cp1LineEl?.remove();
+        curve.cp2LineEl?.remove();
+        delete curve.cp1El;
+        delete curve.cp2El;
+        delete curve.cp1LineEl;
+        delete curve.cp2LineEl;
       }
-      if (!curve.cp2LineEl) {
-        curve.cp2LineEl = document.createElementNS(svgNS, 'line');
-        curve.cp2LineEl.classList.add('handle-connector');
-        curve.cp2LineEl.style.display = 'none';
-        curve.cp2LineEl.setAttribute('stroke', '#4b0082');
-        curve.cp2LineEl.setAttribute('stroke-width', '1');
-        linesSvg.appendChild(curve.cp2LineEl);
-      }
-
-      curve.cp1El.style.left = `${cp1x}px`;
-      curve.cp1El.style.top = `${cp1y}px`;
-      curve.cp2El.style.left = `${cp2x}px`;
-      curve.cp2El.style.top = `${cp2y}px`;
-
-      curve.cp1LineEl.setAttribute('x1', p1.x);
-      curve.cp1LineEl.setAttribute('y1', p1.y);
-      curve.cp1LineEl.setAttribute('x2', cp1x);
-      curve.cp1LineEl.setAttribute('y2', cp1y);
-
-      curve.cp2LineEl.setAttribute('x1', p2.x);
-      curve.cp2LineEl.setAttribute('y1', p2.y);
-      curve.cp2LineEl.setAttribute('x2', cp2x);
-      curve.cp2LineEl.setAttribute('y2', cp2y);
 
       d += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
     }
