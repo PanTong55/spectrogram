@@ -17,7 +17,7 @@ const speciesRules = [
     rules: [
       {
         callType: 'CF-FM',
-        cfStart: [60, 70],
+        cfStart: [65, 72],
         duration: [10, 18],
         harmonic: [0, 1, 2, 3]
       }
@@ -75,6 +75,15 @@ const speciesRules = [
         callType: 'QCF',
         lowestFreq: [44, 46],
         harmonic: [0, 1, 2, 3]
+      },
+      {
+        callType: 'FM-QCF',
+        lowestFreq: [46, 50],
+        highestFreq: [70, 100],
+        kneeFreq: [46, 50],
+        kneeLowBandwidth: [0, 2.5],
+        duration: [3, 5],
+        harmonic: [0, 1, 2]
       }
     ]
   },
