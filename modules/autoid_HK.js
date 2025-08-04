@@ -82,7 +82,7 @@ const speciesRules = [
         highestFreq: [70, 100],
         kneeFreq: [46, 50],
         kneeLowBandwidth: [0, 2.5],
-        duration: [3, 5],
+        duration: [3, 6],
         harmonic: [0, 1, 2]
       }
     ]
