@@ -61,7 +61,8 @@ export function initAutoIdPanel({
       cfStart: { el: null, freq: null, time: null },
       cfEnd: { el: null, freq: null, time: null }
     },
-    line: null
+    line: null,
+    resultEl: null
   }));
   let currentTab = 0;
 
@@ -221,6 +222,7 @@ export function initAutoIdPanel({
     if (tabData[currentTab].autoIdResult != null) {
       tabData[currentTab].autoIdResult = null;
       updateResultDisplay();
+      updateMarkers();
     }
   }
   function saveCurrentTab() {
@@ -416,10 +418,22 @@ export function initAutoIdPanel({
     return el;
   }
 
+  function createResultEl(tabIdx) {
+    const el = document.createElement('div');
+    el.className = 'pulseid-result';
+    el.dataset.tab = tabIdx;
+    overlay.appendChild(el);
+    return el;
+  }
+
   function updateMarkers() {
     const { min, max } = getFreqRange();
     const actualWidth = container.scrollWidth;
     tabData.forEach((tab, idx) => {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      let hasAny = false;
       Object.entries(tab.markers).forEach(([key, m]) => {
         if (!m.el) m.el = createMarkerEl(key, idx);
         if (m.freq == null || m.time == null) {
@@ -435,7 +449,22 @@ export function initAutoIdPanel({
         m.el.style.opacity = idx === currentTab ? '1' : '0.5';
         m.el.dataset.freq = m.freq;
         m.el.dataset.time = m.time;
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+        hasAny = true;
       });
+      if (!tab.resultEl) tab.resultEl = createResultEl(idx);
+      const rEl = tab.resultEl;
+      if (tab.autoIdResult && hasAny) {
+        rEl.innerHTML = formatSpeciesResult(tab.autoIdResult);
+        rEl.style.left = `${(minX + maxX) / 2}px`;
+        rEl.style.top = `${maxY + 20}px`;
+        rEl.style.display = 'block';
+        rEl.style.opacity = idx === currentTab ? '1' : '0.5';
+      } else {
+        rEl.style.display = 'none';
+      }
     });
     updateLines();
   }
@@ -744,6 +773,7 @@ export function initAutoIdPanel({
     if (!validateMandatoryInputs(true)) {
       tabData[currentTab].autoIdResult = null;
       if (resultEl) resultEl.textContent = "-";
+      updateMarkers();
       return;
     }
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
@@ -802,6 +832,7 @@ export function initAutoIdPanel({
     });
     tabData[currentTab].autoIdResult = res;
     updateResultDisplay();
+    updateMarkers();
   }
 
   function runSequenceId() {
