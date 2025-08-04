@@ -381,10 +381,13 @@ export function initAutoIdPanel({
     } else {
       bandwidthEl.textContent = '-';
     }
-    if (startTime != null && endTime != null) {
-      durationEl.textContent = ((endTime - startTime) * 1000).toFixed(1);
-    } else if (markers.high.time != null && markers.low.time != null) {
-      durationEl.textContent = ((markers.low.time - markers.high.time) * 1000).toFixed(1);
+    const times = Object.values(markers)
+      .filter((m) => m.time != null && !isNaN(m.freq))
+      .map((m) => m.time);
+    if (times.length >= 2) {
+      const max = Math.max(...times);
+      const min = Math.min(...times);
+      durationEl.textContent = ((max - min) * 1000).toFixed(1);
     } else {
       durationEl.textContent = '-';
     }
@@ -787,10 +790,13 @@ export function initAutoIdPanel({
     const cfEnd = parseFloat(inputs.cfEnd.value);
 
     let duration = null;
-    if (startTime != null && endTime != null) {
-      duration = (endTime - startTime) * 1000;
-    } else if (markers.high.time != null && markers.low.time != null) {
-      duration = (markers.low.time - markers.high.time) * 1000;
+    const times = Object.values(markers)
+      .filter((m) => m.time != null && !isNaN(m.freq))
+      .map((m) => m.time);
+    if (times.length >= 2) {
+      const max = Math.max(...times);
+      const min = Math.min(...times);
+      duration = (max - min) * 1000;
     }
 
     let bandwidth = null;
