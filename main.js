@@ -150,7 +150,7 @@ initWavesurfer({
 });
 getWavesurfer().on('finish', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Play';
+  playPauseBtn.title = 'Play (Ctrl + P)';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -175,7 +175,7 @@ getWavesurfer().on('pause', () => {
     return;
   }
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Continue';
+  playPauseBtn.title = 'Continue (Ctrl + P)';
   playPauseBtn.classList.add('paused');
   playPauseBtn.classList.remove('playing');
   progressLineElem.style.pointerEvents = 'auto';
@@ -196,7 +196,7 @@ getWavesurfer().on('seek', (prog) => {
 
 document.addEventListener('file-loaded', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Play';
+  playPauseBtn.title = 'Play (Ctrl + P)';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -213,7 +213,7 @@ playPauseBtn.addEventListener('click', () => {
     ws.pause();
     // Update button immediately in case the pause event is delayed
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-    playPauseBtn.title = 'Continue';
+    playPauseBtn.title = 'Continue (Ctrl + P)';
     playPauseBtn.classList.add('paused');
     playPauseBtn.classList.remove('playing');
     progressLineElem.style.pointerEvents = 'auto';
@@ -238,7 +238,7 @@ stopBtn.addEventListener('click', () => {
   ignoreNextPause = true;
   ws.stop();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Play';
+  playPauseBtn.title = 'Play (Ctrl + P)';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -1091,6 +1091,10 @@ break;
 case 'p':
 e.preventDefault();
 playPauseBtn.click();
+break;
+case 'i':
+e.preventDefault();
+document.getElementById('autoIdBtn')?.click();
 break;
 }
 });
