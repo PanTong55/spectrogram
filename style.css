@@ -163,7 +163,7 @@ html, body {
   margin-top: -5px;
   border: 2px solid rgba(0, 0, 0, 0.7);
   border-radius: 50%;
-  background: white;
+  background: rgba(255, 255, 255, 0.8);
   cursor: move !important;
 }
 #autoid-lines {
