@@ -115,7 +115,7 @@ export function initAutoIdPanel({
 
   resetTabBtn?.addEventListener('click', resetCurrentTab);
 
-  const callTypeDropdown = initDropdown('callTypeInput', ['CF-FM','FM-CF-FM','FM','FM-QCF','QCF']);
+  const callTypeDropdown = initDropdown('callTypeInput', ['CF-FM','FM-CF-FM','FM','FM-QCF','FM-QCF-FM','QCF']);
   const harmonicDropdown = initDropdown('harmonicInput', ['0','1','2','3']);
   function handleHarmonicChange(value, idx) {
     tabData[currentTab].harmonic = idx;
@@ -382,7 +382,7 @@ export function initAutoIdPanel({
   function handleCallTypeChange(value, idx) {
     const hideHighLow = ['CF-FM', 'FM-CF-FM'].includes(value);
     const hideKneeHeel = ['CF-FM', 'FM-CF-FM', 'QCF'].includes(value);
-    const hideCf = ['QCF', 'FM-QCF', 'FM'].includes(value);
+    const hideCf = ['QCF', 'FM-QCF', 'FM', 'FM-QCF-FM'].includes(value);
     toggleRow('high', !hideHighLow);
     toggleRow('low', !hideHighLow);
     toggleRow('knee', !hideKneeHeel);
@@ -1035,6 +1035,7 @@ export function initAutoIdPanel({
       'FM-CF-FM': ['cfStart', 'cfEnd'],
       'FM': ['high', 'low'],
       'FM-QCF': ['high', 'low', 'knee'],
+      'FM-QCF-FM': ['high', 'knee', 'heel', 'low'],
       'QCF': ['high', 'low'],
     };
     const required = requiredMap[callType] || [];
