@@ -631,7 +631,7 @@ input[type="file"]:hover {
 
 #auto-id-panel {
   display: none;
-  width: 420px;
+  width: 426px;
   height: auto;
   left: 50%;
   transform: translateX(-50%);
@@ -654,7 +654,7 @@ input[type="file"]:hover {
 #auto-id-panel .autoid-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 0px;
   font-size: 14px;
 }
 
@@ -669,9 +669,10 @@ input[type="file"]:hover {
 }
 
 #auto-id-panel .autoid-input {
-  width: 30px;
+  width: 37px;
   height: 23px;
   padding: 2px 6px;
+  text-align: center;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
