@@ -74,8 +74,13 @@ export function initFreqContextMenu({
     menu.style.display = 'block';
     menu.style.left = `${clientX}px`;
     menu.style.top = `${clientY}px`;
-    const menuRect = menu.getBoundingClientRect();
+    let menuRect = menu.getBoundingClientRect();
     const wrapperRect = wrapper.getBoundingClientRect();
+    if (menuRect.bottom > wrapperRect.bottom) {
+      const newTop = clientY - menuRect.height;
+      menu.style.top = `${Math.max(wrapperRect.top, newTop)}px`;
+      menuRect = menu.getBoundingClientRect();
+    }
     if (menuRect.right > wrapperRect.right) {
       const newLeft = clientX - menuRect.width;
       menu.style.left = `${Math.max(wrapperRect.left, newLeft)}px`;
