@@ -393,6 +393,7 @@ export function initAutoIdPanel({
     if (!suppressResultReset) clearResult();
     updateDerived();
     updateLines();
+    tabData[currentTab].showValidation = false;
     validateMandatoryInputs();
   }
 
