@@ -11,6 +11,9 @@ export function initFreqContextMenu({
   const wrapper = document.getElementById(wrapperId);
   const container = document.getElementById(containerId);
   if (!viewer || !wrapper) return null;
+  const defaultScrollbarThickness = 20;
+  const getScrollbarThickness = () =>
+    container.scrollWidth > viewer.clientWidth ? 0 : defaultScrollbarThickness;
   const menu = document.createElement('div');
   menu.id = 'freq-context-menu';
   menu.className = 'freq-context-menu';
@@ -90,7 +93,8 @@ export function initFreqContextMenu({
     const rect = viewer.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const overHScrollbar = viewer.scrollWidth > viewer.clientWidth && y > viewer.clientHeight;
+    const threshold = getScrollbarThickness();
+    const overHScrollbar = y > (viewer.clientHeight - threshold);
     const overVScrollbar = viewer.scrollHeight > viewer.clientHeight && x > viewer.clientWidth;
     if (overHScrollbar || overVScrollbar) return;
     e.preventDefault();
