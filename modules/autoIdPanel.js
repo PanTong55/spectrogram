@@ -483,9 +483,11 @@ export function initAutoIdPanel({
       hideHover();
       viewer.classList.add('hide-cursor');
       el.classList.add('hide-cursor');
-      document.querySelectorAll('.freq-marker').forEach(m => m.classList.add('hide-cursor'));
+      // 拖動時所有 handle-connector 及 path-handle 半透明
       document.querySelectorAll('.path-handle').forEach(h => h.classList.add('dragging'));
       document.querySelectorAll('.handle-connector').forEach(l => l.classList.add('dragging'));
+      // 拖動時所有 marker 維持隱藏游標
+      document.querySelectorAll('.freq-marker').forEach(m => m.classList.add('hide-cursor-drag'));
       draggingHandle = { tabIdx, segKey, handleKey, el };
       document.addEventListener('mousemove', onHandleDrag, { passive: true });
       document.addEventListener('mouseup', stopHandleDrag, { once: true });
@@ -860,9 +862,10 @@ export function initAutoIdPanel({
   function stopHandleDrag() {
     if (!draggingHandle) return;
     draggingHandle.el.classList.remove('hide-cursor');
-    document.querySelectorAll('.freq-marker').forEach(m => m.classList.remove('hide-cursor'));
+    // 拖動結束時移除半透明與游標隱藏
     document.querySelectorAll('.path-handle').forEach(h => h.classList.remove('dragging'));
     document.querySelectorAll('.handle-connector').forEach(l => l.classList.remove('dragging'));
+    document.querySelectorAll('.freq-marker').forEach(m => m.classList.remove('hide-cursor-drag'));
     draggingHandle = null;
     document.removeEventListener('mousemove', onHandleDrag);
     viewer.classList.remove('hide-cursor');
@@ -877,4 +880,296 @@ export function initAutoIdPanel({
     input.dataset.time = time;
     markers[key].freq = freq;
     markers[key].time = time;
-    if
+    if (key === 'start') startTime = time;
+    if (key === 'end') endTime = time;
+    tabData[currentTab].startTime = startTime;
+    tabData[currentTab].endTime = endTime;
+    updateDerived();
+    updateMarkers();
+    clearResult();
+    validateMandatoryInputs();
+  }
+
+  function removeMarker(key) {
+    resetField(key);
+  }
+
+  function isFieldEnabled(key) {
+    const input = inputs[key];
+    return input && !input.disabled;
+  }
+
+  function resetTabData(tab) {
+    tab.callType = 3;
+    tab.harmonic = 0;
+    tab.autoIdResult = null;
+    tab.showValidation = false;
+    Object.keys(tab.inputs).forEach(k => { tab.inputs[k] = ""; });
+    tab.startTime = null;
+    tab.endTime = null;
+    Object.values(tab.markers).forEach(m => {
+      m.freq = null;
+      m.time = null;
+      if (m.el) m.el.style.display = 'none';
+    });
+    Object.values(tab.curves || {}).forEach(c => {
+      c.cp1El?.remove();
+      c.cp2El?.remove();
+      c.cp1LineEl?.remove();
+      c.cp2LineEl?.remove();
+    });
+    tab.curves = {};
+    if (tab.line) {
+      tab.line.setAttribute('d', '');
+      tab.line.style.display = 'none';
+    }
+  }
+
+  function resetCurrentTab() {
+    tabData[currentTab].showValidation = false;
+    resetTabData(tabData[currentTab]);
+    callTypeDropdown.select(3);
+    harmonicDropdown.select(0);
+    Object.values(inputs).forEach(el => {
+      if (!el) return;
+      el.value = "";
+      delete el.dataset.time;
+      el.classList.remove('active-get');
+      el.classList.remove('invalid');
+      el.classList.remove('warning');
+    });
+    bandwidthEl.textContent = '-';
+    durationEl.textContent = '-';
+    startTime = null;
+    endTime = null;
+    active = null;
+    tabData[currentTab].autoIdResult = null;
+    activeMarkerKey = null;
+    setMarkerInteractivity(true);
+    loadTab(currentTab);
+  }
+
+  function reset() {
+    tabData.forEach(d => {
+      d.showValidation = false;
+      d.callType = 3;
+      d.harmonic = 0;
+      d.autoIdResult = null;
+      Object.keys(d.inputs).forEach(k => { d.inputs[k] = ""; });
+      d.startTime = null;
+      d.endTime = null;
+      Object.keys(d.markers).forEach(k => { d.markers[k].freq = null; d.markers[k].time = null; });
+      Object.values(d.curves || {}).forEach(c => { c.cp1El?.remove(); c.cp2El?.remove(); c.cp1LineEl?.remove(); c.cp2LineEl?.remove(); });
+      d.curves = {};
+      if (d.line) {
+        d.line.setAttribute('d', '');
+        d.line.style.display = 'none';
+      }
+    });
+    callTypeDropdown.select(3);
+    harmonicDropdown.select(0);
+    Object.values(inputs).forEach(el => {
+      if (!el) return;
+      el.value = "";
+      delete el.dataset.time;
+      el.classList.remove('active-get');
+      el.classList.remove('invalid');
+      el.classList.remove('warning');
+    });
+    bandwidthEl.textContent = '-';
+    durationEl.textContent = '-';
+    startTime = null;
+    endTime = null;
+    tabData.forEach(tab => {
+      Object.values(tab.markers).forEach(m => {
+        m.freq = null;
+        m.time = null;
+        if (m.el) m.el.style.display = 'none';
+      });
+    });
+    active = null;
+    activeMarkerKey = null;
+    setMarkerInteractivity(true);
+    loadTab(currentTab);
+  }
+  viewer.addEventListener('click', (e) => {
+    if (!active) return;
+    const rect = viewer.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const scrollLeft = viewer.scrollLeft || 0;
+    const { min, max } = getFreqRange();
+    const freq = (1 - y / spectrogramHeight) * (max - min) + min;
+    const time = ((x + scrollLeft) / container.scrollWidth) * getDuration();
+    const key = active.dataset.key;
+    active.value = freq.toFixed(1);
+    active.dataset.time = time;
+    markers[key].freq = freq;
+    markers[key].time = time;
+    if (active === inputs.start) startTime = time;
+    if (active === inputs.end) endTime = time;
+    tabData[currentTab].startTime = startTime;
+    tabData[currentTab].endTime = endTime;
+    active.classList.remove('active-get');
+    active = null;
+    setMarkerInteractivity(true);
+    updateDerived();
+    updateMarkers();
+    clearResult();
+  });
+
+  viewer.addEventListener('scroll', updateMarkers);
+
+  function formatSpeciesResult(res) {
+    return res.split(' / ').map(name => {
+      if (name.endsWith('sp.')) {
+        const genus = name.replace(' sp.', '');
+        return `<i>${genus}</i> sp.`;
+      }
+      if (name === 'TBC' || name === '-' || name === 'No species matched') return name;
+      return `<i>${name}</i>`;
+    }).join(' / ');
+  }
+
+  function showPlaceholderResult() {
+    updateResultDisplay();
+  }
+
+  function validateMandatoryInputs(forceShow = false) {
+    const tab = tabData[currentTab];
+    if (forceShow) tab.showValidation = true;
+    const showValidation = tab.showValidation;
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const requiredMap = {
+      'CF-FM': ['cfStart', 'cfEnd'],
+      'FM-CF-FM': ['cfStart', 'cfEnd'],
+      'FM': ['high', 'low'],
+      'FM-QCF': ['high', 'low', 'knee'],
+      'FM-QCF-FM': ['high', 'knee', 'heel', 'low'],
+      'QCF': ['high', 'low'],
+    };
+    const required = requiredMap[callType] || [];
+    let allValid = true;
+    Object.entries(inputs).forEach(([key, el]) => {
+      if (!el) return;
+      if (required.includes(key)) {
+        const val = parseFloat(el.value);
+        const isValid = !isNaN(val);
+        if (showValidation) {
+          el.classList.toggle('invalid', !isValid);
+        } else {
+          el.classList.remove('invalid');
+        }
+        if (!isValid) allValid = false;
+      } else {
+        el.classList.remove('invalid');
+      }
+    });
+    return allValid;
+  }
+  function runPulseId() {
+    if (!validateMandatoryInputs(true)) {
+      tabData[currentTab].autoIdResult = null;
+      if (resultEl) resultEl.textContent = "-";
+      updateMarkers();
+      return;
+    }
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const high = parseFloat(inputs.high.value);
+    const low = parseFloat(inputs.low.value);
+    const knee = parseFloat(inputs.knee.value);
+    const heel = parseFloat(inputs.heel.value);
+    const start = parseFloat(inputs.start.value);
+    const end = parseFloat(inputs.end.value);
+    const cfStart = parseFloat(inputs.cfStart.value);
+    const cfEnd = parseFloat(inputs.cfEnd.value);
+
+    let duration = null;
+    const times = Object.values(markers)
+      .filter((m) => m.time != null && !isNaN(m.freq))
+      .map((m) => m.time);
+    if (times.length >= 2) {
+      const max = Math.max(...times);
+      const min = Math.min(...times);
+      duration = (max - min) * 1000;
+    }
+
+    let bandwidth = null;
+    if (["FM-CF-FM", "CF-FM"].includes(callType)) {
+      if (!isNaN(cfStart) && !isNaN(end)) bandwidth = cfStart - end;
+    } else if (!isNaN(high) && !isNaN(low)) {
+      bandwidth = high - low;
+    }
+
+    const kneeLowTime =
+      markers.knee.time != null && markers.low.time != null
+        ? (markers.knee.time - markers.low.time) * 1000
+        : null;
+    const kneeLowBandwidth = !isNaN(knee) && !isNaN(low) ? knee - low : null;
+    const heelLowBandwidth = !isNaN(heel) && !isNaN(low) ? heel - low : null;
+    const kneeHeelBandwidth = !isNaN(knee) && !isNaN(heel) ? knee - heel : null;
+    const harmonic = parseInt(
+      harmonicDropdown.items[harmonicDropdown.selectedIndex],
+      10
+    );
+
+    const res = autoIdHK({
+      callType,
+      harmonic,
+      highestFreq: high,
+      lowestFreq: low,
+      kneeFreq: knee,
+      heelFreq: heel,
+      startFreq: start,
+      endFreq: end,
+      cfStart,
+      cfEnd,
+      duration,
+      bandwidth,
+      kneeLowTime,
+      kneeLowBandwidth,
+      heelLowBandwidth,
+      kneeHeelBandwidth
+    });
+    tabData[currentTab].autoIdResult = res;
+    updateResultDisplay();
+    updateMarkers();
+  }
+
+  function runSequenceId() {
+    runPulseId();
+  }
+
+  pulseIdBtn?.addEventListener('click', runPulseId);
+  sequenceIdBtn?.addEventListener('click', runSequenceId);
+
+  document.addEventListener('keydown', (e) => {
+    if (!document.body.classList.contains('autoid-open')) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    if (e.key === 'Enter' && e.ctrlKey) {
+      e.preventDefault();
+      pulseIdBtn?.click();
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      sequenceIdBtn?.click();
+    } else if (e.ctrlKey && e.key === 'ArrowLeft') {
+      e.preventDefault();
+      if (currentTab > 0) switchTab(currentTab - 1);
+    } else if (e.ctrlKey && e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (currentTab < TAB_COUNT - 1) switchTab(currentTab + 1);
+    }
+  });
+
+  return {
+    updateMarkers,
+    reset,
+    resetCurrentTab,
+    setMarkerAt,
+    removeMarker,
+    isFieldEnabled,
+    getFreqRange,
+    getDuration: () => getDuration(),
+    spectrogramHeight
+  };
+}
