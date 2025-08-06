@@ -123,12 +123,12 @@ export function initAutoIdPanel({
   }
   harmonicDropdown.onChange = handleHarmonicChange;
   if (tabsContainer) {
-    tabsContainer.title = 'Prev tag (Ctrl + ←), Next tag (Ctrl + →)';
+    tabsContainer.title = 'Prev pulse (Ctrl + ←), Next pulse (Ctrl + →)';
     for (let i = 0; i < TAB_COUNT; i++) {
       const t = document.createElement("button");
       t.textContent = `${i + 1}`;
       t.className = "tab-btn";
-      t.title = `Tag ${i + 1}`;
+      t.title = `Pulse ${i + 1}`;
       if (i === 0) t.classList.add("active");
       t.addEventListener("click", () => switchTab(i));
       tabsContainer.appendChild(t);
