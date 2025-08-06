@@ -154,6 +154,9 @@ html, body {
   pointer-events: auto;
   cursor: move !important;
 }
+body.handle-dragging .freq-marker {
+  cursor: none !important;
+}
 #fixed-overlay > .path-handle {
   pointer-events: auto;
   position: absolute;
