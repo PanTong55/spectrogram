@@ -296,6 +296,11 @@ if (uploadOverlay.style.display !== 'flex') {
 }
 freqHoverControl?.hideHover();
 freqHoverControl?.clearSelections();
+
+if (document.body.classList.contains('autoid-open')) {
+  freqHoverControl?.setPersistentLinesEnabled(false);
+}  
+
 if (selectionExpandMode) {
   selectionExpandMode = false;
   sampleRateBtn.disabled = false;
@@ -650,6 +655,11 @@ onBeforeLoad: () => {
 if (uploadOverlay.style.display !== 'flex') {
 loadingOverlay.style.display = 'flex';
 }
+
+if (document.body.classList.contains('autoid-open')) {
+  freqHoverControl?.setPersistentLinesEnabled(false);
+}  
+
 freqHoverControl?.hideHover();
 freqHoverControl?.clearSelections();
 },
