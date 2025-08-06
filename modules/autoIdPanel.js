@@ -483,11 +483,9 @@ export function initAutoIdPanel({
       hideHover();
       viewer.classList.add('hide-cursor');
       el.classList.add('hide-cursor');
-      // 拖動時所有 handle-connector 及 path-handle 半透明
+      document.body.classList.add('handle-dragging');
       document.querySelectorAll('.path-handle').forEach(h => h.classList.add('dragging'));
       document.querySelectorAll('.handle-connector').forEach(l => l.classList.add('dragging'));
-      // 拖動時所有 marker 維持隱藏游標
-      document.querySelectorAll('.freq-marker').forEach(m => m.classList.add('hide-cursor-drag'));
       draggingHandle = { tabIdx, segKey, handleKey, el };
       document.addEventListener('mousemove', onHandleDrag, { passive: true });
       document.addEventListener('mouseup', stopHandleDrag, { once: true });
@@ -862,10 +860,9 @@ export function initAutoIdPanel({
   function stopHandleDrag() {
     if (!draggingHandle) return;
     draggingHandle.el.classList.remove('hide-cursor');
-    // 拖動結束時移除半透明與游標隱藏
+    document.body.classList.remove('handle-dragging');
     document.querySelectorAll('.path-handle').forEach(h => h.classList.remove('dragging'));
     document.querySelectorAll('.handle-connector').forEach(l => l.classList.remove('dragging'));
-    document.querySelectorAll('.freq-marker').forEach(m => m.classList.remove('hide-cursor-drag'));
     draggingHandle = null;
     document.removeEventListener('mousemove', onHandleDrag);
     viewer.classList.remove('hide-cursor');

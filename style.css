@@ -1954,3 +1954,7 @@ input.tag-button.editing {
 .freq-menu-item.delete {
   color: red;
 }
+
+body.handle-dragging .freq-marker {
+  cursor: none !important;
+}
