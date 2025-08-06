@@ -154,7 +154,6 @@ html, body {
   pointer-events: auto;
   cursor: move !important;
 }
-/* path-handle 預設樣式 */
 #fixed-overlay > .path-handle {
   pointer-events: auto;
   position: absolute;
@@ -166,20 +165,6 @@ html, body {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.8);
   cursor: move !important;
-  opacity: 1;
-  transition: opacity 0.1s;
-}
-
-/* 拖動時半透明效果 */
-.path-handle.dragging,
-#autoid-lines .handle-connector.dragging {
-  opacity: 0.4 !important;
-}
-
-/* 拖動 handle 期間 marker 也維持隱藏游標 */
-.freq-marker.hide-cursor-drag {
-  cursor: none !important;
-}
 }
 #autoid-lines {
   position: absolute;
@@ -191,7 +176,6 @@ html, body {
   overflow: visible;
 }
 #autoid-lines path {
-  /* 70% transparent red stroke for better visibility */
   stroke: rgba(255, 0, 0, 0.7);
   stroke-width: 3px;
   stroke-linecap: round;
@@ -200,8 +184,6 @@ html, body {
 #autoid-lines line.handle-connector {
   stroke: rgba(0, 0, 0, 0.7);
   stroke-width: 2px;
-  opacity: 1;
-  transition: opacity 0.1s;
 }
 #progress-line {
   pointer-events: auto;
