@@ -205,6 +205,9 @@ document.addEventListener('file-loaded', () => {
   playPauseBtn.disabled = false;
   hideStopButton();
   updateProgressLine(0);
+    if (document.body.classList.contains('autoid-open')) {
+        freqHoverControl?.setPersistentLinesEnabled(false);
+    }
 });
 
 playPauseBtn.addEventListener('click', () => {
