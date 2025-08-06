@@ -165,6 +165,12 @@ html, body {
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.8);
   cursor: move !important;
+  opacity: 1;
+  transition: opacity 0.1s;
+}
+.path-handle.dragging,
+#autoid-lines .handle-connector.dragging {
+  opacity: 0.4 !important;
 }
 #autoid-lines {
   position: absolute;
@@ -184,6 +190,8 @@ html, body {
 #autoid-lines line.handle-connector {
   stroke: rgba(0, 0, 0, 0.7);
   stroke-width: 2px;
+  opacity: 1;
+  transition: opacity 0.1s;
 }
 #progress-line {
   pointer-events: auto;
