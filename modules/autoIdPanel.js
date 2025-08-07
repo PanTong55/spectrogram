@@ -464,6 +464,17 @@ export function initAutoIdPanel({
         markerWasDragged = false;
         return;
       }
+      // 檢查是否已建立 handle，若未建立則建立
+      const tab = tabData[tabIdx];
+      let hasHandle = false;
+      Object.values(tab.curves || {}).forEach(curve => {
+        if ((curve.p1Key === key || curve.p2Key === key) && (curve.cp1El || curve.cp2El)) {
+          hasHandle = true;
+        }
+      });
+      if (!hasHandle) {
+        updateLines(); // 觸發 path 生成與 handle 建立
+      }
       showHandlesForMarker(key);
     });
     overlay.appendChild(el);
