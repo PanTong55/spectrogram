@@ -210,7 +210,7 @@ export function autoIdHK(data = {}) {
 
   const matches = speciesRules.filter(species =>
     species.rules.some(rule => {
-      if (rule.callType && rule.callType !== data.callType) return false;
+      if (rule.callType && rule.callType.includes(data.callType)) return false;
       if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
       return fields.every(f => {
         if (!rule[f]) return true;
