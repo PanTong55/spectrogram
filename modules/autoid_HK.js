@@ -98,7 +98,7 @@ const speciesRules = [
       },
       {
         callType: 'QCF',
-        startFreq: [<highestFreq],
+        startFreq: ['<highestFreq'],
         lowestFreq: [49, 54.9],
         duration: [7, 12],
         harmonic: [0, 1, 2, 3]
