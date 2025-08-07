@@ -892,6 +892,8 @@ export function initAutoIdPanel({
     if (key === 'end') endTime = time;
     tabData[currentTab].startTime = startTime;
     tabData[currentTab].endTime = endTime;
+    // 新增/更新 marker 時，重置受影響的 draggingHandle 並即時更新 path 弧度
+    resetCurvesForMarker(key, currentTab);
     updateDerived();
     updateMarkers();
     clearResult();
