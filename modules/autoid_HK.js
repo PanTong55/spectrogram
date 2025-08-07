@@ -147,6 +147,17 @@ const speciesRules = [
 function inRange(val, range) {
   if (val == null || isNaN(val)) return false;
   if (Array.isArray(range[0])) return range.some(r => inRange(val, r));
+  // 新增: 支援 [=>field]、[>field]、[<field]、[=<field] 格式
+  if (typeof range[0] === 'string' && range.length === 1) {
+    const match = range[0].match(/^(=|=>|>=|<|<=|>)\s*(\w+)$/);
+    if (match) {
+      const op = match[1];
+      const refField = match[2];
+      // 這裡 val 是 data[f]，refVal 需外部傳入
+      // 但 inRange 目前無法取得 data，只能在 autoIdHK 處理
+      return { op, refField };
+    }
+  }
   const [min, max] = range;
   return val >= min && val <= max;
 }
@@ -163,7 +174,38 @@ export function autoIdHK(data = {}) {
     species.rules.some(rule => {
       if (rule.callType && rule.callType !== data.callType) return false;
       if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
-      return fields.every(f => !rule[f] || inRange(data[f], rule[f]));
+      return fields.every(f => {
+        if (!rule[f]) return true;
+        // 檢查是否為特殊比較格式
+        if (typeof rule[f][0] === 'string' && rule[f].length === 1) {
+          const match = rule[f][0].match(/^(=|=>|>=|<|<=|>)\s*(\w+)$/);
+          if (match) {
+            const op = match[1];
+            const refField = match[2];
+            const val = data[f];
+            const refVal = data[refField];
+            if (val == null || refVal == null || isNaN(val) || isNaN(refVal)) return false;
+            switch (op) {
+              case '=':
+                return val === refVal;
+              case '>':
+                return val > refVal;
+              case '<':
+                return val < refVal;
+              case '>=':
+              case '=>':
+                return val >= refVal;
+              case '<=':
+              case '=<':
+                return val <= refVal;
+              default:
+                return false;
+            }
+          }
+        }
+        // 一般範圍判斷
+        return inRange(data[f], rule[f]);
+      });
     })
   ).map(s => s.name);
 
