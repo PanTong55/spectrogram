@@ -52,9 +52,8 @@ export function initFreqContextMenu({
   // 新增 Reset option
   const resetItem = document.createElement('div');
   resetItem.className = 'freq-menu-item';
-  resetItem.textContent = 'Reset';
+  resetItem.textContent = 'Reset ↺';
   resetItem.style.color = 'red';
-  resetItem.style.fontWeight = 'bold';
   resetItem.addEventListener('click', () => {
     hide();
     if (autoId && typeof autoId.resetCurrentTab === 'function') {
