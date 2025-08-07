@@ -88,6 +88,24 @@ const speciesRules = [
     ]
   },
   {
+    name: 'Tylonycteris fulvida',
+    rules: [
+      {
+        callType: 'FM, QCF, FM-QCF',
+        lowestFreq: [50, 54.9],
+        duration: [7, 11],
+        harmonic: [0, 1, 2, 3]
+      },
+      {
+        callType: 'QCF',
+        startFreq: [<highestFreq],
+        lowestFreq: [49, 54.9],
+        duration: [7, 12],
+        harmonic: [0, 1, 2, 3]
+      }      
+    ]
+  },  
+  {
     name: 'Hypsugo pulveratus',
     rules: [
       {
