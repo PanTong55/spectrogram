@@ -102,6 +102,7 @@ const speciesRules = [
         lowestFreq: [49.5, 55],
         highestFreq: [54.6, 65],
         bandwidth: [5.1, 15],
+        kneeFreq: ['>lowestFreq'],
         duration: [7, 11],
         harmonic: [0, 1, 2]
       },
@@ -110,6 +111,7 @@ const speciesRules = [
         lowestFreq: [49.5, 55],
         highestFreq: [65.1, 92],
         bandwidth: [15.1, 45],
+        kneeFreq: ['>lowestFreq'],
         duration: [6, 11],
         harmonic: [0, 1, 2]
       },      
