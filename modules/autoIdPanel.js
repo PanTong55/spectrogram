@@ -219,9 +219,6 @@ export function initAutoIdPanel({
   let activeMarkerKey = null;
   let markersEnabled = true;
   let suppressResultReset = false;
-  // handle lock 狀態
-  let handleLock = {};
-  let altPressed = false;
   let markerWasDragged = false;
   let ctrlPressed = false;
 
@@ -567,9 +564,6 @@ export function initAutoIdPanel({
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Alt') {
-      altPressed = true;
-    }
     if (e.key === 'Control' && !ctrlPressed) {
       ctrlPressed = true;
       updateMarkers();
@@ -577,9 +571,6 @@ export function initAutoIdPanel({
   });
 
   document.addEventListener('keyup', (e) => {
-    if (e.key === 'Alt') {
-      altPressed = false;
-    }
     if (e.key === 'Control' && ctrlPressed) {
       ctrlPressed = false;
       updateMarkers();
@@ -859,37 +850,10 @@ export function initAutoIdPanel({
     const { time, freq } = xyToTimeFreq(x, y);
     const { tabIdx, segKey, handleKey } = draggingHandle;
     const curve = tabData[tabIdx].curves[segKey];
-    if (!curve) return;
-    // handleLock key: tabIdx+segKey
-    const lockKey = `${tabIdx}_${segKey}`;
-    // 預設鎖定，除非 altPressed 或 lock 被解除
-    if (altPressed || handleLock[lockKey] === false) {
+    if (curve) {
       curve[handleKey] = { time, freq };
-      // 判斷是否非直線
-      if (curve.cp1El && curve.cp2El && curve.cp1El !== curve.cp2El) {
-        const p1 = curve.cp1El;
-        const p2 = curve.cp2El;
-        // 取兩 handle 的座標
-        const p1x = p1.offsetLeft, p1y = p1.offsetTop;
-        const p2x = p2.offsetLeft, p2y = p2.offsetTop;
-        // 若不是完全水平或垂直，解除鎖定
-        if (Math.abs(p1x - p2x) > 1 && Math.abs(p1y - p2y) > 1) {
-          handleLock[lockKey] = false;
-        }
-      }
-    } else {
-      // 鎖定狀態下，拖動一個 handle，另一個同步
-      curve[handleKey] = { time, freq };
-      // 另一個 handle key
-      const otherKey = handleKey === 'cp1' ? 'cp2' : 'cp1';
-      curve[otherKey] = { time, freq };
     }
     updateLines();
-    // marker 移動時重設 handleLock
-    Object.entries(tab.curves || {}).forEach(([segKey, curve]) => {
-      const lockKey = `${tabIdx}_${segKey}`;
-      handleLock[lockKey] = true;
-    });
   }
 
   function stopHandleDrag() {
