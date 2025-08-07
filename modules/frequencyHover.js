@@ -291,7 +291,7 @@ export function initFrequencyHover({
       <div><b>F.Low:</b> <span class="flow">${Flow.toFixed(1)}</span> kHz</div>
       <div><b>Bandwidth:</b> <span class="bandwidth">${Bandwidth.toFixed(1)}</span> kHz</div>
       <div><b>Duration:</b> <span class="duration">${(Duration * 1000).toFixed(1)}</span> ms</div>
-      <div><b>Avg.Slope:</b> <span class="slope">${(Bandwidth / Duration * 1000).toFixed(1)}</span> kHz/ms</div>
+      <div><b>Avg.Slope:</b> <span class="slope">${(Bandwidth / (Duration * 1000)).toFixed(1)}</span> kHz/ms</div>
       <div class="tooltip-close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });
