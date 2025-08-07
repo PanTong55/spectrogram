@@ -49,6 +49,19 @@ export function initFreqContextMenu({
     });
     menu.appendChild(item);
   });
+  // 新增 Reset option
+  const resetItem = document.createElement('div');
+  resetItem.className = 'freq-menu-item';
+  resetItem.textContent = 'Reset';
+  resetItem.style.color = 'red';
+  resetItem.style.fontWeight = 'bold';
+  resetItem.addEventListener('click', () => {
+    hide();
+    if (autoId && typeof autoId.resetCurrentTab === 'function') {
+      autoId.resetCurrentTab();
+    }
+  });
+  menu.appendChild(resetItem);
   document.body.appendChild(menu);
 
   let currentFreq = 0;
