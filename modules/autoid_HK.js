@@ -208,7 +208,12 @@ export function autoIdHK(data = {}) {
 
   const matches = speciesRules.filter(species =>
     species.rules.some(rule => {
-      if (rule.callType && rule.callType !== data.callType) return false;
+      // callType 支援逗號分隔 OR
+      if (rule.callType) {
+        const callTypes = rule.callType.split(',').map(s => s.trim());
+        if (!callTypes.includes(data.callType)) return false;
+      }
+      // harmonic 支援陣列 includes
       if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
       return fields.every(f => {
         if (!rule[f]) return true;
