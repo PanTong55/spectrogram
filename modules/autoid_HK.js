@@ -102,7 +102,6 @@ const speciesRules = [
         lowestFreq: [49.5, 55],
         highestFreq: [54.6, 65],
         bandwidth: [5.1, 15],
-        kneeFreq: ['>lowestFreq'],
         duration: [7, 11],
         harmonic: [0, 1, 2]
       },
@@ -111,7 +110,6 @@ const speciesRules = [
         lowestFreq: [49.5, 55],
         highestFreq: [65.1, 92],
         bandwidth: [15.1, 45],
-        kneeFreq: ['>lowestFreq'],
         duration: [6, 11],
         harmonic: [0, 1, 2]
       },      
@@ -210,7 +208,7 @@ export function autoIdHK(data = {}) {
 
   const matches = speciesRules.filter(species =>
     species.rules.some(rule => {
-      if (rule.callType && rule.callType.includes(data.callType)) return false;
+      if (rule.callType && rule.callType !== data.callType) return false;
       if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
       return fields.every(f => {
         if (!rule[f]) return true;
