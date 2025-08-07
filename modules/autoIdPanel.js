@@ -410,15 +410,14 @@ export function initAutoIdPanel({
     const cfStartVal = parseFloat(inputs.cfStart.value);
     const endVal = parseFloat(inputs.end.value);
     let bandwidth = null;
-    if (['FM-CF-FM', 'CF-FM'].includes(callType)) {
-      if (!isNaN(cfStartVal) && !isNaN(endVal)) {
-        bandwidth = cfStartVal - endVal;
-        bandwidthEl.textContent = bandwidth.toFixed(1);
-      } else {
-        bandwidthEl.textContent = '-';
-      }
-    } else if (!isNaN(high) && !isNaN(low)) {
-      bandwidth = high - low;
+    // 新 Bandwidth 計算：取所有 marker 中有 freq 且有 value 的，找最大最小 freq
+    const markerFreqs = Object.values(markers)
+      .filter(m => m.freq != null && !isNaN(m.freq) && m.el && m.el.value !== "")
+      .map(m => m.freq);
+    if (markerFreqs.length >= 2) {
+      const maxFreq = Math.max(...markerFreqs);
+      const minFreq = Math.min(...markerFreqs);
+      bandwidth = maxFreq - minFreq;
       bandwidthEl.textContent = bandwidth.toFixed(1);
     } else {
       bandwidthEl.textContent = '-';
