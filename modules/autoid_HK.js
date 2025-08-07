@@ -99,8 +99,8 @@ const speciesRules = [
       },      
       { // NarrowBand FM, FM-QCF Type
         callType: 'FM, FM-QCF',
-        lowestFreq: [49.5, 56],
-        highestFreq: [54.6, 65],
+        lowestFreq: [49.5, 57],
+        highestFreq: [54.6, 70],
         bandwidth: [5.1, 15],
         duration: [6, 11],
         harmonic: [0, 1, 2]
