@@ -542,6 +542,7 @@ export function initFrequencyHover({
     tooltip.querySelector('.flow').textContent = Flow.toFixed(1);
     tooltip.querySelector('.bandwidth').textContent = Bandwidth.toFixed(1);
     tooltip.querySelector('.duration').textContent = (Duration * 1000).toFixed(1);
+    tooltip.querySelector('.slope').textContent = (Bandwidth / (Duration * 1000)).toFixed(1);
   }
 
   function updateSelections() {
