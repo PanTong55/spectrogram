@@ -70,7 +70,7 @@ const speciesRules = [
         bandwidth: [5.1, 20],
         highestFreq: [44.1, 62],        
         lowestFreq: [39, 42],
-        duration: [5, 8]
+        duration: [5, 9]
       },
       { // 20.1-40 Bandwidth FM-QCF
         callType: 'FM-QCF',
@@ -78,7 +78,14 @@ const speciesRules = [
         highestFreq: [60.1, 82],        
         lowestFreq: [40.0, 42],
         duration: [5, 8]
-      }
+      },
+      { // 40.1-70 Bandwidth FM, FM-QCF
+        callType: 'FM, FM-QCF',
+        bandwidth: [40.1, 70], 
+        highestFreq: [82.1, 115],        
+        lowestFreq: [42.0, 45],
+        duration: [3, 7]
+      }      
     ]
   },
   {
