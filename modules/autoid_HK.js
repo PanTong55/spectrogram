@@ -63,7 +63,7 @@ const speciesRules = [
         callType: 'QCF, FM-QCF',
         bandwidth: [1, 5],
         lowestFreq: [39, 43.5],
-        duration: [8, 10]
+        duration: [6.5, 10]
       },      
       { // 5.1-20 Bandwidth FM-QCF
         callType: 'FM-QCF',
@@ -190,14 +190,11 @@ const speciesRules = [
 function inRange(val, range) {
   if (val == null || isNaN(val)) return false;
   if (Array.isArray(range[0])) return range.some(r => inRange(val, r));
-  // 新增: 支援 [=>field]、[>field]、[<field]、[=<field] 格式
   if (typeof range[0] === 'string' && range.length === 1) {
     const match = range[0].match(/^(=|=>|>=|<|<=|>)\s*(\w+)$/);
     if (match) {
       const op = match[1];
       const refField = match[2];
-      // 這裡 val 是 data[f]，refVal 需外部傳入
-      // 但 inRange 目前無法取得 data，只能在 autoIdHK 處理
       return { op, refField };
     }
   }
@@ -215,16 +212,13 @@ export function autoIdHK(data = {}) {
 
   const matches = speciesRules.filter(species =>
     species.rules.some(rule => {
-      // callType 支援逗號分隔 OR
       if (rule.callType) {
         const callTypes = rule.callType.split(',').map(s => s.trim());
         if (!callTypes.includes(data.callType)) return false;
       }
-      // harmonic 支援陣列 includes
       if (rule.harmonic && !rule.harmonic.includes(data.harmonic)) return false;
       return fields.every(f => {
         if (!rule[f]) return true;
-        // 檢查是否為特殊比較格式
         if (typeof rule[f][0] === 'string' && rule[f].length === 1) {
           const match = rule[f][0].match(/^(=|=>|>=|<|<=|>)\s*(\w+)$/);
           if (match) {
