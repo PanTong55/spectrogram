@@ -73,8 +73,7 @@ const speciesRules = [
     rules: [
       {
         callType: 'QCF',
-        lowestFreq: [44, 46],
-        harmonic: [0, 1, 2, 3]
+        lowestFreq: [44, 46]
       },
       {
         callType: 'FM-QCF',
@@ -82,44 +81,39 @@ const speciesRules = [
         highestFreq: [60, 100],
         kneeFreq: [46, 53],
         kneeLowBandwidth: [0, 5],
-        duration: [3, 6],
-        harmonic: [0, 1, 2]
+        duration: [3, 6]
       }
     ]
   },
   {
     name: 'Tylonycteris fulvida',
     rules: [
-      { // QCF Type
+      { // 2.5-5 Bandwidth QCF
         callType: 'QCF',
-        lowestFreq: [49, 54],
         bandwidth: [2, 5],
-        duration: [5, 8.5],
-        harmonic: [0, 1, 2]
+        lowestFreq: [49, 54],
+        duration: [5, 8.5]
       },      
-      { // NarrowBand FM, FM-QCF Type
+      { // 5.1-15 Bandwidth FM, FM-QCF
         callType: 'FM, FM-QCF',
-        lowestFreq: [49.5, 57],
-        highestFreq: [54.6, 70],
         bandwidth: [5.1, 15],
-        duration: [6, 11],
-        harmonic: [0, 1, 2]
+        highestFreq: [54.6, 70],        
+        lowestFreq: [49.5, 57],
+        duration: [6, 11]
       },
-      { // Mid-Band FM, FM-QCF Type
+      { // 15.1-45 Bandwidth FM, FM-QCF
         callType: 'FM, FM-QCF',
+        bandwidth: [15.1, 45], 
+        highestFreq: [65.1, 92],        
         lowestFreq: [49.5, 55],
-        highestFreq: [65.1, 92],
-        bandwidth: [15.1, 45],
-        duration: [6, 11],
-        harmonic: [0, 1, 2]
+        duration: [6, 11]
       },      
-      { // BoardBand FM, FM-QCF Type
+      { // 15.1-60 Bandwidth FM, FM-QCF
         callType: 'FM, FM-QCF',
-        lowestFreq: [55.1, 60],
+        bandwidth: [15.1, 60],        
         highestFreq: [70, 115],
-        bandwidth: [15.1, 60],
-        duration: [5, 7],
-        harmonic: [0, 1, 2]
+        lowestFreq: [55.1, 60],
+        duration: [5, 7]
       }      
     ]
   },  
