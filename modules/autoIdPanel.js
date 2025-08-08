@@ -554,6 +554,10 @@ export function initAutoIdPanel({
         m.el.style.opacity = idx === currentTab ? '1' : '0.5';
         m.el.dataset.freq = m.freq;
         m.el.dataset.time = m.time;
+      // 動態更新 data-title 內容
+  const title = `${markerTitles[key] || key} (${Number(m.freq).toFixed(1)} kHz)`;
+  m.el.dataset.title = title;
+  m.el.setAttribute('aria-label', title);
         minX = Math.min(minX, x);
         maxX = Math.max(maxX, x);
         maxY = Math.max(maxY, y);
