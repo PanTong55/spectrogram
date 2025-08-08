@@ -134,11 +134,10 @@ export function initFrequencyHover({
       const viewerRect = viewer.getBoundingClientRect();
       const cx = type === 'touch' ? ev.touches[0].clientX : ev.clientX;
       const cy = type === 'touch' ? ev.touches[0].clientY : ev.clientY;
-  let currentX = cx - viewerRect.left + viewer.scrollLeft;
-  let currentY = cy - viewerRect.top;
-  // clamp 右邊界改用 viewer.clientWidth，確保不超過可見範圍
-  currentX = clamp(currentX, 0, viewer.clientWidth);
-  currentY = clamp(currentY, 0, viewer.clientHeight - getScrollbarThickness());
+      let currentX = cx - viewerRect.left + viewer.scrollLeft;
+      let currentY = cy - viewerRect.top;
+      currentX = clamp(currentX, 0, viewer.scrollWidth);
+      currentY = clamp(currentY, 0, viewer.clientHeight - getScrollbarThickness());
       const x = Math.min(currentX, startX);
       const y = Math.min(currentY, startY);
       const width = Math.abs(currentX - startX);
