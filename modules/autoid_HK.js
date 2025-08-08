@@ -5,7 +5,7 @@ const speciesRules = [
     name: 'Hipposideros gentilis',
     rules: [
       {
-        callType: 'CF-FM',
+        callType: 'CF-FM, FM-CF-FM',
         cfStart: [120, 130],
         duration: [5, 10],
         harmonic: [0, 1, 2, 3]
@@ -16,10 +16,9 @@ const speciesRules = [
     name: 'Hipposideros armiger',
     rules: [
       {
-        callType: 'CF-FM',
+        callType: 'CF-FM, FM-CF-FM',
         cfStart: [65, 72],
-        duration: [10, 18],
-        harmonic: [0, 1, 2, 3]
+        duration: [10, 18]
       }
     ]
   },
@@ -29,8 +28,7 @@ const speciesRules = [
       {
         callType: 'FM-CF-FM',
         cfStart: [100, 110],
-        duration: [30, 70],
-        harmonic: [0, 1, 2, 3]
+        duration: [30, 70]
       }
     ]
   },
@@ -40,8 +38,7 @@ const speciesRules = [
       {
         callType: 'FM-CF-FM',
         cfStart: [75, 87],
-        duration: [30, 70],
-        harmonic: [0, 1, 2, 3]
+        duration: [30, 70]
       }
     ]
   },
@@ -51,17 +48,16 @@ const speciesRules = [
       {
         callType: 'FM-CF-FM',
         cfStart: [68, 75],
-        duration: [30, 80],
-        harmonic: [0, 1, 2, 3]
+        duration: [30, 80]
       }
     ]
   },
   {
     name: 'Pipistrellus tenuis',
     rules: [
-      { // 1-5 Bandwidth QCF, FM-QCF
+      { // 0.1-5 Bandwidth QCF, FM-QCF
         callType: 'QCF, FM-QCF',
-        bandwidth: [1, 5],
+        bandwidth: [0.1, 5],
         lowestFreq: [39, 43.5],
         duration: [6.5, 10]
       },      
