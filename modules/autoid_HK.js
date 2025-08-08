@@ -59,12 +59,25 @@ const speciesRules = [
   {
     name: 'Pipistrellus tenuis',
     rules: [
-      {
-        callType: 'QCF',
-        lowestFreq: [39, 42],
+      { // 1-5 Bandwidth QCF, FM-QCF
+        callType: 'QCF, FM-QCF',
         bandwidth: [1, 5],
-        duration: [5, 10],
-        harmonic: [0, 1, 2, 3]
+        lowestFreq: [39, 43.5],
+        duration: [8, 10]
+      },      
+      { // 5.1-20 Bandwidth FM-QCF
+        callType: 'FM-QCF',
+        bandwidth: [5.1, 20],
+        highestFreq: [44.1, 62],        
+        lowestFreq: [39, 42],
+        duration: [5, 8]
+      },
+      { // 20.1-40 Bandwidth FM-QCF
+        callType: 'FM-QCF',
+        bandwidth: [20.1, 40], 
+        highestFreq: [60.1, 82],        
+        lowestFreq: [40.0, 42],
+        duration: [5, 8]
       }
     ]
   },
