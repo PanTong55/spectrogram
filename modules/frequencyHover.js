@@ -22,8 +22,6 @@ export function initFrequencyHover({
   const container = document.getElementById('spectrogram-only');
   const persistentLines = [];
   const selections = [];
-  // 鎖定 spectrogram 產生後的寬度
-  let lockedWidth = null;
   let hoveredSelection = null;
   let persistentLinesEnabled = true;
   let disablePersistentLinesForScrollbar = false;
@@ -118,8 +116,6 @@ export function initFrequencyHover({
 
   function startSelection(clientX, clientY, type) {
     const rect = viewer.getBoundingClientRect();
-    // 鎖定寬度（只在第一次拖曳時記錄）
-    if (!lockedWidth) lockedWidth = viewer.scrollWidth;
     startX = clientX - rect.left + viewer.scrollLeft;
     startY = clientY - rect.top;
     if (startY > (viewer.clientHeight - getScrollbarThickness())) return;
@@ -140,8 +136,7 @@ export function initFrequencyHover({
       const cy = type === 'touch' ? ev.touches[0].clientY : ev.clientY;
       let currentX = cx - viewerRect.left + viewer.scrollLeft;
       let currentY = cy - viewerRect.top;
-      // clamp 用 lockedWidth
-      currentX = clamp(currentX, 0, lockedWidth);
+      currentX = clamp(currentX, 0, viewer.scrollWidth);
       currentY = clamp(currentY, 0, viewer.clientHeight - getScrollbarThickness());
       const x = Math.min(currentX, startX);
       const y = Math.min(currentY, startY);
