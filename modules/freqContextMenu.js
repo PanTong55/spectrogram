@@ -18,79 +18,6 @@ export function initFreqContextMenu({
   menu.id = 'freq-context-menu';
   menu.className = 'freq-context-menu';
   menu.style.display = 'none';
-
-    // Submenu helpers
-    function createSubmenu(options, onClick) {
-      const submenu = document.createElement('div');
-      submenu.className = 'freq-context-submenu';
-      options.forEach(opt => {
-        const item = document.createElement('div');
-        item.className = 'freq-menu-item';
-        item.textContent = opt.label;
-        item.dataset.key = opt.key;
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          hide();
-          onClick(opt.key);
-        });
-        submenu.appendChild(item);
-      });
-      return submenu;
-    }
-
-    // 取得所有 call type options
-    function getCallTypeOptions() {
-      return [
-        { key: 'CF-FM', label: 'CF-FM' },
-        { key: 'FM-CF-FM', label: 'FM-CF-FM' },
-        { key: 'FM', label: 'FM' },
-        { key: 'FM-QCF', label: 'FM-QCF' },
-        { key: 'FM-QCF-FM', label: 'FM-QCF-FM' },
-        { key: 'QCF', label: 'QCF' }
-      ];
-    }
-
-    // 取得 optional freq 欄位
-    function getOptionalFreqKeys() {
-      if (!autoId || typeof autoId.getOptionalFreqKeys !== 'function') return [];
-      return autoId.getOptionalFreqKeys();
-    }
-
-    // Optional freq submenu
-    let optionalFreqItem = null;
-    let optionalFreqSubmenu = null;
-    let callTypeItem = null;
-    let callTypeSubmenu = null;
-
-    function showOptionalFreqSubmenu() {
-      if (optionalFreqSubmenu) optionalFreqSubmenu.remove();
-      const keys = getOptionalFreqKeys();
-      if (!keys.length) return;
-      const options = keys.map(k => ({ key: k, label: labels[k] || k }));
-      optionalFreqSubmenu = createSubmenu(options, (key) => {
-        if (autoId && typeof autoId.setMarkerAt === 'function') {
-          autoId.setMarkerAt(key, currentFreq, currentTime);
-        }
-      });
-      optionalFreqSubmenu.style.position = 'absolute';
-      optionalFreqSubmenu.style.left = menu.offsetWidth + 'px';
-      optionalFreqSubmenu.style.top = optionalFreqItem.offsetTop + 'px';
-      menu.appendChild(optionalFreqSubmenu);
-    }
-
-    function showCallTypeSubmenu() {
-      if (callTypeSubmenu) callTypeSubmenu.remove();
-      const options = getCallTypeOptions();
-      callTypeSubmenu = createSubmenu(options, (key) => {
-        if (autoId && typeof autoId.setCallType === 'function') {
-          autoId.setCallType(key);
-        }
-      });
-      callTypeSubmenu.style.position = 'absolute';
-      callTypeSubmenu.style.left = menu.offsetWidth + 'px';
-      callTypeSubmenu.style.top = callTypeItem.offsetTop + 'px';
-      menu.appendChild(callTypeSubmenu);
-    }
   const labels = {
     start: 'Start freq.',
     end: 'End freq.',
@@ -103,34 +30,6 @@ export function initFreqContextMenu({
   };
   const keys = Object.keys(labels);
   let deleteKey = null;
-    // 插入 Optional freq. 與 Call type option（如有可用）
-    function insertSpecialOptions() {
-      // Optional freq.
-      const optionalKeys = getOptionalFreqKeys();
-      if (optionalKeys.length) {
-        optionalFreqItem = document.createElement('div');
-        optionalFreqItem.className = 'freq-menu-item';
-        optionalFreqItem.textContent = 'Optional freq.';
-        optionalFreqItem.style.justifyContent = 'space-between';
-        optionalFreqItem.innerHTML += '<span style="float:right">&gt;</span>';
-        optionalFreqItem.addEventListener('click', (e) => {
-          e.stopPropagation();
-          showOptionalFreqSubmenu();
-        });
-        menu.appendChild(optionalFreqItem);
-      }
-      // Call type
-      callTypeItem = document.createElement('div');
-      callTypeItem.className = 'freq-menu-item';
-      callTypeItem.textContent = 'Call type';
-      callTypeItem.style.justifyContent = 'space-between';
-      callTypeItem.innerHTML += '<span style="float:right">&gt;</span>';
-      callTypeItem.addEventListener('click', (e) => {
-        e.stopPropagation();
-        showCallTypeSubmenu();
-      });
-      menu.appendChild(callTypeItem);
-    }
   keys.forEach(key => {
     const item = document.createElement('div');
     item.className = 'freq-menu-item';
@@ -150,8 +49,6 @@ export function initFreqContextMenu({
     });
     menu.appendChild(item);
   });
-      // 插入 special options（在 Reset 之前）
-      insertSpecialOptions();
   // 新增 Reset option
   const resetItem = document.createElement('div');
   resetItem.className = 'freq-menu-item';
