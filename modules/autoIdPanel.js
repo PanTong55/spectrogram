@@ -167,17 +167,38 @@ export function initAutoIdPanel({
   const timeOrderWarning = document.getElementById('time-order-warning');
 
   function updateWarnings(high, low, knee, bw, startT, endT) {
+    const QCFDurationWarning = document.getElementById('QCF-duration-warning');
+    const QCFSlopeWarning = document.getElementById('QCF-slope-warning');
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
-    const showBandwidth = callType === 'QCF' && bw != null && bw > 5;
+    let showQCFDuration = false;
+    let showQCFSlope = false;
+    let showBandwidth = false;
+    if (callType === 'QCF') {
+      // duration(ms) 需 >=1
+      let duration = null;
+      if (startT != null && endT != null) {
+        duration = Math.abs(endT - startT) * 1000;
+        showQCFDuration = duration < 1;
+      }
+      // slope = bandwidth/duration, 需 <1 且 >=0.1
+      if (bw != null && duration != null && duration > 0) {
+        const slope = bw / duration;
+        showQCFSlope = !(slope < 1 && slope >= 0.1);
+      }
+      // bandwidth > 5kHz
+      showBandwidth = bw != null && bw > 5;
+    }
     const showOrder = !isNaN(high) && !isNaN(low) && low > high;
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
     const showTimeOrder = startT != null && endT != null && endT < startT;
-    const hasWarnings = showBandwidth || showOrder || showKneeOrder || showTimeOrder;
+    const hasWarnings = showQCFDuration || showQCFSlope || showBandwidth || showOrder || showKneeOrder || showTimeOrder;
     if (inputs.high) inputs.high.classList.toggle('warning', showBandwidth || showOrder);
     if (inputs.low) inputs.low.classList.toggle('warning', showBandwidth || showOrder || showKneeOrder);
     if (inputs.knee) inputs.knee.classList.toggle('warning', showKneeOrder);
-    if (inputs.start) inputs.start.classList.toggle('warning', showTimeOrder);
-    if (inputs.end) inputs.end.classList.toggle('warning', showTimeOrder);
+    if (inputs.start) inputs.start.classList.toggle('warning', showTimeOrder || showQCFDuration);
+    if (inputs.end) inputs.end.classList.toggle('warning', showTimeOrder || showQCFDuration);
+    if (QCFDurationWarning) QCFDurationWarning.style.display = showQCFDuration ? 'flex' : 'none';
+    if (QCFSlopeWarning) QCFSlopeWarning.style.display = showQCFSlope ? 'flex' : 'none';
     if (bandwidthWarning) bandwidthWarning.style.display = showBandwidth ? 'flex' : 'none';
     if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
     if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
