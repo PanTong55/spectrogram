@@ -1523,7 +1523,8 @@ input.tag-button.editing {
 /* AutoID Panel Warnings */
 #QCF-duration-warning,
 #QCF-slope-warning,
-#freq-order-warning,
+#highfreq-warning,
+#lowfreq-warning,
 #knee-order-warning,
 #time-order-warning {
   display: none;

@@ -197,7 +197,7 @@ export function initAutoIdPanel({
       .map(m => m.freq);
     let showHighFreqWarning = false;
     let showLowFreqWarning = false;
-    if (markerFreqs.length > 0) {
+    if (markerFreqs.length > 1) {
       const highFreq = markers.high?.freq;
       const lowFreq = markers.low?.freq;
       const maxFreq = Math.max(...markerFreqs);
