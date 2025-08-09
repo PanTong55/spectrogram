@@ -1520,7 +1520,9 @@ input.tag-button.editing {
   background: transparent;
 }
 
-#bandwidth-warning,
+/* AutoID Panel Warnings */
+#QCF-duration-warning,
+#QCF-slope-warning,
 #freq-order-warning,
 #knee-order-warning,
 #time-order-warning {

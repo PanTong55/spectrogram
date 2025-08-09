@@ -173,10 +173,15 @@ export function initAutoIdPanel({
     let showQCFDuration = false;
     let showQCFSlope = false;
     if (callType === 'QCF') {
-      // duration(ms) 需 >=1
+      // duration(ms) 需 >=1，取所有marker的最大time與最小time
       let duration = null;
-      if (startT != null && endT != null) {
-        duration = Math.abs(endT - startT) * 1000;
+      const markerTimes = Object.values(markers)
+        .filter(m => m.time != null && !isNaN(m.time))
+        .map(m => m.time);
+      if (markerTimes.length >= 2) {
+        const maxTime = Math.max(...markerTimes);
+        const minTime = Math.min(...markerTimes);
+        duration = Math.abs(maxTime - minTime) * 1000;
         showQCFDuration = duration < 1;
       }
       // slope = bandwidth/duration, 需 <1 且 >=0.1
