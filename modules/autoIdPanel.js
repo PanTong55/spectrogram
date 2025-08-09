@@ -198,7 +198,7 @@ export function initAutoIdPanel({
       const markerFreqs = Object.values(markers)
         .filter(m => m.freq != null && !isNaN(m.freq))
         .map(m => m.freq);
-      if (markerFreqs.length > 0) {
+      if (markerFreqs.length >= 2) {
         const maxFreq = Math.max(...markerFreqs);
         const maxCount = markerFreqs.filter(f => f === maxFreq).length;
         if (high !== maxFreq || maxCount > 1) {
@@ -212,7 +212,7 @@ export function initAutoIdPanel({
       const markerFreqs = Object.values(markers)
         .filter(m => m.freq != null && !isNaN(m.freq))
         .map(m => m.freq);
-      if (markerFreqs.length > 0) {
+      if (markerFreqs.length >= 2) {
         const minFreq = Math.min(...markerFreqs);
         const minCount = markerFreqs.filter(f => f === minFreq).length;
         if (low !== minFreq || minCount > 1) {
