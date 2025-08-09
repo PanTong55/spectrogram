@@ -169,6 +169,8 @@ export function initAutoIdPanel({
   function updateWarnings(high, low, knee, bw, startT, endT) {
     const QCFDurationWarning = document.getElementById('QCF-duration-warning');
     const QCFSlopeWarning = document.getElementById('QCF-slope-warning');
+    const highFreqWarning = document.getElementById('highfreq-warning');
+    const lowFreqWarning = document.getElementById('lowfreq-warning');
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     let showQCFDuration = false;
     let showQCFSlope = false;
@@ -190,18 +192,38 @@ export function initAutoIdPanel({
         showQCFSlope = !(slope < 1 && slope >= 0.1);
       }
     }
-    const showOrder = !isNaN(high) && !isNaN(low) && low > high;
+    // 新規則1：high frequency marker 應是最大
+    let showHighFreqWarning = false;
+    if (!isNaN(high)) {
+      const markerFreqs = Object.values(markers)
+        .filter(m => m.freq != null && !isNaN(m.freq))
+        .map(m => m.freq);
+      if (markerFreqs.length > 0 && high < Math.max(...markerFreqs)) {
+        showHighFreqWarning = true;
+      }
+    }
+    // 新規則2：low frequency marker 應是最細
+    let showLowFreqWarning = false;
+    if (!isNaN(low)) {
+      const markerFreqs = Object.values(markers)
+        .filter(m => m.freq != null && !isNaN(m.freq))
+        .map(m => m.freq);
+      if (markerFreqs.length > 0 && low > Math.min(...markerFreqs)) {
+        showLowFreqWarning = true;
+      }
+    }
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
     const showTimeOrder = startT != null && endT != null && endT < startT;
-    const hasWarnings = showQCFDuration || showQCFSlope || showOrder || showKneeOrder || showTimeOrder;
-    if (inputs.high) inputs.high.classList.toggle('warning', showOrder);
-    if (inputs.low) inputs.low.classList.toggle('warning', showOrder || showKneeOrder);
+    const hasWarnings = showQCFDuration || showQCFSlope || showHighFreqWarning || showLowFreqWarning || showKneeOrder || showTimeOrder;
+    if (inputs.high) inputs.high.classList.toggle('warning', showHighFreqWarning);
+    if (inputs.low) inputs.low.classList.toggle('warning', showLowFreqWarning || showKneeOrder);
     if (inputs.knee) inputs.knee.classList.toggle('warning', showKneeOrder);
     if (inputs.start) inputs.start.classList.toggle('warning', showTimeOrder || showQCFDuration);
     if (inputs.end) inputs.end.classList.toggle('warning', showTimeOrder || showQCFDuration);
     if (QCFDurationWarning) QCFDurationWarning.style.display = showQCFDuration ? 'flex' : 'none';
     if (QCFSlopeWarning) QCFSlopeWarning.style.display = showQCFSlope ? 'flex' : 'none';
-    if (freqOrderWarning) freqOrderWarning.style.display = showOrder ? 'flex' : 'none';
+    if (highFreqWarning) highFreqWarning.style.display = showHighFreqWarning ? 'flex' : 'none';
+    if (lowFreqWarning) lowFreqWarning.style.display = showLowFreqWarning ? 'flex' : 'none';
     if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
     if (timeOrderWarning) timeOrderWarning.style.display = showTimeOrder ? 'flex' : 'none';
     if (pulseIdBtn) pulseIdBtn.disabled = hasWarnings;
