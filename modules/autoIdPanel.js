@@ -192,24 +192,32 @@ export function initAutoIdPanel({
         showQCFSlope = !(slope < 1 && slope >= 0.1);
       }
     }
-    // 新規則1：high frequency marker 應是最大
+    // 新規則1：high frequency marker 應是唯一最大
     let showHighFreqWarning = false;
     if (!isNaN(high)) {
       const markerFreqs = Object.values(markers)
         .filter(m => m.freq != null && !isNaN(m.freq))
         .map(m => m.freq);
-      if (markerFreqs.length > 0 && high < Math.max(...markerFreqs)) {
-        showHighFreqWarning = true;
+      if (markerFreqs.length > 0) {
+        const maxFreq = Math.max(...markerFreqs);
+        const maxCount = markerFreqs.filter(f => f === maxFreq).length;
+        if (high !== maxFreq || maxCount > 1) {
+          showHighFreqWarning = true;
+        }
       }
     }
-    // 新規則2：low frequency marker 應是最細
+    // 新規則2：low frequency marker 應是唯一最細
     let showLowFreqWarning = false;
     if (!isNaN(low)) {
       const markerFreqs = Object.values(markers)
         .filter(m => m.freq != null && !isNaN(m.freq))
         .map(m => m.freq);
-      if (markerFreqs.length > 0 && low > Math.min(...markerFreqs)) {
-        showLowFreqWarning = true;
+      if (markerFreqs.length > 0) {
+        const minFreq = Math.min(...markerFreqs);
+        const minCount = markerFreqs.filter(f => f === minFreq).length;
+        if (low !== minFreq || minCount > 1) {
+          showLowFreqWarning = true;
+        }
       }
     }
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
