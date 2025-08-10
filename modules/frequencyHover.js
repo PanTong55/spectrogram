@@ -342,12 +342,13 @@ export function initFrequencyHover({
     expandBtn.title = 'Crop and expand this session';
     expandBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
+      // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
+      // 強制解除 suppressHover/isOverBtnGroup，確保 hover 標記能顯示
       suppressHover = false;
       isOverBtnGroup = false;
       viewer.dispatchEvent(new CustomEvent('expand-selection', {
         detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
-      }));      
-      // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
+      }));
       if (lastClientX !== null && lastClientY !== null) {
         setTimeout(() => {
           updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
@@ -378,7 +379,12 @@ export function initFrequencyHover({
 
     group.addEventListener('mouseenter', () => {
       isOverBtnGroup = true;
-      hideAll();
+      // 若剛 expand/crop 完，且 lastClientX/lastClientY 有值，主動顯示 hover 標記
+      if (lastClientX !== null && lastClientY !== null) {
+        updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+      } else {
+        hideAll();
+      }
       sel.rect.style.cursor = 'default';
       // cursor 進入 btn group 時，保持 hoveredSelection
       hoveredSelection = sel;
