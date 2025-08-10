@@ -268,7 +268,8 @@ export function initFrequencyHover({
     selObj.rect.addEventListener('mouseleave', (e) => {
       // 只有在 cursor 離開 selection area 且不在 selection-btn-group 時才設為 null
       const related = e.relatedTarget;
-      if (hoveredSelection === selObj && !(related && (related.closest && related.closest('.selection-btn-group')))) {
+      const inBtnGroup = related && (related.closest && related.closest('.selection-btn-group'));
+      if (hoveredSelection === selObj && !inBtnGroup) {
         hoveredSelection = null;
       }
     });
@@ -348,7 +349,9 @@ export function initFrequencyHover({
       isOverBtnGroup = false;
       // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
       if (lastClientX !== null && lastClientY !== null) {
-        updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+        setTimeout(() => {
+          updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+        }, 0);
       }
     });
     expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
@@ -384,9 +387,9 @@ export function initFrequencyHover({
       isOverBtnGroup = false;
       // 只有當 cursor 離開 btn group 且也不在 selection area(rect)時才設為 null
       const related = e.relatedTarget;
-      const inSelectionArea = related && (related.closest && related.closest('.selection-duration'));
-      const inSelectionRect = related && (related.closest && related.closest('.selection-btn-group'));
-      if (!inSelectionArea && !inSelectionRect) {
+      const inSelectionArea = related && (related.closest && related.closest('.selection-rect'));
+      const inBtnGroup = related && (related.closest && related.closest('.selection-btn-group'));
+      if (!inSelectionArea && !inBtnGroup) {
         hoveredSelection = null;
       }
     });
