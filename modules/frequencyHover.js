@@ -342,11 +342,11 @@ export function initFrequencyHover({
     expandBtn.title = 'Crop and expand this session';
     expandBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      viewer.dispatchEvent(new CustomEvent('expand-selection', {
-        detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
-      }));
       suppressHover = false;
       isOverBtnGroup = false;
+      viewer.dispatchEvent(new CustomEvent('expand-selection', {
+        detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
+      }));      
       // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
       if (lastClientX !== null && lastClientY !== null) {
         setTimeout(() => {
