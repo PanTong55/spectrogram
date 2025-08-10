@@ -184,6 +184,8 @@ export function initFrequencyHover({
       const newSel = createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
       selectionRect = null;
       suppressHover = false;
+      // 建立 selection area 後，直接設為 hoveredSelection
+      hoveredSelection = newSel;
 
       if (lastClientX !== null && lastClientY !== null) {
         const box = newSel.rect.getBoundingClientRect();
@@ -263,7 +265,13 @@ export function initFrequencyHover({
 
     enableResize(selObj);
     selObj.rect.addEventListener('mouseenter', () => { hoveredSelection = selObj; });
-    selObj.rect.addEventListener('mouseleave', () => { if (hoveredSelection === selObj) hoveredSelection = null; });
+    selObj.rect.addEventListener('mouseleave', (e) => {
+      // 只有在 cursor 離開 selection area 且不在 selection-btn-group 時才設為 null
+      const related = e.relatedTarget;
+      if (hoveredSelection === selObj && !(related && (related.closest && related.closest('.selection-btn-group')))) {
+        hoveredSelection = null;
+      }
+    });
     return selObj;
   }
 
@@ -365,8 +373,17 @@ export function initFrequencyHover({
       isOverBtnGroup = true;
       hideAll();
       sel.rect.style.cursor = 'default';
+      // cursor 進入 btn group 時，保持 hoveredSelection
+      hoveredSelection = sel;
     });
-    group.addEventListener('mouseleave', () => { isOverBtnGroup = false; });
+    group.addEventListener('mouseleave', (e) => {
+      isOverBtnGroup = false;
+      // cursor 離開 btn group 且不在 selection area 時，設為 null
+      const related = e.relatedTarget;
+      if (!(related && (related.closest && related.closest('.selection-duration')))) {
+        hoveredSelection = null;
+      }
+    });
     group.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
 
     group.appendChild(closeBtn);
