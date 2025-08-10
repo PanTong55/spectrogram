@@ -346,6 +346,10 @@ export function initFrequencyHover({
       }));
       suppressHover = false;
       isOverBtnGroup = false;
+      // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
+      if (lastClientX !== null && lastClientY !== null) {
+        updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+      }
     });
     expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
     expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
@@ -378,9 +382,11 @@ export function initFrequencyHover({
     });
     group.addEventListener('mouseleave', (e) => {
       isOverBtnGroup = false;
-      // cursor 離開 btn group 且不在 selection area 時，設為 null
+      // 只有當 cursor 離開 btn group 且也不在 selection area(rect)時才設為 null
       const related = e.relatedTarget;
-      if (!(related && (related.closest && related.closest('.selection-duration')))) {
+      const inSelectionArea = related && (related.closest && related.closest('.selection-duration'));
+      const inSelectionRect = related && (related.closest && related.closest('.selection-btn-group'));
+      if (!inSelectionArea && !inSelectionRect) {
         hoveredSelection = null;
       }
     });
