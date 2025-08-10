@@ -519,6 +519,13 @@ const zoomControl = initZoomControls(
       viewer.dispatchEvent(new CustomEvent('expand-selection', {
         detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
       }));
+      // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
+      // 強制解除 suppressHover/isOverBtnGroup 狀態
+      if (freqHoverControl?.refreshHover) {
+        setTimeout(() => {
+          freqHoverControl.refreshHover();
+        }, 0);
+      }
       return true;
     }
     return false;
