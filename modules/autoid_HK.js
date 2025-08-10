@@ -104,10 +104,10 @@ const speciesRules = [
   {
     name: 'Tylonycteris fulvida',
     rules: [
-      { // 2.5-5 Bandwidth FM-QCF, QCF
+      { // 1-5 Bandwidth FM-QCF, QCF
         callType: 'FM-QCF, QCF',
         bandwidth: [1, 5],
-        lowestFreq: [49, 54.5],
+        lowestFreq: [49, 56],
         duration: [5, 8.5]
       },      
       { // 5.1-15 Bandwidth FM, FM-QCF
