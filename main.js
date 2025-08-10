@@ -519,18 +519,6 @@ const zoomControl = initZoomControls(
       viewer.dispatchEvent(new CustomEvent('expand-selection', {
         detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
       }));
-      // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
-      // 強制解除 suppressHover/isOverBtnGroup 狀態
-      if (freqHoverControl) {
-        // 直接存取 frequencyHover.js module 內部狀態
-        try {
-          freqHoverControl.suppressHover = false;
-          freqHoverControl.isOverBtnGroup = false;
-        } catch {}
-        setTimeout(() => {
-          freqHoverControl.refreshHover();
-        }, 0);
-      }
       return true;
     }
     return false;
@@ -592,6 +580,9 @@ viewer.addEventListener('expand-selection', async (e) => {
       updateExpandBackBtn();
       autoIdControl?.reset();
       updateSpectrogramSettingsText();
+      // 強制解除 suppressHover/isOverBtnGroup 狀態
+      viewer.dispatchEvent(new CustomEvent('force-hover-enable'));
+      freqHoverControl?.refreshHover();
     }
   }
 });

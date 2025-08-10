@@ -43,6 +43,12 @@ export function initFrequencyHover({
   let tapTimer = null;
   const doubleTapDelay = 300;
 
+  // 監聽 main.js 觸發的強制解除 hover 狀態事件
+  viewer.addEventListener('force-hover-enable', () => {
+    suppressHover = false;
+    isOverBtnGroup = false;
+  });
+
   const hideAll = () => {
     hoverLine.style.display = 'none';
     hoverLineV.style.display = 'none';
