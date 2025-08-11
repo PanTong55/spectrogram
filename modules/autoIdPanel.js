@@ -288,11 +288,11 @@ export function initAutoIdPanel({
     if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
     if (startfreqWarning) {
       startfreqWarning.style.display = showStartFreqWarning ? 'flex' : 'none';
-      startfreqWarning.textContent = 'Start frequency should be the first one.';
+      startfreqWarning.textContent = 'The start frequency should be the first one';
     }
     if (endfreqWarning) {
       endfreqWarning.style.display = showEndFreqWarning ? 'flex' : 'none';
-      endfreqWarning.textContent = 'End frequency should be the last one.';
+      endfreqWarning.textContent = 'The end frequency should be the last one';
     }
     if (pulseIdBtn) pulseIdBtn.disabled = hasWarnings;
     if (sequenceIdBtn) sequenceIdBtn.disabled = hasWarnings;
