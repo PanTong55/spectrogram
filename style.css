@@ -1535,7 +1535,8 @@ input.tag-button.editing {
   height: 20px;
   width: max-content;
   transform: translateX(-50%);
-  background: rgb(16 16 16 / 60%);
+  background: rgb(16 16 16 / 55%);
+  backdrop-filter: blur(4px);
   color: white;
 }
 
