@@ -1957,3 +1957,21 @@ input.tag-button.editing {
 .freq-menu-item.delete {
   color: red;
 }
+
+/* === Freq Context Submenu === */
+.freq-submenu {
+  min-width: 120px;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  padding: 4px 0;
+  font-family: 'Noto Sans HK', sans-serif;
+  user-select: none;
+  z-index: 1001;
+}
+.freq-menu-calltype > span {
+  font-weight: bold;
+  color: #888;
+  pointer-events: none;
+}

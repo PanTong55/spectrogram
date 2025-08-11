@@ -1,3 +1,6 @@
+// 確保在全域可以存取到 handleCallTypeChange
+window.handleCallTypeChange = window.handleCallTypeChange || function() {};
+
 export function initFreqContextMenu({
   viewerId,
   wrapperId = 'viewer-wrapper',
@@ -49,7 +52,88 @@ export function initFreqContextMenu({
     });
     menu.appendChild(item);
   });
-  // 新增 Reset option
+  // 新增 Call type submenu
+  // 取得與dropdown完全一致的選項列表
+  const callTypeInput = document.getElementById('callTypeInput');
+  const callTypeOptions = callTypeInput && callTypeInput._dropdown ? 
+    callTypeInput._dropdown.items : 
+    ['CF-FM','FM-CF-FM','FM','FM-QCF','FM-QCF-FM','QCF'];
+  
+  let submenu = document.createElement('div');
+  submenu.className = 'freq-context-menu freq-submenu';
+  submenu.style.display = 'none';
+  submenu.style.position = 'absolute';
+  submenu.style.zIndex = '1001';
+  document.body.appendChild(submenu);
+  let submenuOpen = false;
+  let submenuParentRect = null;
+  function hideSubmenu() {
+    submenu.style.display = 'none';
+    submenuOpen = false;
+  }
+  function showSubmenu(parentRect) {
+    submenu.style.display = 'block';
+    submenuOpen = true;
+    submenuParentRect = parentRect;
+    // submenu定位：右側且避開spectrogram下邊緣
+    const wrapperRect = wrapper.getBoundingClientRect();
+    let left = parentRect.right;
+    let top = parentRect.top;
+    submenu.style.left = left + 'px';
+    submenu.style.top = top + 'px';
+    let submenuRect = submenu.getBoundingClientRect();
+    if (submenuRect.bottom > wrapperRect.bottom) {
+      top = Math.max(wrapperRect.top, wrapperRect.bottom - submenuRect.height);
+      submenu.style.top = top + 'px';
+    }
+  }
+  // 填充submenu內容
+  function renderSubmenu(selectedIdx) {
+    submenu.innerHTML = '';
+    callTypeOptions.forEach((opt, idx) => {
+      const item = document.createElement('div');
+      item.className = 'freq-menu-item';
+      item.textContent = opt;
+      if (selectedIdx === idx) {
+        item.style.fontWeight = 'bold';
+        item.style.background = 'rgba(0,0,0,0.08)';
+      }
+      item.addEventListener('click', () => {
+        // 直接呼叫全域的 handleCallTypeChange
+        if (window.handleCallTypeChange) {
+          window.handleCallTypeChange(opt, idx);
+        }
+        // 更新下拉選單的顯示文字
+        const dropdownBtn = document.getElementById('callTypeInput');
+        if (dropdownBtn) {
+          dropdownBtn.textContent = opt;
+        }
+        hideSubmenu();
+        hide();
+      });
+      submenu.appendChild(item);
+    });
+  }
+  // 插入 Call type option
+  const callTypeItem = document.createElement('div');
+  callTypeItem.className = 'freq-menu-item freq-menu-calltype';
+  callTypeItem.textContent = 'Call type';
+  callTypeItem.style.position = 'relative';
+  // 加上 > 符號
+  const arrow = document.createElement('span');
+  arrow.textContent = ' >';
+  arrow.style.position = 'absolute';
+  arrow.style.right = '8px';
+  callTypeItem.appendChild(arrow);
+  callTypeItem.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // submenu顯示在右側
+    const rect = callTypeItem.getBoundingClientRect();
+    renderSubmenu(document.getElementById('callTypeInput')?document.getElementById('callTypeInput')._dropdown?.selectedIndex:-1);
+    showSubmenu(rect);
+  });
+  menu.appendChild(callTypeItem);
+  // Reset option
   const resetItem = document.createElement('div');
   resetItem.className = 'freq-menu-item';
   resetItem.textContent = 'Reset ↺';
@@ -97,10 +181,12 @@ export function initFreqContextMenu({
       const newLeft = clientX - menuRect.width;
       menu.style.left = `${Math.max(wrapperRect.left, newLeft)}px`;
     }
+    hideSubmenu();
   }
 
   function hide() {
     menu.style.display = 'none';
+    hideSubmenu();
     deleteKey = null;
   }
 
@@ -133,8 +219,10 @@ export function initFreqContextMenu({
 
   document.addEventListener('mousedown', (ev) => {
     if (ev.button !== 0) return;
-    if (menu.style.display === 'none') return;
-    if (!menu.contains(ev.target)) hide();
+    if (menu.style.display === 'none' && submenu.style.display === 'none') return;
+    if (!menu.contains(ev.target) && !submenu.contains(ev.target)) {
+      hide();
+    }
   });
 
   return { hide };

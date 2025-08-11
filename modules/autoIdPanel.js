@@ -122,6 +122,25 @@ export function initAutoIdPanel({
     if (!suppressResultReset) clearResult();
   }
   harmonicDropdown.onChange = handleHarmonicChange;
+  // 暴露給全域使用
+  window.handleCallTypeChange = function(value, idx) {
+    const hideHighLow = ['CF-FM', 'FM-CF-FM'].includes(value);
+    const hideKneeHeel = ['CF-FM', 'FM-CF-FM', 'QCF'].includes(value);
+    const hideCf = ['QCF', 'FM-QCF', 'FM', 'FM-QCF-FM'].includes(value);
+    toggleRow('high', !hideHighLow);
+    toggleRow('low', !hideHighLow);
+    toggleRow('knee', !hideKneeHeel);
+    toggleRow('heel', !hideKneeHeel);
+    toggleRow('cfStart', !hideCf);
+    toggleRow('cfEnd', !hideCf);
+    tabData[currentTab].callType = idx;
+    if (!suppressResultReset) clearResult();
+    updateDerived();
+    updateLines();
+    tabData[currentTab].showValidation = false;
+    validateMandatoryInputs();
+  };
+  callTypeDropdown.onChange = window.handleCallTypeChange;
   if (tabsContainer) {
     tabsContainer.title = 'Prev pulse (Ctrl + ←), Next pulse (Ctrl + →)';
     for (let i = 0; i < TAB_COUNT; i++) {
@@ -197,16 +216,25 @@ export function initAutoIdPanel({
       .map(m => m.freq);
     let showHighFreqWarning = false;
     let showLowFreqWarning = false;
+    
     if (markerFreqs.length > 1) {
-      const highFreq = markers.high?.freq;
-      const lowFreq = markers.low?.freq;
       const maxFreq = Math.max(...markerFreqs);
       const minFreq = Math.min(...markerFreqs);
-      if (!isNaN(highFreq) && highFreq !== maxFreq) {
-        showHighFreqWarning = true;
+      
+      // 只在high freq有值時檢查
+      if (inputs.high.value !== '') {
+        const highFreq = markers.high?.freq;
+        if (!isNaN(highFreq) && highFreq !== maxFreq) {
+          showHighFreqWarning = true;
+        }
       }
-      if (!isNaN(lowFreq) && lowFreq !== minFreq) {
-        showLowFreqWarning = true;
+      
+      // 只在low freq有值時檢查
+      if (inputs.low.value !== '') {
+        const lowFreq = markers.low?.freq;
+        if (!isNaN(lowFreq) && lowFreq !== minFreq) {
+          showLowFreqWarning = true;
+        }
       }
     }
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
