@@ -190,9 +190,12 @@ export function initAutoIdPanel({
     const QCFSlopeWarning = document.getElementById('QCF-slope-warning');
     const highFreqWarning = document.getElementById('highfreq-warning');
     const lowFreqWarning = document.getElementById('lowfreq-warning');
+    const startfreqWarning = document.getElementById('startfreq-warning');
+    const endfreqWarning = document.getElementById('endfreq-warning');
     const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
     let showQCFDuration = false;
     let showQCFSlope = false;
+    
     // QCF 檢查
     if (callType === 'QCF') {
       let duration = null;
@@ -210,6 +213,7 @@ export function initAutoIdPanel({
         showQCFSlope = !(slope < 1 && slope >= 0.1);
       }
     }
+    
     // 新增高低頻檢查
     const markerFreqs = Object.values(markers)
       .filter(m => m.freq != null && !isNaN(m.freq))
@@ -237,20 +241,59 @@ export function initAutoIdPanel({
         }
       }
     }
+    
+    // 檢查 Start freq 和 End freq 的時間順序
+    let showStartFreqWarning = false;
+    let showEndFreqWarning = false;
+    
+    // 取得所有有效的時間標記
+    const markerTimes = Object.values(markers)
+      .filter(m => m.time != null && !isNaN(m.time))
+      .map(m => m.time);
+      
+    if (markerTimes.length > 0) {
+      const minTime = Math.min(...markerTimes);
+      const maxTime = Math.max(...markerTimes);
+      
+      // 檢查 Start freq
+      if (inputs.start.value !== '' && markers.start?.time !== null) {
+        if (markers.start.time > minTime) {
+          showStartFreqWarning = true;
+        }
+      }
+      
+      // 檢查 End freq
+      if (inputs.end.value !== '' && markers.end?.time !== null) {
+        if (markers.end.time < maxTime) {
+          showEndFreqWarning = true;
+        }
+      }
+    }
+    
     const showKneeOrder = !isNaN(knee) && !isNaN(low) && knee < low;
-    const showTimeOrder = startT != null && endT != null && endT < startT;
-    const hasWarnings = showQCFDuration || showQCFSlope || showHighFreqWarning || showLowFreqWarning || showKneeOrder || showTimeOrder;
+    const hasWarnings = showQCFDuration || showQCFSlope || showHighFreqWarning || 
+                       showLowFreqWarning || showKneeOrder || showStartFreqWarning || 
+                       showEndFreqWarning;
+    
     if (inputs.high) inputs.high.classList.toggle('warning', showHighFreqWarning);
     if (inputs.low) inputs.low.classList.toggle('warning', showLowFreqWarning || showKneeOrder);
     if (inputs.knee) inputs.knee.classList.toggle('warning', showKneeOrder);
-    if (inputs.start) inputs.start.classList.toggle('warning', showTimeOrder || showQCFDuration);
-    if (inputs.end) inputs.end.classList.toggle('warning', showTimeOrder || showQCFDuration);
+    if (inputs.start) inputs.start.classList.toggle('warning', showStartFreqWarning || showQCFDuration);
+    if (inputs.end) inputs.end.classList.toggle('warning', showEndFreqWarning || showQCFDuration);
+    
     if (QCFDurationWarning) QCFDurationWarning.style.display = showQCFDuration ? 'flex' : 'none';
     if (QCFSlopeWarning) QCFSlopeWarning.style.display = showQCFSlope ? 'flex' : 'none';
     if (highFreqWarning) highFreqWarning.style.display = showHighFreqWarning ? 'flex' : 'none';
     if (lowFreqWarning) lowFreqWarning.style.display = showLowFreqWarning ? 'flex' : 'none';
     if (kneeOrderWarning) kneeOrderWarning.style.display = showKneeOrder ? 'flex' : 'none';
-    if (timeOrderWarning) timeOrderWarning.style.display = showTimeOrder ? 'flex' : 'none';
+    if (startfreqWarning) {
+      startfreqWarning.style.display = showStartFreqWarning ? 'flex' : 'none';
+      startfreqWarning.textContent = 'Start frequency should be the first one.';
+    }
+    if (endfreqWarning) {
+      endfreqWarning.style.display = showEndFreqWarning ? 'flex' : 'none';
+      endfreqWarning.textContent = 'End frequency should be the last one.';
+    }
     if (pulseIdBtn) pulseIdBtn.disabled = hasWarnings;
     if (sequenceIdBtn) sequenceIdBtn.disabled = hasWarnings;
   }

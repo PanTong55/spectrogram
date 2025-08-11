@@ -1526,7 +1526,8 @@ input.tag-button.editing {
 #highfreq-warning,
 #lowfreq-warning,
 #knee-order-warning,
-#time-order-warning {
+#startfreq-warning,
+#endfreq-warning {
   display: none;
   top: 38px;
   left: 50%;
