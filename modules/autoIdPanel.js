@@ -192,15 +192,42 @@ export function initAutoIdPanel({
     const lowFreqWarning = document.getElementById('lowfreq-warning');
     const startfreqWarning = document.getElementById('startfreq-warning');
     const endfreqWarning = document.getElementById('endfreq-warning');
-  const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
-  const HighKneeTimeWarning = document.getElementById('highknee-time-warning');
-  const LowKneeTimeWarning = document.getElementById('lowknee-time-warning');
-  const HighHeelTimeWarning = document.getElementById('highheel-time-warning');
-  const LowHeelTimeWarning = document.getElementById('lowheel-time-warning');
+    const callType = callTypeDropdown.items[callTypeDropdown.selectedIndex];
+    const HighKneeTimeWarning = document.getElementById('highknee-time-warning');
+    const LowKneeTimeWarning = document.getElementById('lowknee-time-warning');
+    const HighHeelTimeWarning = document.getElementById('highheel-time-warning');
+    const LowHeelTimeWarning = document.getElementById('lowheel-time-warning');
     let showQCFDuration = false;
     let showQCFSlope = false;
-    
-    // QCF 檢查
+
+    // FM-QCF 檢查
+    if (callType === 'FM-QCF') {
+      // 取得 marker
+      const knee = markers.knee;
+      const heel = markers.heel;
+      const low = markers.low;
+      // 1. Knee, Heel, Low 都有值
+      if (knee?.freq != null && knee?.time != null && heel?.freq != null && heel?.time != null && low?.freq != null && low?.time != null) {
+        // 以 Knee 與 Heel 計算
+        const duration = (heel.time - knee.time) * 1000;
+        showQCFDuration = duration < 1;
+        const bw = Math.abs(heel.freq - knee.freq);
+        if (duration > 0) {
+          const slope = bw / duration;
+          showQCFSlope = !(slope < 1 && slope >= 0.1);
+        }
+      } else if (knee?.freq != null && knee?.time != null && low?.freq != null && low?.time != null && (heel?.freq == null || heel?.time == null)) {
+        // 2. Knee, Low 有值，Heel 無值
+        const duration = (low.time - knee.time) * 1000;
+        showQCFDuration = duration < 1;
+        const bw = Math.abs(low.freq - knee.freq);
+        if (duration > 0) {
+          const slope = bw / duration;
+          showQCFSlope = !(slope < 1 && slope >= 0.1);
+        }
+      }
+    }
+    // QCF 檢查（原本的 QCF 類型）
     if (callType === 'QCF') {
       let duration = null;
       const markerTimes = Object.values(markers)
@@ -309,17 +336,17 @@ export function initAutoIdPanel({
           showLowHeelTimeWarning = true;
         }
       }
-    }
+    } 
 
     hasWarnings = hasWarnings || showHighKneeTimeWarning || showLowKneeTimeWarning || 
                   showHighHeelTimeWarning || showLowHeelTimeWarning;
     
     if (inputs.high) inputs.high.classList.toggle('warning', showHighFreqWarning);
-  if (inputs.low) inputs.low.classList.toggle('warning', showLowFreqWarning);
-  if (inputs.knee) inputs.knee.classList.toggle('warning', showHighKneeTimeWarning || showLowKneeTimeWarning);
-  if (inputs.heel) inputs.heel.classList.toggle('warning', showHighHeelTimeWarning || showLowHeelTimeWarning);
-    if (inputs.start) inputs.start.classList.toggle('warning', showStartFreqWarning || showQCFDuration);
-    if (inputs.end) inputs.end.classList.toggle('warning', showEndFreqWarning || showQCFDuration);
+  if (inputs.low) inputs.low.classList.toggle('warning', showLowFreqWarning || (callType === 'FM-QCF' && (showQCFDuration || showQCFSlope) && !markers.heel?.time));
+  if (inputs.knee) inputs.knee.classList.toggle('warning', showHighKneeTimeWarning || showLowKneeTimeWarning || (callType === 'FM-QCF' && (showQCFDuration || showQCFSlope)));
+  if (inputs.heel) inputs.heel.classList.toggle('warning', showHighHeelTimeWarning || showLowHeelTimeWarning || (callType === 'FM-QCF' && markers.heel?.time && (showQCFDuration || showQCFSlope)));
+    if (inputs.start) inputs.start.classList.toggle('warning', showStartFreqWarning || (callType === 'QCF' && (showQCFDuration || showQCFSlope)));
+    if (inputs.end) inputs.end.classList.toggle('warning', showEndFreqWarning || (callType === 'QCF' && (showQCFDuration || showQCFSlope)));
     
     if (QCFDurationWarning) {
       QCFDurationWarning.style.display = showQCFDuration ? 'flex' : 'none';
