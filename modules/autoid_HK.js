@@ -87,16 +87,22 @@ const speciesRules = [
   {
     name: 'Pipistrellus abramus',
     rules: [
-      {
+      { // 1-5 Bandwidth FM-QCF, QCF
         callType: 'QCF',
         lowestFreq: [44, 46]
       },
-      {
+      { // 5.1-15 Bandwidth FM-QCF
         callType: 'FM-QCF',
-        lowestFreq: [46, 50],
-        highestFreq: [60, 100],
-        kneeFreq: [46, 53],
-        kneeLowBandwidth: [0, 5],
+        bandwidth: [5.1, 15],
+        highestFreq: [52.1, 64],        
+        lowestFreq: [47, 49],
+        duration: [3.5, 7]
+      },      
+      { // 15.1-45 Bandwidth FM-QCF
+        callType: 'FM-QCF',
+        bandwidth: [15.1, 45],
+        highestFreq: [63.1, 96],        
+        lowestFreq: [48, 51],
         duration: [3, 6]
       }
     ]
