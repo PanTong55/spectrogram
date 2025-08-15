@@ -338,18 +338,14 @@ export function initMapPopup({
       edit: { featureGroup: drawnItems },
       draw: {
         circlemarker: false,
-        polyline: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } },
-        polygon: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } },
-        rectangle: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } },
-        circle: { shapeOptions: { renderer: canvasRenderer, pane: 'annotationPane' } }
+        polyline: {},
+        polygon: {},
+        rectangle: {},
+        circle: {}
       }
     });
     map.on(L.Draw.Event.CREATED, (e) => {
-      if (e.layer && e.layer instanceof L.Path) {
-        e.layer.options.renderer = canvasRenderer;
-        e.layer.options.pane = 'annotationPane';
-      }
-      drawnItems.addLayer(e.layer);
+  drawnItems.addLayer(e.layer);
     });
 
     const RouteToggleControl = L.Control.extend({
