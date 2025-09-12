@@ -77,12 +77,10 @@ specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
   [
-    'toggleSidebarBtn',
     'toggleTagModeBtn',
     'autoIdBtn',
     'exportBtn',
     'mapBtn',
-    'setting',
     'spectrogram-settings',
     'drop-overlay',
     'sidebar'
