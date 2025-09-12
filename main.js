@@ -82,8 +82,7 @@ if (isMobileDevice) {
     'exportBtn',
     'mapBtn',
     'spectrogram-settings',
-    'drop-overlay',
-    'sidebar'
+    'drop-overlay'
   ]
     .forEach(id => {
       const el = document.getElementById(id);
