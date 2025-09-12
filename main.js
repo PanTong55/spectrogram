@@ -88,7 +88,14 @@ if (isMobileDevice) {
       const el = document.getElementById(id);
       if (el) el.classList.add('mobile-hidden');
     });
+  // 預設收合 sidebar
   requestAnimationFrame(() => {
+    const sidebarElem = document.getElementById('sidebar');
+    if (sidebarElem && !sidebarElem.classList.contains('collapsed')) {
+      sidebarElem.classList.add('collapsed');
+      const toggleBtn = document.getElementById('toggleSidebarBtn');
+      if (toggleBtn) toggleBtn.title = 'Open File List';
+    }
     requestAnimationFrame(() => {
       alert('SonoRadar is optimized for desktop use. Android devices support viewer functionality only.');
     });
