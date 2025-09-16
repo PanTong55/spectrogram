@@ -291,6 +291,15 @@ export function initMapPopup({
       { attribution: false, maxZoom: 20, minZoom: 0, crossOrigin: 'anonymous' }
     );
 
+    // Geofabrik Topo
+    const geofabrikTopo = L.tileLayer(
+      'https://tile.geofabrik.de/hong-kong/{z}/{x}/{y}.png',
+      {
+        attribution: '&copy; Geofabrik, OpenStreetMap contributors',
+        crossOrigin: 'anonymous'
+      }
+    );
+
     const hkVectorGroup = L.layerGroup([hkVectorBase, hkVectorLabel]);
     const hkImageryGroup = L.layerGroup([hkImageryLayer, hkImageryLabel]);
 
@@ -309,6 +318,7 @@ export function initMapPopup({
       'Google Streets': googleStreets,
       'Google Satellite': googleSatellite,
       'Google Hybrid': googleHybrid,
+      'Geofabrik Topo': geofabrikTopo,
       'HK Vector': hkVectorGroup,
       'HK Imagery': hkImageryGroup,
     };
