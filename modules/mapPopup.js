@@ -1188,8 +1188,19 @@ export function initMapPopup({
   window.addEventListener('mousemove', (e) => {
     if (isMaximized) return;
     if (dragging) {
-      popup.style.left = `${e.clientX - offsetX}px`;
-      popup.style.top = `${e.clientY - offsetY}px`;
+      // 限制 popup 不超出視窗範圍
+      const popupWidth = popup.offsetWidth;
+      const popupHeight = popup.offsetHeight;
+      let newLeft = e.clientX - offsetX;
+      let newTop = e.clientY - offsetY;
+      // 限制 left/top 不小於 0
+      newLeft = Math.max(0, newLeft);
+      newTop = Math.max(0, newTop);
+      // 限制 right/bottom 不大於 window 大小
+      newLeft = Math.min(window.innerWidth - popupWidth, newLeft);
+      newTop = Math.min(window.innerHeight - popupHeight, newTop);
+      popup.style.left = `${newLeft}px`;
+      popup.style.top = `${newTop}px`;
       e.stopPropagation();
       return;
     }
