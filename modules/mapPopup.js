@@ -291,11 +291,12 @@ export function initMapPopup({
       { attribution: false, maxZoom: 20, minZoom: 0, crossOrigin: 'anonymous' }
     );
 
-    // Geofabrik Topo
-    const geofabrikTopo = L.tileLayer(
-      'https://tile.geofabrik.de/hong-kong/{z}/{x}/{y}.png',
+
+    // Google Terrain
+    const googleTerrain = L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
       {
-        attribution: '&copy; Geofabrik, OpenStreetMap contributors',
+        attribution: 'Map data ©2025 Google',
         crossOrigin: 'anonymous'
       }
     );
@@ -317,10 +318,10 @@ export function initMapPopup({
       'Carto Dark': cartoDark,
       'Google Streets': googleStreets,
       'Google Satellite': googleSatellite,
-      'Google Hybrid': googleHybrid,
-      'Geofabrik Topo': geofabrikTopo,
-      'HK Vector': hkVectorGroup,
-      'HK Imagery': hkImageryGroup,
+  'Google Hybrid': googleHybrid,
+  'Google Terrain': googleTerrain,
+  'HK Vector': hkVectorGroup,
+  'HK Imagery': hkImageryGroup,
     };
 
     layersControl = L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
