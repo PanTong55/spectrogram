@@ -123,20 +123,11 @@ export function initFrequencyHover({
   // 右上角 selection time info 元素
   const selectionTimeInfo = document.getElementById('selection-time-info');
 
-  // 統一格式化 selection time 與 duration
-  function formatSelectionTime(start, end) {
-    const s = Math.min(start, end);
-    const e = Math.max(start, end);
-    return {
-      start: s,
-      end: e,
-      duration: e - s,
-      text: `Selection time: ${s.toFixed(1)} - ${e.toFixed(1)} (${(e - s).toFixed(1)} ms)`
-    };
-  }
   function showSelectionTimeInfo(startMs, endMs) {
-    const info = formatSelectionTime(startMs, endMs);
-    selectionTimeInfo.textContent = info.text;
+    const s = Math.min(startMs, endMs);
+    const e = Math.max(startMs, endMs);
+    const d = e - s;
+    selectionTimeInfo.textContent = `Selection time: ${s.toFixed(1)} - ${e.toFixed(1)} (${d.toFixed(1)}ms)`;
     selectionTimeInfo.style.display = '';
   }
   function hideSelectionTimeInfo() {
@@ -170,10 +161,10 @@ export function initFrequencyHover({
       const x = Math.min(currentX, startX);
       const width = Math.abs(currentX - startX);
       // 計算時間
-  const actualWidth = getDuration() * getZoomLevel();
-  const startTime = (startX / actualWidth) * getDuration() * 1000;
-  const endTime = (currentX / actualWidth) * getDuration() * 1000;
-  showSelectionTimeInfo(startTime, endTime);
+      const actualWidth = getDuration() * getZoomLevel();
+      const startTime = (startX / actualWidth) * getDuration() * 1000;
+      const endTime = (currentX / actualWidth) * getDuration() * 1000;
+      showSelectionTimeInfo(startTime, endTime);
       // 畫框
       const y = Math.min(currentY, startY);
       const height = Math.abs(currentY - startY);
@@ -213,14 +204,11 @@ export function initFrequencyHover({
       const Flow = (1 - (top + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
       const Fhigh = (1 - top / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
       const Bandwidth = Fhigh - Flow;
-  const actualWidth = getDuration() * getZoomLevel();
-  // startTime, endTime 單位: 秒
-  const startTime = (left / actualWidth) * getDuration();
-  const endTime = ((left + width) / actualWidth) * getDuration();
-  const Duration = endTime - startTime;
-  // 讓 selection-time-info 也顯示與 tooltip 一致的值（毫秒）
-  showSelectionTimeInfo(startTime * 1000, endTime * 1000);
-  const newSel = createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
+      const actualWidth = getDuration() * getZoomLevel();
+      const startTime = (left / actualWidth) * getDuration();
+      const endTime = ((left + width) / actualWidth) * getDuration();
+      const Duration = endTime - startTime;
+      const newSel = createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, selectionRect, startTime, endTime);
       selectionRect = null;
       suppressHover = false;
       // 建立 selection area 後，直接設為 hoveredSelection
