@@ -735,7 +735,7 @@ const fftSizeDropdown = initDropdown('fftSizeInput', [
 { label: '1024', value: 1024 },
 { label: '2048', value: 2048 },
 ], { onChange: (item) => handleFftSize(item.value) });
-fftSizeDropdown.select(1);
+fftSizeDropdown.select(0);
 
 const windowTypeDropdown = initDropdown('windowTypeInput', [
   { label: 'Blackman', value: 'blackman' },
