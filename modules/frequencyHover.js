@@ -125,23 +125,12 @@ export function initFrequencyHover({
     startX = clientX - rect.left + viewer.scrollLeft;
     startY = clientY - rect.top;
     if (startY > (viewer.clientHeight - getScrollbarThickness())) return;
-
-  isDrawing = true;
-  suppressHover = true;
-  hideAll();
-  selectionRect = document.createElement('div');
-  selectionRect.className = 'selection-rect';
-  viewer.appendChild(selectionRect);
-
-  // 新增：建立左上與右下資訊顯示元素
-  const selInfoTL = document.createElement('div');
-  selInfoTL.className = 'selection-info-label selection-info-topleft';
-  selInfoTL.style.display = 'none';
-  viewer.appendChild(selInfoTL);
-  const selInfoBR = document.createElement('div');
-  selInfoBR.className = 'selection-info-label selection-info-bottomright';
-  selInfoBR.style.display = 'none';
-  viewer.appendChild(selInfoBR);
+    isDrawing = true;
+    suppressHover = true;
+    hideAll();
+    selectionRect = document.createElement('div');
+    selectionRect.className = 'selection-rect';
+    viewer.appendChild(selectionRect);
 
     const moveEv = type === 'touch' ? 'touchmove' : 'mousemove';
     const upEv = type === 'touch' ? 'touchend' : 'mouseup';
@@ -163,25 +152,6 @@ export function initFrequencyHover({
       selectionRect.style.top = `${y}px`;
       selectionRect.style.width = `${width}px`;
       selectionRect.style.height = `${height}px`;
-
-      // 計算時間與頻率
-      const actualWidth = getDuration() * getZoomLevel();
-      const startTime = (x / actualWidth) * getDuration();
-      const endTime = ((x + width) / actualWidth) * getDuration();
-      const Fhigh = (1 - y / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-      const Flow = (1 - (y + height) / spectrogramHeight) * (maxFrequency - minFrequency) + minFrequency;
-
-      // 格式化顯示
-      selInfoTL.textContent = `${startTime.toFixed(1)}ms ${Fhigh.toFixed(1)}kHz`;
-      selInfoBR.textContent = `${endTime.toFixed(1)}ms ${Flow.toFixed(1)}kHz`;
-
-      // 顯示並定位於 selectionRect 外側
-      selInfoTL.style.display = 'block';
-      selInfoTL.style.left = `${x - 2}px`;
-      selInfoTL.style.top = `${Math.max(y - 22, 0)}px`;
-      selInfoBR.style.display = 'block';
-      selInfoBR.style.left = `${x + width + 2}px`;
-      selInfoBR.style.top = `${y + height + 2}px`;
     };
 
     const upHandler = (ev) => {
@@ -189,10 +159,6 @@ export function initFrequencyHover({
       isDrawing = false;
       window.removeEventListener(moveEv, moveHandler);
       window.removeEventListener(upEv, upHandler);
-
-      // 移除資訊顯示
-      selInfoTL.remove();
-      selInfoBR.remove();
 
       const rect = selectionRect.getBoundingClientRect();
       const viewerRect = viewer.getBoundingClientRect();

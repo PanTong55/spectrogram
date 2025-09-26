@@ -1,28 +1,3 @@
-/* Selection info label for drag */
-.selection-info-label {
-  position: absolute;
-  z-index: 30;
-  font-size: 13px;
-  background: rgba(255,255,255,0.95);
-  color: #222;
-  border-radius: 4px;
-  padding: 2px 7px;
-  pointer-events: none;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  font-family: 'Noto Sans HK', sans-serif;
-  white-space: nowrap;
-  border: 1px solid #e0e0e0;
-}
-.selection-info-topleft {
-  left: 0;
-  top: 0;
-  transform: none;
-}
-.selection-info-bottomright {
-  right: 0;
-  bottom: 0;
-  transform: none;
-}
 /* === 全局樣式 === */
 html, body {
   padding: 0 5px;
