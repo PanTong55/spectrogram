@@ -120,6 +120,20 @@ export function initFrequencyHover({
     zoomControls.addEventListener('mouseleave', () => { suppressHover = false; });
   }
 
+  // 右上角 selection time info 元素
+  const selectionTimeInfo = document.getElementById('selection-time-info');
+
+  function showSelectionTimeInfo(startMs, endMs) {
+    const s = Math.min(startMs, endMs);
+    const e = Math.max(startMs, endMs);
+    const d = e - s;
+    selectionTimeInfo.textContent = `Selection time: ${s.toFixed(1)} - ${e.toFixed(1)} (${d.toFixed(1)}ms)`;
+    selectionTimeInfo.style.display = '';
+  }
+  function hideSelectionTimeInfo() {
+    selectionTimeInfo.style.display = 'none';
+  }
+
   function startSelection(clientX, clientY, type) {
     const rect = viewer.getBoundingClientRect();
     startX = clientX - rect.left + viewer.scrollLeft;
@@ -145,8 +159,14 @@ export function initFrequencyHover({
       currentX = clamp(currentX, 0, viewer.scrollWidth);
       currentY = clamp(currentY, 0, viewer.clientHeight - getScrollbarThickness());
       const x = Math.min(currentX, startX);
-      const y = Math.min(currentY, startY);
       const width = Math.abs(currentX - startX);
+      // 計算時間
+      const actualWidth = getDuration() * getZoomLevel();
+      const startTime = (startX / actualWidth) * getDuration() * 1000;
+      const endTime = (currentX / actualWidth) * getDuration() * 1000;
+      showSelectionTimeInfo(startTime, endTime);
+      // 畫框
+      const y = Math.min(currentY, startY);
       const height = Math.abs(currentY - startY);
       selectionRect.style.left = `${x}px`;
       selectionRect.style.top = `${y}px`;
@@ -159,6 +179,7 @@ export function initFrequencyHover({
       isDrawing = false;
       window.removeEventListener(moveEv, moveHandler);
       window.removeEventListener(upEv, upHandler);
+      hideSelectionTimeInfo();
 
       const rect = selectionRect.getBoundingClientRect();
       const viewerRect = viewer.getBoundingClientRect();
