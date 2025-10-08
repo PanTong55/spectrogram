@@ -359,26 +359,29 @@ export function initMapPopup({
                 iconAnchor: [11, 22]
               })
             });
-            let tooltipVisible = false;
+            let tooltipLocked = false;
             marker.bindTooltip(pt.Location, {
               direction: 'top',
               offset: [-3, -22],
               className: 'map-tooltip',
               permanent: false
             });
-            marker.on('click', function() {
-              tooltipVisible = !tooltipVisible;
-              if (tooltipVisible) {
-                marker.openTooltip();
-              } else {
-                marker.closeTooltip();
-              }
+            marker.on('mouseover', function() {
+              marker.openTooltip();
             });
             marker.on('mouseout', function() {
-              if (!tooltipVisible) marker.closeTooltip();
+              if (!tooltipLocked) marker.closeTooltip();
             });
-            marker.on('mouseover', function() {
-              if (!tooltipVisible) marker.openTooltip();
+            marker.on('click', function() {
+              tooltipLocked = !tooltipLocked;
+              if (tooltipLocked) {
+                marker.openTooltip();
+              } else {
+                // 只有 mouse 不在 marker 上時才關閉
+                if (!marker._icon.matches(':hover')) {
+                  marker.closeTooltip();
+                }
+              }
             });
             return marker;
           }).filter(Boolean);
