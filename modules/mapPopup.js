@@ -353,47 +353,16 @@ export function initMapPopup({
             if (isNaN(lat) || isNaN(lon)) return null;
             const marker = L.marker([lat, lon], {
               icon: L.divIcon({
-                html: '<i class="fa-solid fa-location-dot" style="color:#e74c3c; text-shadow: 0 0 2px #fff, 0 0 6px #fff, 0 0 0px #fff, 0 0 1px #fff;"></i>',
+                html: '<i class="fa-solid fa-location-dot"></i>',
                 className: 'map-marker-survey',
                 iconSize: [22, 22],
                 iconAnchor: [11, 22]
               })
             });
-            let tooltipLocked = false;
-            let closeTimer = null;
             marker.bindTooltip(pt.Location, {
               direction: 'top',
               offset: [-3, -22],
-              className: 'map-tooltip',
-              permanent: false
-            });
-            marker.on('mouseover', function() {
-              // 進入時取消關閉計時器並顯示 tooltip
-              if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
-              marker.openTooltip();
-            });
-            marker.on('mouseout', function() {
-              // 延遲關閉以避免與 click 的事件競爭
-              if (closeTimer) clearTimeout(closeTimer);
-              closeTimer = setTimeout(() => {
-                closeTimer = null;
-                if (!tooltipLocked) marker.closeTooltip();
-              }, 150);
-            });
-            marker.on('click', function() {
-              // 切換鎖定狀態，並立即取消/清除關閉計時器
-              tooltipLocked = !tooltipLocked;
-              if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
-              const el = marker.getElement();
-              if (tooltipLocked) {
-                marker.openTooltip();
-                if (el) el.classList.add('tooltip-locked');
-              } else {
-                if (el) el.classList.remove('tooltip-locked');
-                // 若滑鼠不在上面則關閉
-                const hovering = el ? el.matches(':hover') : false;
-                if (!hovering) marker.closeTooltip();
-              }
+              className: 'map-tooltip'
             });
             return marker;
           }).filter(Boolean);
