@@ -1,0 +1,35 @@
+.map-marker-survey {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-marker-survey .marker-icon-wrapper {
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px white;
+}
+
+.map-marker-survey i {
+  color: #000;
+  font-size: 16px;
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.3));
+}
+
+.map-tooltip {
+  background: rgba(0,0,0,0.8) !important;
+  border: none !important;
+  border-radius: 4px;
+  padding: 4px 8px;
+  color: white;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.map-tooltip.locked {
+  font-weight: bold;
+}
