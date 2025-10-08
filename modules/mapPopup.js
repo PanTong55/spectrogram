@@ -360,6 +360,7 @@ export function initMapPopup({
               })
             });
             let tooltipLocked = false;
+            let closeTimer = null;
             marker.bindTooltip(pt.Location, {
               direction: 'top',
               offset: [-3, -22],
@@ -367,20 +368,31 @@ export function initMapPopup({
               permanent: false
             });
             marker.on('mouseover', function() {
+              // 進入時取消關閉計時器並顯示 tooltip
+              if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
               marker.openTooltip();
             });
             marker.on('mouseout', function() {
-              if (!tooltipLocked) marker.closeTooltip();
+              // 延遲關閉以避免與 click 的事件競爭
+              if (closeTimer) clearTimeout(closeTimer);
+              closeTimer = setTimeout(() => {
+                closeTimer = null;
+                if (!tooltipLocked) marker.closeTooltip();
+              }, 150);
             });
             marker.on('click', function() {
+              // 切換鎖定狀態，並立即取消/清除關閉計時器
               tooltipLocked = !tooltipLocked;
+              if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+              const el = marker.getElement();
               if (tooltipLocked) {
                 marker.openTooltip();
+                if (el) el.classList.add('tooltip-locked');
               } else {
-                // 只有 mouse 不在 marker 上時才關閉
-                if (!marker._icon.matches(':hover')) {
-                  marker.closeTooltip();
-                }
+                if (el) el.classList.remove('tooltip-locked');
+                // 若滑鼠不在上面則關閉
+                const hovering = el ? el.matches(':hover') : false;
+                if (!hovering) marker.closeTooltip();
               }
             });
             return marker;
