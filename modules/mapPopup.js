@@ -359,7 +359,7 @@ export function initMapPopup({
                 iconAnchor: [11, 22]
               })
             });
-            marker.bindTooltip(pt.Name, {
+            marker.bindTooltip(pt.Location, {
               direction: 'top',
               offset: [-3, -22],
               className: 'map-tooltip'
