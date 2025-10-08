@@ -342,52 +342,33 @@ export function initMapPopup({
         layersControl.addOverlay(hkgridLayer, '1km Grid');
       });
     
-          // Survey point layer 
-    let surveyPointLayer = null;
-    fetch("https://opensheet.elk.sh/1Al_sWwiIU6DtQv6sMFvXb9wBUbBiE-zcYk8vEwV82x8/sheet3")
-      .then(r => r.json())
-      .then(points => {
-        const surveyMarkers = points.map(pt => {
-          const lat = parseFloat(pt.Latitude);
-          const lon = parseFloat(pt.Longitude);
-          if (isNaN(lat) || isNaN(lon)) return null;
-          
-          // Create marker with styled icon
-          const marker = L.marker([lat, lon], {
-            icon: L.divIcon({
-              html: '<div class="marker-icon-wrapper"><i class="fa-solid fa-location-dot"></i></div>',
-              className: 'map-marker-survey',
-              iconSize: [24, 24],
-              iconAnchor: [12, 24]
-            })
-          });
-
-          // Create tooltip
-          marker.bindTooltip(pt.Location, {
-            permanent: false,
-            direction: 'top',
-            offset: [-3, -22],
-            className: 'map-tooltip'
-          });
-
-          // Add click handler for tooltip lock/unlock
-          let isLocked = false;
-          marker.on('click', () => {
-            isLocked = !isLocked;
-            marker.getTooltip().options.permanent = isLocked;
-            if (isLocked) {
-              marker.openTooltip();
-            } else {
-              marker.closeTooltip();
-            }
-          });
-
-          return marker;
-        }).filter(Boolean);
-
-        surveyPointLayer = L.layerGroup(surveyMarkers);
-        layersControl.addOverlay(surveyPointLayer, 'Survey point');
-      });
+      // Survey point layer
+      let surveyPointLayer = null;
+      fetch("https://opensheet.elk.sh/1Al_sWwiIU6DtQv6sMFvXb9wBUbBiE-zcYk8vEwV82x8/sheet3")
+        .then(r => r.json())
+        .then(points => {
+          const markers = points.map(pt => {
+            const lat = parseFloat(pt.Latitude);
+            const lon = parseFloat(pt.Longitude);
+            if (isNaN(lat) || isNaN(lon)) return null;
+            const marker = L.marker([lat, lon], {
+              icon: L.divIcon({
+                html: '<i class="fa-solid fa-location-dot"></i>',
+                className: 'map-marker-survey',
+                iconSize: [22, 22],
+                iconAnchor: [11, 22]
+              })
+            });
+            marker.bindTooltip(pt.Location, {
+              direction: 'top',
+              offset: [-3, -22],
+              className: 'map-tooltip'
+            });
+            return marker;
+          }).filter(Boolean);
+          surveyPointLayer = L.layerGroup(markers);
+          layersControl.addOverlay(surveyPointLayer, 'Survey point');
+        });
 
     drawnItems = new L.FeatureGroup().addTo(map);
     const canvasRenderer = L.canvas({ pane: 'annotationPane' });
