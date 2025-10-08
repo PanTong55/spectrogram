@@ -353,7 +353,7 @@ export function initMapPopup({
             if (isNaN(lat) || isNaN(lon)) return null;
             const marker = L.marker([lat, lon], {
               icon: L.divIcon({
-                html: '<i class="fa-solid fa-location-dot"></i>',
+                html: '<i class="fa-solid fa-location-dot" style="color:#000000; text-shadow: 0 0 2px #fff, 0 0 6px #fff, 0 0 0px #fff, 0 0 1px #fff;"></i>',
                 className: 'map-marker-survey',
                 iconSize: [22, 22],
                 iconAnchor: [11, 22]
