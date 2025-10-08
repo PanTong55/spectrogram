@@ -353,16 +353,32 @@ export function initMapPopup({
             if (isNaN(lat) || isNaN(lon)) return null;
             const marker = L.marker([lat, lon], {
               icon: L.divIcon({
-                html: '<i class="fa-solid fa-location-dot"></i>',
+                html: '<i class="fa-solid fa-location-dot" style="color:#e74c3c; text-shadow: 0 0 2px #fff, 0 0 6px #fff, 0 0 0px #fff, 0 0 1px #fff;"></i>',
                 className: 'map-marker-survey',
                 iconSize: [22, 22],
                 iconAnchor: [11, 22]
               })
             });
+            let tooltipVisible = false;
             marker.bindTooltip(pt.Location, {
               direction: 'top',
               offset: [-3, -22],
-              className: 'map-tooltip'
+              className: 'map-tooltip',
+              permanent: false
+            });
+            marker.on('click', function() {
+              tooltipVisible = !tooltipVisible;
+              if (tooltipVisible) {
+                marker.openTooltip();
+              } else {
+                marker.closeTooltip();
+              }
+            });
+            marker.on('mouseout', function() {
+              if (!tooltipVisible) marker.closeTooltip();
+            });
+            marker.on('mouseover', function() {
+              if (!tooltipVisible) marker.openTooltip();
             });
             return marker;
           }).filter(Boolean);
