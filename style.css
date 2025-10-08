@@ -1989,3 +1989,24 @@ input.tag-button.editing {
   color: #888;
   pointer-events: none;
 }
+
+/* Survey point marker icon with white border */
+.survey-marker-icon {
+  display: inline-block;
+  background: #fff;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 2px #0002;
+  padding: 2px;
+}
+.survey-marker-icon i.fa-location-dot {
+  color: #222;
+  font-size: 20px;
+  filter: drop-shadow(0 0 1px #fff);
+}
+.map-marker-survey {
+  /* 讓 icon 不被 leaflet 預設樣式覆蓋 */
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}

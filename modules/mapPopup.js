@@ -353,10 +353,10 @@ export function initMapPopup({
             if (isNaN(lat) || isNaN(lon)) return null;
             const marker = L.marker([lat, lon], {
               icon: L.divIcon({
-                html: '<i class="fa-solid fa-location-dot"></i>',
+                html: '<span class="survey-marker-icon"><i class="fa-solid fa-location-dot"></i></span>',
                 className: 'map-marker-survey',
-                iconSize: [22, 22],
-                iconAnchor: [11, 22]
+                iconSize: [26, 26],
+                iconAnchor: [13, 26]
               })
             });
             marker.bindTooltip(pt.Location, {
