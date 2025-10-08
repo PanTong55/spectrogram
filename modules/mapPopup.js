@@ -353,36 +353,16 @@ export function initMapPopup({
             if (isNaN(lat) || isNaN(lon)) return null;
             const marker = L.marker([lat, lon], {
               icon: L.divIcon({
-                html: '<span class="survey-marker-icon"><i class="fa-solid fa-location-dot"></i></span>',
+                html: '<i class="fa-solid fa-location-dot"></i>',
                 className: 'map-marker-survey',
-                iconSize: [26, 26],
-                iconAnchor: [13, 26]
+                iconSize: [22, 22],
+                iconAnchor: [11, 22]
               })
             });
-            let locked = false;
             marker.bindTooltip(pt.Location, {
               direction: 'top',
               offset: [-3, -22],
-              className: 'map-tooltip',
-              permanent: true,
-              opacity: 0.95
-            });
-            // 初始顯示 tooltip
-            marker.openTooltip();
-            // hover 始終顯示
-            marker.on('mouseover', () => {
-              marker.openTooltip();
-            });
-            marker.on('mouseout', () => {
-              if (!locked) marker.closeTooltip();
-            });
-            marker.on('click', () => {
-              locked = !locked;
-              if (locked) {
-                marker.openTooltip();
-              } else {
-                marker.closeTooltip();
-              }
+              className: 'map-tooltip'
             });
             return marker;
           }).filter(Boolean);
