@@ -43,23 +43,78 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, noiseCorrection) {
     }
   }
 
-  // Noise baseline correction: compute 20th percentile per frequency bin and subtract the mean
+  // Noise baseline correction: approximate Batgizmo behaviour
+  // - decimate in time to ~100 samples per frequency bin for performance
+  // - compute 20th percentile (quickselect) per frequency bin
+  // - subtract mean of baseline so average is zero
+  // - apply a linear high-frequency uplift to avoid over-emphasising high freq noise
   if (noiseCorrection) {
     const baseline = new Float32Array(height);
+    const targetSamplesToUse = 100; // aim for ~100 samples per frequency for percentile
+    // decimation step (same for every bin for simplicity)
+    const decimationStep = Math.max(1, Math.floor(width / targetSamplesToUse));
     let sum = 0;
+
+    // quickselect to find k-th smallest (in-place on JS Array)
+    function quickselect(arr, k) {
+      if (arr.length === 0) return undefined;
+      let left = 0, right = arr.length - 1;
+      while (true) {
+        if (left === right) return arr[left];
+        let pivotIndex = left + Math.floor(Math.random() * (right - left + 1));
+        pivotIndex = partition(arr, left, right, pivotIndex);
+        if (k === pivotIndex) return arr[k];
+        else if (k < pivotIndex) right = pivotIndex - 1;
+        else left = pivotIndex + 1;
+      }
+
+      function partition(a, l, r, pIdx) {
+        const pv = a[pIdx];
+        swap(a, pIdx, r);
+        let store = l;
+        for (let i = l; i < r; i++) {
+          if (a[i] < pv) { swap(a, store, i); store++; }
+        }
+        swap(a, store, r);
+        return store;
+      }
+
+      function swap(a, i, j) { const t = a[i]; a[i] = a[j]; a[j] = t; }
+    }
+
     for (let y = 0; y < height; y++) {
-      // collect column values
-      const col = new Float32Array(width);
-      for (let x = 0; x < width; x++) col[x] = transformed[x + y * width];
-      // sort copy to compute percentile
-      const sorted = Array.from(col).sort((a, b) => a - b);
-      const idx = Math.floor(0.2 * (sorted.length - 1));
-      const v = sorted[idx] || 0;
+      // collect decimated column values
+      const tmp = new Array();
+      for (let x = 0; x < width; x += decimationStep) {
+        tmp.push(transformed[x + y * width]);
+      }
+
+      // compute 20th percentile using quickselect (avoid full sort)
+      let v = 0;
+      if (tmp.length > 0) {
+        const qIdx = Math.floor(0.2 * (tmp.length - 1));
+        v = quickselect(tmp, qIdx);
+      }
       baseline[y] = v;
       sum += v;
     }
+
+    // subtract average so baseline mean is zero
     const avg = sum / height;
     for (let y = 0; y < height; y++) baseline[y] -= avg;
+
+    // high-frequency linear adjustment (mirror Batgizmo smoothing)
+    // parameters chosen to match Batgizmo's Kotlin: fCornerHz=80k, reductionFactor=10
+    const fCornerHz = 80000;
+    const reductionFactor = 10;
+    const freqBinHz = sr / fftSize; // frequency per bin
+    let freqCornerBucket = Math.round(fCornerHz / Math.max(1, freqBinHz));
+    freqCornerBucket = Math.max(1, Math.min(freqCornerBucket, height - 1));
+    for (let y = freqCornerBucket; y < height; y++) {
+      const freqRatio = (y - freqCornerBucket) / freqCornerBucket;
+      const deltaDb = freqRatio * reductionFactor;
+      baseline[y] = baseline[y] + deltaDb;
+    }
 
     // subtract baseline from transformed
     for (let y = 0; y < height; y++) {
