@@ -8,20 +8,27 @@ self.onmessage = (e) => {
     ctx = canvas.getContext('2d');
   } else if (type === 'render') {
     if (!ctx) return;
-    renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0);
+    // noiseCorrection flag optionally provided
+    renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0, !!e.data.noiseCorrection);
   }
 };
 
-function renderSpectrogram(signal, sr, fftSize, overlapPct) {
+function renderSpectrogram(signal, sr, fftSize, overlapPct, noiseCorrection) {
   const hop = Math.max(1, Math.floor(fftSize * (1 - overlapPct / 100)));
   const width = Math.max(1, Math.ceil((signal.length - fftSize) / hop));
   const height = fftSize / 2;
   canvas.width = width;
   canvas.height = height;
+  // We'll first compute dB-like values for every time/frequency point,
+  // optionally compute and apply a noise baseline per frequency, then map to image.
   const img = ctx.createImageData(width, height);
   const window = hannWindow(fftSize);
   const real = new Float32Array(fftSize);
   const imag = new Float32Array(fftSize);
+
+  // Store dB values in flattened array: index = x + y * width
+  const transformed = new Float32Array(width * height);
+
   for (let x = 0, i = 0; i + fftSize <= signal.length; i += hop, x++) {
     for (let j = 0; j < fftSize; j++) {
       real[j] = signal[i + j] * window[j];
@@ -30,8 +37,44 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
     fft(real, imag);
     for (let y = 0; y < height; y++) {
       const mag = Math.sqrt(real[y] * real[y] + imag[y] * imag[y]);
-      let val = Math.log10(mag + 1e-12);
-      val = Math.max(0, Math.min(1, val / 5));
+      // Use log10(magnitude) as a dB-like value (consistent with prior behaviour)
+      const db = Math.log10(mag + 1e-12);
+      transformed[x + y * width] = db;
+    }
+  }
+
+  // Noise baseline correction: compute 20th percentile per frequency bin and subtract the mean
+  if (noiseCorrection) {
+    const baseline = new Float32Array(height);
+    let sum = 0;
+    for (let y = 0; y < height; y++) {
+      // collect column values
+      const col = new Float32Array(width);
+      for (let x = 0; x < width; x++) col[x] = transformed[x + y * width];
+      // sort copy to compute percentile
+      const sorted = Array.from(col).sort((a, b) => a - b);
+      const idx = Math.floor(0.2 * (sorted.length - 1));
+      const v = sorted[idx] || 0;
+      baseline[y] = v;
+      sum += v;
+    }
+    const avg = sum / height;
+    for (let y = 0; y < height; y++) baseline[y] -= avg;
+
+    // subtract baseline from transformed
+    for (let y = 0; y < height; y++) {
+      const b = baseline[y];
+      for (let x = 0; x < width; x++) {
+        transformed[x + y * width] = transformed[x + y * width] - b;
+      }
+    }
+  }
+
+  // Map transformed values to greyscale image (preserve previous scaling behaviour)
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const db = transformed[x + y * width];
+      let val = Math.max(0, Math.min(1, db / 5));
       const col = Math.floor(val * 255);
       const idx = (height - 1 - y) * width + x;
       img.data[idx * 4] = col;
@@ -40,6 +83,7 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct) {
       img.data[idx * 4 + 3] = 255;
     }
   }
+
   ctx.putImageData(img, 0, 0);
   self.postMessage({ type: 'rendered' });
 }

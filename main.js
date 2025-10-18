@@ -74,6 +74,21 @@ const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 
+// Noise correction switch
+const noiseCorrectionSwitch = document.getElementById('noiseCorrectionSwitch');
+let noiseCorrectionEnabled = noiseCorrectionSwitch?.checked || false;
+if (noiseCorrectionSwitch) {
+  noiseCorrectionSwitch.addEventListener('change', () => {
+    noiseCorrectionEnabled = noiseCorrectionSwitch.checked;
+    // re-render current file if loaded to apply change
+    const currentFile = getCurrentFile();
+    if (currentFile) {
+      // trigger a file-loaded event to re-send render request
+      document.dispatchEvent(new Event('file-loaded'));
+    }
+  });
+}
+
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
   [
@@ -1225,7 +1240,7 @@ document.addEventListener("file-loaded", async () => {
     const workerOverlap = currentOverlap === 'auto'
       ? getAutoOverlapPercent()
       : getOverlapPercent();
-    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap }, [audioBuf.getChannelData(0).buffer]);
+    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap, noiseCorrection: !!noiseCorrectionEnabled }, [audioBuf.getChannelData(0).buffer]);
     updateSpectrogramSettingsText();
   }
 });
