@@ -55,12 +55,10 @@ let selectedSampleRate = 'auto';
 let currentFftSize = 1024;
 let currentWindowType = 'hann';
 let currentOverlap = 'auto';
-let currentAudioBufferLength = 0;
 let overlapWarningShown = false;
 let freqHoverControl = null;
 let autoIdControl = null;
 let freqMenuControl = null;
-let demoFetchController = null;
 const sampleRateBtn = document.getElementById('sampleRateInput');
 const fftSizeBtn = document.getElementById('fftSizeInput');
 let selectionExpandMode = false;
@@ -74,43 +72,24 @@ const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 
-// Noise correction switch
-const noiseCorrectionSwitch = document.getElementById('noiseCorrectionSwitch');
-let noiseCorrectionEnabled = noiseCorrectionSwitch?.checked || false;
-if (noiseCorrectionSwitch) {
-  noiseCorrectionSwitch.addEventListener('change', () => {
-    noiseCorrectionEnabled = noiseCorrectionSwitch.checked;
-    // re-render current file if loaded to apply change
-    const currentFile = getCurrentFile();
-    if (currentFile) {
-      // trigger a file-loaded event to re-send render request
-      document.dispatchEvent(new Event('file-loaded'));
-    }
-  });
-}
-
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
   [
+    'toggleSidebarBtn',
     'toggleTagModeBtn',
     'autoIdBtn',
     'exportBtn',
     'mapBtn',
+    'setting',
     'spectrogram-settings',
-    'drop-overlay'
+    'drop-overlay',
+    'sidebar'
   ]
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('mobile-hidden');
     });
-  // 預設收合 sidebar
   requestAnimationFrame(() => {
-    const sidebarElem = document.getElementById('sidebar');
-    if (sidebarElem && !sidebarElem.classList.contains('collapsed')) {
-      sidebarElem.classList.add('collapsed');
-      const toggleBtn = document.getElementById('toggleSidebarBtn');
-      if (toggleBtn) toggleBtn.title = 'Open File List';
-    }
     requestAnimationFrame(() => {
       alert('SonoRadar is optimized for desktop use. Android devices support viewer functionality only.');
     });
@@ -170,7 +149,7 @@ initWavesurfer({
 });
 getWavesurfer().on('finish', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Play (Ctrl + P)';
+  playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -195,7 +174,7 @@ getWavesurfer().on('pause', () => {
     return;
   }
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Continue (Ctrl + P)';
+  playPauseBtn.title = 'Continue';
   playPauseBtn.classList.add('paused');
   playPauseBtn.classList.remove('playing');
   progressLineElem.style.pointerEvents = 'auto';
@@ -216,7 +195,7 @@ getWavesurfer().on('seek', (prog) => {
 
 document.addEventListener('file-loaded', () => {
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Play (Ctrl + P)';
+  playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -224,9 +203,6 @@ document.addEventListener('file-loaded', () => {
   playPauseBtn.disabled = false;
   hideStopButton();
   updateProgressLine(0);
-    if (document.body.classList.contains('autoid-open')) {
-        freqHoverControl?.setPersistentLinesEnabled(false);
-    }
 });
 
 playPauseBtn.addEventListener('click', () => {
@@ -236,7 +212,7 @@ playPauseBtn.addEventListener('click', () => {
     ws.pause();
     // Update button immediately in case the pause event is delayed
     playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-    playPauseBtn.title = 'Continue (Ctrl + P)';
+    playPauseBtn.title = 'Continue';
     playPauseBtn.classList.add('paused');
     playPauseBtn.classList.remove('playing');
     progressLineElem.style.pointerEvents = 'auto';
@@ -261,7 +237,7 @@ stopBtn.addEventListener('click', () => {
   ignoreNextPause = true;
   ws.stop();
   playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-  playPauseBtn.title = 'Play (Ctrl + P)';
+  playPauseBtn.title = 'Play';
   playPauseBtn.classList.remove('playing', 'paused');
   progressLineElem.style.display = 'none';
   progressLineElem.style.pointerEvents = 'none';
@@ -309,21 +285,17 @@ zoomControlsElem.style.display = 'flex';
 sidebarControl.refresh(file.name);
 },
 onBeforeLoad: () => {
-if (demoFetchController) {
-  demoFetchController.abort();
-  demoFetchController = null;
-}
 if (uploadOverlay.style.display !== 'flex') {
-  loadingOverlay.style.display = 'flex';
+loadingOverlay.style.display = 'flex';
 }
 freqHoverControl?.hideHover();
 freqHoverControl?.clearSelections();
 if (selectionExpandMode) {
-  selectionExpandMode = false;
-  sampleRateBtn.disabled = false;
-  expandHistory = [];
-  currentExpandBlob = null;
-  updateExpandBackBtn();
+selectionExpandMode = false;
+sampleRateBtn.disabled = false;
+expandHistory = [];
+currentExpandBlob = null;
+updateExpandBackBtn();
 }
 },
   onAfterLoad: () => {
@@ -359,27 +331,18 @@ sidebarElem.addEventListener('sidebar-toggle', () => {
 const tagControl = initTagControl();
 
 (async () => {
-  demoFetchController = new AbortController();
-  try {
-    const resp = await fetch(
-      'https://raw.githubusercontent.com/hkbatradar/SonoRadar/main/recording/demo_recording.wav',
-      { signal: demoFetchController.signal }
-    );
-    const blob = await resp.blob();
-    if (demoFetchController.signal.aborted) return;
-    const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
-    setFileList([demoFile], -1);
-    toggleFileIcon(0, 'trash');
-    toggleFileIcon(0, 'star');
-    toggleFileIcon(0, 'question');
-    sidebarControl.refresh(demoFile.name);
-  } catch (err) {
-    if (err.name !== 'AbortError') {
-      console.error('Failed to preload demo file', err);
-    }
-  } finally {
-    demoFetchController = null;
-  }
+try {
+const resp = await fetch('https://raw.githubusercontent.com/hkbatradar/SonoRadar/main/recording/demo_recording.wav');
+const blob = await resp.blob();
+const demoFile = new File([blob], 'demo_recording.wav', { type: 'audio/wav' });
+setFileList([demoFile], -1);
+toggleFileIcon(0, 'trash');
+toggleFileIcon(0, 'star');
+toggleFileIcon(0, 'question');
+sidebarControl.refresh(demoFile.name);
+} catch (err) {
+console.error('Failed to preload demo file', err);
+}
 })();
 
 document.addEventListener('keydown', (e) => {
@@ -449,9 +412,9 @@ duration = getWavesurfer().getDuration();
     renderAxes();
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
-    updateSpectrogramSettingsText();
   }
 );
+updateSpectrogramSettingsText();
 }
 
 async function handleSampleRate(rate) {
@@ -526,11 +489,7 @@ const zoomControl = initZoomControls(
   renderAxes,
   wrapper,
   () => { freqHoverControl?.hideHover(); },
-  () => {
-    freqHoverControl?.refreshHover();
-    autoIdControl?.updateMarkers();
-    updateSpectrogramSettingsText();
-  },
+  () => { freqHoverControl?.refreshHover(); autoIdControl?.updateMarkers(); },
   () => selectionExpandMode,
   () => {
     const sel = freqHoverControl?.getHoveredSelection?.();
@@ -598,10 +557,6 @@ viewer.addEventListener('expand-selection', async (e) => {
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
       autoIdControl?.reset();
-      updateSpectrogramSettingsText();
-      // 強制解除 suppressHover/isOverBtnGroup 狀態
-      viewer.dispatchEvent(new CustomEvent('force-hover-enable'));
-      freqHoverControl?.refreshHover();
     }
   }
 });
@@ -626,7 +581,6 @@ viewer.addEventListener('fit-window-selection', async (e) => {
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
       autoIdControl?.reset();
-      updateSpectrogramSettingsText();
     }
   }
 });
@@ -653,7 +607,6 @@ duration = getWavesurfer().getDuration();
     renderAxes();
   freqHoverControl?.refreshHover();
   autoIdControl?.updateMarkers();
-  updateSpectrogramSettingsText();
   }
   );
   drawColorBar(colorMap);
@@ -707,7 +660,6 @@ requestAnimationFrame(() => {
 renderAxes();
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
-    updateSpectrogramSettingsText();
 });
 });
 
@@ -719,7 +671,6 @@ updateProgressLine(0);
 renderAxes();
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
-  updateSpectrogramSettingsText();
 });
 
 document.body.addEventListener('touchstart', () => {
@@ -750,7 +701,7 @@ const fftSizeDropdown = initDropdown('fftSizeInput', [
 { label: '1024', value: 1024 },
 { label: '2048', value: 2048 },
 ], { onChange: (item) => handleFftSize(item.value) });
-fftSizeDropdown.select(0);
+fftSizeDropdown.select(1);
 
 const windowTypeDropdown = initDropdown('windowTypeInput', [
   { label: 'Blackman', value: 'blackman' },
@@ -768,40 +719,24 @@ overlapInput.addEventListener('change', () => {
 const val = overlapInput.value.trim();
 if (val === '') {
 currentOverlap = 'auto';
-handleOverlapChange();
-return;
-}
-
+} else {
 const num = parseInt(val, 10);
 if (!isNaN(num) && num >= 1 && num <= 99) {
-const proceed = () => {
 currentOverlap = num;
-handleOverlapChange();
-};
 if (num >= 80 && !overlapWarningShown) {
 showMessageBox({
 title: 'Reminder',
-message: `Using an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`,
-confirmText: 'OK',
-cancelText: 'Cancel',
-onConfirm: () => {
-overlapWarningShown = true;
-proceed();
-},
-onCancel: () => {
-overlapInput.value = '';
-currentOverlap = 'auto';
-}
+message: `Using an overlap size above 80% can significantly increase rendering time. If the .wav file is longer than 8 seconds or high-level zoom-in is enabled, large overlap sizes are not recommended.`
 });
-return;
+overlapWarningShown = true;
 }
-proceed();
 } else {
 alert('Overlap must be between 1 and 99.');
 overlapInput.value = '';
 currentOverlap = 'auto';
-handleOverlapChange();
 }
+}
+handleOverlapChange();
 });
 
 const quickPresetBtn = document.getElementById('quickPresetBtn');
@@ -838,14 +773,10 @@ function updateSpectrogramSettingsText() {
   const textElem = document.getElementById('spectrogram-settings-text');
   const sampleRate = currentSampleRate;
   const fftSize = currentFftSize;
-  const overlap = currentOverlap === 'auto'
-    ? getAutoOverlapPercent()
-    : getOverlapPercent();
+  const overlap = getOverlapPercent();
   const windowType = currentWindowType.charAt(0).toUpperCase() + currentWindowType.slice(1);
 
-  const overlapText = currentOverlap === 'auto'
-    ? `Auto${overlap !== null ? ` (${overlap}%)` : ''}`
-    : `${overlap}%`;
+  const overlapText = overlap !== null ? `${overlap}%` : 'Auto';
   if (textElem) {
     textElem.textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
@@ -867,23 +798,9 @@ function drawColorBar(colorMap) {
 }
 
 function getOverlapPercent() {
-  if (currentOverlap === 'auto') return null;
-  const parsed = parseInt(currentOverlap, 10);
-  return isNaN(parsed) ? null : parsed;
-}
-
-function getAutoOverlapPercent() {
-  const bufferLength = currentAudioBufferLength || getWavesurfer()?.backend?.buffer?.length;
-  const canvasWidth = document
-    .querySelector('#spectrogram-only canvas')
-    ?.width || container.clientWidth;
-  const fft = currentFftSize;
-  if (bufferLength && canvasWidth && fft) {
-    const samplesPerCol = bufferLength / canvasWidth;
-    const noverlap = Math.max(0, Math.round(fft - samplesPerCol));
-    return Math.round((noverlap / fft) * 100);
-  }
-  return null;
+if (currentOverlap === 'auto') return null;
+const parsed = parseInt(currentOverlap, 10);
+return isNaN(parsed) ? null : parsed;
 }
 
 function formatFreqValue(value) {
@@ -925,11 +842,11 @@ function handleFftSize(size) {
       renderAxes();
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
-      updateSpectrogramSettingsText();
     },
     currentFftSize,
     currentWindowType
   );
+  updateSpectrogramSettingsText();
 }
 
 function handleWindowType(type) {
@@ -948,11 +865,11 @@ function handleWindowType(type) {
       renderAxes();
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
-      updateSpectrogramSettingsText();
     },
     currentFftSize,
     currentWindowType
   );
+  updateSpectrogramSettingsText();
 }
 
 function handleOverlapChange() {
@@ -963,16 +880,16 @@ colorMap,
 spectrogramHeight,
 currentFreqMin,
 currentFreqMax,
-getOverlapPercent(),
-() => {
+getOverlapPercent()
+);
+
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
+
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
 updateSpectrogramSettingsText();
-}
-);
 }
 
 function updateFrequencyRange(freqMin, freqMax) {
@@ -986,20 +903,21 @@ colorMap,
 spectrogramHeight,
 freqMin,
 freqMax,
-getOverlapPercent(),
-() => {
+getOverlapPercent()
+);
+
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
+
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
+
 if (freqHoverControl) {
 freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
 autoIdControl?.updateMarkers();
 }
 updateSpectrogramSettingsText();
-}
-);
 }
 
 const clearAllBtn = document.getElementById('clearAllBtn');
@@ -1011,10 +929,7 @@ getCurrentColorMap(),
 spectrogramHeight,
 currentFreqMin,
 currentFreqMax,
-getOverlapPercent(),
-() => {
-updateSpectrogramSettingsText();
-}
+getOverlapPercent()
 );
 showDropOverlay();
 loadingOverlay.style.display = 'none';
@@ -1065,10 +980,7 @@ clearTrashBtn.addEventListener('click', () => {
             spectrogramHeight,
             currentFreqMin,
             currentFreqMax,
-            getOverlapPercent(),
-            () => {
-              updateSpectrogramSettingsText();
-            }
+            getOverlapPercent()
           );
           showDropOverlay();
           loadingOverlay.style.display = 'none';
@@ -1150,10 +1062,6 @@ case 'p':
 e.preventDefault();
 playPauseBtn.click();
 break;
-case 'i':
-e.preventDefault();
-document.getElementById('autoIdBtn')?.click();
-break;
 }
 });
 document.addEventListener('map-file-selected', (e) => {
@@ -1202,7 +1110,6 @@ expandBackBtn.addEventListener('click', async () => {
 
   updateExpandBackBtn();
   autoIdControl?.reset();
-  updateSpectrogramSettingsText();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -1236,12 +1143,7 @@ document.addEventListener("file-loaded", async () => {
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-    currentAudioBufferLength = audioBuf.length;
-    const workerOverlap = currentOverlap === 'auto'
-      ? getAutoOverlapPercent()
-      : getOverlapPercent();
-    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap, noiseCorrection: !!noiseCorrectionEnabled }, [audioBuf.getChannelData(0).buffer]);
-    updateSpectrogramSettingsText();
+    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: getOverlapPercent() }, [audioBuf.getChannelData(0).buffer]);
   }
 });
 
@@ -1252,10 +1154,8 @@ selectionExpandMode = false;
 expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
-  currentAudioBufferLength = 0;
   playPauseBtn.disabled = true;
   hideStopButton();
-  updateSpectrogramSettingsText();
 });
 
 window.addEventListener('resize', () => {
