@@ -1,4 +1,5 @@
 import { getTimeExpansionMode } from './fileState.js';
+import { getWavesurfer } from './wsManager.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -117,6 +118,25 @@ export function initFrequencyHover({
   wrapper.addEventListener('mouseleave', () => { isCursorInside = false; hideAll(); });
   viewer.addEventListener('mouseenter', () => { viewer.classList.add('hide-cursor'); isCursorInside = true; });
   viewer.addEventListener('mouseleave', () => { viewer.classList.remove('hide-cursor'); isCursorInside = false; });
+
+  // If Wavesurfer emits scroll events (plugin internal scrolling), keep
+  // selection positions in sync by listening and updating selections.
+  try {
+    const ws = getWavesurfer();
+    if (ws && typeof ws.on === 'function') {
+      ws.on('scroll', (startPct, endPct, scrollLeft) => {
+        if (typeof scrollLeft === 'number') {
+          // Mirror wavesurfer scroll to the viewer container so DOM-based
+          // selection elements remain aligned with spectrogram content.
+          try { viewer.scrollLeft = scrollLeft; } catch (e) { /* ignore */ }
+        }
+        // Recompute selection positions based on current zoom/scroll
+        updateSelections();
+      });
+    }
+  } catch (e) {
+    // defensive - don't break if ws unavailable
+  }
 
   const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
 
