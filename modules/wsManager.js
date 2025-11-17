@@ -165,9 +165,31 @@ export function replacePlugin(
     if (outerViewer) {
       outerViewer.style.overflowX = 'auto';
     }
-    requestAnimationFrame(() => {
-      if (typeof onRendered === 'function') onRendered();
-    });
+    // Prefer plugin 'ready' event so we wait until rendering is fully
+    // completed. Fallback to requestAnimationFrame if the plugin doesn't
+    // emit ready.
+    try {
+      if (typeof plugin.once === 'function') {
+        let called = false;
+        plugin.once('ready', () => {
+          if (called) return;
+          called = true;
+          if (typeof onRendered === 'function') onRendered();
+        });
+        // also ensure we call onRendered if plugin doesn't fire 'ready'
+        requestAnimationFrame(() => {
+          if (!called && typeof onRendered === 'function') onRendered();
+        });
+      } else {
+        requestAnimationFrame(() => {
+          if (typeof onRendered === 'function') onRendered();
+        });
+      }
+    } catch (e) {
+      requestAnimationFrame(() => {
+        if (typeof onRendered === 'function') onRendered();
+      });
+    }
     // Re-bind ws scroll sync after plugin replacement so the time-axis
     // keeps in sync with the active plugin's internal scroll container.
     try {
