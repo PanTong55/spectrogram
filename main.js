@@ -629,31 +629,35 @@ const zoomControl = initZoomControls(
     // After zoom has been applied, switch to the flash plugin if the
     // overlap percent crosses the threshold (<=30%). This handles the case
     // where Auto overlap changes when the canvas width changes due to zoom.
-    try {
-      const useFlash = shouldUseFlashForReplace();
-      const curPlugin = getPlugin();
-      const isFlash = !!curPlugin?.isFlashPlugin;
-      if (useFlash !== isFlash) {
-        replacePlugin(
-          getCurrentColorMap(),
-          spectrogramHeight,
-          currentFreqMin,
-          currentFreqMax,
-          getOverlapPercent(),
-          () => {
-            renderAxes();
-            freqHoverControl?.refreshHover();
-            autoIdControl?.updateMarkers();
-            updateSpectrogramSettingsText();
-          },
-          currentFftSize,
-          currentWindowType,
-          useFlash
-        );
+    // Use requestAnimationFrame to ensure DOM (canvas.width) has updated
+    // before computing auto overlap, fixing stale canvas.width on first zoom.
+    requestAnimationFrame(() => {
+      try {
+        const useFlash = shouldUseFlashForReplace();
+        const curPlugin = getPlugin();
+        const isFlash = !!curPlugin?.isFlashPlugin;
+        if (useFlash !== isFlash) {
+          replacePlugin(
+            getCurrentColorMap(),
+            spectrogramHeight,
+            currentFreqMin,
+            currentFreqMax,
+            getOverlapPercent(),
+            () => {
+              renderAxes();
+              freqHoverControl?.refreshHover();
+              autoIdControl?.updateMarkers();
+              updateSpectrogramSettingsText();
+            },
+            currentFftSize,
+            currentWindowType,
+            useFlash
+          );
+        }
+      } catch (e) {
+        console.error('Failed to maybe replace plugin after zoom', e);
       }
-    } catch (e) {
-      console.error('Failed to maybe replace plugin after zoom', e);
-    }
+    });
   },
   () => selectionExpandMode,
   () => {
@@ -1113,9 +1117,9 @@ function getAutoOverlapPercent(overriddenBufferLength = null) {
       getWavesurfer()?.getDecodedData()?.length ||
       getWavesurfer()?.backend?.buffer?.length
     );
-  const canvasWidth = document
-    .querySelector('#spectrogram-only canvas')
-    ?.width || container.clientWidth;
+  // Prefer container.scrollWidth (reflects current zoom layout width) over canvas.width
+  // (canvas.width may be stale during zoom transitions). Fallback to clientWidth if no scroll.
+  const canvasWidth = container.scrollWidth > 0 ? container.scrollWidth : container.clientWidth;
   const fft = currentFftSize;
   if (bufferLength && canvasWidth && fft) {
     const samplesPerCol = bufferLength / canvasWidth;
