@@ -6,6 +6,7 @@ replacePlugin,
 createSpectrogramPlugin,
 getCurrentColorMap,
 initScrollSync,
+initWsScrollSync,
 } from './modules/wsManager.js';
 
 import { initZoomControls } from './modules/zoomControl.js';
@@ -841,6 +842,13 @@ onSampleRateDetected: autoSetSampleRate
 initScrollSync({
 scrollSourceId: 'viewer-container',
 scrollTargetId: 'time-axis-wrapper',
+});
+
+// Also sync time axis via wavesurfer scroll events so plugin-internal
+// scroll containers (e.g. spectrogram-flash plugin) still update the
+// time axis correctly after zoom or plugin replacement.
+initWsScrollSync({
+  scrollTargetId: 'time-axis-wrapper',
 });
 
 getWavesurfer().on('ready', () => {
