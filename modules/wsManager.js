@@ -188,19 +188,7 @@ export function initScrollSync({
     return;
   }
 
-  // 同步時使用「可滾動範圍」的比例來映射 scrollLeft，
-  // 以避免 source/target 的 scrollWidth 不同步時造成滯後或無法到達最大值的問題。
   source.addEventListener('scroll', () => {
-    const sourceScrollRange = Math.max(0, source.scrollWidth - source.clientWidth);
-    const targetScrollRange = Math.max(0, target.scrollWidth - target.clientWidth);
-
-    if (sourceScrollRange === 0) {
-      // 沒有可滾動範圍時直接對齊（退化處理）
-      target.scrollLeft = source.scrollLeft;
-      return;
-    }
-
-    const ratio = targetScrollRange / sourceScrollRange;
-    target.scrollLeft = Math.round(source.scrollLeft * ratio);
+    target.scrollLeft = source.scrollLeft;
   });
 }
