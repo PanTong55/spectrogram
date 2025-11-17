@@ -1112,7 +1112,9 @@ function getAutoOverlapPercent(overriddenBufferLength = null) {
   if (bufferLength && canvasWidth && fft) {
     const samplesPerCol = bufferLength / canvasWidth;
     const noverlap = Math.max(0, Math.round(fft - samplesPerCol));
-    return Math.round((noverlap / fft) * 100);
+    const overlapPercent = Math.round((noverlap / fft) * 100);
+    // Ensure minimum overlap size is 5% in auto mode
+    return Math.max(5, overlapPercent);
   }
   return null;
 }
