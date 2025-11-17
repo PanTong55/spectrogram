@@ -571,10 +571,6 @@ const renderAxes = () => {
   
   // 使用批量更新優化，避免多次重排。在單個 RAF 中同時更新時間軸和頻率網格
   requestAnimationFrame(() => {
-    // Sync time-axis-wrapper width with spectrogram container width to ensure scroll synchronization
-    const timeAxisWidth = duration * zoomControl.getZoomLevel();
-    timeWrapper.style.width = `${timeAxisWidth}px`;
-    
     drawTimeAxis({
       containerWidth,
       duration,
