@@ -106,8 +106,19 @@ export function replacePlugin(
     plugin = null;  // ✅ 確保 plugin 引用被清空
   }
 
-  // ✅ 強制重新設置 container 寬度為預設值（避免殘留的大尺寸）
-  container.style.width = '100%';
+  // Only reset container width to default when not currently zoomed.
+  // If the container is zoomed (scrollWidth > clientWidth), preserve the
+  // current width so plugin replacement doesn't reset zoom state which
+  // would cause auto-overlap calculations to use the unzoomed width.
+  try {
+    const isZoomed = container.scrollWidth > container.clientWidth;
+    if (!isZoomed) {
+      container.style.width = '100%';
+    }
+  } catch (e) {
+    // defensive fallback
+    container.style.width = '100%';
+  }
 
   currentColorMap = colorMap;
 
