@@ -106,19 +106,8 @@ export function replacePlugin(
     plugin = null;  // ✅ 確保 plugin 引用被清空
   }
 
-  // Only reset container width to default when not currently zoomed.
-  // If the container is zoomed (scrollWidth > clientWidth), preserve the
-  // current width so plugin replacement doesn't reset zoom state which
-  // would cause auto-overlap calculations to use the unzoomed width.
-  try {
-    const isZoomed = container.scrollWidth > container.clientWidth;
-    if (!isZoomed) {
-      container.style.width = '100%';
-    }
-  } catch (e) {
-    // defensive fallback
-    container.style.width = '100%';
-  }
+  // ✅ 強制重新設置 container 寬度為預設值（避免殘留的大尺寸）
+  container.style.width = '100%';
 
   currentColorMap = colorMap;
 
@@ -165,31 +154,9 @@ export function replacePlugin(
     if (outerViewer) {
       outerViewer.style.overflowX = 'auto';
     }
-    // Prefer plugin 'ready' event so we wait until rendering is fully
-    // completed. Fallback to requestAnimationFrame if the plugin doesn't
-    // emit ready.
-    try {
-      if (typeof plugin.once === 'function') {
-        let called = false;
-        plugin.once('ready', () => {
-          if (called) return;
-          called = true;
-          if (typeof onRendered === 'function') onRendered();
-        });
-        // also ensure we call onRendered if plugin doesn't fire 'ready'
-        requestAnimationFrame(() => {
-          if (!called && typeof onRendered === 'function') onRendered();
-        });
-      } else {
-        requestAnimationFrame(() => {
-          if (typeof onRendered === 'function') onRendered();
-        });
-      }
-    } catch (e) {
-      requestAnimationFrame(() => {
-        if (typeof onRendered === 'function') onRendered();
-      });
-    }
+    requestAnimationFrame(() => {
+      if (typeof onRendered === 'function') onRendered();
+    });
     // Re-bind ws scroll sync after plugin replacement so the time-axis
     // keeps in sync with the active plugin's internal scroll container.
     try {
