@@ -610,8 +610,15 @@ const renderAxes = () => {
       autoIdControl?.updateMarkers();
     }
     updateProgressLine(getWavesurfer().getCurrentTime());
+    
+    // 強制同步 scroll 位置，防止 zoom 後時間軸與 spectrogram 滾動位置不同步
+    const timeAxisWrapper = document.getElementById('time-axis-wrapper');
+    if (timeAxisWrapper && viewer) {
+      timeAxisWrapper.scrollLeft = viewer.scrollLeft;
+    }
   });
 };
+
 
 const wrapper = document.getElementById('viewer-wrapper');
 const zoomControl = initZoomControls(
@@ -679,7 +686,13 @@ viewer.addEventListener('scroll', () => {
   if (!ws) return;
   updateProgressLine(ws.getCurrentTime());
   autoIdControl?.updateMarkers();
-});
+  
+  // 同步時間軸 scroll 位置
+  const timeAxisWrapper = document.getElementById('time-axis-wrapper');
+  if (timeAxisWrapper) {
+    timeAxisWrapper.scrollLeft = viewer.scrollLeft;
+  }
+}, { passive: true });
 
 progressLineElem.addEventListener('mousedown', (e) => {
   const ws = getWavesurfer();
