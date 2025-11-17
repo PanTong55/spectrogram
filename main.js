@@ -24,7 +24,7 @@ import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { initAutoIdPanel } from './modules/autoIdPanel.js';
 import { initFreqContextMenu } from './modules/freqContextMenu.js';
-import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile } from './modules/fileState.js';
+import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile, getTimeExpansionMode, setTimeExpansionMode, toggleTimeExpansionMode } from './modules/fileState.js';
 
 const spectrogramHeight = 800;
 let sidebarControl;
@@ -56,6 +56,7 @@ let currentFftSize = 1024;
 let currentWindowType = 'hann';
 let currentOverlap = 'auto';
 let currentAudioBufferLength = 0;
+let savedAudioBufferLengthBeforeExpand = null;
 let overlapWarningShown = false;
 let freqHoverControl = null;
 let autoIdControl = null;
@@ -66,6 +67,11 @@ const fftSizeBtn = document.getElementById('fftSizeInput');
 let selectionExpandMode = false;
 let expandHistory = [];
 let currentExpandBlob = null;
+// When true, prevent applySampleRate from auto-adjusting the displayed
+// freqMin/freqMax input values. Used when reloading the file due to
+// UI-only actions (e.g. toggling Time Expansion) where we don't want to
+// override user's displayed frequency settings.
+let suppressFreqValueAdjustment = false;
 const expandBackBtn = document.getElementById('expandBackBtn');
 const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
@@ -77,21 +83,25 @@ specWorker.postMessage({ type: "init", canvas: offscreen }, [offscreen]);
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
   [
-    'toggleSidebarBtn',
     'toggleTagModeBtn',
     'autoIdBtn',
     'exportBtn',
     'mapBtn',
-    'setting',
     'spectrogram-settings',
-    'drop-overlay',
-    'sidebar'
+    'drop-overlay'
   ]
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('mobile-hidden');
     });
+  // 預設收合 sidebar
   requestAnimationFrame(() => {
+    const sidebarElem = document.getElementById('sidebar');
+    if (sidebarElem && !sidebarElem.classList.contains('collapsed')) {
+      sidebarElem.classList.add('collapsed');
+      const toggleBtn = document.getElementById('toggleSidebarBtn');
+      if (toggleBtn) toggleBtn.title = 'Open File List';
+    }
     requestAnimationFrame(() => {
       alert('SonoRadar is optimized for desktop use. Android devices support viewer functionality only.');
     });
@@ -104,6 +114,85 @@ function updateExpandBackBtn() {
     expandBackCount.textContent = String(count);
     expandBackCount.style.display = count > 0 ? 'flex' : 'none';
   }
+}
+// Time Expansion UI helper
+const timeExpBtn = document.getElementById('timeexpBtn');
+function applyTimeExpansionUI() {
+  const active = getTimeExpansionMode();
+  if (timeExpBtn) {
+    if (active) {
+      timeExpBtn.classList.add('active');
+      timeExpBtn.title = 'Exit 10x Time Expansion';
+    } else {
+      timeExpBtn.classList.remove('active');
+      timeExpBtn.title = '10x Time Expansion';
+    }
+  }
+  document.body.classList.toggle('timeexp-open', active);
+  // adjust displayed freq input maxima and values
+  const maxFreq = currentSampleRate / 2000;
+  const dispMax = active ? (maxFreq * 10) : maxFreq;
+  freqMaxInput.max = dispMax;
+  freqMinInput.max = dispMax;
+}
+
+if (timeExpBtn) {
+  timeExpBtn.addEventListener('click', async () => {
+    // If currently in Time Expansion mode and the user is attempting to
+    // exit it, disallow exiting when the currently loaded audio is
+    // longer than 20 seconds.
+    const currentlyActive = getTimeExpansionMode();
+    if (currentlyActive) {
+      const ws = getWavesurfer();
+      const curDur = ws ? ws.getDuration() : 0;
+      if (curDur > 20) {
+        showMessageBox({
+          title: 'Warning',
+          message: 'Cannot exit time-expansion mode for >20s recording.'
+        });
+        return;
+      }
+    }
+
+    const newState = toggleTimeExpansionMode();
+    setTimeExpansionMode(newState); // ensure saved
+    applyTimeExpansionUI();
+
+
+    try {
+      const idx = getCurrentIndex();
+      if (idx >= 0 && fileLoaderControl && typeof fileLoaderControl.loadFileAtIndex === 'function') {
+        suppressFreqValueAdjustment = true;
+        try {
+          await fileLoaderControl.loadFileAtIndex(idx);
+        } finally {
+          suppressFreqValueAdjustment = false;
+        }
+      } else {
+        replacePlugin(
+          getCurrentColorMap(),
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent(),
+          () => {
+            duration = getWavesurfer().getDuration();
+            zoomControl.applyZoom();
+            renderAxes();
+            freqHoverControl?.refreshHover();
+            autoIdControl?.updateMarkers();
+            updateSpectrogramSettingsText();
+          }
+          ,
+          currentFftSize,
+          currentWindowType,
+          shouldUseFlashForReplace(),
+        );
+      }
+    } catch (err) {
+      console.error('Error reloading file after Time Expansion toggle', err);
+    }
+  });
 }
 let stopBtnRafId = null;
 function showStopButton() {
@@ -290,22 +379,30 @@ zoomControlsElem.style.display = 'flex';
 sidebarControl.refresh(file.name);
 },
 onBeforeLoad: () => {
-if (demoFetchController) {
-  demoFetchController.abort();
-  demoFetchController = null;
-}
-if (uploadOverlay.style.display !== 'flex') {
-  loadingOverlay.style.display = 'flex';
-}
-freqHoverControl?.hideHover();
-freqHoverControl?.clearSelections();
-if (selectionExpandMode) {
-  selectionExpandMode = false;
-  sampleRateBtn.disabled = false;
-  expandHistory = [];
-  currentExpandBlob = null;
-  updateExpandBackBtn();
-}
+  if (demoFetchController) {
+    demoFetchController.abort();
+    demoFetchController = null;
+  }
+  if (uploadOverlay.style.display !== 'flex') {
+    loadingOverlay.style.display = 'flex';
+  }
+  // ✅ 在加載新文件前重置 container 寬度，避免先前 zoom 的殘留
+  container.style.width = '100%';
+  
+  freqHoverControl?.hideHover();
+  freqHoverControl?.clearSelections();
+  if (selectionExpandMode) {
+    selectionExpandMode = false;
+    sampleRateBtn.disabled = false;
+    expandHistory = [];
+    currentExpandBlob = null;
+    updateExpandBackBtn();
+    // restore original audio length if we saved it
+    if (savedAudioBufferLengthBeforeExpand !== null) {
+      currentAudioBufferLength = savedAudioBufferLengthBeforeExpand;
+      savedAudioBufferLengthBeforeExpand = null;
+    }
+  }
 },
   onAfterLoad: () => {
     if (uploadOverlay.style.display !== 'flex') {
@@ -390,23 +487,31 @@ async function applySampleRate(rate, reloadFile = true) {
 const prevRate = currentSampleRate;
 currentSampleRate = rate;
 const maxFreq = currentSampleRate / 2000;
-freqMaxInput.max = maxFreq;
-freqMinInput.max = maxFreq;
+  // Displayed max should reflect Time Expansion mode (UI shows values *10)
+  const dispMax = getTimeExpansionMode() ? (maxFreq * 10) : maxFreq;
+  freqMaxInput.max = dispMax;
+  freqMinInput.max = dispMax;
 
 const isManual = selectedSampleRate !== 'auto';
 
-if (isManual && rate < prevRate) {
-freqMaxInput.value = maxFreq;
-} else if (parseFloat(freqMaxInput.value) > maxFreq) {
-freqMaxInput.value = maxFreq;
-}
+  // When updating displayed inputs, convert back and forth between display
+  // values and internal kHz values. Displayed values are multiplied by 10 in
+  // time expansion mode, so convert accordingly when reading input values.
+  const divisor = getTimeExpansionMode() ? 10 : 1;
+  if (!suppressFreqValueAdjustment) {
+    if (isManual && rate < prevRate) {
+      freqMaxInput.value = formatFreqValue(maxFreq);
+    } else if (parseFloat(freqMaxInput.value) > (maxFreq * divisor)) {
+      freqMaxInput.value = formatFreqValue(maxFreq);
+    }
+  }
 
-if (parseFloat(freqMinInput.value) > maxFreq) {
-freqMinInput.value = maxFreq;
-}
+  if (parseFloat(freqMinInput.value) > (maxFreq * divisor)) {
+    freqMinInput.value = formatFreqValue(maxFreq);
+  }
 
-currentFreqMax = parseFloat(freqMaxInput.value);
-currentFreqMin = parseFloat(freqMinInput.value);
+  currentFreqMax = parseFloat(freqMaxInput.value) / divisor;
+  currentFreqMin = parseFloat(freqMinInput.value) / divisor;
 
 if (getWavesurfer()) {
 getWavesurfer().options.sampleRate = currentSampleRate;
@@ -418,21 +523,24 @@ await fileLoaderControl.loadFileAtIndex(idx);
 }
 }
 freqHoverControl?.hideHover();
-replacePlugin(
-getCurrentColorMap(),
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
-() => {
+  replacePlugin(
+    getCurrentColorMap(),
+    spectrogramHeight,
+    currentFreqMin,
+    currentFreqMax,
+    getOverlapPercent(),
+    () => {
 duration = getWavesurfer().getDuration();
     zoomControl.applyZoom();
     renderAxes();
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
     updateSpectrogramSettingsText();
-  }
-);
+    },
+    currentFftSize,
+    currentWindowType,
+    shouldUseFlashForReplace(),
+  );
 }
 
 async function handleSampleRate(rate) {
@@ -460,43 +568,49 @@ updateSpectrogramSettingsText();
 
 const renderAxes = () => {
   containerWidth = container.clientWidth;
-  drawTimeAxis({
-    containerWidth,
-    duration,
-    zoomLevel: zoomControl.getZoomLevel(),
-    axisElement: timeAxis,
-    labelElement: timeLabel,
-  });
+  
+  // 使用批量更新優化，避免多次重排。在單個 RAF 中同時更新時間軸和頻率網格
+  requestAnimationFrame(() => {
+    drawTimeAxis({
+      containerWidth,
+      duration,
+      zoomLevel: zoomControl.getZoomLevel(),
+      axisElement: timeAxis,
+      labelElement: timeLabel,
+      timeExpansion: getTimeExpansionMode(),
+    });
+    
+    drawFrequencyGrid({
+      gridCanvas: freqGrid,
+      labelContainer: freqAxisContainer,
+      containerElement: container,
+      spectrogramHeight,
+      maxFrequency: currentFreqMax - currentFreqMin,
+      offsetKHz: currentFreqMin,
+      timeExpansion: getTimeExpansionMode(),
+    });
 
-drawFrequencyGrid({
-gridCanvas: freqGrid,
-labelContainer: freqAxisContainer,
-containerElement: container,
-spectrogramHeight,
-maxFrequency: currentFreqMax - currentFreqMin,
-offsetKHz: currentFreqMin,
-});
-
-if (!freqHoverControl) {
-freqHoverControl = initFrequencyHover({
-viewerId: 'viewer-container',
-wrapperId: 'viewer-wrapper',
-hoverLineId: 'hover-line',
-hoverLineVId: 'hover-line-vertical',
-freqLabelId: 'hover-label',
-spectrogramHeight,
-    spectrogramWidth: containerWidth,
-maxFrequency: currentFreqMax,
-minFrequency: currentFreqMin,
-totalDuration: duration,
-getZoomLevel: () => zoomControl.getZoomLevel(),
-    getDuration: () => duration
+    if (!freqHoverControl) {
+      freqHoverControl = initFrequencyHover({
+        viewerId: 'viewer-container',
+        wrapperId: 'viewer-wrapper',
+        hoverLineId: 'hover-line',
+        hoverLineVId: 'hover-line-vertical',
+        freqLabelId: 'hover-label',
+        spectrogramHeight,
+        spectrogramWidth: containerWidth,
+        maxFrequency: currentFreqMax,
+        minFrequency: currentFreqMin,
+        totalDuration: duration,
+        getZoomLevel: () => zoomControl.getZoomLevel(),
+        getDuration: () => duration
+      });
+    } else {
+      freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+      autoIdControl?.updateMarkers();
+    }
+    updateProgressLine(getWavesurfer().getCurrentTime());
   });
-  } else {
-    freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
-    autoIdControl?.updateMarkers();
-  }
-  updateProgressLine(getWavesurfer().getCurrentTime());
 };
 
 const wrapper = document.getElementById('viewer-wrapper');
@@ -511,6 +625,34 @@ const zoomControl = initZoomControls(
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
     updateSpectrogramSettingsText();
+    // After zoom has been applied, switch to the flash plugin if the
+    // overlap percent crosses the threshold (<=30%). This handles the case
+    // where Auto overlap changes when the canvas width changes due to zoom.
+    try {
+      const useFlash = shouldUseFlashForReplace();
+      const curPlugin = getPlugin();
+      const isFlash = !!curPlugin?.isFlashPlugin;
+      if (useFlash !== isFlash) {
+        replacePlugin(
+          getCurrentColorMap(),
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent(),
+          () => {
+            renderAxes();
+            freqHoverControl?.refreshHover();
+            autoIdControl?.updateMarkers();
+            updateSpectrogramSettingsText();
+          },
+          currentFftSize,
+          currentWindowType,
+          useFlash
+        );
+      }
+    } catch (e) {
+      console.error('Failed to maybe replace plugin after zoom', e);
+    }
   },
   () => selectionExpandMode,
   () => {
@@ -569,18 +711,28 @@ viewer.addEventListener('expand-selection', async (e) => {
     const blob = await cropWavBlob(base, startTime, endTime);
     if (blob) {
       expandHistory.push({ src: base, freqMin: currentFreqMin, freqMax: currentFreqMax });
-      await getWavesurfer().loadBlob(blob);
-      currentExpandBlob = blob;
+      // Save original audio length so we can restore when leaving expansion
+      savedAudioBufferLengthBeforeExpand = currentAudioBufferLength;
+      // Set selectionExpandMode true BEFORE loadBlob so decode handler sees it
       selectionExpandMode = true;
-      zoomControl.setZoomLevel(0);
+      try {
+        await getWavesurfer().loadBlob(blob);
+      } catch (err) {
+        // if load fails, revert selectionExpandMode and rethrow
+        selectionExpandMode = false;
+        savedAudioBufferLengthBeforeExpand = null;
+        throw err;
+      }
+      currentExpandBlob = blob;
+      zoomControl.resetZoomState();
+      container.style.width = '100%';
+      
       sampleRateBtn.disabled = true;
       renderAxes();
       freqHoverControl?.hideHover();
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
       autoIdControl?.reset();
-      updateSpectrogramSettingsText();
-      // 強制解除 suppressHover/isOverBtnGroup 狀態
       viewer.dispatchEvent(new CustomEvent('force-hover-enable'));
       freqHoverControl?.refreshHover();
     }
@@ -595,10 +747,21 @@ viewer.addEventListener('fit-window-selection', async (e) => {
     const blob = await cropWavBlob(base, startTime, endTime);
     if (blob) {
       expandHistory.push({ src: base, freqMin: currentFreqMin, freqMax: currentFreqMax });
-      await getWavesurfer().loadBlob(blob);
-      currentExpandBlob = blob;
+      // Ensure selectionExpandMode is set before decoding so getAutoOverlapPercent() can use backend buffer
       selectionExpandMode = true;
-      zoomControl.setZoomLevel(0);
+      try {
+        await getWavesurfer().loadBlob(blob);
+      } catch (err) {
+        selectionExpandMode = false;
+        savedAudioBufferLengthBeforeExpand = null;
+        throw err;
+      }
+      currentExpandBlob = blob;
+      zoomControl.resetZoomState();  // ✅ 使用完整重置
+      
+      // ✅ 強制重置 container 寬度
+      container.style.width = '100%';
+      
       sampleRateBtn.disabled = true;
       freqMinInput.value = formatFreqValue(Flow);
       freqMaxInput.value = formatFreqValue(Fhigh);
@@ -607,7 +770,8 @@ viewer.addEventListener('fit-window-selection', async (e) => {
       freqHoverControl?.clearSelections();
       updateExpandBackBtn();
       autoIdControl?.reset();
-      updateSpectrogramSettingsText();
+      // ✅ 移除此處的 updateSpectrogramSettingsText()，讓 decode 事件處理器負責
+      // updateSpectrogramSettingsText();
     }
   }
 });
@@ -622,21 +786,24 @@ contrastValId: 'contrastVal',
 resetBtnId: 'resetButton',
 onColorMapUpdated: (colorMap) => {
 freqHoverControl?.hideHover();        
-replacePlugin(
-colorMap,
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
-() => {
+    replacePlugin(
+      colorMap,
+      spectrogramHeight,
+      currentFreqMin,
+      currentFreqMax,
+      getOverlapPercent(),
+      () => {
 duration = getWavesurfer().getDuration();
     zoomControl.applyZoom();
     renderAxes();
   freqHoverControl?.refreshHover();
   autoIdControl?.updateMarkers();
   updateSpectrogramSettingsText();
-  }
-  );
+      },
+      currentFftSize,
+      currentWindowType,
+      shouldUseFlashForReplace(),
+    );
   drawColorBar(colorMap);
   },
 });
@@ -678,28 +845,78 @@ scrollTargetId: 'time-axis-wrapper',
 
 getWavesurfer().on('ready', () => {
     duration = getWavesurfer().getDuration();
-    zoomControl.setZoomLevel(0);
+    
+    // ✅ 強制重置所有寬度，確保不受先前 zoom 影響
+    container.style.width = '100%';
+    wrapper.style.width = '100%';
+    
+    // ✅ 調用完整 reset，會基於 100% 寬度計算 minZoomLevel
+    zoomControl.resetZoomState();
 
-  progressLineElem.style.display = 'none';
-  updateProgressLine(0);
+    progressLineElem.style.display = 'none';
+    updateProgressLine(0);
 
-getPlugin()?.render();
-requestAnimationFrame(() => {
-renderAxes();
-freqHoverControl?.refreshHover();
-autoIdControl?.updateMarkers();
-    updateSpectrogramSettingsText();
-});
-});
+    getPlugin()?.render();
+    // Ensure the plugin type matches overlap threshold on file ready. This
+    // is important when returning from selection expand mode where buffer
+    // length can change and auto-overlap may need to switch implementation.
+    try {
+      const useFlash = shouldUseFlashForReplace();
+      const curPlugin = getPlugin();
+      const isFlash = !!curPlugin?.isFlashPlugin;
+      if (useFlash !== isFlash) {
+        replacePlugin(
+          getCurrentColorMap(),
+          spectrogramHeight,
+          currentFreqMin,
+          currentFreqMax,
+          getOverlapPercent(),
+          () => {
+            renderAxes();
+            freqHoverControl?.refreshHover();
+            autoIdControl?.updateMarkers();
+            updateSpectrogramSettingsText();
+          },
+          currentFftSize,
+          currentWindowType,
+          useFlash
+        );
+      }
+    } catch (e) {
+      console.error('Failed to maybe replace plugin on ready', e);
+    }
+    requestAnimationFrame(() => {
+      renderAxes();
+      freqHoverControl?.refreshHover();
+      autoIdControl?.updateMarkers();
+      updateSpectrogramSettingsText();
+    });
+  });
 
 getWavesurfer().on('decode', () => {
-duration = getWavesurfer().getDuration();
-zoomControl.setZoomLevel(0);
-progressLineElem.style.display = 'none';
-updateProgressLine(0);
-renderAxes();
-freqHoverControl?.refreshHover();
-autoIdControl?.updateMarkers();
+  duration = getWavesurfer().getDuration();
+  
+  // ✅ 在 selection expansion mode 時，從 wavesurfer backend 獲取新的 buffer 長度
+  if (selectionExpandMode) {
+    // Try to get decoded data length from wavesurfer; fallback to backend buffer
+    const newBufferLength = getWavesurfer()?.getDecodedData()?.length || getWavesurfer()?.backend?.buffer?.length;
+    if (newBufferLength) {
+      currentAudioBufferLength = newBufferLength;
+    }
+  }
+  
+  // ✅ 強制重置所有寬度，確保不受先前 zoom 影響
+  container.style.width = '100%';
+  wrapper.style.width = '100%';
+  
+  // ✅ 調用完整 reset，會基於 100% 寬度計算 minZoomLevel
+  zoomControl.resetZoomState();
+  
+  progressLineElem.style.display = 'none';
+  updateProgressLine(0);
+  renderAxes();
+  freqHoverControl?.refreshHover();
+  autoIdControl?.updateMarkers();
   updateSpectrogramSettingsText();
 });
 
@@ -713,8 +930,13 @@ const freqMinInput = document.getElementById('freqMinInput');
 const freqMaxInput = document.getElementById('freqMaxInput');
 const applyFreqRangeBtn = document.getElementById('applyFreqRangeBtn');
 
-freqMaxInput.max = currentSampleRate / 2000;
-freqMinInput.max = freqMaxInput.max;
+// initialize displayed max according to Time Expansion mode
+const initMaxFreq = currentSampleRate / 2000;
+const initDispMax = getTimeExpansionMode() ? (initMaxFreq * 10) : initMaxFreq;
+freqMaxInput.max = initDispMax;
+freqMinInput.max = initDispMax;
+// Ensure UI reflects current Time Expansion mode on startup
+applyTimeExpansionUI();
 
 const sampleRateDropdown = initDropdown('sampleRateInput', [
 { label: 'Auto', value: 'auto' },
@@ -731,7 +953,7 @@ const fftSizeDropdown = initDropdown('fftSizeInput', [
 { label: '1024', value: 1024 },
 { label: '2048', value: 2048 },
 ], { onChange: (item) => handleFftSize(item.value) });
-fftSizeDropdown.select(1);
+fftSizeDropdown.select(0);
 
 const windowTypeDropdown = initDropdown('windowTypeInput', [
   { label: 'Blackman', value: 'blackman' },
@@ -821,7 +1043,7 @@ function updateSpectrogramSettingsText() {
   const fftSize = currentFftSize;
   const overlap = currentOverlap === 'auto'
     ? getAutoOverlapPercent()
-    : getOverlapPercent();
+    : getPluginUsedOverlapPercentFromManual(currentOverlap);
   const windowType = currentWindowType.charAt(0).toUpperCase() + currentWindowType.slice(1);
 
   const overlapText = currentOverlap === 'auto'
@@ -853,8 +1075,36 @@ function getOverlapPercent() {
   return isNaN(parsed) ? null : parsed;
 }
 
-function getAutoOverlapPercent() {
-  const bufferLength = currentAudioBufferLength || getWavesurfer()?.backend?.buffer?.length;
+function getPluginUsedOverlapPercentFromManual(pct) {
+  const parsed = parseInt(pct, 10);
+  if (isNaN(parsed)) return null;
+  const fft = currentFftSize;
+  if (!fft) return null;
+  const noverlap = Math.floor(fft * (parsed / 100));
+  return Math.round((noverlap / fft) * 100);
+}
+
+function shouldUseFlashForReplace() {
+  const manual = getOverlapPercent();
+  if (manual !== null) {
+    const pluginPct = getPluginUsedOverlapPercentFromManual(manual);
+    return pluginPct !== null && pluginPct <= 30;
+  }
+  const auto = getAutoOverlapPercent();
+  return auto !== null && auto <= 30;
+}
+
+function getAutoOverlapPercent(overriddenBufferLength = null) {
+  // 優先使用傳入的 bufferLength，其次是 currentAudioBufferLength，最後回退到 wavesurfer backend
+  const bufferLength = overriddenBufferLength !== null
+    ? overriddenBufferLength
+    : (
+      // If not in selectionExpandMode, prefer wavesurfer internal decoded length (original wav)
+      (!selectionExpandMode && getWavesurfer()?.getDecodedData()?.length) ||
+      currentAudioBufferLength ||
+      getWavesurfer()?.getDecodedData()?.length ||
+      getWavesurfer()?.backend?.buffer?.length
+    );
   const canvasWidth = document
     .querySelector('#spectrogram-only canvas')
     ?.width || container.clientWidth;
@@ -868,22 +1118,27 @@ function getAutoOverlapPercent() {
 }
 
 function formatFreqValue(value) {
-  return Math.abs(value - Math.round(value)) < 0.001
-    ? String(Math.round(value))
-    : value.toFixed(1);
+  const timeExp = getTimeExpansionMode();
+  const display = timeExp ? (value * 10) : value;
+  return Math.abs(display - Math.round(display)) < 0.001
+    ? String(Math.round(display))
+    : display.toFixed(1);
 }
 
 applyFreqRangeBtn.addEventListener('click', () => {
-const min = Math.max(0, parseFloat(freqMinInput.value));
-const maxAllowed = currentSampleRate / 2000;
-const max = Math.min(maxAllowed, parseFloat(freqMaxInput.value));
+  const dispMin = Math.max(0, parseFloat(freqMinInput.value));
+  const maxAllowed = currentSampleRate / 2000;
+  const divisor = getTimeExpansionMode() ? 10 : 1;
+  const dispMax = Math.min(maxAllowed * divisor, parseFloat(freqMaxInput.value));
 
-if (isNaN(min) || isNaN(max) || min >= max) {
-alert('Please enter valid frequency values. Min must be less than Max.');
-return;
-}
+  if (isNaN(dispMin) || isNaN(dispMax) || dispMin >= dispMax) {
+    alert('Please enter valid frequency values. Min must be less than Max.');
+    return;
+  }
 
-updateFrequencyRange(min, max);
+  const min = dispMin / divisor;
+  const max = dispMax / divisor;
+  updateFrequencyRange(min, max);
 });
 
 document.getElementById('fileInputBtn').addEventListener('click', () => {
@@ -909,7 +1164,8 @@ function handleFftSize(size) {
       updateSpectrogramSettingsText();
     },
     currentFftSize,
-    currentWindowType
+    currentWindowType,
+    shouldUseFlashForReplace(),
   );
 }
 
@@ -932,27 +1188,31 @@ function handleWindowType(type) {
       updateSpectrogramSettingsText();
     },
     currentFftSize,
-    currentWindowType
+    currentWindowType,
+    shouldUseFlashForReplace(),
   );
 }
 
 function handleOverlapChange() {
 const colorMap = getCurrentColorMap();
 freqHoverControl?.hideHover();
-replacePlugin(
-colorMap,
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
-() => {
+    replacePlugin(
+    colorMap,
+    spectrogramHeight,
+    currentFreqMin,
+    currentFreqMax,
+  getOverlapPercent(),
+  () => {
 freqHoverControl?.refreshHover();
 autoIdControl?.updateMarkers();
 duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
 updateSpectrogramSettingsText();
-}
+  },
+  currentFftSize,
+  currentWindowType,
+  shouldUseFlashForReplace(),
 );
 }
 
@@ -967,19 +1227,22 @@ colorMap,
 spectrogramHeight,
 freqMin,
 freqMax,
-getOverlapPercent(),
-() => {
-freqHoverControl?.refreshHover();
-autoIdControl?.updateMarkers();
-duration = getWavesurfer().getDuration();
-zoomControl.applyZoom();
-renderAxes();
-if (freqHoverControl) {
-freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
-autoIdControl?.updateMarkers();
-}
-updateSpectrogramSettingsText();
-}
+  getOverlapPercent(),
+  () => {
+    freqHoverControl?.refreshHover();
+    autoIdControl?.updateMarkers();
+    duration = getWavesurfer().getDuration();
+    zoomControl.applyZoom();
+    renderAxes();
+    if (freqHoverControl) {
+      freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
+      autoIdControl?.updateMarkers();
+    }
+    updateSpectrogramSettingsText();
+  },
+  currentFftSize,
+  currentWindowType,
+  shouldUseFlashForReplace(),
 );
 }
 
@@ -987,16 +1250,19 @@ const clearAllBtn = document.getElementById('clearAllBtn');
 clearAllBtn.addEventListener('click', () => {
 clearFileList();
 sidebarControl.refresh('');
-replacePlugin(
-getCurrentColorMap(),
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
-() => {
-updateSpectrogramSettingsText();
-}
-);
+  replacePlugin(
+    getCurrentColorMap(),
+    spectrogramHeight,
+    currentFreqMin,
+    currentFreqMax,
+    getOverlapPercent(),
+    () => {
+      updateSpectrogramSettingsText();
+    },
+    currentFftSize,
+    currentWindowType,
+    shouldUseFlashForReplace(),
+  );
 showDropOverlay();
 loadingOverlay.style.display = 'none';
 zoomControlsElem.style.display = 'none';
@@ -1049,7 +1315,10 @@ clearTrashBtn.addEventListener('click', () => {
             getOverlapPercent(),
             () => {
               updateSpectrogramSettingsText();
-            }
+            },
+            currentFftSize,
+            currentWindowType,
+            shouldUseFlashForReplace(),
           );
           showDropOverlay();
           loadingOverlay.style.display = 'none';
@@ -1158,6 +1427,11 @@ expandBackBtn.addEventListener('click', async () => {
       duration = getWavesurfer().getDuration();
       currentExpandBlob = null;
       selectionExpandMode = false;
+      // Restore original audio buffer length if we saved it before expansion
+      if (savedAudioBufferLengthBeforeExpand !== null) {
+        currentAudioBufferLength = savedAudioBufferLengthBeforeExpand;
+        savedAudioBufferLengthBeforeExpand = null;
+      }
       sampleRateBtn.disabled = false;
       zoomControl.setZoomLevel(0);
       renderAxes();
@@ -1217,7 +1491,11 @@ document.addEventListener("file-loaded", async () => {
     const arrayBuf = await currentFile.arrayBuffer();
     const ac = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuf = await ac.decodeAudioData(arrayBuf.slice(0));
-    currentAudioBufferLength = audioBuf.length;
+    // Prefer Wavesurfer decoded internal length for the original audio buffer when available
+    const wsDecodedLen = getWavesurfer()?.getDecodedData()?.length;
+    currentAudioBufferLength = wsDecodedLen || audioBuf.length;
+    // If a saved original length from expansion exists, clear it because we just loaded the real file
+    savedAudioBufferLengthBeforeExpand = null;
     const workerOverlap = currentOverlap === 'auto'
       ? getAutoOverlapPercent()
       : getOverlapPercent();
@@ -1234,9 +1512,38 @@ expandHistory = [];
 currentExpandBlob = null;
 updateExpandBackBtn();
   currentAudioBufferLength = 0;
+  savedAudioBufferLengthBeforeExpand = null;
   playPauseBtn.disabled = true;
   hideStopButton();
   updateSpectrogramSettingsText();
+  // After a file finishes loading, ensure the implemented plugin matches the
+  // current overlap threshold. This handles transitions from selection
+  // expansion back to the original file.
+  try {
+    const useFlash = shouldUseFlashForReplace();
+    const curPlugin = getPlugin();
+    const isFlash = !!curPlugin?.isFlashPlugin;
+    if (useFlash !== isFlash) {
+      replacePlugin(
+        getCurrentColorMap(),
+        spectrogramHeight,
+        currentFreqMin,
+        currentFreqMax,
+        getOverlapPercent(),
+        () => {
+          renderAxes();
+          freqHoverControl?.refreshHover();
+          autoIdControl?.updateMarkers();
+          updateSpectrogramSettingsText();
+        },
+        currentFftSize,
+        currentWindowType,
+        useFlash
+      );
+    }
+  } catch (e) {
+    console.error('Failed to maybe replace plugin on file-loaded', e);
+  }
 });
 
 window.addEventListener('resize', () => {
@@ -1247,4 +1554,12 @@ window.addEventListener('resize', () => {
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
   }
+});
+
+// Warn user before closing the tab/window so they must confirm.
+window.addEventListener('beforeunload', (e) => {
+  // Standard way to trigger a confirmation dialog in modern browsers.
+  // Browsers will typically show a generic message; custom text is ignored.
+  e.preventDefault();
+  e.returnValue = '';
 });
