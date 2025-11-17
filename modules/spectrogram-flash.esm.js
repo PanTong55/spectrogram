@@ -756,6 +756,10 @@ class SpectrogramPlugin extends BasePlugin {
     if (!noverlap) {
       const uniqueSamplesPerPx = buffer.length / this.canvas.width;
       noverlap = Math.max(0, Math.round(fftSamples - uniqueSamplesPerPx));
+      
+      // Ensure minimum overlap size is 5% in auto mode
+      const minNoverlap = Math.floor(fftSamples * 0.05);
+      noverlap = Math.max(minNoverlap, noverlap);
     }
 
     // Reuse FFT instance when possible to avoid repeated allocations
