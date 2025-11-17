@@ -190,19 +190,6 @@ export function getCurrentWindowType() {
   return currentWindowType;
 }
 
-export function getPluginActualOverlapPercent(fftSize) {
-  if (!plugin) return null;
-  
-  // If plugin has noverlap property, compute actual percentage from it
-  if (plugin.noverlap !== undefined && plugin.noverlap !== null && fftSize > 0) {
-    return Math.round((plugin.noverlap / fftSize) * 100);
-  }
-  
-  // Fallback: plugin is in auto mode but hasn't computed noverlap yet
-  // Return null to signal that caller should compute it
-  return null;
-}
-
 export function initScrollSync({
   scrollSourceId,
   scrollTargetId,

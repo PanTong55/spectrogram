@@ -7,7 +7,6 @@ createSpectrogramPlugin,
 getCurrentColorMap,
 initScrollSync,
 initWsScrollSync,
-getPluginActualOverlapPercent,
 } from './modules/wsManager.js';
 
 import { initZoomControls } from './modules/zoomControl.js';
@@ -1054,16 +1053,9 @@ function updateSpectrogramSettingsText() {
   const textElem = document.getElementById('spectrogram-settings-text');
   const sampleRate = currentSampleRate;
   const fftSize = currentFftSize;
-  
-  let overlap;
-  if (currentOverlap === 'auto') {
-    // Try to get actual overlap from plugin first (most accurate)
-    const pluginActual = getPluginActualOverlapPercent(fftSize);
-    overlap = pluginActual !== null ? pluginActual : getAutoOverlapPercent();
-  } else {
-    overlap = getPluginUsedOverlapPercentFromManual(currentOverlap);
-  }
-  
+  const overlap = currentOverlap === 'auto'
+    ? getAutoOverlapPercent()
+    : getPluginUsedOverlapPercentFromManual(currentOverlap);
   const windowType = currentWindowType.charAt(0).toUpperCase() + currentWindowType.slice(1);
 
   const overlapText = currentOverlap === 'auto'
