@@ -52,13 +52,6 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
     applyZoomCallback();
     if (typeof onAfterZoom === 'function') onAfterZoom();    
     updateZoomButtons();
-    
-    // 修復：確保容器在 zoom 後保持正確的 overflow 設置
-    // Fix: Ensure container overflow is correct after zoom (for spectrogram-only shadow-root)
-    if (container) {
-      container.style.overflowX = 'hidden';
-      container.style.overflowY = 'hidden';
-    }
   }
 
   function setZoomLevel(newZoom) {

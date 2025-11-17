@@ -388,9 +388,6 @@ onBeforeLoad: () => {
   }
   // ✅ 在加載新文件前重置 container 寬度，避免先前 zoom 的殘留
   container.style.width = '100%';
-  // 確保 overflow 設置正確（修復 shadow-root 滾動問題）
-  container.style.overflowX = 'hidden';
-  container.style.overflowY = 'hidden';
   
   freqHoverControl?.hideHover();
   freqHoverControl?.clearSelections();
@@ -742,9 +739,6 @@ viewer.addEventListener('expand-selection', async (e) => {
       currentExpandBlob = blob;
       zoomControl.resetZoomState();
       container.style.width = '100%';
-      // 確保 overflow 設置正確（修復 shadow-root 滾動問題）
-      container.style.overflowX = 'hidden';
-      container.style.overflowY = 'hidden';
       
       sampleRateBtn.disabled = true;
       renderAxes();
@@ -780,9 +774,6 @@ viewer.addEventListener('fit-window-selection', async (e) => {
       
       // ✅ 強制重置 container 寬度
       container.style.width = '100%';
-      // 確保 overflow 設置正確（修復 shadow-root 滾動問題）
-      container.style.overflowX = 'hidden';
-      container.style.overflowY = 'hidden';
       
       sampleRateBtn.disabled = true;
       freqMinInput.value = formatFreqValue(Flow);
@@ -871,9 +862,6 @@ getWavesurfer().on('ready', () => {
     // ✅ 強制重置所有寬度，確保不受先前 zoom 影響
     container.style.width = '100%';
     wrapper.style.width = '100%';
-    // 確保 overflow 設置正確（修復 shadow-root 滾動問題）
-    container.style.overflowX = 'hidden';
-    container.style.overflowY = 'hidden';
     
     // ✅ 調用完整 reset，會基於 100% 寬度計算 minZoomLevel
     zoomControl.resetZoomState();
