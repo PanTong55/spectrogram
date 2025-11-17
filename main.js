@@ -625,7 +625,8 @@ const zoomControl = initZoomControls(
   () => {
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
-    updateSpectrogramSettingsText();
+    // Don't call updateSpectrogramSettingsText() here yet; it will be called
+    // after plugin switch decision in requestAnimationFrame below.
     // After zoom has been applied, switch to the flash plugin if the
     // overlap percent crosses the threshold (<=30%). This handles the case
     // where Auto overlap changes when the canvas width changes due to zoom.
@@ -653,6 +654,9 @@ const zoomControl = initZoomControls(
             currentWindowType,
             useFlash
           );
+        } else {
+          // No plugin switch, but still update settings text with current overlap calculation
+          updateSpectrogramSettingsText();
         }
       } catch (e) {
         console.error('Failed to maybe replace plugin after zoom', e);
