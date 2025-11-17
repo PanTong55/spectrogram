@@ -180,49 +180,15 @@ export function initScrollSync({
   scrollSourceId,
   scrollTargetId,
 }) {
-  let source = document.getElementById(scrollSourceId);
-  let target = document.getElementById(scrollTargetId);
+  const source = document.getElementById(scrollSourceId);
+  const target = document.getElementById(scrollTargetId);
 
   if (!source || !target) {
     console.warn(`[scrollSync] One or both elements not found.`);
     return;
   }
 
-  // Debounce flag to prevent excessive updates
-  let isUpdatingTarget = false;
-  let isUpdatingSource = false;
-
-  const syncSourceToTarget = () => {
-    if (isUpdatingTarget) return;
-    isUpdatingSource = true;
+  source.addEventListener('scroll', () => {
     target.scrollLeft = source.scrollLeft;
-    isUpdatingSource = false;
-  };
-
-  const syncTargetToSource = () => {
-    if (isUpdatingSource) return;
-    isUpdatingTarget = true;
-    source.scrollLeft = target.scrollLeft;
-    isUpdatingTarget = false;
-  };
-
-  // Use passive listeners for better scroll performance
-  source.addEventListener('scroll', syncSourceToTarget, { passive: true });
-  target.addEventListener('scroll', syncTargetToSource, { passive: true });
-
-  // Also handle resize events to ensure sync works after zoom
-  const resizeObserver = new ResizeObserver(() => {
-    // Force sync when size changes
-    syncSourceToTarget();
   });
-
-  resizeObserver.observe(source);
-  resizeObserver.observe(target);
-
-  // Return cleanup function for potential future use
-  return () => {
-    source.removeEventListener('scroll', syncSourceToTarget);
-    target.removeEventListener('scroll', syncTargetToSource);
-    resizeObserver.disconnect();
-  };
 }
