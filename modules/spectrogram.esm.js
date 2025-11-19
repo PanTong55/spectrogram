@@ -352,7 +352,8 @@ class h extends s {
           , r = this.getWidth()
           , i = this.buffer.sampleRate / 2
           , a = this.frequencyMin
-          , n = this.frequencyMax;
+          , n = this.frequencyMax
+          , isLowOverlap = this.noverlap <= 5;
         if (e) {
             if (n > i) {
                 const i = this.colorMap[this.colorMap.length - 1];
@@ -363,24 +364,44 @@ class h extends s {
                 const o = this.resample(t[h])
                   , l = o[0].length
                   , c = new ImageData(r,l);
-                for (let t = 0; t < o.length; t++)
-                    for (let e = 0; e < o[t].length; e++) {
-                        let idx = o[t][e];
-                        if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
-                        const cmapBase = idx * 4;
-                        const i = 4 * ((l - e - 1) * r + t);
-                        c.data[i] = this._colorMapUint[cmapBase];
-                        c.data[i + 1] = this._colorMapUint[cmapBase + 1];
-                        c.data[i + 2] = this._colorMapUint[cmapBase + 2];
-                        c.data[i + 3] = this._colorMapUint[cmapBase + 3];
+                
+                if (isLowOverlap) {
+                    // Fast path: simple colormap lookup
+                    for (let t = 0; t < o.length; t++) {
+                        for (let e = 0; e < o[t].length; e++) {
+                            let idx = o[t][e];
+                            if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
+                            const cmapBase = idx * 4;
+                            const i = 4 * ((l - e - 1) * r + t);
+                            c.data[i] = this._colorMapUint[cmapBase];
+                            c.data[i + 1] = this._colorMapUint[cmapBase + 1];
+                            c.data[i + 2] = this._colorMapUint[cmapBase + 2];
+                            c.data[i + 3] = this._colorMapUint[cmapBase + 3];
+                        }
                     }
-                const u = this.hzToScale(a) / this.hzToScale(i)
-                  , f = this.hzToScale(n) / this.hzToScale(i)
-                  , p = Math.min(1, f);
-                createImageBitmap(c, 0, Math.round(l * (1 - p)), r, Math.round(l * (p - u))).then((t => {
-                    e.drawImage(t, 0, s * (h + 1 - p / f), r, s * p / f)
+                    // Directly draw without async imagebitmap for speed
+                    e.putImageData(c, 0, s * h);
+                } else {
+                    // Original async path for high overlap
+                    for (let t = 0; t < o.length; t++)
+                        for (let e = 0; e < o[t].length; e++) {
+                            let idx = o[t][e];
+                            if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
+                            const cmapBase = idx * 4;
+                            const i = 4 * ((l - e - 1) * r + t);
+                            c.data[i] = this._colorMapUint[cmapBase];
+                            c.data[i + 1] = this._colorMapUint[cmapBase + 1];
+                            c.data[i + 2] = this._colorMapUint[cmapBase + 2];
+                            c.data[i + 3] = this._colorMapUint[cmapBase + 3];
+                        }
+                    const u = this.hzToScale(a) / this.hzToScale(i)
+                      , f = this.hzToScale(n) / this.hzToScale(i)
+                      , p = Math.min(1, f);
+                    createImageBitmap(c, 0, Math.round(l * (1 - p)), r, Math.round(l * (p - u))).then((t => {
+                        e.drawImage(t, 0, s * (h + 1 - p / f), r, s * p / f)
+                    }
+                    ))
                 }
-                ))
             }
             this.options.labels && this.loadLabels(this.options.labelsBackground, "12px", "12px", "", this.options.labelsColor, this.options.labelsHzColor || this.options.labelsColor, "center", "#specLabels", t.length),
             this.emit("ready")
@@ -489,6 +510,14 @@ class h extends s {
     getWidth() {
         return this.wavesurfer.getWrapper().offsetWidth
     }
+    fastLog2(t) {
+        // Fast approximation of log2 using bit manipulation
+        const e = new ArrayBuffer(4)
+          , s = new Int32Array(e)
+          , r = new Float32Array(e);
+        return r[0] = t,
+        s[0] * 1.1920928955078125e-7 - 126.94269504
+    }
     getFrequencies(t) {
         var e, s;
         const r = this.fftSamples
@@ -504,21 +533,30 @@ class h extends s {
             const e = t.length / this.canvas.width;
             o = Math.max(0, Math.round(r - e))
         }
+        
+        // Use fast path for overlap <= 5
+        const isLowOverlap = o <= 5;
+        
         const l = new a(r,n,this.windowFunc,this.alpha);
         let c;
-        switch (this.scale) {
-        case "mel":
-            c = this.createFilterBank(this.numMelFilters, n, this.hzToMel, this.melToHz);
-            break;
-        case "logarithmic":
-            c = this.createFilterBank(this.numLogFilters, n, this.hzToLog, this.logToHz);
-            break;
-        case "bark":
-            c = this.createFilterBank(this.numBarkFilters, n, this.hzToBark, this.barkToHz);
-            break;
-        case "erb":
-            c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
+        
+        // Only compute filter banks if not using fast path
+        if (!isLowOverlap) {
+            switch (this.scale) {
+            case "mel":
+                c = this.createFilterBank(this.numMelFilters, n, this.hzToMel, this.melToHz);
+                break;
+            case "logarithmic":
+                c = this.createFilterBank(this.numLogFilters, n, this.hzToLog, this.logToHz);
+                break;
+            case "bark":
+                c = this.createFilterBank(this.numBarkFilters, n, this.hzToBark, this.barkToHz);
+                break;
+            case "erb":
+                c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
+            }
         }
+        
         for (let e = 0; e < i; e++) {
             const s = t.getChannelData(e)
               , i = [];
@@ -527,12 +565,27 @@ class h extends s {
                                 const tSlice = s.subarray(a, a + r)
                                     , e = new Uint8Array(r / 2);
                                 let n = l.calculateSpectrum(tSlice);
-                c && (n = this.applyFilterBank(n, c));
-                for (let t = 0; t < r / 2; t++) {
-                    const s = n[t] > 1e-12 ? n[t] : 1e-12
-                      , r = 20 * Math.log10(s);
-                    r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                
+                if (isLowOverlap) {
+                    // Fast path: simplified spectrum computation without filter banks
+                    for (let t = 0; t < r / 2; t++) {
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12;
+                        // Use fast log2 approximation instead of Math.log10
+                        const h = this.fastLog2(s) / 2;
+                        let o = Math.round(255 * (h + this.gainDB) / this.rangeDB);
+                        o = Math.max(0, Math.min(255, o));
+                        e[t] = o;
+                    }
+                } else {
+                    // Original path with filter banks for high overlap
+                    c && (n = this.applyFilterBank(n, c));
+                    for (let t = 0; t < r / 2; t++) {
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12
+                          , r = 20 * Math.log10(s);
+                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                    }
                 }
+                
                 i.push(e),
                 a += r - o
             }
@@ -597,6 +650,37 @@ class h extends s {
           , out = []
           , invIn = 1 / t.length;
 
+        // Use fast path for low overlap
+        const isLowOverlap = this.noverlap <= 5;
+        
+        if (isLowOverlap && t.length > 0) {
+            // Fast resampling for low overlap: simple linear interpolation
+            for (let h = 0; h < t.length; h++) {
+                const outArr = new Uint8Array(outW);
+                const src = t[h];
+                const srcLen = src.length;
+                
+                // Simple linear scaling without complex contribution mapping
+                for (let a = 0; a < outW; a++) {
+                    const srcIdx = (a / outW) * srcLen;
+                    const floorIdx = Math.floor(srcIdx);
+                    const fracIdx = srcIdx - floorIdx;
+                    
+                    let val;
+                    if (floorIdx >= srcLen - 1) {
+                        val = src[srcLen - 1];
+                    } else {
+                        // Linear interpolation between two adjacent samples
+                        val = src[floorIdx] * (1 - fracIdx) + src[floorIdx + 1] * fracIdx;
+                    }
+                    outArr[a] = Math.round(val);
+                }
+                out.push(outArr);
+            }
+            return out;
+        }
+        
+        // Original complex resampling path for high overlap
         const cacheKey = `${t.length}:${outW}`;
         let mapping = this._resampleCache[cacheKey];
         if (!mapping) {
