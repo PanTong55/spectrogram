@@ -1433,9 +1433,10 @@ export function initMapPopup({
       popup.style.top = '0px';
       popup.style.width = `${window.innerWidth -2}px`;
       popup.style.height = `${window.innerHeight -2}px`;
-      // 在動畫完成後移除 animating class
+      // 在動畫完成後移除 animating class 並重新計算 map 大小
       setTimeout(() => {
         popup.classList.remove('animating');
+        map?.invalidateSize(true);
       }, 400);
       // 狀態：最大化
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
@@ -1450,9 +1451,10 @@ export function initMapPopup({
       popup.style.height = `${floatingState.height}px`;
       popup.style.left = `${floatingState.left}px`;
       popup.style.top = `${floatingState.top}px`;
-      // 在動畫完成後移除 animating class
+      // 在動畫完成後移除 animating class 並重新計算 map 大小
       setTimeout(() => {
         popup.classList.remove('animating');
+        map?.invalidateSize(true);
       }, 400);
       // 狀態：一般（非最大化/最小化）
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
@@ -1461,7 +1463,6 @@ export function initMapPopup({
       maxBtn.title = 'Maximize';
       isMaximized = false;
     }
-    map?.invalidateSize();
   }
 
   function toggleMinimize() {
@@ -1483,9 +1484,10 @@ export function initMapPopup({
       popup.style.top = `${window.innerHeight - 362}px`;
       popup.style.width = '290px';
       popup.style.height = '360px';
-      // 在動畫完成後移除 animating class
+      // 在動畫完成後移除 animating class 並重新計算 map 大小
       setTimeout(() => {
         popup.classList.remove('animating');
+        map?.invalidateSize(true);
       }, 400);
       // 狀態：最小化
       minBtn.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
@@ -1511,9 +1513,10 @@ export function initMapPopup({
       popup.style.height = `${floatingState.height}px`;
       popup.style.left = `${floatingState.left}px`;
       popup.style.top = `${floatingState.top}px`;
-      // 在動畫完成後移除 animating class
+      // 在動畫完成後移除 animating class 並重新計算 map 大小
       setTimeout(() => {
         popup.classList.remove('animating');
+        map?.invalidateSize(true);
       }, 400);
       // 狀態：一般（非最大化/最小化）
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
@@ -1532,7 +1535,6 @@ export function initMapPopup({
       }
       isMinimized = false;
     }
-    map?.invalidateSize();
   }
 
   let dragging = false;
@@ -1629,6 +1631,7 @@ export function initMapPopup({
     const state = getEdgeState(e.clientX, e.clientY);
     if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
       resizing = true;
+      popup.classList.add('resizing');
       resizeLeft = state.onLeft;
       resizeRight = state.onRight;
       resizeTop = state.onTop;
@@ -1684,6 +1687,7 @@ export function initMapPopup({
     const state = getEdgeState(e.clientX, e.clientY);
     if (state.onLeft || state.onRight || state.onTop || state.onBottom) {
       resizing = true;
+      popup.classList.add('resizing');
       resizeLeft = state.onLeft;
       resizeRight = state.onRight;
       resizeTop = state.onTop;
@@ -1764,6 +1768,7 @@ export function initMapPopup({
     }
     if (resizing) {
       resizing = false;
+      popup.classList.remove('resizing');
       map?.dragging.enable();
       
       // 只在非最小化和非最大化狀態時更新並儲存 Floating window 狀態
