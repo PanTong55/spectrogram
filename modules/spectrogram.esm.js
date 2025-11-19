@@ -504,12 +504,6 @@ class h extends s {
             const e = t.length / this.canvas.width;
             o = Math.max(0, Math.round(r - e))
         }
-        
-        // Calculate overlap percentage
-        const overlapPercent = o / r * 100;
-        // Use fast mode when overlap is 5% or less
-        const useFastMode = overlapPercent <= 5;
-        
         const l = new a(r,n,this.windowFunc,this.alpha);
         let c;
         switch (this.scale) {
@@ -525,85 +519,22 @@ class h extends s {
         case "erb":
             c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
         }
-        
-        // Precompute constants for fast mode
-        const gainDBNeg = -this.gainDB;
-        const gainDBRange = this.gainDB / this.rangeDB;
-        const rangeScale = 255 / this.rangeDB;
-        const minThreshold = gainDBNeg - this.rangeDB;
-        
         for (let e = 0; e < i; e++) {
             const s = t.getChannelData(e)
               , i = [];
             let a = 0;
-            
-            if (useFastMode) {
-                // Ultra-fast mode: skip filter bank, larger hop size, simplified dB calculation
-                const hopSize = Math.max(r / 2, Math.round(r - o));
-                const freqStep = r / 2;
-                
-                for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r);
-                    const fftResult = l.calculateSpectrum(tSlice);
-                    
-                    // Sample every 2nd frequency bin to reduce computation
-                    const e = new Uint8Array(r / 2);
-                    let maxIdx = 0;
-                    
-                    for (let t = 0; t < freqStep; t++) {
-                        const freqIdx = t * 2;
-                        const val = fftResult[freqIdx] || 0;
-                        const magnitude = val > 1e-12 ? val : 1e-12;
-                        const dbVal = 20 * Math.log10(magnitude);
-                        
-                        // Faster dB to byte conversion using precomputed values
-                        if (dbVal < minThreshold) {
-                            e[t] = 0;
-                        } else if (dbVal > gainDBNeg) {
-                            e[t] = 255;
-                        } else {
-                            e[t] = Math.round((dbVal + this.gainDB) * rangeScale);
-                        }
-                    }
-                    
-                    // Don't apply filter bank in fast mode - save massive computation
-                    if (!useFastMode || !c) {
-                        i.push(e);
-                    }
-                    a += hopSize;
+                        for (; a + r < s.length; ) {
+                                const tSlice = s.subarray(a, a + r)
+                                    , e = new Uint8Array(r / 2);
+                                let n = l.calculateSpectrum(tSlice);
+                c && (n = this.applyFilterBank(n, c));
+                for (let t = 0; t < r / 2; t++) {
+                    const s = n[t] > 1e-12 ? n[t] : 1e-12
+                      , r = 20 * Math.log10(s);
+                    r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
                 }
-                // If we didn't fill due to the check above, use normal path
-                if (i.length === 0) {
-                    a = 0;
-                    for (; a + r < s.length; ) {
-                        const tSlice = s.subarray(a, a + r);
-                        const e = new Uint8Array(r / 2);
-                        let n = l.calculateSpectrum(tSlice);
-                        c && (n = this.applyFilterBank(n, c));
-                        for (let t = 0; t < r / 2; t++) {
-                            const s = n[t] > 1e-12 ? n[t] : 1e-12
-                              , r = 20 * Math.log10(s);
-                            e[t] = r < minThreshold ? 0 : r > gainDBNeg ? 255 : (r + this.gainDB) / this.rangeDB * 255 + 256;
-                        }
-                        i.push(e);
-                        a += r - o;
-                    }
-                }
-            } else {
-                // Normal mode: original calculation with slight optimization
-                for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r)
-                      , e = new Uint8Array(r / 2);
-                    let n = l.calculateSpectrum(tSlice);
-                    c && (n = this.applyFilterBank(n, c));
-                    for (let t = 0; t < r / 2; t++) {
-                        const s = n[t] > 1e-12 ? n[t] : 1e-12
-                          , r = 20 * Math.log10(s);
-                        e[t] = r < minThreshold ? 0 : r > gainDBNeg ? 255 : Math.round((r + this.gainDB) * rangeScale);
-                    }
-                    i.push(e),
-                    a += r - o
-                }
+                i.push(e),
+                a += r - o
             }
             h.push(i)
         }
