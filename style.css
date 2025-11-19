@@ -1721,14 +1721,42 @@ input.tag-button.editing {
 }
 
 .leaflet-text-toggle-control {
+  display: flex;
+  align-items: center;
   margin-top: 1px !important;
 }
 
-.leaflet-text-toggle-control a.active {
+.leaflet-text-toggle-control > a.active {
   background-color: #e6e6e6;
 }
 
-.leaflet-text-toggle-control a i {
+.leaflet-text-toggle-control > a i {
+  color: #363636;
+}
+
+.leaflet-text-toggle-control .text-button-group {
+  display: flex;
+  margin-left: 1px;
+  gap: 1px;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+.leaflet-text-toggle-control .text-button-group.visible {
+  max-width: 100px;
+  opacity: 1;
+}
+
+.leaflet-text-toggle-control .text-button-group a {
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+}
+
+.leaflet-text-toggle-control .text-button-group a i {
   color: #363636;
 }
 

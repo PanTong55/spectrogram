@@ -732,6 +732,8 @@ export function initMapPopup({
       options: { position: 'topleft' },
       onAdd() {
         const container = L.DomUtil.create('div', 'leaflet-bar leaflet-text-toggle-control');
+        container.style.display = 'flex';
+
         const link = L.DomUtil.create('a', '', container);
         link.href = '#';
         link.title = 'Text';
@@ -745,8 +747,10 @@ export function initMapPopup({
           .on(link, 'dblclick', L.DomEvent.stopPropagation)
           .on(link, 'click', toggleTextMode);
 
-        // Clear Text button (same style as text toggle control)
-        const clearLink = L.DomUtil.create('a', '', container);
+        // Clear Text button group (horizontally aligned)
+        const textButtonGroup = L.DomUtil.create('div', 'text-button-group', container);
+
+        const clearLink = L.DomUtil.create('a', '', textButtonGroup);
         clearLink.href = '#';
         clearLink.title = 'Clear Text';
         clearLink.innerHTML = '<i class="fa-solid fa-broom"></i>';
@@ -770,6 +774,8 @@ export function initMapPopup({
                   });
                   textMarkers = [];
                   updateMarkerPointerEvents();
+                  // 隱藏 Clear Text button
+                  updateTextClearButtonVisibility();
                 } catch (e) {}
               }
             });
@@ -1143,6 +1149,7 @@ export function initMapPopup({
       } else {
         map.removeLayer(marker);
         textMarkers = textMarkers.filter(m => m !== marker);
+        updateTextClearButtonVisibility();
       }
       updateMarkerPointerEvents();
     };
@@ -1206,6 +1213,7 @@ export function initMapPopup({
             if (val && (val.value === 'remove' || val.label === 'Remove')) {
               map.removeLayer(marker);
               textMarkers = textMarkers.filter(m => m !== marker);
+              updateTextClearButtonVisibility();
               updateMarkerPointerEvents();
             }
           } finally {
@@ -1266,7 +1274,20 @@ export function initMapPopup({
     marker.addTo(map);
     textMarkers.push(marker);
     updateMarkerPointerEvents();
+    updateTextClearButtonVisibility();
     editTextMarker(marker);
+  }
+
+  function updateTextClearButtonVisibility() {
+    if (!clearTextBtn || !clearTextBtn.parentElement) return;
+    const textButtonGroup = clearTextBtn.parentElement;
+    if (textMarkers.length > 0) {
+      // Show with smooth animation
+      textButtonGroup.classList.add('visible');
+    } else {
+      // Hide with smooth animation
+      textButtonGroup.classList.remove('visible');
+    }
   }
 
   function toggleTextMode() {
