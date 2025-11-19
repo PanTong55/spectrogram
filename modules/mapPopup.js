@@ -1382,8 +1382,13 @@ export function initMapPopup({
     if (popup.style.display === 'block') {
       if (isMaximized) toggleMaximize();
       if (isMinimized) toggleMinimize();
-      popup.style.display = 'none';
-      document.body.classList.remove('map-open');
+      // 淡出動畫
+      popup.classList.add('hidden');
+      setTimeout(() => {
+        popup.style.display = 'none';
+        popup.classList.remove('hidden');
+        document.body.classList.remove('map-open');
+      }, 300);
       if (textMode) toggleTextMode();
     } else {
       popup.style.display = 'block';
@@ -1422,11 +1427,16 @@ export function initMapPopup({
         localStorage.setItem('mapFloatingLeft', floatingState.left);
         localStorage.setItem('mapFloatingTop', floatingState.top);
       }
-      // 設置最大化狀態
+      // 啟用動畫並設置最大化狀態
+      popup.classList.add('animating');
       popup.style.left = '0px';
       popup.style.top = '0px';
       popup.style.width = `${window.innerWidth -2}px`;
       popup.style.height = `${window.innerHeight -2}px`;
+      // 在動畫完成後移除 animating class
+      setTimeout(() => {
+        popup.classList.remove('animating');
+      }, 400);
       // 狀態：最大化
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
       minBtn.title = 'Minimize';
@@ -1434,11 +1444,16 @@ export function initMapPopup({
       maxBtn.title = 'Restore Down';
       isMaximized = true;
     } else {
-      // 從最大化狀態還原時，直接使用儲存的浮動視窗狀態
+      // 啟用動畫並從最大化狀態還原
+      popup.classList.add('animating');
       popup.style.width = `${floatingState.width}px`;
       popup.style.height = `${floatingState.height}px`;
       popup.style.left = `${floatingState.left}px`;
       popup.style.top = `${floatingState.top}px`;
+      // 在動畫完成後移除 animating class
+      setTimeout(() => {
+        popup.classList.remove('animating');
+      }, 400);
       // 狀態：一般（非最大化/最小化）
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
       minBtn.title = 'Minimize';
@@ -1462,11 +1477,16 @@ export function initMapPopup({
         localStorage.setItem('mapFloatingLeft', floatingState.left);
         localStorage.setItem('mapFloatingTop', floatingState.top);
       }
-      // 設置最小化狀態（從任何狀態都直接最小化）
+      // 啟用動畫並設置最小化狀態
+      popup.classList.add('animating');
       popup.style.left = '0px';
       popup.style.top = `${window.innerHeight - 362}px`;
       popup.style.width = '290px';
       popup.style.height = '360px';
+      // 在動畫完成後移除 animating class
+      setTimeout(() => {
+        popup.classList.remove('animating');
+      }, 400);
       // 狀態：最小化
       minBtn.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
       minBtn.title = 'Restore Up';
@@ -1485,11 +1505,16 @@ export function initMapPopup({
       isMinimized = true;
       isMaximized = false; // 確保狀態正確
     } else {
-      // 從最小化狀態還原，直接使用儲存的浮動視窗狀態
+      // 啟用動畫並從最小化狀態還原
+      popup.classList.add('animating');
       popup.style.width = `${floatingState.width}px`;
       popup.style.height = `${floatingState.height}px`;
       popup.style.left = `${floatingState.left}px`;
       popup.style.top = `${floatingState.top}px`;
+      // 在動畫完成後移除 animating class
+      setTimeout(() => {
+        popup.classList.remove('animating');
+      }, 400);
       // 狀態：一般（非最大化/最小化）
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
       minBtn.title = 'Minimize';

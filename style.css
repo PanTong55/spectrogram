@@ -1309,6 +1309,24 @@ input.tag-button.editing {
   cursor: default;
   user-select: none;
   overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.map-popup.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-popup.resizing {
+  transition: none;
+}
+
+.map-popup.animating {
+  transition: left 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              top 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              width 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .popup-drag-bar {
