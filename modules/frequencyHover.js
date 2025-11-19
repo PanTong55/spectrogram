@@ -162,6 +162,9 @@ export function initFrequencyHover({
 
     // Ctrl-key state while drawing
     let ctrlPressed = false;
+    // track current selection duration (ms) while drawing so we can
+    // suppress Ctrl icon and auto-expand for very short selections
+    let currentSelectionDurationMs = 0;
     // Create ctrl icon element and keyboard handlers; visibility controlled below
     const ctrlIcon = document.createElement('i');
     ctrlIcon.className = 'fa-solid fa-magnifying-glass selection-ctrl-icon';
@@ -176,7 +179,10 @@ export function initFrequencyHover({
     const keyDownHandler = (ev) => {
       if (ev.key === 'Control') {
         ctrlPressed = true;
-        ctrlIcon.style.display = '';
+        // only show icon when selection duration is >= 100ms
+        if (currentSelectionDurationMs >= 100) {
+          ctrlIcon.style.display = '';
+        }
       }
     };
     const keyUpHandler = (ev) => {
@@ -202,9 +208,10 @@ export function initFrequencyHover({
       const width = Math.abs(currentX - startX);
       // 計算時間
       const actualWidth = getDuration() * getZoomLevel();
-      const startTime = (startX / actualWidth) * getDuration() * 1000;
-      const endTime = (currentX / actualWidth) * getDuration() * 1000;
-      showSelectionTimeInfo(startTime, endTime);
+      const startTimeMs = (startX / actualWidth) * getDuration() * 1000;
+      const endTimeMs = (currentX / actualWidth) * getDuration() * 1000;
+      currentSelectionDurationMs = Math.abs(endTimeMs - startTimeMs);
+      showSelectionTimeInfo(startTimeMs, endTimeMs);
       // 畫框
       const y = Math.min(currentY, startY);
       const height = Math.abs(currentY - startY);
@@ -215,7 +222,8 @@ export function initFrequencyHover({
 
       // Update ctrl icon visibility depending on current ctrl state (mouse event or keyboard)
       const evtCtrl = type === 'touch' ? false : !!(ev.ctrlKey);
-      if (evtCtrl || ctrlPressed) {
+      // Only show ctrl icon for selections that are at least 100ms
+      if ((evtCtrl || ctrlPressed) && currentSelectionDurationMs >= 100) {
         ctrlIcon.style.display = '';
       } else {
         ctrlIcon.style.display = 'none';
@@ -276,7 +284,9 @@ export function initFrequencyHover({
       }
       // If Ctrl was pressed during selection completion, immediately trigger expand-selection
       const completedWithCtrl = ctrlPressed || (ev && ev.ctrlKey);
-      if (completedWithCtrl) {
+      // Only allow immediate Ctrl-expand for selections >= 100ms
+      const selDurationMs = (newSel.data.endTime - newSel.data.startTime) * 1000;
+      if (completedWithCtrl && selDurationMs >= 100) {
         // behave like clicking expand button
         suppressHover = false;
         isOverBtnGroup = false;
