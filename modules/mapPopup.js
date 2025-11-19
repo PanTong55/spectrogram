@@ -680,7 +680,6 @@ export function initMapPopup({
         L.DomEvent.on(container, 'dblclick', L.DomEvent.stopPropagation);
 
         routeBtnGroup = L.DomUtil.create('div', 'route-button-group', container);
-        routeBtnGroup.style.display = 'none';
 
         const createLink = L.DomUtil.create('a', '', routeBtnGroup);
         createLink.href = '#';
@@ -716,8 +715,8 @@ export function initMapPopup({
           .on(toggle, 'mousedown', L.DomEvent.stopPropagation)
           .on(toggle, 'dblclick', L.DomEvent.stopPropagation)
           .on(toggle, 'click', () => {
-            const visible = routeBtnGroup.style.display === 'flex';
-            routeBtnGroup.style.display = visible ? 'none' : 'flex';
+            const visible = routeBtnGroup.classList.contains('visible');
+            routeBtnGroup.classList.toggle('visible', !visible);
             toggle.classList.toggle('active', !visible);
           });
 

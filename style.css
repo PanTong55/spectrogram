@@ -1690,9 +1690,18 @@ input.tag-button.editing {
 }
 
 .leaflet-route-toggle-control .route-button-group {
-  display: none;
+  display: flex;
   margin-left: 1px;
   gap: 1px;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-width 0.3s ease, opacity 0.3s ease;
+}
+
+.leaflet-route-toggle-control .route-button-group.visible {
+  max-width: 100px;
+  opacity: 1;
 }
 
 .leaflet-route-toggle-control .route-button-group a i,
