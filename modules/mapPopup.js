@@ -1453,6 +1453,8 @@ export function initMapPopup({
       setTimeout(() => {
         popup.classList.remove('animating');
         map?.invalidateSize(true);
+        // 最大化後自動 fit 所有 markers
+        fitAllMarkers();
       }, 400);
       // 狀態：最大化
       minBtn.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
