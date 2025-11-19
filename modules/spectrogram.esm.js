@@ -506,6 +506,8 @@ class h extends s {
         }
         const l = new a(r,n,this.windowFunc,this.alpha);
         let c;
+        const fastMode = (o !== null && o <= 5);
+
         switch (this.scale) {
         case "mel":
             c = this.createFilterBank(this.numMelFilters, n, this.hzToMel, this.melToHz);
@@ -519,23 +521,34 @@ class h extends s {
         case "erb":
             c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
         }
+
+        // If fastMode is enabled (small overlap), skip expensive filter bank
+        // calculations to speed up rendering. The visual result will be
+        // slightly coarser but much faster.
+        if (fastMode) {
+            c = null;
+        }
         for (let e = 0; e < i; e++) {
             const s = t.getChannelData(e)
               , i = [];
             let a = 0;
                         for (; a + r < s.length; ) {
-                                const tSlice = s.subarray(a, a + r)
-                                    , e = new Uint8Array(r / 2);
-                                let n = l.calculateSpectrum(tSlice);
-                c && (n = this.applyFilterBank(n, c));
-                for (let t = 0; t < r / 2; t++) {
-                    const s = n[t] > 1e-12 ? n[t] : 1e-12
-                      , r = 20 * Math.log10(s);
-                    r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
-                }
-                i.push(e),
-                a += r - o
-            }
+                                        const tSlice = s.subarray(a, a + r)
+                                            , e = new Uint8Array(r / 2);
+                                        let n = l.calculateSpectrum(tSlice);
+                        if (c) {
+                            n = this.applyFilterBank(n, c);
+                        } else {
+                            // fast path: avoid filter bank, allow slightly coarser output
+                        }
+                        for (let t = 0; t < r / 2; t++) {
+                            const s = n[t] > 1e-12 ? n[t] : 1e-12
+                              , r = 20 * Math.log10(s);
+                            r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                        }
+                        i.push(e),
+                        a += r - o
+                    }
             h.push(i)
         }
         return h
@@ -593,9 +606,25 @@ class h extends s {
             }
     }
     resample(t) {
-        const outW = this.getWidth()
-          , out = []
-          , invIn = 1 / t.length;
+        const outW = this.getWidth(), out = [];
+
+        // Fast path for very small overlap: nearest-neighbor resampling.
+        // This is much cheaper than area-weighted resampling and acceptable
+        // when a slightly coarser spectrogram is fine.
+        const fastMode = (this.noverlap !== null && this.noverlap <= 5);
+        if (fastMode) {
+            const srcLen = t.length;
+            if (srcLen === 0) return out;
+            // Map each output column to the nearest source column.
+            for (let a = 0; a < outW; a++) {
+                const srcIdx = Math.min(srcLen - 1, Math.round((a * (srcLen - 1)) / Math.max(1, outW - 1)));
+                // reuse source Uint8Array to avoid allocations
+                out.push(t[srcIdx]);
+            }
+            return out;
+        }
+
+        const invIn = 1 / t.length;
 
         const cacheKey = `${t.length}:${outW}`;
         let mapping = this._resampleCache[cacheKey];
