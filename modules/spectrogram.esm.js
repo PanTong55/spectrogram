@@ -504,10 +504,6 @@ class h extends s {
             const e = t.length / this.canvas.width;
             o = Math.max(0, Math.round(r - e))
         }
-        
-        // 當 noverlap ≤ 5 時，使用快速計算模式
-        const useFastMode = o <= 5;
-        
         const l = new a(r,n,this.windowFunc,this.alpha);
         let c;
         switch (this.scale) {
@@ -527,58 +523,19 @@ class h extends s {
             const s = t.getChannelData(e)
               , i = [];
             let a = 0;
-            
-            if (useFastMode) {
-                // 快速模式：計算關鍵幀，其餘通過插值
-                const keyFrames = [];
-                let prevSpectrum = null;
-                
-                for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r);
-                    let n = l.calculateSpectrum(tSlice);
-                    c && (n = this.applyFilterBank(n, c));
-                    
-                    const spectrum = new Uint8Array(r / 2);
-                    for (let t = 0; t < r / 2; t++) {
-                        const s = n[t] > 1e-12 ? n[t] : 1e-12
-                          , r = 20 * Math.log10(s);
-                        spectrum[t] = r < -this.gainDB - this.rangeDB ? 0 : r > -this.gainDB ? 255 : (r + this.gainDB) / this.rangeDB * 255 + 256
-                    }
-                    
-                    keyFrames.push(spectrum);
-                    
-                    // 如果有前一幀，使用線性插值填充中間的幀
-                    if (prevSpectrum !== null) {
-                        for (let interp = 0; interp < 1; interp += 0.5) {
-                            const interpolated = new Uint8Array(r / 2);
-                            for (let t = 0; t < r / 2; t++) {
-                                interpolated[t] = Math.round(prevSpectrum[t] * (1 - interp) + spectrum[t] * interp);
-                            }
-                            i.push(interpolated);
-                        }
-                    }
-                    
-                    i.push(spectrum);
-                    prevSpectrum = spectrum;
-                    a += r - o;
+                        for (; a + r < s.length; ) {
+                                const tSlice = s.subarray(a, a + r)
+                                    , e = new Uint8Array(r / 2);
+                                let n = l.calculateSpectrum(tSlice);
+                c && (n = this.applyFilterBank(n, c));
+                for (let t = 0; t < r / 2; t++) {
+                    const s = n[t] > 1e-12 ? n[t] : 1e-12
+                      , r = 20 * Math.log10(s);
+                    r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
                 }
-            } else {
-                // 標準模式：計算所有幀
-                for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r)
-                        , e = new Uint8Array(r / 2);
-                    let n = l.calculateSpectrum(tSlice);
-                    c && (n = this.applyFilterBank(n, c));
-                    for (let t = 0; t < r / 2; t++) {
-                        const s = n[t] > 1e-12 ? n[t] : 1e-12
-                          , r = 20 * Math.log10(s);
-                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
-                    }
-                    i.push(e),
-                    a += r - o
-                }
+                i.push(e),
+                a += r - o
             }
-            
             h.push(i)
         }
         return h
