@@ -39,6 +39,16 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, opts = {}) {
   const hop = Math.max(1, Math.floor(fftSize * (1 - overlapPct / 100)));
   const width = Math.max(1, Math.ceil((signal.length - fftSize) / hop));
   const height = fftSize / 2;
+  
+  // 當 overlap ≤ 5% 時，使用快速計算路徑
+  if (overlapPct <= 5) {
+    renderSpectrogramFast(signal, sr, fftSize, hop, width, height, opts);
+  } else {
+    renderSpectrogramStandard(signal, sr, fftSize, hop, width, height, opts);
+  }
+}
+
+function renderSpectrogramStandard(signal, sr, fftSize, hop, width, height, opts = {}) {
   canvas.width = width;
   canvas.height = height;
   const img = ctx.createImageData(width, height);
@@ -48,10 +58,6 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, opts = {}) {
   // 取得（或建立）可重用的緩衝，避免重複配置
   const { real, imag } = getBuffersCached(fftSize);
   const bitReverse = getBitReverseCached(fftSize);
-  
-  // 預計算幅度值的規範化常數
-  const invHeight = 1.0 / height;
-  const invFftSize = 1.0 / fftSize;
   
   // 使用預計算的 twiddle factors 進行快速 FFT
   const twiddleFactors = getTwiddleFactorsCached(fftSize);
@@ -92,6 +98,102 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, opts = {}) {
         imgData[pixelIdx + 3] = 255;
       }
     }
+  }
+  
+  ctx.putImageData(img, 0, 0);
+  self.postMessage({ type: 'rendered' });
+}
+
+function renderSpectrogramFast(signal, sr, fftSize, hop, width, height, opts = {}) {
+  canvas.width = width;
+  canvas.height = height;
+  const img = ctx.createImageData(width, height);
+  const imgData = img.data;
+  const window = getWindowCached(fftSize);
+  
+  // 取得（或建立）可重用的緩衝，避免重複配置
+  const { real, imag } = getBuffersCached(fftSize);
+  const bitReverse = getBitReverseCached(fftSize);
+  
+  // 使用預計算的 twiddle factors 進行快速 FFT
+  const twiddleFactors = getTwiddleFactorsCached(fftSize);
+  
+  // 用於儲存上一列的頻譜值，用於插值
+  const prevSpectrum = new Float32Array(height);
+  let firstFrame = true;
+  
+  for (let x = 0, i = 0; i + fftSize <= signal.length; i += hop, x++) {
+    // 應用窗函數並複製到實部
+    for (let j = 0; j < fftSize; j++) {
+      real[j] = signal[i + j] * window[j];
+      imag[j] = 0;
+    }
+    
+    // 使用優化的 FFT（傳入 bit-reverse 快取）
+    fftOptimized(real, imag, twiddleFactors, bitReverse);
+    
+    // 計算當前列的頻譜幅度並繪製
+    const spectrum = new Float32Array(height);
+    for (let y = 0; y < height; y++) {
+      const magSq = real[y] * real[y] + imag[y] * imag[y];
+      const mag = Math.sqrt(magSq);
+
+      // 快速對數規範化
+      let val = mag > 1e-12 ? Math.log10(mag) / 5 : -2.4;
+      val = val < 0 ? 0 : (val > 1 ? 1 : val);
+
+      spectrum[y] = val;
+
+      const col = Math.floor(val * 255);
+      const idx = (height - 1 - y) * width + x;
+      const pixelIdx = idx * 4;
+
+      if (colorMapUint) {
+        const cmapBase = col * 4;
+        imgData[pixelIdx] = colorMapUint[cmapBase];
+        imgData[pixelIdx + 1] = colorMapUint[cmapBase + 1];
+        imgData[pixelIdx + 2] = colorMapUint[cmapBase + 2];
+        imgData[pixelIdx + 3] = colorMapUint[cmapBase + 3];
+      } else {
+        imgData[pixelIdx] = col;
+        imgData[pixelIdx + 1] = col;
+        imgData[pixelIdx + 2] = col;
+        imgData[pixelIdx + 3] = 255;
+      }
+    }
+    
+    // 如果不是第一幀，使用線性插值填充中間的列（保持視覺細緻度）
+    if (!firstFrame && x > 0) {
+      for (let interpX = x - 1; interpX > 0; interpX--) {
+        // 在上一列和當前列之間插值
+        const t = 0.5; // 使用中點插值
+        for (let y = 0; y < height; y++) {
+          const interpolatedVal = prevSpectrum[y] * (1 - t) + spectrum[y] * t;
+          const col = Math.floor(interpolatedVal * 255);
+          const idx = (height - 1 - y) * width + interpX;
+          const pixelIdx = idx * 4;
+
+          if (colorMapUint) {
+            const cmapBase = col * 4;
+            imgData[pixelIdx] = colorMapUint[cmapBase];
+            imgData[pixelIdx + 1] = colorMapUint[cmapBase + 1];
+            imgData[pixelIdx + 2] = colorMapUint[cmapBase + 2];
+            imgData[pixelIdx + 3] = colorMapUint[cmapBase + 3];
+          } else {
+            imgData[pixelIdx] = col;
+            imgData[pixelIdx + 1] = col;
+            imgData[pixelIdx + 2] = col;
+            imgData[pixelIdx + 3] = 255;
+          }
+        }
+      }
+    }
+    
+    // 保存當前頻譜用於下次插值
+    for (let y = 0; y < height; y++) {
+      prevSpectrum[y] = spectrum[y];
+    }
+    firstFrame = false;
   }
   
   ctx.putImageData(img, 0, 0);
