@@ -504,6 +504,12 @@ class h extends s {
             const e = t.length / this.canvas.width;
             o = Math.max(0, Math.round(r - e))
         }
+        
+        // Calculate overlap percentage
+        const overlapPercent = o / r * 100;
+        // Use fast mode when overlap is 5% or less
+        const useFastMode = overlapPercent <= 5;
+        
         const l = new a(r,n,this.windowFunc,this.alpha);
         let c;
         switch (this.scale) {
@@ -523,18 +529,38 @@ class h extends s {
             const s = t.getChannelData(e)
               , i = [];
             let a = 0;
-                        for (; a + r < s.length; ) {
-                                const tSlice = s.subarray(a, a + r)
-                                    , e = new Uint8Array(r / 2);
-                                let n = l.calculateSpectrum(tSlice);
-                c && (n = this.applyFilterBank(n, c));
-                for (let t = 0; t < r / 2; t++) {
-                    const s = n[t] > 1e-12 ? n[t] : 1e-12
-                      , r = 20 * Math.log10(s);
-                    r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+            
+            if (useFastMode) {
+                // Fast mode: use larger hop size and simpler computation
+                const hopSize = Math.max(r / 4, Math.round(r - o));
+                for (; a + r < s.length; ) {
+                    const tSlice = s.subarray(a, a + r)
+                      , e = new Uint8Array(r / 2);
+                    let n = l.calculateSpectrum(tSlice);
+                    c && (n = this.applyFilterBank(n, c));
+                    for (let t = 0; t < r / 2; t++) {
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12
+                          , r = 20 * Math.log10(s);
+                        e[t] = r < -this.gainDB - this.rangeDB ? 0 : r > -this.gainDB ? 255 : (r + this.gainDB) / this.rangeDB * 255 + 256;
+                    }
+                    i.push(e);
+                    a += hopSize;
                 }
-                i.push(e),
-                a += r - o
+            } else {
+                // Normal mode: original calculation
+                for (; a + r < s.length; ) {
+                    const tSlice = s.subarray(a, a + r)
+                      , e = new Uint8Array(r / 2);
+                    let n = l.calculateSpectrum(tSlice);
+                    c && (n = this.applyFilterBank(n, c));
+                    for (let t = 0; t < r / 2; t++) {
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12
+                          , r = 20 * Math.log10(s);
+                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                    }
+                    i.push(e),
+                    a += r - o
+                }
             }
             h.push(i)
         }
