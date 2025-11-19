@@ -90,31 +90,6 @@ export function initMapPopup({
   let drawControlVisible = false;
   let layersControl = null;
   let hkgridLayer = null;
-  // Show/hide Clear Text button with animation
-  function updateClearTextButtonVisibility() {
-    try {
-      if (!clearTextBtn) return;
-      const has = Array.isArray(textMarkers) && textMarkers.length > 0;
-      if (has) {
-        if (clearTextBtn.style.display === 'none' || clearTextBtn.style.opacity === '0') {
-          clearTextBtn.style.display = 'flex';
-          // force reflow then animate
-          // eslint-disable-next-line no-unused-expressions
-          clearTextBtn.getBoundingClientRect();
-          clearTextBtn.style.transform = 'translateX(0)';
-          clearTextBtn.style.opacity = '1';
-        }
-      } else {
-        // animate out then set display none
-        clearTextBtn.style.transform = 'translateX(8px)';
-        clearTextBtn.style.opacity = '0';
-        // after transition, hide it
-        setTimeout(() => {
-          try { if (clearTextBtn && clearTextBtn.style.opacity === '0') clearTextBtn.style.display = 'none'; } catch (e) {}
-        }, 220);
-      }
-    } catch (e) {}
-  }
   // overlays handling (moved to outer scope so togglePopup can access)
   let overlaysPending = []; // { layer, name }
   let overlaysLoaded = false; // whether overlays have been added to layersControl
@@ -795,7 +770,6 @@ export function initMapPopup({
                   });
                   textMarkers = [];
                   updateMarkerPointerEvents();
-                  try { updateClearTextButtonVisibility(); } catch (e) {}
                 } catch (e) {}
               }
             });
@@ -806,8 +780,6 @@ export function initMapPopup({
     const textControl = new TextToggleControl();
     map.addControl(textControl);
     textToggleContainer = textControl.getContainer();
-
-    
 
     const ExportControl = L.Control.extend({
       options: { position: 'topleft' },
@@ -1173,7 +1145,6 @@ export function initMapPopup({
         textMarkers = textMarkers.filter(m => m !== marker);
       }
       updateMarkerPointerEvents();
-      try { updateClearTextButtonVisibility(); } catch (e) {}
     };
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -1236,7 +1207,6 @@ export function initMapPopup({
               map.removeLayer(marker);
               textMarkers = textMarkers.filter(m => m !== marker);
               updateMarkerPointerEvents();
-              try { updateClearTextButtonVisibility(); } catch (e) {}
             }
           } finally {
             cleanup();
@@ -1296,7 +1266,6 @@ export function initMapPopup({
     marker.addTo(map);
     textMarkers.push(marker);
     updateMarkerPointerEvents();
-    try { updateClearTextButtonVisibility(); } catch (e) {}
     editTextMarker(marker);
   }
 
