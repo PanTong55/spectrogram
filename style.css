@@ -649,15 +649,14 @@ input[type="file"]:hover {
   overflow-x: auto;
 }
 
-/* 工具欄疊加邏輯 */
-/* 當 peak-mode-tool-bar 和 tool-bar 都開啟時，tool-bar 向下移 */
-#peak-mode-tool-bar.open ~ #tool-bar.open {
-  top: calc(100% + 30px + 50px + 10px);  /* peak-mode-tool-bar 高度約50px + 間隔10px */
+/* 工具欄動態定位由 JavaScript 管理 */
+/* 為 peak-mode-tool-bar 添加動態定位類 */
+#peak-mode-tool-bar.position-bottom {
+  top: calc(100% + 30px + 50px + 10px) !important;  /* 在 tool-bar 下方 */
 }
 
-/* 當 peak-mode-tool-bar 開啟但 tool-bar 還未開啟時，peak-mode-tool-bar 在上方 */
-#peak-mode-tool-bar.open ~ #tool-bar:not(.open) {
-  top: calc(100% + 30px);  /* tool-bar 仍在預設位置 */
+#tool-bar.position-bottom {
+  top: calc(100% + 30px + 50px + 10px) !important;  /* tool-bar 下移 */
 }
 
 #tool-bar.open {
