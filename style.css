@@ -589,7 +589,7 @@ input[type="file"]:hover {
 #peak-mode-tool-bar {
   position: absolute;
   left: 50%;
-  top: calc(100% + 30px + 70px);
+  top: calc(100% + 30px);
   transform: translateX(-50%) scale(0.9);
   display: flex;
   flex-wrap: wrap;
@@ -615,7 +615,6 @@ input[type="file"]:hover {
 #peak-mode-tool-bar.open {
   opacity: 1;
   pointer-events: auto;
-  top: calc(100% + 30px + 50px + 10px);  /* Tool-bar 高度約50px + 間隔10px */
 }
 
 #peak-mode-tool-bar .toolbar-divider {
@@ -648,6 +647,17 @@ input[type="file"]:hover {
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease, top 0.2s ease;
   overflow-x: auto;
+}
+
+/* 工具欄疊加邏輯 */
+/* 當 peak-mode-tool-bar 和 tool-bar 都開啟時，tool-bar 向下移 */
+#peak-mode-tool-bar.open ~ #tool-bar.open {
+  top: calc(100% + 30px + 50px + 5px);  /* peak-mode-tool-bar 高度約50px + 間隔10px */
+}
+
+/* 當 peak-mode-tool-bar 開啟但 tool-bar 還未開啟時，peak-mode-tool-bar 在上方 */
+#peak-mode-tool-bar.open ~ #tool-bar:not(.open) {
+  top: calc(100% + 30px);  /* tool-bar 仍在預設位置 */
 }
 
 #tool-bar.open {
