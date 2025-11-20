@@ -126,11 +126,11 @@ function updatePeakButtonUI() {
   if (peakModeActive) {
     // 狀態 1：Peak Mode 啟用 → 紅色
     peakBtn.classList.add('active');
-    peakBtn.title = 'Peak Tracking Mode (Active - Red)';
+    peakBtn.title = 'Peak Tracking Mode (Active';
   } else if (peakToolBarOpen) {
     // 狀態 2：Peak-Tool-bar 開啟，Peak Mode 未啟用 → 藍色
     peakBtn.classList.add('toolbar-open');
-    peakBtn.title = 'Peak Tracking Mode (Toolbar Open - Blue)';
+    peakBtn.title = 'Peak Tracking Mode (Toolbar Open)';
   } else {
     // 狀態 3：默認 → 灰色
     peakBtn.title = 'Peak Tracking Mode';
