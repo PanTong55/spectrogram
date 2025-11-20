@@ -362,7 +362,8 @@ class h extends s {
             for (let h = 0; h < t.length; h++) {
                 const o = this.resample(t[h])
                   , l = o[0].length
-                  , c = new ImageData(r,l);
+                  , c = new ImageData(r,l)
+                  , channelPeakBands = this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[h] ? this.peakBandArrayPerChannel[h] : [];
                 for (let t = 0; t < o.length; t++)
                     for (let e = 0; e < o[t].length; e++) {
                         let idx = o[t][e];
@@ -370,9 +371,9 @@ class h extends s {
                         const cmapBase = idx * 4;
                         const i = 4 * ((l - e - 1) * r + t);
                         
-                        // Peak Mode support
-                        if (this.options.peakMode && e === this.peakBand) {
-                          // Draw red color for peak band
+                        // Peak Mode support - 每個時間步顯示其峰值
+                        if (this.options.peakMode && channelPeakBands && channelPeakBands[t] !== undefined && e === channelPeakBands[t]) {
+                          // Draw red color for peak band of this time step
                           c.data[i] = 255;      // R
                           c.data[i + 1] = 0;    // G
                           c.data[i + 2] = 0;    // B
@@ -529,17 +530,21 @@ class h extends s {
         case "erb":
             c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
         }
+        
+        // 初始化峰值追蹤陣列 - 為每個頻道分別存儲
+        this.peakBandArrayPerChannel = [];
+        
         for (let e = 0; e < i; e++) {
             const s = t.getChannelData(e)
-              , i = [];
+              , i = []
+              , channelPeakBands = [];  // 當前頻道的峰值 bins
             let a = 0;
                         for (; a + r < s.length; ) {
                                 const tSlice = s.subarray(a, a + r)
                                     , e = new Uint8Array(r / 2);
                                 let n = l.calculateSpectrum(tSlice);
-                // 保存最新的 peakBand 值到 Spectrogram 對象
-                this.peakBand = l.peakBand;
-                this.peak = l.peak;
+                // 保存當前頻道每個時間步的 peakBand 值
+                channelPeakBands.push(l.peakBand);
                 c && (n = this.applyFilterBank(n, c));
                 for (let t = 0; t < r / 2; t++) {
                     const s = n[t] > 1e-12 ? n[t] : 1e-12
@@ -549,6 +554,7 @@ class h extends s {
                 i.push(e),
                 a += r - o
             }
+            this.peakBandArrayPerChannel.push(channelPeakBands);
             h.push(i)
         }
         return h
