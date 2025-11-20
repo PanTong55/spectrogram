@@ -5,6 +5,7 @@
 
 let peakModeActive = false;
 let peakThreshold = 0.4;  // 默認閾值 40%
+let peakToolBarOpen = false;
 
 /**
  * 初始化 Peak Control
@@ -25,6 +26,7 @@ export function initPeakControl(options = {}) {
   const peakModeSwitch = document.getElementById('peakModeSwitch');
   const peakThresholdSlider = document.getElementById('peakThresholdSlider');
   const peakThresholdVal = document.getElementById('peakThresholdVal');
+  const toolBar = document.getElementById('tool-bar');
 
   if (!peakBtn) {
     console.warn(`[peakControl] Button with ID "${peakBtnId}" not found`);
@@ -35,8 +37,27 @@ export function initPeakControl(options = {}) {
   peakBtn.addEventListener('click', () => {
     if (peakModeToolBar) {
       peakModeToolBar.classList.toggle('open');
+      peakToolBarOpen = peakModeToolBar.classList.contains('open');
+      updatePeakButtonUI();
     }
   });
+
+  // 監聽 Peak Mode Tool Bar 的開啟/關閉
+  if (peakModeToolBar) {
+    const observer = new MutationObserver(() => {
+      peakToolBarOpen = peakModeToolBar.classList.contains('open');
+      updatePeakButtonUI();
+    });
+    observer.observe(peakModeToolBar, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  // 監聽 Tool Bar 的開啟/關閉（用於協調定位）
+  if (toolBar) {
+    const observer = new MutationObserver(() => {
+      updatePeakButtonUI();
+    });
+    observer.observe(toolBar, { attributes: true, attributeFilter: ['class'] });
+  }
 
   // Peak Mode Switch 事件
   if (peakModeSwitch) {
@@ -90,16 +111,28 @@ function togglePeakMode() {
 
 /**
  * 更新 Peak Button 的 UI 狀態
+ * 狀態優先級：
+ * 1. 紅色：Peak Mode 啟用（peakModeActive = true）
+ * 2. 藍色：Peak-Tool-bar 開啟但 Peak Mode 未啟用（peakToolBarOpen = true）
+ * 3. 灰色：默認狀態
  */
 function updatePeakButtonUI() {
   const peakBtn = document.getElementById('peakBtn');
   if (!peakBtn) return;
 
+  // 移除所有狀態類
+  peakBtn.classList.remove('active', 'toolbar-open');
+  
   if (peakModeActive) {
+    // 狀態 1：Peak Mode 啟用 → 紅色
     peakBtn.classList.add('active');
-    peakBtn.title = 'Peak Tracking Mode (Active)';
+    peakBtn.title = 'Peak Tracking Mode (Active - Red)';
+  } else if (peakToolBarOpen) {
+    // 狀態 2：Peak-Tool-bar 開啟，Peak Mode 未啟用 → 藍色
+    peakBtn.classList.add('toolbar-open');
+    peakBtn.title = 'Peak Tracking Mode (Toolbar Open - Blue)';
   } else {
-    peakBtn.classList.remove('active');
+    // 狀態 3：默認 → 灰色
     peakBtn.title = 'Peak Tracking Mode';
   }
 }

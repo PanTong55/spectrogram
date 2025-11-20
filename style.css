@@ -649,9 +649,15 @@ input[type="file"]:hover {
   overflow-x: auto;
 }
 
-/* 當 peak-mode-tool-bar 開啟時，tool-bar 向下移 */
-#peak-mode-tool-bar.open ~ #tool-bar {
-  top: calc(100% + 30px + 50px);  /* 向下移動約 50px */
+/* 工具欄疊加邏輯 */
+/* 當 peak-mode-tool-bar 和 tool-bar 都開啟時，tool-bar 向下移 */
+#peak-mode-tool-bar.open ~ #tool-bar.open {
+  top: calc(100% + 30px + 50px + 10px);  /* peak-mode-tool-bar 高度約50px + 間隔10px */
+}
+
+/* 當 peak-mode-tool-bar 開啟但 tool-bar 還未開啟時，peak-mode-tool-bar 在上方 */
+#peak-mode-tool-bar.open ~ #tool-bar:not(.open) {
+  top: calc(100% + 30px);  /* tool-bar 仍在預設位置 */
 }
 
 #tool-bar.open {
@@ -1180,9 +1186,13 @@ body.timeexp-open #timeexpBtn {
   background-color: #007bff;
 }
 
-/* Peak Button active state */
+/* Peak Button states */
+#peakBtn.toolbar-open {
+  background-color: #0d6efd;  /* 藍色：Peak-Tool-bar 開啟 */
+}
+
 #peakBtn.active {
-  background-color: #dc3545;
+  background-color: #dc3545;  /* 紅色：Peak Mode 啟用 */
 }
 
 input.tag-button {
