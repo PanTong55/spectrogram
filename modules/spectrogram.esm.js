@@ -365,7 +365,6 @@ class h extends s {
                   , c = new ImageData(r,l)
                   , channelPeakBands = this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[h] ? this.peakBandArrayPerChannel[h] : [];
                 
-                // Get the resample mapping to find which original time steps contribute to each output column
                 const cacheKey = `${t[h].length}:${r}`;
                 const mapping = this._resampleCache[cacheKey];
                 
@@ -376,25 +375,40 @@ class h extends s {
                         const cmapBase = idx * 4;
                         const i = 4 * ((l - e - 1) * r + t);
                         
-                        // Peak Mode support - check if any source time step for this output column is a peak
+                        // Peak Mode 渲染邏輯
                         let isPeakColumn = false;
+                        let isHighPeak = false; // 用於標記是否為高強度峰值
+
                         if (this.options.peakMode && mapping && mapping[t]) {
-                          // mapping[t] contains the source time steps that contribute to output column t
                           for (let m = 0; m < mapping[t].length; m++) {
-                            const sourceIdx = mapping[t][m][0];  // Original time step index
-                            if (channelPeakBands && channelPeakBands[sourceIdx] !== undefined && channelPeakBands[sourceIdx] !== -1 && e === channelPeakBands[sourceIdx]) {
+                            const sourceIdx = mapping[t][m][0];
+                            
+                            // 獲取峰值數據對象
+                            const peakData = channelPeakBands[sourceIdx];
+                            
+                            // 檢查數據是否存在且當前 Bin 匹配
+                            if (peakData && peakData.bin === e) {
                               isPeakColumn = true;
+                              isHighPeak = peakData.isHigh; // 讀取是否超過70%
                               break;
                             }
                           }
                         }
                         
                         if (isPeakColumn) {
-                          // Draw red color for peak band
-                          c.data[i] = 255;      // R
-                          c.data[i + 1] = 0;    // G
-                          c.data[i + 2] = 0;    // B
-                          c.data[i + 3] = 255;  // A
+                          if (isHighPeak) {
+                              // 超過 70% 顯示為 #FF00D6 (RGB: 255, 0, 214)
+                              c.data[i] = 255;      // R
+                              c.data[i + 1] = 0;    // G
+                              c.data[i + 2] = 214;  // B
+                              c.data[i + 3] = 255;  // A
+                          } else {
+                              // 普通峰值顯示紅色
+                              c.data[i] = 255;      // R
+                              c.data[i + 1] = 0;    // G
+                              c.data[i + 2] = 0;    // B
+                              c.data[i + 3] = 255;  // A
+                          }
                         } else {
                           c.data[i] = this._colorMapUint[cmapBase];
                           c.data[i + 1] = this._colorMapUint[cmapBase + 1];
@@ -567,61 +581,53 @@ class h extends s {
             c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
         }
         
-        // 初始化峰值追蹤陣列 - 為每個頻道分別存儲
         this.peakBandArrayPerChannel = [];
         
-        // Pre-calculate dB conversion constants for optimization
         const gainDBNeg = -this.gainDB;
         const gainDBNegRange = gainDBNeg - this.rangeDB;
         const rangeDBReciprocal = 255 / this.rangeDB;
         
-        // 當 Peak Mode 啟用時才進行峰值追蹤計算
         if (this.options.peakMode) {
-            // 先進行第一次掃描來找出全局最高峰值
+            // 1. 第一次掃描：找出全局最大峰值
             let globalMaxPeakValue = 0;
-            const tempPeakBandArrayPerChannel = [];
             
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e);
                 let a = 0;
-                const tempChannelPeakBands = [];
                 
                 for (; a + r < s.length; ) {
                     const tSlice = s.subarray(a, a + r);
                     l.peak = 0;
                     let spectrumData = l.calculateSpectrum(tSlice);
                     
-                    // 在頻率範圍內找出峰值（優化：只檢查必要的 bin 範圍）
                     let peakValueInRange = 0;
                     for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
                       peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
                     }
                     
                     globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
-                    tempChannelPeakBands.push(peakValueInRange);
                     a += r - o;
                 }
-                tempPeakBandArrayPerChannel.push(tempChannelPeakBands);
             }
             
-            // 計算閾值（使用設定的 peakThreshold，默認為 0.4 = 40%）
+            // 2. 計算閾值：基本顯示閾值 (40%) 和 高峰值變色閾值 (70%)
             const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
             const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
+            const highPeakThreshold = globalMaxPeakValue * 0.7; // 新增：70% 閾值
             
-            // 第二次掃描來計算需要顯示紅色的峰值 bin
+            // 3. 第二次掃描：記錄數據
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e)
                   , i = []
-                  , channelPeakBands = [];  // 當前頻道的峰值 bins
+                  , channelPeakBands = [];
                 let a = 0;
-                            for (; a + r < s.length; ) {
-                                    const tSlice = s.subarray(a, a + r)
-                                        , e = new Uint8Array(r / 2);
-                                    // 重置 peak 以便每個 FFT 幀獨立計算峰值
-                                    l.peak = 0;
-                                    let spectrumData = l.calculateSpectrum(tSlice);
+                for (; a + r < s.length; ) {
+                    const tSlice = s.subarray(a, a + r)
+                        , e = new Uint8Array(r / 2);
                     
-                    // 在頻率範圍內查找峰值（優化：只檢查必要的 bin 範圍）
+                    l.peak = 0;
+                    let spectrumData = l.calculateSpectrum(tSlice);
+                    
                     let peakBandInRange = Math.max(0, minBinFull);
                     let peakValueInRange = spectrumData[peakBandInRange] || 0;
                     for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
@@ -631,17 +637,19 @@ class h extends s {
                       }
                     }
                     
-                    // 只有當峰值高於閾值時才記錄，否則記錄 -1 表示不顯示紅色
+                    // 修改：存儲對象而不是單純的索引
                     if (peakValueInRange >= peakThreshold) {
-                      channelPeakBands.push(peakBandInRange);
+                      channelPeakBands.push({
+                          bin: peakBandInRange,
+                          isHigh: peakValueInRange >= highPeakThreshold // 標記是否超過 70%
+                      });
                     } else {
-                      channelPeakBands.push(-1);  // -1 表示不顯示紅色
+                      channelPeakBands.push(null);
                     }
                     
                     let n = spectrumData;
                     c && (n = this.applyFilterBank(n, c));
                     
-                    // OPTIMIZATION: Only process bins within frequency range if filter bank is not used
                     const startBin = c ? 0 : minBinFull;
                     const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
                     
@@ -663,7 +671,7 @@ class h extends s {
                 h.push(i)
             }
         } else {
-            // Peak Mode 禁用時，直接計算 spectrogram 而不進行峰值追蹤
+            // Peak Mode 禁用時的邏輯
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e)
                   , i = [];
@@ -674,7 +682,6 @@ class h extends s {
                     let n = l.calculateSpectrum(s.subarray(a, a + r));
                     c && (n = this.applyFilterBank(n, c));
                     
-                    // OPTIMIZATION: Only process bins within frequency range if filter bank is not used
                     const startBin = c ? 0 : minBinFull;
                     const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
                     
