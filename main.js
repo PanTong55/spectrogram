@@ -103,11 +103,6 @@ let suppressFreqValueAdjustment = false;
 const expandBackBtn = document.getElementById('expandBackBtn');
 const expandBackCount = document.getElementById('expandBackCount');
 let ignoreNextPause = false;
-const canvasElem = document.getElementById("spectrogram-canvas");
-const offscreen = canvasElem.transferControlToOffscreen();
-const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
-// 傳入初始 options（colorMap 和 windowFunc）給 worker
-specWorker.postMessage({ type: "init", canvas: offscreen, options: { colorMap: getCurrentColorMap(), windowFunc: currentWindowType, gainDB: 20, rangeDB: 80, peakMode: false } }, [offscreen]);
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
@@ -1489,10 +1484,7 @@ document.addEventListener("file-loaded", async () => {
     currentAudioBufferLength = wsDecodedLen || audioBuf.length;
     // If a saved original length from expansion exists, clear it because we just loaded the real file
     savedAudioBufferLengthBeforeExpand = null;
-    const workerOverlap = currentOverlap === 'auto'
-      ? getAutoOverlapPercent()
-      : getOverlapPercent();
-    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap, options: { colorMap: getCurrentColorMap(), windowFunc: currentWindowType, peakMode: isPeakModeActive() } }, [audioBuf.getChannelData(0).buffer]);
+    // Spectrogram rendering is now handled by Wavesurfer's Spectrogram plugin
     updateSpectrogramSettingsText();
   }
 });
