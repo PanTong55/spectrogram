@@ -551,84 +551,108 @@ class h extends s {
         // 初始化峰值追蹤陣列 - 為每個頻道分別存儲
         this.peakBandArrayPerChannel = [];
         
-        // 計算頻率範圍對應的 bin 範圍
-        // 頻率映射: bin = frequency * fftSize / sampleRate
-        const minBin = Math.floor(this.frequencyMin * r / n);
-        const maxBin = Math.ceil(this.frequencyMax * r / n);
-        
-        // 先進行第一次掃描來找出全局最高峰值
-        let globalMaxPeakValue = 0;
-        const tempPeakBandArrayPerChannel = [];
-        
-        for (let e = 0; e < i; e++) {
-            const s = t.getChannelData(e);
-            let a = 0;
-            const tempChannelPeakBands = [];
+        // 當 Peak Mode 啟用時才進行峰值追蹤計算
+        if (this.options.peakMode) {
+            // 計算頻率範圍對應的 bin 範圍
+            // 頻率映射: bin = frequency * fftSize / sampleRate
+            const minBin = Math.floor(this.frequencyMin * r / n);
+            const maxBin = Math.ceil(this.frequencyMax * r / n);
             
-            for (; a + r < s.length; ) {
-                const tSlice = s.subarray(a, a + r);
-                l.peak = 0;
-                let spectrumData = l.calculateSpectrum(tSlice);
+            // 先進行第一次掃描來找出全局最高峰值
+            let globalMaxPeakValue = 0;
+            const tempPeakBandArrayPerChannel = [];
+            
+            for (let e = 0; e < i; e++) {
+                const s = t.getChannelData(e);
+                let a = 0;
+                const tempChannelPeakBands = [];
                 
-                // 在頻率範圍內找出峰值
-                let peakValueInRange = 0;
-                for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
-                  peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
+                for (; a + r < s.length; ) {
+                    const tSlice = s.subarray(a, a + r);
+                    l.peak = 0;
+                    let spectrumData = l.calculateSpectrum(tSlice);
+                    
+                    // 在頻率範圍內找出峰值
+                    let peakValueInRange = 0;
+                    for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
+                      peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
+                    }
+                    
+                    globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
+                    tempChannelPeakBands.push(peakValueInRange);
+                    a += r - o;
                 }
-                
-                globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
-                tempChannelPeakBands.push(peakValueInRange);
-                a += r - o;
+                tempPeakBandArrayPerChannel.push(tempChannelPeakBands);
             }
-            tempPeakBandArrayPerChannel.push(tempChannelPeakBands);
-        }
-        
-        // 計算閾值（使用設定的 peakThreshold，默認為 0.4 = 40%）
-        const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
-        const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
-        
-        // 第二次掃描來計算需要顯示紅色的峰值 bin
-        for (let e = 0; e < i; e++) {
-            const s = t.getChannelData(e)
-              , i = []
-              , channelPeakBands = [];  // 當前頻道的峰值 bins
-            let a = 0;
-                        for (; a + r < s.length; ) {
-                                const tSlice = s.subarray(a, a + r)
-                                    , e = new Uint8Array(r / 2);
-                                // 重置 peak 以便每個 FFT 幀獨立計算峰值
-                                l.peak = 0;
-                                let spectrumData = l.calculateSpectrum(tSlice);
-                
-                // 在頻率範圍內查找峰值
-                let peakBandInRange = Math.max(0, minBin);
-                let peakValueInRange = spectrumData[peakBandInRange] || 0;
-                for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
-                  if ((spectrumData[k] || 0) > peakValueInRange) {
-                    peakValueInRange = spectrumData[k];
-                    peakBandInRange = k;
-                  }
+            
+            // 計算閾值（使用設定的 peakThreshold，默認為 0.4 = 40%）
+            const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
+            const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
+            
+            // 第二次掃描來計算需要顯示紅色的峰值 bin
+            for (let e = 0; e < i; e++) {
+                const s = t.getChannelData(e)
+                  , i = []
+                  , channelPeakBands = [];  // 當前頻道的峰值 bins
+                let a = 0;
+                            for (; a + r < s.length; ) {
+                                    const tSlice = s.subarray(a, a + r)
+                                        , e = new Uint8Array(r / 2);
+                                    // 重置 peak 以便每個 FFT 幀獨立計算峰值
+                                    l.peak = 0;
+                                    let spectrumData = l.calculateSpectrum(tSlice);
+                    
+                    // 在頻率範圍內查找峰值
+                    let peakBandInRange = Math.max(0, minBin);
+                    let peakValueInRange = spectrumData[peakBandInRange] || 0;
+                    for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
+                      if ((spectrumData[k] || 0) > peakValueInRange) {
+                        peakValueInRange = spectrumData[k];
+                        peakBandInRange = k;
+                      }
+                    }
+                    
+                    // 只有當峰值高於閾值時才記錄，否則記錄 -1 表示不顯示紅色
+                    if (peakValueInRange >= peakThreshold) {
+                      channelPeakBands.push(peakBandInRange);
+                    } else {
+                      channelPeakBands.push(-1);  // -1 表示不顯示紅色
+                    }
+                    
+                    let n = spectrumData;
+                    c && (n = this.applyFilterBank(n, c));
+                    for (let t = 0; t < r / 2; t++) {
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12
+                          , r = 20 * Math.log10(s);
+                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                    }
+                    i.push(e),
+                    a += r - o
                 }
-                
-                // 只有當峰值高於閾值時才記錄，否則記錄 -1 表示不顯示紅色
-                if (peakValueInRange >= peakThreshold) {
-                  channelPeakBands.push(peakBandInRange);
-                } else {
-                  channelPeakBands.push(-1);  // -1 表示不顯示紅色
-                }
-                
-                let n = spectrumData;
-                c && (n = this.applyFilterBank(n, c));
-                for (let t = 0; t < r / 2; t++) {
-                    const s = n[t] > 1e-12 ? n[t] : 1e-12
-                      , r = 20 * Math.log10(s);
-                    r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
-                }
-                i.push(e),
-                a += r - o
+                this.peakBandArrayPerChannel.push(channelPeakBands);
+                h.push(i)
             }
-            this.peakBandArrayPerChannel.push(channelPeakBands);
-            h.push(i)
+        } else {
+            // Peak Mode 禁用時，直接計算 spectrogram 而不進行峰值追蹤
+            for (let e = 0; e < i; e++) {
+                const s = t.getChannelData(e)
+                  , i = [];
+                let a = 0;
+                for (; a + r < s.length; ) {
+                    const e = new Uint8Array(r / 2);
+                    l.peak = 0;
+                    let n = l.calculateSpectrum(s.subarray(a, a + r));
+                    c && (n = this.applyFilterBank(n, c));
+                    for (let t = 0; t < r / 2; t++) {
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12
+                          , r = 20 * Math.log10(s);
+                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                    }
+                    i.push(e),
+                    a += r - o
+                }
+                h.push(i)
+            }
         }
         return h
     }
