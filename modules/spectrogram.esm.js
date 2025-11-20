@@ -416,23 +416,36 @@ class h extends s {
     }
     createFilterBank(t, e, s, r) {
                 // cache by scale name + params to avoid rebuilding
-                const cacheKey = `${this.scale}:${t}:${e}:${this.fftSamples}`;
+                // Include frequency range in cache key for optimization
+                const freqMinStr = this.frequencyMin || "0";
+                const freqMaxStr = this.frequencyMax || "0";
+                const cacheKey = `${this.scale}:${t}:${e}:${this.fftSamples}:${freqMinStr}:${freqMaxStr}`;
                 if (this._filterBankCache[cacheKey])
                         return this._filterBankCache[cacheKey];
 
                 const i = s(0)
-                    , a = s(e / 2)
-                    , n = Array.from({
+                    , a = s(e / 2);
+                
+                // Optimize: Only create filters for the specified frequency range
+                const fMin = this.frequencyMin > 0 ? s(this.frequencyMin) : i;
+                const fMax = this.frequencyMax > 0 && this.frequencyMax < e / 2 ? s(this.frequencyMax) : a;
+                
+                const n = Array.from({
                         length: t
-                }, ( () => Array(this.fftSamples / 2 + 1).fill(0)))
-                    , h = e / this.fftSamples;
+                }, ( () => {
+                    const fftHalfSize = this.fftSamples / 2 + 1;
+                    const arr = new Float32Array(fftHalfSize);
+                    arr.fill(0);
+                    return arr;
+                }));
+                const h = e / this.fftSamples;
         for (let e = 0; e < t; e++) {
-            let s = r(i + e / t * (a - i))
+            let s = r(fMin + e / t * (fMax - fMin))
               , o = Math.floor(s / h)
               , l = o * h
               , c = (s - l) / ((o + 1) * h - l);
-            n[e][o] = 1 - c,
-            n[e][o + 1] = c
+            if (o >= 0 && o < n[e].length) n[e][o] = 1 - c;
+            if (o + 1 >= 0 && o + 1 < n[e].length) n[e][o + 1] = c;
         }
         this._filterBankCache[cacheKey] = n;
         return n
@@ -532,6 +545,12 @@ class h extends s {
             const e = t.length / this.canvas.width;
             o = Math.max(0, Math.round(r - e))
         }
+        
+        // OPTIMIZATION: Calculate frequency range bin indices once
+        const minBinFull = Math.floor(this.frequencyMin * r / n);
+        const maxBinFull = Math.ceil(this.frequencyMax * r / n);
+        const binRangeSize = maxBinFull - minBinFull;
+        
         const l = new a(r,n,this.windowFunc,this.alpha);
         let c;
         switch (this.scale) {
@@ -551,13 +570,13 @@ class h extends s {
         // 初始化峰值追蹤陣列 - 為每個頻道分別存儲
         this.peakBandArrayPerChannel = [];
         
+        // Pre-calculate dB conversion constants for optimization
+        const gainDBNeg = -this.gainDB;
+        const gainDBNegRange = gainDBNeg - this.rangeDB;
+        const rangeDBReciprocal = 255 / this.rangeDB;
+        
         // 當 Peak Mode 啟用時才進行峰值追蹤計算
         if (this.options.peakMode) {
-            // 計算頻率範圍對應的 bin 範圍
-            // 頻率映射: bin = frequency * fftSize / sampleRate
-            const minBin = Math.floor(this.frequencyMin * r / n);
-            const maxBin = Math.ceil(this.frequencyMax * r / n);
-            
             // 先進行第一次掃描來找出全局最高峰值
             let globalMaxPeakValue = 0;
             const tempPeakBandArrayPerChannel = [];
@@ -572,9 +591,9 @@ class h extends s {
                     l.peak = 0;
                     let spectrumData = l.calculateSpectrum(tSlice);
                     
-                    // 在頻率範圍內找出峰值
+                    // 在頻率範圍內找出峰值（優化：只檢查必要的 bin 範圍）
                     let peakValueInRange = 0;
-                    for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
+                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
                       peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
                     }
                     
@@ -602,10 +621,10 @@ class h extends s {
                                     l.peak = 0;
                                     let spectrumData = l.calculateSpectrum(tSlice);
                     
-                    // 在頻率範圍內查找峰值
-                    let peakBandInRange = Math.max(0, minBin);
+                    // 在頻率範圍內查找峰值（優化：只檢查必要的 bin 範圍）
+                    let peakBandInRange = Math.max(0, minBinFull);
                     let peakValueInRange = spectrumData[peakBandInRange] || 0;
-                    for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
+                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
                       if ((spectrumData[k] || 0) > peakValueInRange) {
                         peakValueInRange = spectrumData[k];
                         peakBandInRange = k;
@@ -621,10 +640,21 @@ class h extends s {
                     
                     let n = spectrumData;
                     c && (n = this.applyFilterBank(n, c));
-                    for (let t = 0; t < r / 2; t++) {
+                    
+                    // OPTIMIZATION: Only process bins within frequency range if filter bank is not used
+                    const startBin = c ? 0 : minBinFull;
+                    const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
+                    
+                    for (let t = startBin; t < endBin; t++) {
                         const s = n[t] > 1e-12 ? n[t] : 1e-12
                           , r = 20 * Math.log10(s);
-                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                        if (r < gainDBNegRange) {
+                            e[t] = 0;
+                        } else if (r > gainDBNeg) {
+                            e[t] = 255;
+                        } else {
+                            e[t] = (r + this.gainDB) * rangeDBReciprocal + 256;
+                        }
                     }
                     i.push(e),
                     a += r - o
@@ -643,10 +673,21 @@ class h extends s {
                     l.peak = 0;
                     let n = l.calculateSpectrum(s.subarray(a, a + r));
                     c && (n = this.applyFilterBank(n, c));
-                    for (let t = 0; t < r / 2; t++) {
+                    
+                    // OPTIMIZATION: Only process bins within frequency range if filter bank is not used
+                    const startBin = c ? 0 : minBinFull;
+                    const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
+                    
+                    for (let t = startBin; t < endBin; t++) {
                         const s = n[t] > 1e-12 ? n[t] : 1e-12
                           , r = 20 * Math.log10(s);
-                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                        if (r < gainDBNegRange) {
+                            e[t] = 0;
+                        } else if (r > gainDBNeg) {
+                            e[t] = 255;
+                        } else {
+                            e[t] = (r + this.gainDB) * rangeDBReciprocal + 256;
+                        }
                     }
                     i.push(e),
                     a += r - o
