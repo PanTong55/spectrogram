@@ -583,8 +583,8 @@ class h extends s {
             tempPeakBandArrayPerChannel.push(tempChannelPeakBands);
         }
         
-        // 計算閾值（全局最高峰值的 20%）
-        const peakThreshold = globalMaxPeakValue * 0.2;
+        // 計算閾值（全局最高峰值的 10%）
+        const peakThreshold = globalMaxPeakValue * 0.1;
         
         // 第二次掃描來計算需要顯示紅色的峰值 bin
         for (let e = 0; e < i; e++) {
