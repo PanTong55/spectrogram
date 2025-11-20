@@ -537,6 +537,9 @@ class h extends s {
                                 const tSlice = s.subarray(a, a + r)
                                     , e = new Uint8Array(r / 2);
                                 let n = l.calculateSpectrum(tSlice);
+                // 保存最新的 peakBand 值到 Spectrogram 對象
+                this.peakBand = l.peakBand;
+                this.peak = l.peak;
                 c && (n = this.applyFilterBank(n, c));
                 for (let t = 0; t < r / 2; t++) {
                     const s = n[t] > 1e-12 ? n[t] : 1e-12

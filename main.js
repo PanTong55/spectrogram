@@ -1306,11 +1306,24 @@ initPeakControl({
   onPeakModeToggled: (isActive) => {
     // 設置 Peak Mode 狀態
     setPeakMode(isActive);
-    // 重新渲染 spectrogram，應用 Peak Mode
-    const idx = getCurrentIndex();
-    if (idx >= 0 && fileLoaderControl && typeof fileLoaderControl.loadFileAtIndex === 'function') {
-      fileLoaderControl.loadFileAtIndex(idx);
-    }
+    // 重新創建 Spectrogram 插件以應用 Peak Mode
+    replacePlugin(
+      getCurrentColorMap(),
+      spectrogramHeight,
+      currentFreqMin,
+      currentFreqMax,
+      getOverlapPercent(),
+      () => {
+        zoomControl.applyZoom();
+        renderAxes();
+        freqHoverControl?.refreshHover();
+        autoIdControl?.updateMarkers();
+        updateSpectrogramSettingsText();
+      },
+      currentFftSize,
+      currentWindowType,
+      isActive
+    );
   }
 });
 
