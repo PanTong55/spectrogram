@@ -1,37 +1,11 @@
 /**
  * Peak Control Module
- * 管理 Peak Mode 的切換、Spectrogram 重新渲染，以及工具欄位置
+ * 管理 Peak Mode 的切換和 Spectrogram 重新渲染
  */
 
 let peakModeActive = false;
 let peakThreshold = 0.4;  // 默認閾值 40%
 let peakToolBarOpen = false;
-
-/**
- * 更新工具欄位置
- * 邏輯：
- * - 如果兩個工具欄都開啟，peak-mode-tool-bar 在上方（預設位置），tool-bar 在下方
- * - 如果只有 peak-mode-tool-bar 開啟，它使用預設位置
- * - 如果只有 tool-bar 開啟，它使用預設位置
- */
-function updateToolBarPositions() {
-  const peakModeToolBar = document.getElementById('peak-mode-tool-bar');
-  const toolBar = document.getElementById('tool-bar');
-
-  if (!peakModeToolBar || !toolBar) return;
-
-  const peakModeOpen = peakModeToolBar.classList.contains('open');
-  const toolBarOpen = toolBar.classList.contains('open');
-
-  // 移除位置類
-  peakModeToolBar.classList.remove('position-bottom');
-  toolBar.classList.remove('position-bottom');
-
-  // 邏輯：如果兩者都開啟，tool-bar 移到下方
-  if (peakModeOpen && toolBarOpen) {
-    toolBar.classList.add('position-bottom');
-  }
-}
 
 /**
  * 初始化 Peak Control
@@ -65,7 +39,6 @@ export function initPeakControl(options = {}) {
       peakModeToolBar.classList.toggle('open');
       peakToolBarOpen = peakModeToolBar.classList.contains('open');
       updatePeakButtonUI();
-      updateToolBarPositions();
     }
   });
 
@@ -74,16 +47,14 @@ export function initPeakControl(options = {}) {
     const observer = new MutationObserver(() => {
       peakToolBarOpen = peakModeToolBar.classList.contains('open');
       updatePeakButtonUI();
-      updateToolBarPositions();
     });
     observer.observe(peakModeToolBar, { attributes: true, attributeFilter: ['class'] });
   }
 
-  // 監聽 Tool Bar 的開啟/關閉（用於更新工具欄位置）
+  // 監聽 Tool Bar 的開啟/關閉（用於協調定位）
   if (toolBar) {
     const observer = new MutationObserver(() => {
       updatePeakButtonUI();
-      updateToolBarPositions();
     });
     observer.observe(toolBar, { attributes: true, attributeFilter: ['class'] });
   }
@@ -208,11 +179,3 @@ export function setPeakThreshold(threshold) {
     peakThresholdVal.textContent = Math.round(threshold * 100) + '%';
   }
 }
-
-/**
- * 導出位置更新函數供外部使用（如在 main.js 中）
- */
-export function updateToolBarPositionsExternal() {
-  updateToolBarPositions();
-}
-
