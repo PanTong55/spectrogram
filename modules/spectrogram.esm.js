@@ -624,7 +624,7 @@ class h extends s {
                     for (let t = 0; t < r / 2; t++) {
                         const s = n[t] > 1e-12 ? n[t] : 1e-12
                           , r = 20 * Math.log10(s);
-                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (-(r + this.gainDB + this.rangeDB)) / this.rangeDB * 255
                     }
                     i.push(e),
                     a += r - o
@@ -646,7 +646,7 @@ class h extends s {
                     for (let t = 0; t < r / 2; t++) {
                         const s = n[t] > 1e-12 ? n[t] : 1e-12
                           , r = 20 * Math.log10(s);
-                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (r + this.gainDB) / this.rangeDB * 255 + 256
+                        r < -this.gainDB - this.rangeDB ? e[t] = 0 : r > -this.gainDB ? e[t] = 255 : e[t] = (-(r + this.gainDB + this.rangeDB)) / this.rangeDB * 255
                     }
                     i.push(e),
                     a += r - o
