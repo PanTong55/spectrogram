@@ -382,7 +382,7 @@ class h extends s {
                           // mapping[t] contains the source time steps that contribute to output column t
                           for (let m = 0; m < mapping[t].length; m++) {
                             const sourceIdx = mapping[t][m][0];  // Original time step index
-                            if (channelPeakBands && channelPeakBands[sourceIdx] !== undefined && e === channelPeakBands[sourceIdx]) {
+                            if (channelPeakBands && channelPeakBands[sourceIdx] !== undefined && channelPeakBands[sourceIdx] !== -1 && e === channelPeakBands[sourceIdx]) {
                               isPeakColumn = true;
                               break;
                             }
@@ -556,6 +556,37 @@ class h extends s {
         const minBin = Math.floor(this.frequencyMin * r / n);
         const maxBin = Math.ceil(this.frequencyMax * r / n);
         
+        // 先進行第一次掃描來找出全局最高峰值
+        let globalMaxPeakValue = 0;
+        const tempPeakBandArrayPerChannel = [];
+        
+        for (let e = 0; e < i; e++) {
+            const s = t.getChannelData(e);
+            let a = 0;
+            const tempChannelPeakBands = [];
+            
+            for (; a + r < s.length; ) {
+                const tSlice = s.subarray(a, a + r);
+                l.peak = 0;
+                let spectrumData = l.calculateSpectrum(tSlice);
+                
+                // 在頻率範圍內找出峰值
+                let peakValueInRange = 0;
+                for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
+                  peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
+                }
+                
+                globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
+                tempChannelPeakBands.push(peakValueInRange);
+                a += r - o;
+            }
+            tempPeakBandArrayPerChannel.push(tempChannelPeakBands);
+        }
+        
+        // 計算閾值（全局最高峰值的 40%）
+        const peakThreshold = globalMaxPeakValue * 0.4;
+        
+        // 第二次掃描來計算需要顯示紅色的峰值 bin
         for (let e = 0; e < i; e++) {
             const s = t.getChannelData(e)
               , i = []
@@ -577,7 +608,13 @@ class h extends s {
                     peakBandInRange = k;
                   }
                 }
-                channelPeakBands.push(peakBandInRange);
+                
+                // 只有當峰值高於閾值時才記錄，否則記錄 -1 表示不顯示紅色
+                if (peakValueInRange >= peakThreshold) {
+                  channelPeakBands.push(peakBandInRange);
+                } else {
+                  channelPeakBands.push(-1);  // -1 表示不顯示紅色
+                }
                 
                 let n = spectrumData;
                 c && (n = this.applyFilterBank(n, c));
