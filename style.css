@@ -598,7 +598,7 @@ input[type="file"]:hover {
   column-gap: 12px;
   row-gap: 5px;
   padding: 8px 12px;
-  width: 400px;
+  width: 450px;
   background-color: #fff;
   border-radius: 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -610,6 +610,10 @@ input[type="file"]:hover {
   transition: opacity 0.2s ease, transform 0.2s ease, top 0.2s ease;
   overflow-x: auto;
   z-index: 100;
+}
+
+input[type="range"]#peakThresholdSlider {
+    width: 150px;
 }
 
 #peak-mode-tool-bar.open {
