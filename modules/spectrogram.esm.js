@@ -584,7 +584,7 @@ class h extends s {
         }
         
         // 計算閾值（全局最高峰值的 10%）
-        const peakThreshold = globalMaxPeakValue * 0.1;
+        const peakThreshold = globalMaxPeakValue * 0.05;
         
         // 第二次掃描來計算需要顯示紅色的峰值 bin
         for (let e = 0; e < i; e++) {
