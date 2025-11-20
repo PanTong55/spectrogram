@@ -25,6 +25,7 @@ export function initPeakControl(options = {}) {
 
   peakBtn.addEventListener('click', () => {
     togglePeakMode();
+    console.log('[peakControl] Peak mode toggled, new state:', peakModeActive);
     onPeakModeToggled(peakModeActive);
   });
 
@@ -41,6 +42,7 @@ export function initPeakControl(options = {}) {
 function togglePeakMode() {
   peakModeActive = !peakModeActive;
   updatePeakButtonUI();
+  console.log('[peakControl.togglePeakMode] peakModeActive is now:', peakModeActive);
 }
 
 /**

@@ -32,6 +32,7 @@ self.onmessage = (e) => {
     if (!ctx) return;
     const opts = Object.assign({}, currentOptions, e.data.options || {});
     if (opts.colorMap) setColorMapUint(opts.colorMap);
+    console.log('[spectrogramWorker] render options:', { peakMode: opts.peakMode, hasColorMap: !!opts.colorMap });
     renderSpectrogram(e.data.buffer, e.data.sampleRate || sampleRate, e.data.fftSize || 1024, e.data.overlap || 0, opts);
   }
 };
@@ -57,10 +58,6 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, opts = {}) {
   // 使用預計算的 twiddle factors 進行快速 FFT
   const twiddleFactors = getTwiddleFactorsCached(fftSize);
   
-  // Peak mode 紅色設定
-  const peakRed = [255, 0, 0, 255];
-  const isPeakMode = opts.peakMode === true;
-  
   for (let x = 0, i = 0; i + fftSize <= signal.length; i += hop, x++) {
     // 應用窗函數並複製到實部
     for (let j = 0; j < fftSize; j++) {
@@ -70,20 +67,6 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, opts = {}) {
     
     // 使用優化的 FFT（傳入 bit-reverse 快取）
     fftOptimized(real, imag, twiddleFactors, bitReverse);
-    
-    // 找出 peak bin（最高能量的頻率 bin）
-    let peakBin = 0;
-    if (isPeakMode) {
-      let peakMag = 0;
-      for (let y = 0; y < height; y++) {
-        const magSq = real[y] * real[y] + imag[y] * imag[y];
-        const mag = Math.sqrt(magSq);
-        if (mag > peakMag) {
-          peakMag = mag;
-          peakBin = y;
-        }
-      }
-    }
     
     // 批量繪製像素，減少運算次數。使用 colorMapUint 若有提供。
     for (let y = 0; y < height; y++) {
@@ -98,13 +81,7 @@ function renderSpectrogram(signal, sr, fftSize, overlapPct, opts = {}) {
       const idx = (height - 1 - y) * width + x;
       const pixelIdx = idx * 4;
 
-      // Peak mode 下，如果是 peakBin 則使用紅色
-      if (isPeakMode && y === peakBin) {
-        imgData[pixelIdx] = peakRed[0];
-        imgData[pixelIdx + 1] = peakRed[1];
-        imgData[pixelIdx + 2] = peakRed[2];
-        imgData[pixelIdx + 3] = peakRed[3];
-      } else if (colorMapUint) {
+      if (colorMapUint) {
         const cmapBase = col * 4;
         imgData[pixelIdx] = colorMapUint[cmapBase];
         imgData[pixelIdx + 1] = colorMapUint[cmapBase + 1];

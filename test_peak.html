@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Peak Control Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .log { border: 1px solid #ccc; padding: 10px; margin: 10px 0; background: #f9f9f9; max-height: 300px; overflow-y: auto; }
+    button { padding: 10px 20px; margin: 5px; }
+    button.active { background-color: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Peak Control Test</h1>
+  <div>
+    <button id="peakBtn" style="padding: 10px 20px; background: #555; color: white;">Peak Button Test</button>
+    <span id="status">Status: Not Clicked</span>
+  </div>
+  <div class="log" id="log">Console Output:</div>
+
+  <script type="module">
+    // Import peakControl
+    import { initPeakControl, isPeakModeActive } from './modules/peakControl.js';
+
+    // Setup logging
+    const logElement = document.getElementById('log');
+    const originalLog = console.log;
+    console.log = (...args) => {
+      originalLog(...args);
+      logElement.innerHTML += '<div>' + args.map(arg => {
+        if (typeof arg === 'object') return JSON.stringify(arg);
+        return String(arg);
+      }).join(' ') + '</div>';
+      logElement.scrollTop = logElement.scrollHeight;
+    };
+
+    // Initialize
+    console.log('[test] Starting Peak Control test...');
+    
+    initPeakControl({
+      peakBtnId: 'peakBtn',
+      onPeakModeToggled: (isActive) => {
+        console.log('[test callback] onPeakModeToggled called with isActive:', isActive);
+        document.getElementById('status').textContent = 'Status: ' + (isActive ? 'ACTIVE' : 'INACTIVE');
+      }
+    });
+
+    console.log('[test] Peak Control initialized');
+    console.log('[test] isPeakModeActive():', isPeakModeActive());
+  </script>
+</body>
+</html>

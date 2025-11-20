@@ -369,10 +369,20 @@ class h extends s {
                         if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
                         const cmapBase = idx * 4;
                         const i = 4 * ((l - e - 1) * r + t);
-                        c.data[i] = this._colorMapUint[cmapBase];
-                        c.data[i + 1] = this._colorMapUint[cmapBase + 1];
-                        c.data[i + 2] = this._colorMapUint[cmapBase + 2];
-                        c.data[i + 3] = this._colorMapUint[cmapBase + 3];
+                        
+                        // Peak Mode support
+                        if (this.options.peakMode && e === this.peakBand) {
+                          // Draw red color for peak band
+                          c.data[i] = 255;      // R
+                          c.data[i + 1] = 0;    // G
+                          c.data[i + 2] = 0;    // B
+                          c.data[i + 3] = 255;  // A
+                        } else {
+                          c.data[i] = this._colorMapUint[cmapBase];
+                          c.data[i + 1] = this._colorMapUint[cmapBase + 1];
+                          c.data[i + 2] = this._colorMapUint[cmapBase + 2];
+                          c.data[i + 3] = this._colorMapUint[cmapBase + 3];
+                        }
                     }
                 const u = this.hzToScale(a) / this.hzToScale(i)
                   , f = this.hzToScale(n) / this.hzToScale(i)

@@ -6,6 +6,7 @@ replacePlugin,
 createSpectrogramPlugin,
 getCurrentColorMap,
 initScrollSync,
+setPeakMode,
 } from './modules/wsManager.js';
 
 import { initZoomControls } from './modules/zoomControl.js';
@@ -30,6 +31,30 @@ import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileLis
 const spectrogramHeight = 800;
 let sidebarControl;
 let fileLoaderControl;
+
+/**
+ * 在 Wavesurfer Spectrogram 上應用紅色 Peak 線
+ */
+function applyPeakLineToCanvas() {
+  // 獲取 spectrogram 容器中的 canvas
+  const container = document.getElementById('spectrogram-only');
+  const canvas = container?.querySelector('canvas');
+  
+  if (!canvas) {
+    return;
+  }
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return;
+  }
+
+  // 在 canvas 上繪製紅色垂直線，標記 peak 位置
+  // TODO: 實現從 Spectrogram 對象獲取 peakBand 信息的方式
+  // 暫時這是一個佔位符
+  console.log('[applyPeakLineToCanvas] Would draw peak line on canvas');
+}
+
 const container = document.getElementById('spectrogram-only');
 const viewer = document.getElementById('viewer-container');
 const timeAxis = document.getElementById('time-axis');
@@ -1279,6 +1304,8 @@ initMapPopup();
 initPeakControl({
   peakBtnId: 'peakBtn',
   onPeakModeToggled: (isActive) => {
+    // 設置 Peak Mode 狀態
+    setPeakMode(isActive);
     // 重新渲染 spectrogram，應用 Peak Mode
     const idx = getCurrentIndex();
     if (idx >= 0 && fileLoaderControl && typeof fileLoaderControl.loadFileAtIndex === 'function') {
