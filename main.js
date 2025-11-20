@@ -7,6 +7,8 @@ createSpectrogramPlugin,
 getCurrentColorMap,
 initScrollSync,
 setPeakMode,
+setPeakThreshold,
+getPeakThreshold,
 } from './modules/wsManager.js';
 
 import { initZoomControls } from './modules/zoomControl.js';
@@ -1323,6 +1325,28 @@ initPeakControl({
       currentFftSize,
       currentWindowType,
       isActive
+    );
+  },
+  onThresholdChanged: (threshold) => {
+    // 設置 Peak Threshold 並重新渲染
+    setPeakThreshold(threshold);
+    replacePlugin(
+      getCurrentColorMap(),
+      spectrogramHeight,
+      currentFreqMin,
+      currentFreqMax,
+      getOverlapPercent(),
+      () => {
+        zoomControl.applyZoom();
+        renderAxes();
+        freqHoverControl?.refreshHover();
+        autoIdControl?.updateMarkers();
+        updateSpectrogramSettingsText();
+      },
+      currentFftSize,
+      currentWindowType,
+      isPeakModeActive(),
+      threshold
     );
   }
 });

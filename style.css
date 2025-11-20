@@ -586,6 +586,44 @@ input[type="file"]:hover {
   width: 100%;
 }
 
+#peak-mode-tool-bar {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 30px);
+  transform: translateX(-50%) scale(0.9);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 5px;
+  padding: 8px 12px;
+  width: 400px;
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #eee;
+  font-family: 'Noto Sans HK', sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  overflow-x: auto;
+  z-index: 99;
+}
+
+#peak-mode-tool-bar.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#peak-mode-tool-bar .toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #ddd;
+  margin: 0 0 0 -4px;
+}
+
 #tool-bar {
   position: absolute;
   left: 50%;
@@ -607,8 +645,13 @@ input[type="file"]:hover {
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, top 0.2s ease;
   overflow-x: auto;
+}
+
+/* 當 peak-mode-tool-bar 開啟時，tool-bar 向下移 */
+#peak-mode-tool-bar.open ~ #tool-bar {
+  top: calc(100% + 30px + 50px);  /* 向下移動約 50px */
 }
 
 #tool-bar.open {

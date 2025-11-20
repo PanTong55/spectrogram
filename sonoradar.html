@@ -87,6 +87,20 @@
           <i class="fa-solid fa-arrow-trend-up"></i>
         </button>
       </div>
+      <!-- Peak Mode Tool Bar -->
+      <div id="peak-mode-tool-bar">
+        <label class="slider-label">Peak Threshold
+          <input type="range" id="peakThresholdSlider" min="0.1" max="1" step="0.05" value="0.4" title="Peak Threshold">
+          <span class="slider-value" id="peakThresholdVal">40%</span>
+        </label>
+        <div class="toolbar-divider"></div>
+        <label class="slider-label">Peak Mode
+          <label class="switch" title="Enable Peak Mode">
+            <input type="checkbox" id="peakModeSwitch">
+            <span class="slider round"></span>
+          </label>
+        </label>
+      </div>
       <!-- Tool Bar -->    
       <div id="tool-bar">
         <label class="slider-label">Type
