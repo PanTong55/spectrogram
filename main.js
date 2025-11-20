@@ -24,6 +24,7 @@ import { initDropdown } from './modules/dropdown.js';
 import { showMessageBox } from './modules/messageBox.js';
 import { initAutoIdPanel } from './modules/autoIdPanel.js';
 import { initFreqContextMenu } from './modules/freqContextMenu.js';
+import { initPeakControl, isPeakModeActive } from './modules/peakControl.js';
 import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileList, getFileIconState, getFileNote, setFileNote, getFileMetadata, setFileMetadata, clearTrashFiles, getTrashFileCount, getCurrentFile, getTimeExpansionMode, setTimeExpansionMode, toggleTimeExpansionMode } from './modules/fileState.js';
 
 const spectrogramHeight = 800;
@@ -79,7 +80,7 @@ const canvasElem = document.getElementById("spectrogram-canvas");
 const offscreen = canvasElem.transferControlToOffscreen();
 const specWorker = new Worker("./spectrogramWorker.js", { type: "module" });
 // 傳入初始 options（colorMap 和 windowFunc）給 worker
-specWorker.postMessage({ type: "init", canvas: offscreen, options: { colorMap: getCurrentColorMap(), windowFunc: currentWindowType, gainDB: 20, rangeDB: 80 } }, [offscreen]);
+specWorker.postMessage({ type: "init", canvas: offscreen, options: { colorMap: getCurrentColorMap(), windowFunc: currentWindowType, gainDB: 20, rangeDB: 80, peakMode: false } }, [offscreen]);
 
 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 if (isMobileDevice) {
@@ -1273,6 +1274,19 @@ document.body.classList.toggle('settings-open', isOpen);
 initExportCsv();
 initTrashProgram();
 initMapPopup();
+
+// 初始化 Peak Control
+initPeakControl({
+  peakBtnId: 'peakBtn',
+  onPeakModeToggled: (isActive) => {
+    // 重新渲染 spectrogram，應用 Peak Mode
+    const idx = getCurrentIndex();
+    if (idx >= 0 && fileLoaderControl && typeof fileLoaderControl.loadFileAtIndex === 'function') {
+      fileLoaderControl.loadFileAtIndex(idx);
+    }
+  }
+});
+
 autoIdControl = initAutoIdPanel({
   spectrogramHeight,
   getDuration,
@@ -1414,7 +1428,7 @@ document.addEventListener("file-loaded", async () => {
     const workerOverlap = currentOverlap === 'auto'
       ? getAutoOverlapPercent()
       : getOverlapPercent();
-    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap, options: { colorMap: getCurrentColorMap(), windowFunc: currentWindowType } }, [audioBuf.getChannelData(0).buffer]);
+    specWorker.postMessage({ type: "render", buffer: audioBuf.getChannelData(0), sampleRate: audioBuf.sampleRate, fftSize: currentFftSize, overlap: workerOverlap, options: { colorMap: getCurrentColorMap(), windowFunc: currentWindowType, peakMode: isPeakModeActive() } }, [audioBuf.getChannelData(0).buffer]);
     updateSpectrogramSettingsText();
   }
 });

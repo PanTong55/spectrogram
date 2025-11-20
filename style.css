@@ -1137,6 +1137,11 @@ body.timeexp-open #timeexpBtn {
   background-color: #007bff;
 }
 
+/* Peak Button active state */
+#peakBtn.active {
+  background-color: #dc3545;
+}
+
 input.tag-button {
   width: 90px;
   margin-bottom: 4px;
