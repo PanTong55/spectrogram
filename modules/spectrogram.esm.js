@@ -551,6 +551,11 @@ class h extends s {
         // 初始化峰值追蹤陣列 - 為每個頻道分別存儲
         this.peakBandArrayPerChannel = [];
         
+        // 計算頻率範圍對應的 bin 範圍
+        // 頻率映射: bin = frequency * fftSize / sampleRate
+        const minBin = Math.floor(this.frequencyMin * r / n);
+        const maxBin = Math.ceil(this.frequencyMax * r / n);
+        
         for (let e = 0; e < i; e++) {
             const s = t.getChannelData(e)
               , i = []
@@ -561,9 +566,20 @@ class h extends s {
                                     , e = new Uint8Array(r / 2);
                                 // 重置 peak 以便每個 FFT 幀獨立計算峰值
                                 l.peak = 0;
-                                let n = l.calculateSpectrum(tSlice);
-                // 保存當前頻道每個時間步的 peakBand 值
-                channelPeakBands.push(l.peakBand);
+                                let spectrumData = l.calculateSpectrum(tSlice);
+                
+                // 在頻率範圍內查找峰值
+                let peakBandInRange = Math.max(0, minBin);
+                let peakValueInRange = spectrumData[peakBandInRange] || 0;
+                for (let k = minBin; k < maxBin && k < spectrumData.length; k++) {
+                  if ((spectrumData[k] || 0) > peakValueInRange) {
+                    peakValueInRange = spectrumData[k];
+                    peakBandInRange = k;
+                  }
+                }
+                channelPeakBands.push(peakBandInRange);
+                
+                let n = spectrumData;
                 c && (n = this.applyFilterBank(n, c));
                 for (let t = 0; t < r / 2; t++) {
                     const s = n[t] > 1e-12 ? n[t] : 1e-12
