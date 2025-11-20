@@ -364,6 +364,11 @@ class h extends s {
                   , l = o[0].length
                   , c = new ImageData(r,l)
                   , channelPeakBands = this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[h] ? this.peakBandArrayPerChannel[h] : [];
+                
+                // Get the resample mapping to find which original time steps contribute to each output column
+                const cacheKey = `${t[h].length}:${r}`;
+                const mapping = this._resampleCache[cacheKey];
+                
                 for (let t = 0; t < o.length; t++)
                     for (let e = 0; e < o[t].length; e++) {
                         let idx = o[t][e];
@@ -371,9 +376,21 @@ class h extends s {
                         const cmapBase = idx * 4;
                         const i = 4 * ((l - e - 1) * r + t);
                         
-                        // Peak Mode support - 每個時間步顯示其峰值
-                        if (this.options.peakMode && channelPeakBands && channelPeakBands[t] !== undefined && e === channelPeakBands[t]) {
-                          // Draw red color for peak band of this time step
+                        // Peak Mode support - check if any source time step for this output column is a peak
+                        let isPeakColumn = false;
+                        if (this.options.peakMode && mapping && mapping[t]) {
+                          // mapping[t] contains the source time steps that contribute to output column t
+                          for (let m = 0; m < mapping[t].length; m++) {
+                            const sourceIdx = mapping[t][m][0];  // Original time step index
+                            if (channelPeakBands && channelPeakBands[sourceIdx] !== undefined && e === channelPeakBands[sourceIdx]) {
+                              isPeakColumn = true;
+                              break;
+                            }
+                          }
+                        }
+                        
+                        if (isPeakColumn) {
+                          // Draw red color for peak band
                           c.data[i] = 255;      // R
                           c.data[i + 1] = 0;    // G
                           c.data[i + 2] = 0;    // B
@@ -542,6 +559,8 @@ class h extends s {
                         for (; a + r < s.length; ) {
                                 const tSlice = s.subarray(a, a + r)
                                     , e = new Uint8Array(r / 2);
+                                // 重置 peak 以便每個 FFT 幀獨立計算峰值
+                                l.peak = 0;
                                 let n = l.calculateSpectrum(tSlice);
                 // 保存當前頻道每個時間步的 peakBand 值
                 channelPeakBands.push(l.peakBand);
