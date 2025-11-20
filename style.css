@@ -650,18 +650,14 @@ input[type="file"]:hover {
 }
 
 /* 工具欄疊加邏輯 */
-#tool-bar.open ~ #peak-mode-tool-bar.open {
-  top: calc(100% + 30px + 100px + 5px);   /* 100px 改成 #tool-bar 實際展開後的高度 */
+/* 當 peak-mode-tool-bar 和 tool-bar 都開啟時，tool-bar 向下移 */
+#peak-mode-tool-bar.open ~ #tool-bar.open {
+  top: calc(100% + 30px + 50px + 5px);  /* peak-mode-tool-bar 高度約50px + 間隔10px */
 }
 
-/* 2. 前面的 #tool-bar 收合起來 → Peak Mode 只躲一點點 */
-#tool-bar:not(.open) ~ #peak-mode-tool-bar.open {
-  top: calc(100% + 30px);
-}
-
-/* 3. 即使 #tool-bar 展開，但 Peak Mode 自己收合時也只躲一點點（可選） */
-#tool-bar.open ~ #peak-mode-tool-bar:not(.open) {
-  top: calc(100% + 30px);
+/* 當 peak-mode-tool-bar 開啟但 tool-bar 還未開啟時，peak-mode-tool-bar 在上方 */
+#peak-mode-tool-bar.open ~ #tool-bar:not(.open) {
+  top: calc(100% + 30px);  /* tool-bar 仍在預設位置 */
 }
 
 #tool-bar.open {
