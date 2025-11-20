@@ -609,7 +609,7 @@ input[type="file"]:hover {
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   overflow-x: auto;
-  z-index: 99;
+  z-index: 100;
 }
 
 #peak-mode-tool-bar.open {
