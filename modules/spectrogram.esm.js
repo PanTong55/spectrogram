@@ -397,10 +397,10 @@ class h extends s {
                         
                         if (isPeakColumn) {
                           if (isHighPeak) {
-                              // 超過 70% 顯示為 #FF00D6 (RGB: 255, 0, 214)
+                              // 超過 70% 顯示為 #FF70FC (RGB: 255, 112, 252)
                               c.data[i] = 255;      // R
-                              c.data[i + 1] = 0;    // G
-                              c.data[i + 2] = 214;  // B
+                              c.data[i + 1] = 112;    // G
+                              c.data[i + 2] = 252;  // B
                               c.data[i + 3] = 255;  // A
                           } else {
                               // 普通峰值顯示紅色
