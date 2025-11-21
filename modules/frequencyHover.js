@@ -417,43 +417,54 @@ export function initFrequencyHover({
 
       const audioData = channels[0]; // 使用第一個通道
       
-      if (audioData.length < 128) return null; // 太短的音頻
+      if (audioData.length < 32) return null; // 太短的音頻
 
-      // 頻率範圍（Hz）
+      // freqMin 和 freqMax 已經是 kHz，需要轉換為 Hz
       const freqMinHz = freqMin * 1000;
       const freqMaxHz = freqMax * 1000;
 
-      // 使用簡單的 autocorrelation 找峰值頻率
-      // 測試不同的週期（對應不同的頻率）
+      // Nyquist 頻率限制
+      const nyquistFreq = sampleRate / 2;
+      if (freqMinHz >= nyquistFreq) return null;
+      const adjustedMaxHz = Math.min(freqMaxHz, nyquistFreq - 1);
+
+      // 使用 Goertzel 演算法計算特定頻率的能量
       let bestFreq = freqMin;
-      let bestCorr = -Infinity;
+      let bestEnergy = -Infinity;
 
-      const minPeriod = Math.floor(sampleRate / freqMaxHz); // 最小週期
-      const maxPeriod = Math.floor(sampleRate / freqMinHz); // 最大週期
-
-      for (let period = minPeriod; period <= maxPeriod; period++) {
-        let correlation = 0;
-        let count = 0;
-
-        // 計算該週期的 autocorrelation
-        for (let i = 0; i + period < audioData.length; i++) {
-          correlation += audioData[i] * audioData[i + period];
-          count++;
+      // 頻率解析度：約 10Hz 步長
+      const freqRange = adjustedMaxHz - freqMinHz;
+      const freqStep = Math.max(10, freqRange / 50);
+      
+      for (let freq = freqMinHz; freq <= adjustedMaxHz; freq += freqStep) {
+        // Goertzel 演算法計算該頻率的能量
+        const w = (2 * Math.PI * freq) / sampleRate;
+        const coeff = 2 * Math.cos(w);
+        
+        let s0 = 0, s1 = 0, s2 = 0;
+        
+        for (let i = 0; i < audioData.length; i++) {
+          s0 = audioData[i] + coeff * s1 - s2;
+          s2 = s1;
+          s1 = s0;
         }
-
-        correlation /= count;
-
-        // 檢查是否是新的最高峰
-        if (correlation > bestCorr) {
-          bestCorr = correlation;
-          const freq = sampleRate / period;
-          if (freq >= freqMinHz && freq <= freqMaxHz) {
-            bestFreq = freq / 1000; // 轉換為 kHz
-          }
+        
+        // 計算功率
+        const energy = s1 * s1 + s2 * s2 - coeff * s1 * s2;
+        
+        if (energy > bestEnergy) {
+          bestEnergy = energy;
+          bestFreq = freq / 1000; // 轉換為 kHz
         }
       }
 
-      return bestFreq > 0 ? bestFreq : null;
+      // 驗證計算結果
+      if (bestEnergy <= 0 || bestFreq < freqMin || bestFreq > freqMax) {
+        // 如果計算失敗，返回頻率範圍的中點
+        return (freqMin + freqMax) / 2;
+      }
+
+      return bestFreq;
     } catch (err) {
       console.warn('calculatePeakFromCroppedAudio 錯誤:', err);
       return null;
