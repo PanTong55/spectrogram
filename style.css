@@ -137,9 +137,10 @@ html, body {
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 12px;
   color: black;
-  background-color: white;
+  background-color: #ffffffa3;
+  backdrop-filter: blur(3px);
   padding: 2px 6px;
-  border: 1px solid #ccc;
+  border: 1px solid #3b3b3b1f;
   border-radius: 4px;
   white-space: nowrap;
   z-index: 30;
@@ -244,7 +245,8 @@ html, body {
   width: 30px;
   height: 30px;
   font-size: 18px;
-  background: white;
+  background: #ffffff21;
+  backdrop-filter: blur(3px);
   border: none;
   display: flex;
   align-items: center;
@@ -252,10 +254,10 @@ html, body {
   cursor: pointer;
 }
 .zoom-button:not(:disabled):hover {
-  background: #eee;
+  background: #89898920;
 }
 .zoom-button:disabled {
-  background: #eee;
+  background: #89898920;
   color: #aaa;
   cursor: not-allowed;
 }
@@ -1537,7 +1539,8 @@ input.tag-button.editing {
   z-index: 30;
   padding: 6px 8px 2px 2px;
   line-height: 14px;
-  background: white;
+  background: #ffffff80;
+  backdrop-filter: blur(5px);
   font-size: 12px;
   font-family: 'Noto Sans HK', sans-serif;
   box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
@@ -1576,6 +1579,12 @@ input.tag-button.editing {
   top: 2px;
   right: 4px;
   cursor: pointer;
+  transition: color 0.2s, font-weight 0.2s;
+}
+
+.tooltip-close-btn:hover {
+  color: red;
+  font-weight:bold;
 }
 
 /* === Frequency Axis === */
