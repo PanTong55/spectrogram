@@ -1,5 +1,5 @@
 import { getTimeExpansionMode } from './fileState.js';
-import { getWavesurfer, getPlugin } from './wsManager.js';
+import { getWavesurfer, getPlugin, calculatePeakFrequencyInRange, getCurrentFftSize, getCurrentWindowType } from './wsManager.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -410,7 +410,7 @@ export function initFrequencyHover({
     return null;
   }
 
-  // 從 cropped audio 計算峰值頻率 - 使用基於能量的方法
+  // 從 cropped audio 計算峰值頻率 - 使用與 spectrogram.esm.js 一致的 FFT 算法
   async function calculatePeakFromCroppedAudio(channels, sampleRate, freqMin, freqMax) {
     try {
       if (!channels || channels.length === 0) return null;
@@ -419,52 +419,25 @@ export function initFrequencyHover({
       
       if (audioData.length < 32) return null; // 太短的音頻
 
-      // freqMin 和 freqMax 已經是 kHz，需要轉換為 Hz
-      const freqMinHz = freqMin * 1000;
-      const freqMaxHz = freqMax * 1000;
+      // 獲取當前的 FFT 設置
+      const fftSize = getCurrentFftSize() || 512;
+      const windowFunc = getCurrentWindowType() || 'hann';
 
-      // Nyquist 頻率限制
-      const nyquistFreq = sampleRate / 2;
-      if (freqMinHz >= nyquistFreq) return null;
-      const adjustedMaxHz = Math.min(freqMaxHz, nyquistFreq - 1);
+      // 使用與 spectrogram 一致的 FFT 算法計算峰值
+      const peakFreq = calculatePeakFrequencyInRange(
+        audioData,
+        sampleRate,
+        fftSize,
+        windowFunc,
+        freqMin,
+        freqMax
+      );
 
-      // 使用 Goertzel 演算法計算特定頻率的能量
-      let bestFreq = freqMin;
-      let bestEnergy = -Infinity;
-
-      // 頻率解析度：約 10Hz 步長
-      const freqRange = adjustedMaxHz - freqMinHz;
-      const freqStep = Math.max(10, freqRange / 50);
-      
-      for (let freq = freqMinHz; freq <= adjustedMaxHz; freq += freqStep) {
-        // Goertzel 演算法計算該頻率的能量
-        const w = (2 * Math.PI * freq) / sampleRate;
-        const coeff = 2 * Math.cos(w);
-        
-        let s0 = 0, s1 = 0, s2 = 0;
-        
-        for (let i = 0; i < audioData.length; i++) {
-          s0 = audioData[i] + coeff * s1 - s2;
-          s2 = s1;
-          s1 = s0;
-        }
-        
-        // 計算功率
-        const energy = s1 * s1 + s2 * s2 - coeff * s1 * s2;
-        
-        if (energy > bestEnergy) {
-          bestEnergy = energy;
-          bestFreq = freq / 1000; // 轉換為 kHz
-        }
+      if (peakFreq && peakFreq > 0) {
+        return peakFreq;
       }
 
-      // 驗證計算結果
-      if (bestEnergy <= 0 || bestFreq < freqMin || bestFreq > freqMax) {
-        // 如果計算失敗，返回頻率範圍的中點
-        return (freqMin + freqMax) / 2;
-      }
-
-      return bestFreq;
+      return null;
     } catch (err) {
       console.warn('calculatePeakFromCroppedAudio 錯誤:', err);
       return null;
