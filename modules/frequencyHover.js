@@ -521,7 +521,10 @@ export function initFrequencyHover({
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
     const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip: null, expandBtn: null, closeBtn: null, btnGroup: null, durationLabel: null };
 
-    if (Duration * 1000 <= 100) {
+    // Duration 是秒數，轉換為毫秒進行比較
+    // 注意：Duration 是實際時間，不受 Time Expansion 影響
+    const durationMs = Duration * 1000;
+    if (durationMs <= 100) {
       selObj.tooltip = buildTooltip(selObj, left, top, width);
     }
 
@@ -535,7 +538,9 @@ export function initFrequencyHover({
 
     selections.push(selObj);
 
-    if (Duration * 1000 > 100) {
+    // Duration 是秒數，需要轉換為毫秒，並且是實際時間（不受 Time Expansion 影響）
+    const actualDurationMs = Duration * 1000;
+    if (actualDurationMs > 100) {
       createBtnGroup(selObj);
     }
 
@@ -551,7 +556,9 @@ export function initFrequencyHover({
     });
 
     // 如果 duration < 100ms，自動計算峰值頻率
-    if (Duration * 1000 < 100) {
+    // Duration 是秒數，需要轉換為毫秒，並且是實際時間（不受 Time Expansion 影響）
+    const actualDurationMsForPeak = Duration * 1000;
+    if (actualDurationMsForPeak < 100) {
       calculatePeakFrequency(selObj).catch(err => {
         console.error('計算峰值頻率失敗:', err);
       });
@@ -955,6 +962,7 @@ export function initFrequencyHover({
       sel.rect.style.height = `${height}px`;
 
       const durationMs = (endTime - startTime) * 1000;
+      // durationMs 是實際時間（毫秒），不受 Time Expansion 影響
       if (durationMs <= 100) {
         if (sel.btnGroup) sel.btnGroup.style.display = 'none';
         if (!sel.tooltip) {
