@@ -737,6 +737,9 @@ export function initFrequencyHover({
       resizing = true;
       isResizing = true;
       e.preventDefault();
+
+      // 防抖計時器用於 resize 時的峰值計算
+      let peakUpdateTimeout = null;
   
       const moveHandler = (e) => {
         if (!resizing) return;
@@ -778,6 +781,19 @@ export function initFrequencyHover({
         }
   
         updateSelections();
+
+        // 防抖：在 resize 時每 300ms 更新一次峰值
+        if (peakUpdateTimeout) {
+          clearTimeout(peakUpdateTimeout);
+        }
+        peakUpdateTimeout = setTimeout(() => {
+          const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
+          if (durationMs < 100) {
+            calculatePeakFrequency(sel).catch(err => {
+              console.error('Resize 時計算峰值頻率失敗:', err);
+            });
+          }
+        }, 300);
       };
   
       const upHandler = () => {
@@ -787,6 +803,22 @@ export function initFrequencyHover({
         lockedVertical = null;
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
+
+        // 當 resize 完成後，如果 selection 時間 < 100ms，重新計算峰值
+        const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
+        if (durationMs < 100) {
+          calculatePeakFrequency(sel).catch(err => {
+            console.error('Resize 後計算峰值頻率失敗:', err);
+          });
+        } else {
+          // 如果 resize 後超過 100ms，清除 peakFreq
+          if (sel.data.peakFreq !== undefined) {
+            delete sel.data.peakFreq;
+            if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
+              sel.tooltip.querySelector('.fpeak').textContent = '-';
+            }
+          }
+        }
       };
   
       window.addEventListener('mousemove', moveHandler, { passive: true });
