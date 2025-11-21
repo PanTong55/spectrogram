@@ -410,12 +410,12 @@ export function initFrequencyHover({
     return null;
   }
 
-  // 從 cropped audio 計算峰值頻率 - 使用基於能量的方法
+  // 從 cropped audio 計算峰值頻率 - 優化版，使用兩階段精確掃描
   async function calculatePeakFromCroppedAudio(channels, sampleRate, freqMin, freqMax) {
     try {
       if (!channels || channels.length === 0) return null;
 
-      const audioData = channels[0]; // 使用第一個通道
+      let audioData = channels[0]; // 使用第一個通道
       
       if (audioData.length < 32) return null; // 太短的音頻
 
@@ -428,47 +428,94 @@ export function initFrequencyHover({
       if (freqMinHz >= nyquistFreq) return null;
       const adjustedMaxHz = Math.min(freqMaxHz, nyquistFreq - 1);
 
-      // 使用 Goertzel 演算法計算特定頻率的能量
-      let bestFreq = freqMin;
-      let bestEnergy = -Infinity;
-
-      // 頻率解析度：約 10Hz 步長
-      const freqRange = adjustedMaxHz - freqMinHz;
-      const freqStep = Math.max(10, freqRange / 50);
+      // 預處理：移除直流分量（DC offset）
+      let dcOffset = 0;
+      for (let i = 0; i < audioData.length; i++) {
+        dcOffset += audioData[i];
+      }
+      dcOffset /= audioData.length;
       
-      for (let freq = freqMinHz; freq <= adjustedMaxHz; freq += freqStep) {
-        // Goertzel 演算法計算該頻率的能量
-        const w = (2 * Math.PI * freq) / sampleRate;
-        const coeff = 2 * Math.cos(w);
-        
-        let s0 = 0, s1 = 0, s2 = 0;
-        
-        for (let i = 0; i < audioData.length; i++) {
-          s0 = audioData[i] + coeff * s1 - s2;
-          s2 = s1;
-          s1 = s0;
-        }
-        
-        // 計算功率
-        const energy = s1 * s1 + s2 * s2 - coeff * s1 * s2;
-        
-        if (energy > bestEnergy) {
-          bestEnergy = energy;
-          bestFreq = freq / 1000; // 轉換為 kHz
+      audioData = audioData.map(sample => sample - dcOffset);
+
+      // 第一階段：粗掃，快速找到粗略的峰值位置
+      let peakFreqCoarse = freqMinHz;
+      let peakEnergyCoarse = -Infinity;
+      const coarseStep = Math.max(20, (adjustedMaxHz - freqMinHz) / 30);
+
+      for (let freq = freqMinHz; freq <= adjustedMaxHz; freq += coarseStep) {
+        const energy = goertzelEnergy(audioData, freq, sampleRate);
+        if (energy > peakEnergyCoarse) {
+          peakEnergyCoarse = energy;
+          peakFreqCoarse = freq;
         }
       }
 
+      // 第二階段：精掃，在粗掃結果周圍進行精確搜索
+      let peakFreqFine = peakFreqCoarse;
+      let peakEnergyFine = peakEnergyCoarse;
+      const fineRangeHz = coarseStep * 1.5;
+      const fineStep = 1; // 1Hz 精度
+
+      const fineMinHz = Math.max(freqMinHz, peakFreqCoarse - fineRangeHz);
+      const fineMaxHz = Math.min(adjustedMaxHz, peakFreqCoarse + fineRangeHz);
+
+      for (let freq = fineMinHz; freq <= fineMaxHz; freq += fineStep) {
+        const energy = goertzelEnergy(audioData, freq, sampleRate);
+        if (energy > peakEnergyFine) {
+          peakEnergyFine = energy;
+          peakFreqFine = freq;
+        }
+      }
+
+      // 第三階段：亞像素精度（拋物線補間）
+      if (peakFreqFine > fineMinHz && peakFreqFine < fineMaxHz) {
+        const freq0 = peakFreqFine - fineStep;
+        const freq1 = peakFreqFine;
+        const freq2 = peakFreqFine + fineStep;
+
+        const energy0 = goertzelEnergy(audioData, freq0, sampleRate);
+        const energy1 = peakEnergyFine;
+        const energy2 = goertzelEnergy(audioData, freq2, sampleRate);
+
+        // 拋物線補間：找到峰值的精確位置
+        const a = (energy2 - 2 * energy1 + energy0) / 2;
+        if (Math.abs(a) > 1e-10) {
+          const correction = (energy0 - energy2) / (4 * a);
+          peakFreqFine += correction * fineStep;
+        }
+      }
+
+      const bestFreqKHz = peakFreqFine / 1000;
+
       // 驗證計算結果
-      if (bestEnergy <= 0 || bestFreq < freqMin || bestFreq > freqMax) {
+      if (peakEnergyFine <= 0 || bestFreqKHz < freqMin || bestFreqKHz > freqMax) {
         // 如果計算失敗，返回頻率範圍的中點
         return (freqMin + freqMax) / 2;
       }
 
-      return bestFreq;
+      return Math.max(freqMin, Math.min(freqMax, bestFreqKHz));
     } catch (err) {
       console.warn('calculatePeakFromCroppedAudio 錯誤:', err);
       return null;
     }
+  }
+
+  // Goertzel 演算法輔助函數
+  function goertzelEnergy(audioData, freq, sampleRate) {
+    const w = (2 * Math.PI * freq) / sampleRate;
+    const coeff = 2 * Math.cos(w);
+    
+    let s0 = 0, s1 = 0, s2 = 0;
+    
+    for (let i = 0; i < audioData.length; i++) {
+      s0 = audioData[i] + coeff * s1 - s2;
+      s2 = s1;
+      s1 = s0;
+    }
+    
+    // 計算複數功率
+    const energy = s1 * s1 + s2 * s2 - coeff * s1 * s2;
+    return energy;
   }
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
