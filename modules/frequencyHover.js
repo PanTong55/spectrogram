@@ -364,8 +364,12 @@ export function initFrequencyHover({
       const { startTime, endTime, Flow, Fhigh } = sel.data;
       const durationMs = (endTime - startTime) * 1000;
 
-      // 只有 duration < 100ms 時才計算
-      if (durationMs >= 100) return null;
+      // 根據 Time Expansion 模式計算用於判斷的持續時間
+      const timeExp = getTimeExpansionMode();
+      const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+      
+      // 只有 displayTime < 100ms 時才計算
+      if (judgeDurationMs >= 100) return null;
 
       // 獲取原始音頻緩衝
       const decodedData = ws.getDecodedData();
