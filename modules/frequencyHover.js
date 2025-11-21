@@ -531,12 +531,26 @@ export function initFrequencyHover({
     const dispDurationMs = (Duration * 1000) / timeDiv;
     const dispSlope = dispDurationMs > 0 ? (dispBandwidth / dispDurationMs) : 0;
     tooltip.innerHTML = `
-      <div><b>F.high:</b> <span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</div>
-      <div><b>F.Low:</b> <span class="flow">${dispFlow.toFixed(1)}</span> kHz</div>
-      <div><b>F.peak:</b> <span class="fpeak">-</span> kHz</div>
-      <div><b>Bandwidth:</b> <span class="bandwidth">${dispBandwidth.toFixed(1)}</span> kHz</div>
-      <div><b>Duration:</b> <span class="duration">${dispDurationMs.toFixed(1)}</span> ms</div>
-      <div><b>Avg.Slope:</b> <span class="slope">${dispSlope.toFixed(1)}</span> kHz/ms</div>
+      <table class="freq-tooltip-table">
+        <tr>
+          <td class="label">Freq.High:</td>
+          <td class="value"><span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</td>
+          <td class="label">Freq.Low:</td>
+          <td class="value"><span class="flow">${dispFlow.toFixed(1)}</span> kHz</td>
+        </tr>
+        <tr>
+          <td class="label">Freq.Peak:</td>
+          <td class="value"><span class="fpeak">-</span> kHz</td>
+          <td class="label">Bandwidth:</td>
+          <td class="value"><span class="bandwidth">${dispBandwidth.toFixed(1)}</span> kHz</td>
+        </tr>
+        <tr>
+          <td class="label">Duration:</td>
+          <td class="value"><span class="duration">${dispDurationMs.toFixed(1)}</span> ms</td>
+          <td class="label">Avg.Slope:</td>
+          <td class="value"><span class="slope">${dispSlope.toFixed(1)}</span> kHz/ms</td>
+        </tr>
+      </table>
       <div class="tooltip-close-btn">×</div>
     `;
     tooltip.addEventListener('mouseenter', () => { isOverTooltip = true; suppressHover = true; hideAll(); });

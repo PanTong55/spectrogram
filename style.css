@@ -1543,6 +1543,33 @@ input.tag-button.editing {
   cursor: move;
 }
 
+.freq-tooltip-table {
+  border-collapse: collapse;
+  margin-bottom: 4px;
+  width: 100%;
+}
+
+.freq-tooltip-table tr {
+  display: table-row;
+}
+
+.freq-tooltip-table td {
+  padding: 2px 4px;
+  border: none;
+}
+
+.freq-tooltip-table td.label {
+  font-weight: bold;
+  text-align: right;
+  padding-right: 6px;
+  min-width: 70px;
+}
+
+.freq-tooltip-table td.value {
+  text-align: left;
+  min-width: 60px;
+}
+
 .tooltip-close-btn {
   position: absolute;
   top: 2px;
