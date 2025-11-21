@@ -1,4 +1,5 @@
 import { getTimeExpansionMode } from './fileState.js';
+import { getWavesurfer, getPlugin } from './wsManager.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -351,6 +352,114 @@ export function initFrequencyHover({
     }
   });
 
+  // 計算 selection area 內的峰值頻率
+  async function calculatePeakFrequency(sel) {
+    try {
+      const ws = getWavesurfer();
+      if (!ws) return null;
+
+      const currentFile = ws.getMediaElement()?.src;
+      if (!currentFile) return null;
+
+      const { startTime, endTime, Flow, Fhigh } = sel.data;
+      const durationMs = (endTime - startTime) * 1000;
+
+      // 只有 duration < 100ms 時才計算
+      if (durationMs >= 100) return null;
+
+      // 獲取原始音頻緩衝
+      const decodedData = ws.getDecodedData();
+      if (!decodedData || !decodedData.getChannelData) return null;
+
+      // 獲取音頻樣本數據
+      const audioBuffer = decodedData;
+      const sampleRate = audioBuffer.sampleRate;
+      const startSample = Math.floor(startTime * sampleRate);
+      const endSample = Math.floor(endTime * sampleRate);
+
+      if (endSample <= startSample) return null;
+
+      // 提取 crop 音頻數據
+      const channels = [];
+      for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+        const channelData = audioBuffer.getChannelData(i);
+        channels.push(new Float32Array(channelData.slice(startSample, endSample)));
+      }
+
+      // 計算 FFT 並找到峰值
+      const peakFreq = await calculatePeakFromCroppedAudio(
+        channels,
+        sampleRate,
+        Flow,
+        Fhigh
+      );
+
+      if (peakFreq !== null) {
+        sel.data.peakFreq = peakFreq;
+        if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
+          const timeExp = getTimeExpansionMode();
+          const freqMul = timeExp ? 10 : 1;
+          const dispPeakFreq = peakFreq * freqMul;
+          sel.tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
+        }
+        return peakFreq;
+      }
+    } catch (err) {
+      console.warn('計算峰值頻率時出錯:', err);
+    }
+    return null;
+  }
+
+  // 從 cropped audio 計算峰值頻率 - 使用基於能量的方法
+  async function calculatePeakFromCroppedAudio(channels, sampleRate, freqMin, freqMax) {
+    try {
+      if (!channels || channels.length === 0) return null;
+
+      const audioData = channels[0]; // 使用第一個通道
+      
+      if (audioData.length < 128) return null; // 太短的音頻
+
+      // 頻率範圍（Hz）
+      const freqMinHz = freqMin * 1000;
+      const freqMaxHz = freqMax * 1000;
+
+      // 使用簡單的 autocorrelation 找峰值頻率
+      // 測試不同的週期（對應不同的頻率）
+      let bestFreq = freqMin;
+      let bestCorr = -Infinity;
+
+      const minPeriod = Math.floor(sampleRate / freqMaxHz); // 最小週期
+      const maxPeriod = Math.floor(sampleRate / freqMinHz); // 最大週期
+
+      for (let period = minPeriod; period <= maxPeriod; period++) {
+        let correlation = 0;
+        let count = 0;
+
+        // 計算該週期的 autocorrelation
+        for (let i = 0; i + period < audioData.length; i++) {
+          correlation += audioData[i] * audioData[i + period];
+          count++;
+        }
+
+        correlation /= count;
+
+        // 檢查是否是新的最高峰
+        if (correlation > bestCorr) {
+          bestCorr = correlation;
+          const freq = sampleRate / period;
+          if (freq >= freqMinHz && freq <= freqMaxHz) {
+            bestFreq = freq / 1000; // 轉換為 kHz
+          }
+        }
+      }
+
+      return bestFreq > 0 ? bestFreq : null;
+    } catch (err) {
+      console.warn('calculatePeakFromCroppedAudio 錯誤:', err);
+      return null;
+    }
+  }
+
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
     const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip: null, expandBtn: null, closeBtn: null, btnGroup: null, durationLabel: null };
 
@@ -382,6 +491,14 @@ export function initFrequencyHover({
         hoveredSelection = null;
       }
     });
+
+    // 如果 duration < 100ms，自動計算峰值頻率
+    if (Duration * 1000 < 100) {
+      calculatePeakFrequency(selObj).catch(err => {
+        console.error('計算峰值頻率失敗:', err);
+      });
+    }
+
     return selObj;
   }
 
@@ -416,6 +533,7 @@ export function initFrequencyHover({
     tooltip.innerHTML = `
       <div><b>F.high:</b> <span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</div>
       <div><b>F.Low:</b> <span class="flow">${dispFlow.toFixed(1)}</span> kHz</div>
+      <div><b>F.peak:</b> <span class="fpeak">-</span> kHz</div>
       <div><b>Bandwidth:</b> <span class="bandwidth">${dispBandwidth.toFixed(1)}</span> kHz</div>
       <div><b>Duration:</b> <span class="duration">${dispDurationMs.toFixed(1)}</span> ms</div>
       <div><b>Avg.Slope:</b> <span class="slope">${dispSlope.toFixed(1)}</span> kHz/ms</div>
@@ -702,6 +820,12 @@ export function initFrequencyHover({
     tooltip.querySelector('.bandwidth').textContent = dispBandwidth.toFixed(1);
     tooltip.querySelector('.duration').textContent = dispDurationMs.toFixed(1);
     tooltip.querySelector('.slope').textContent = dispSlope.toFixed(1);
+    
+    // Update F.peak if available
+    if (data.peakFreq !== undefined) {
+      const dispPeakFreq = data.peakFreq * freqMul;
+      tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
+    }
   }
 
   function updateSelections() {
