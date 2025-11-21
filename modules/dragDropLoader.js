@@ -126,6 +126,8 @@ export function initDragDropLoader({
       return;
     }
 
+    // 確保 drop-overlay 保持顯示
+    showOverlay();
     showUploadOverlay(validFiles.length);
 
     if (typeof onBeforeLoad === 'function') {
@@ -173,6 +175,10 @@ export function initDragDropLoader({
         await importKmlFile(pendingKmlFile);
         pendingKmlFile = null;
       }
+      // 成功加載文件後隱藏 overlay
+      hideOverlay();
+    } else {
+      // 沒有文件被成功加載，保持 overlay 顯示以便用戶重新操作
     }
     if (skippedLong > 0) {
       showMessageBox({
@@ -258,7 +264,6 @@ export function initDragDropLoader({
     if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter = 0;
-    hideOverlay();
     const files = await getFilesFromDataTransfer(e.dataTransfer);
     handleFiles(files);
   });

@@ -178,6 +178,16 @@ if (timeExpBtn) {
       }
     }
 
+    // 如果沒有加載任何文件，只切換 UI 狀態，不重繪
+    const ws = getWavesurfer();
+    const curDur = ws ? ws.getDuration() : 0;
+    if (curDur === 0) {
+      const newState = toggleTimeExpansionMode();
+      setTimeExpansionMode(newState);
+      applyTimeExpansionUI();
+      return;
+    }
+
     const newState = toggleTimeExpansionMode();
     setTimeExpansionMode(newState); // ensure saved
     applyTimeExpansionUI();
