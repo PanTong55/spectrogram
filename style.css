@@ -233,7 +233,7 @@ html, body {
   position: absolute;
   bottom: 30px;
   right: 10px;
-  background: #fff;
+  background: #ffffff70;
   border: 1px solid #ccc;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -245,7 +245,7 @@ html, body {
   width: 30px;
   height: 30px;
   font-size: 18px;
-  background: #ffffff21;
+  background: #ffffff70;
   backdrop-filter: blur(3px);
   border: none;
   display: flex;
