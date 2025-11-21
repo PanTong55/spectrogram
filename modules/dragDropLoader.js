@@ -212,7 +212,9 @@ export function initDragDropLoader({
     if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter--;
-    if (dragCounter === 0) {
+    // 只有當 dragCounter <= 0 時才隱藏，防止在 drop-overlay 上拖曳經過時誤隱藏
+    if (dragCounter <= 0) {
+      dragCounter = 0;
       hideOverlay();
     }
   });
