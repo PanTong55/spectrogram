@@ -1535,7 +1535,8 @@ input.tag-button.editing {
 .freq-tooltip {
   position: absolute;
   z-index: 30;
-  padding: 6px 10px;
+  padding: 6px 8px 2px 2px;
+  line-height: 14px;
   background: white;
   font-size: 12px;
   font-family: 'Noto Sans HK', sans-serif;
@@ -1561,7 +1562,7 @@ input.tag-button.editing {
 .freq-tooltip-table td.label {
   font-weight: bold;
   text-align: right;
-  padding-right: 6px;
+  padding-right: 2px;
   min-width: 70px;
 }
 
@@ -1573,7 +1574,7 @@ input.tag-button.editing {
 .tooltip-close-btn {
   position: absolute;
   top: 2px;
-  right: 6px;
+  right: 4px;
   cursor: pointer;
 }
 
