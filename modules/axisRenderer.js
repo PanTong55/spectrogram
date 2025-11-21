@@ -78,9 +78,8 @@ export function drawFrequencyGrid({
   ctx.lineWidth = 0.4;
 
   const range = maxFrequency;
-  // 頻率軸的 step 不受 Time Expansion 影響，Time Expansion 只影響時間軸
-  const majorStep = 10;
-  const minorStep = 5;
+  const majorStep = timeExpansion ? 1 : 10;
+  const minorStep = timeExpansion ? 0.5 : 5;
 
   // 優化：批量繪製所有網格線
   ctx.beginPath();
@@ -109,8 +108,8 @@ export function drawFrequencyGrid({
     label.className = 'freq-label-static freq-axis-label';
     label.style.top = `${y - 1}px`;
     const freqValue = f + offsetKHz;
-    // 頻率標籤不受 Time Expansion 影響，始終顯示實際頻率值
-    label.textContent = Number(freqValue.toFixed(1)).toString();
+    const displayValue = timeExpansion ? (freqValue * 10) : freqValue;
+    label.textContent = Number(displayValue.toFixed(1)).toString();
     fragment.appendChild(label);
   }
 
