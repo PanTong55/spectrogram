@@ -1197,7 +1197,7 @@ body.timeexp-open #timeexpBtn {
 }
 
 #peakBtn.active {
-  background-color: #dc3545;  /* 紅色：Peak Mode 啟用 */
+  background-color: #B91F1C;  /* 紅色：Peak Mode 啟用 */
 }
 
 input.tag-button {
