@@ -1346,6 +1346,32 @@ export function initMapPopup({
     }
   }
 
+  function zoomToCurrentMarker() {
+    if (!map) return;
+    
+    const idx = getCurrentIndex();
+    if (idx < 0) {
+      // No file selected, show default view
+      const HK_CENTER = [22.28552, 114.15769];
+      map.setView(HK_CENTER, DEFAULT_ZOOM);
+      return;
+    }
+    
+    const meta = getFileMetadata(idx);
+    const lat = parseFloat(meta.latitude);
+    const lon = parseFloat(meta.longitude);
+    
+    if (isNaN(lat) || isNaN(lon)) {
+      // No coordinates for current file, show default view
+      const HK_CENTER = [22.28552, 114.15769];
+      map.setView(HK_CENTER, DEFAULT_ZOOM);
+      return;
+    }
+    
+    // Zoom to current marker
+    map.setView([lat, lon], 16, { animate: true });
+  }
+
   const DEFAULT_ZOOM = 13;
 
   function updateMap() {
@@ -1506,8 +1532,8 @@ export function initMapPopup({
       setTimeout(() => {
         popup.classList.remove('animating');
         map?.invalidateSize(true);
-        // 最小化後自動 fit 所有 markers
-        fitAllMarkers();
+        // 最小化後自動 zoom 到當前 marker
+        zoomToCurrentMarker();
       }, 400);
       // 狀態：最小化
       minBtn.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
