@@ -521,16 +521,17 @@ export function initFrequencyHover({
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
     const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip: null, expandBtn: null, closeBtn: null, btnGroup: null, durationLabel: null };
 
-    // Duration 是秒數，轉換為毫秒進行比較
-    // 注意：Duration 是實際時間，不受 Time Expansion 影響
+    // 根據 Time Expansion 模式計算用於判斷的持續時間
+    const timeExp = getTimeExpansionMode();
     const durationMs = Duration * 1000;
-    if (durationMs <= 100) {
+    const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+    
+    if (judgeDurationMs <= 100) {
       selObj.tooltip = buildTooltip(selObj, left, top, width);
     }
 
   const durationLabel = document.createElement('div');
   durationLabel.className = 'selection-duration';
-  const timeExp = getTimeExpansionMode();
   const displayDurationMs = timeExp ? (Duration * 1000 / 10) : (Duration * 1000);
   durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
     rectObj.appendChild(durationLabel);
@@ -538,9 +539,8 @@ export function initFrequencyHover({
 
     selections.push(selObj);
 
-    // Duration 是秒數，需要轉換為毫秒，並且是實際時間（不受 Time Expansion 影響）
-    const actualDurationMs = Duration * 1000;
-    if (actualDurationMs > 100) {
+    // 根據 Time Expansion 模式判斷是否創建按鈕組
+    if (judgeDurationMs > 100) {
       createBtnGroup(selObj);
     }
 
@@ -556,9 +556,8 @@ export function initFrequencyHover({
     });
 
     // 如果 duration < 100ms，自動計算峰值頻率
-    // Duration 是秒數，需要轉換為毫秒，並且是實際時間（不受 Time Expansion 影響）
-    const actualDurationMsForPeak = Duration * 1000;
-    if (actualDurationMsForPeak < 100) {
+    // 使用判斷時間（已考慮 Time Expansion）
+    if (judgeDurationMs < 100) {
       calculatePeakFrequency(selObj).catch(err => {
         console.error('計算峰值頻率失敗:', err);
       });
@@ -873,7 +872,10 @@ export function initFrequencyHover({
         }
         peakUpdateTimeout = setTimeout(() => {
           const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
-          if (durationMs < 100) {
+          const timeExp = getTimeExpansionMode();
+          const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+          
+          if (judgeDurationMs < 100) {
             calculatePeakFrequency(sel).catch(err => {
               console.error('Resize 時計算峰值頻率失敗:', err);
             });
@@ -889,9 +891,12 @@ export function initFrequencyHover({
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
 
-        // 當 resize 完成後，如果 selection 時間 < 100ms，重新計算峰值
+        // 當 resize 完成後，根據 Time Expansion 模式判斷是否重新計算峰值
         const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
-        if (durationMs < 100) {
+        const timeExp = getTimeExpansionMode();
+        const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+        
+        if (judgeDurationMs < 100) {
           calculatePeakFrequency(sel).catch(err => {
             console.error('Resize 後計算峰值頻率失敗:', err);
           });
@@ -962,8 +967,11 @@ export function initFrequencyHover({
       sel.rect.style.height = `${height}px`;
 
       const durationMs = (endTime - startTime) * 1000;
-      // durationMs 是實際時間（毫秒），不受 Time Expansion 影響
-      if (durationMs <= 100) {
+      // 根據 Time Expansion 模式計算用於判斷的持續時間
+      const timeExp = getTimeExpansionMode();
+      const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+      
+      if (judgeDurationMs <= 100) {
         if (sel.btnGroup) sel.btnGroup.style.display = 'none';
         if (!sel.tooltip) {
           sel.tooltip = buildTooltip(sel, left, top, width);
