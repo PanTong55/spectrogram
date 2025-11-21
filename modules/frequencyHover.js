@@ -535,18 +535,24 @@ export function initFrequencyHover({
         <tr>
           <td class="label">Freq.High:</td>
           <td class="value"><span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</td>
+        </tr>
+        <tr>
           <td class="label">Freq.Low:</td>
           <td class="value"><span class="flow">${dispFlow.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Freq.Peak:</td>
           <td class="value"><span class="fpeak">-</span> kHz</td>
+        </tr>
+        <tr>
           <td class="label">Bandwidth:</td>
           <td class="value"><span class="bandwidth">${dispBandwidth.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Duration:</td>
           <td class="value"><span class="duration">${dispDurationMs.toFixed(1)}</span> ms</td>
+        </tr>
+        <tr>  
           <td class="label">Avg.Slope:</td>
           <td class="value"><span class="slope">${dispSlope.toFixed(1)}</span> kHz/ms</td>
         </tr>
