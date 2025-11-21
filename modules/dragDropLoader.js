@@ -212,10 +212,14 @@ export function initDragDropLoader({
     if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter--;
-    // 只有當 dragCounter <= 0 時才隱藏，防止在 drop-overlay 上拖曳經過時誤隱藏
+    // 只有當 dragCounter <= 0 且有檔案已載入時，才隱藏 overlay
+    // 如果沒有檔案，drop-overlay 應該保持顯示
     if (dragCounter <= 0) {
       dragCounter = 0;
-      hideOverlay();
+      const fileList = getFileList();
+      if (fileList && fileList.length > 0) {
+        hideOverlay();
+      }
     }
   });
 
