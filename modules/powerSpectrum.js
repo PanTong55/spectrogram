@@ -656,10 +656,11 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
+  const topPadding = 40;  // 減少上方空白
   const padding = 50;
   const leftPadding = 65;  // 增加左邊 padding 以容納 Y 軸標題
   const plotWidth = width - leftPadding - padding;
-  const plotHeight = height - padding * 2;
+  const plotHeight = height - topPadding - padding;
 
   // 清除背景
   ctx.fillStyle = '#ffffff';
@@ -690,9 +691,9 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(leftPadding, padding);
-  ctx.lineTo(leftPadding, padding + plotHeight);
-  ctx.lineTo(leftPadding + plotWidth, padding + plotHeight);
+  ctx.moveTo(leftPadding, topPadding);
+  ctx.lineTo(leftPadding, topPadding + plotHeight);
+  ctx.lineTo(leftPadding + plotWidth, topPadding + plotHeight);
   ctx.stroke();
 
   // 繪製頻率軸標籤 (X-axis，Unit: kHz)
@@ -705,10 +706,10 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     const freq = flowKHz + (fhighKHz - flowKHz) * (i / freqSteps);
     const x = leftPadding + (plotWidth * i) / freqSteps;
     ctx.beginPath();
-    ctx.moveTo(x, padding + plotHeight);
-    ctx.lineTo(x, padding + plotHeight + 5);
+    ctx.moveTo(x, topPadding + plotHeight);
+    ctx.lineTo(x, topPadding + plotHeight + 5);
     ctx.stroke();
-    ctx.fillText(freq.toFixed(1), x, padding + plotHeight + 15);
+    ctx.fillText(freq.toFixed(1), x, topPadding + plotHeight + 15);
   }
 
   // 繪製能量軸標籤 (Y-axis，Unit: dB)
@@ -717,7 +718,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   const dbSteps = 4;
   for (let i = 0; i <= dbSteps; i++) {
     const db = maxDb - ((maxDb - minDb) * i) / dbSteps;
-    const y = padding + (plotHeight * i) / dbSteps;
+    const y = topPadding + (plotHeight * i) / dbSteps;
     ctx.beginPath();
     ctx.moveTo(leftPadding - 5, y);
     ctx.lineTo(leftPadding, y);
@@ -732,7 +733,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 20);
 
   ctx.save();
-  ctx.translate(12, padding + plotHeight / 2);
+  ctx.translate(12, topPadding + plotHeight / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.fillText('Energy (dB)', 0, 0);
   ctx.restore();
@@ -761,7 +762,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.save();
   // 設定剪裁區域，確保曲線不會超出圖表邊界
   ctx.beginPath();
-  ctx.rect(leftPadding, padding, plotWidth, plotHeight);
+  ctx.rect(leftPadding, topPadding, plotWidth, plotHeight);
   ctx.clip();
 
   ctx.strokeStyle = '#0066cc';
@@ -813,7 +814,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     // 計算 x 座標（基於頻率百分比）
     const freqPercent = (point.freqHz - minBinFreq) / (maxBinFreq - minBinFreq);
     const x = leftPadding + freqPercent * plotWidth;
-    const y = padding + plotHeight - normalizedDb * plotHeight;
+    const y = topPadding + plotHeight - normalizedDb * plotHeight;
 
     if (firstPoint) {
       ctx.moveTo(x, y);
@@ -832,13 +833,13 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   for (let i = 1; i < freqSteps; i++) {
     const x = leftPadding + (plotWidth * i) / freqSteps;
     ctx.beginPath();
-    ctx.moveTo(x, padding);
-    ctx.lineTo(x, padding + plotHeight);
+    ctx.moveTo(x, topPadding);
+    ctx.lineTo(x, topPadding + plotHeight);
     ctx.stroke();
   }
 
   for (let i = 1; i < dbSteps; i++) {
-    const y = padding + (plotHeight * i) / dbSteps;
+    const y = topPadding + (plotHeight * i) / dbSteps;
     ctx.beginPath();
     ctx.moveTo(leftPadding, y);
     ctx.lineTo(leftPadding + plotWidth, y);
@@ -855,8 +856,8 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
-    ctx.moveTo(peakX, padding);
-    ctx.lineTo(peakX, padding + plotHeight);
+    ctx.moveTo(peakX, topPadding);
+    ctx.lineTo(peakX, topPadding + plotHeight);
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -864,7 +865,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.fillStyle = '#ff0000';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Peak: ${peakFreq.toFixed(1)} kHz`, peakX, padding - 20);
+    ctx.fillText(`Peak: ${peakFreq.toFixed(1)} kHz`, peakX, topPadding - 20);
   }
 }
 
