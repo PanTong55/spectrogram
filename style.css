@@ -2273,6 +2273,8 @@ input.tag-button.editing {
 
 /* === Power Spectrum Popup === */
 .power-spectrum-popup {
+  display: flex;
+  flex-direction: column;
   user-select: none;
   font-family: Arial, sans-serif;
 }

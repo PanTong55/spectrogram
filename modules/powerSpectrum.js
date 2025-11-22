@@ -50,74 +50,41 @@ export function showPowerSpectrumPopup({
 }
 
 /**
- * 建立 500x500 的 Popup Window
+ * 建立 500x500 的 Popup Window (使用 MessageBox 樣式)
  */
 function createPopupWindow() {
   const popup = document.createElement('div');
-  popup.className = 'power-spectrum-popup';
-  popup.style.cssText = `
-    position: fixed;
-    width: 500px;
-    height: 500px;
-    background: white;
-    border: 2px solid #333;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    font-family: 'Arial', sans-serif;
-  `;
+  popup.className = 'map-popup modal-popup';
+  popup.style.width = '500px';
+  popup.style.height = '500px';
 
-  // 標題欄
-  const titleBar = document.createElement('div');
-  titleBar.style.cssText = `
-    background: #f5f5f5;
-    padding: 12px 16px;
-    border-bottom: 1px solid #ddd;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: move;
-    user-select: none;
-  `;
-
-  const title = document.createElement('span');
-  title.textContent = 'Power Spectrum';
-  title.style.cssText = `
-    font-weight: bold;
-    font-size: 14px;
-    color: #333;
-  `;
+  // 建立 Drag Bar (標題欄)
+  const dragBar = document.createElement('div');
+  dragBar.className = 'popup-drag-bar';
+  
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'popup-title';
+  titleSpan.textContent = 'Power Spectrum';
+  dragBar.appendChild(titleSpan);
 
   const closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '×';
-  closeBtn.style.cssText = `
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    line-height: 1;
-  `;
+  closeBtn.className = 'popup-close-btn';
+  closeBtn.title = 'Close';
+  closeBtn.innerHTML = '&times;';
   closeBtn.addEventListener('click', () => popup.remove());
+  dragBar.appendChild(closeBtn);
 
-  titleBar.appendChild(title);
-  titleBar.appendChild(closeBtn);
+  popup.appendChild(dragBar);
 
-  // Canvas 容器
+  // 建立 Canvas 容器
   const canvasContainer = document.createElement('div');
   canvasContainer.style.cssText = `
     flex: 1;
     padding: 16px;
     background: #fafafa;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   `;
 
   const canvas = document.createElement('canvas');
@@ -131,13 +98,12 @@ function createPopupWindow() {
   `;
 
   canvasContainer.appendChild(canvas);
-
-  popup.appendChild(titleBar);
   popup.appendChild(canvasContainer);
+  
   document.body.appendChild(popup);
 
   // 拖動功能
-  makeDraggable(popup, titleBar);
+  makeDraggable(popup, dragBar);
 
   return popup;
 }
@@ -145,24 +111,31 @@ function createPopupWindow() {
 /**
  * 使 popup 可拖動
  */
-function makeDraggable(popup, titleBar) {
+function makeDraggable(popup, dragBar) {
   let offsetX = 0, offsetY = 0, isDragging = false;
 
-  titleBar.addEventListener('mousedown', (e) => {
+  dragBar.addEventListener('mousedown', (e) => {
     isDragging = true;
-    offsetX = e.clientX - popup.offsetLeft;
-    offsetY = e.clientY - popup.offsetTop;
+    const rect = popup.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+    popup.classList.add('resizing');
   });
 
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
+    
+    popup.style.position = 'fixed';
     popup.style.left = `${e.clientX - offsetX}px`;
     popup.style.top = `${e.clientY - offsetY}px`;
     popup.style.transform = 'none';
   });
 
   document.addEventListener('mouseup', () => {
-    isDragging = false;
+    if (isDragging) {
+      isDragging = false;
+      popup.classList.remove('resizing');
+    }
   });
 }
 
