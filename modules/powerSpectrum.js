@@ -737,17 +737,76 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.fillText('Energy (dB)', 0, 0);
   ctx.restore();
 
+  // 計算 peakFreq 對應的 dB 值（使用拋物線插值）
+  let peakDbValue = null;
+  if (peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
+    // peakFreq 在 Hz 單位
+    const peakFreqHz = peakFreq * 1000;
+    const peakBinExact = (peakFreqHz - minBinFreq) / freqResolution + minBin;
+    
+    // 找到 peakBinExact 前後的整數 bin
+    const peakBinFloor = Math.floor(peakBinExact);
+    const peakBinCeil = Math.ceil(peakBinExact);
+    const binFraction = peakBinExact - peakBinFloor;
+    
+    if (peakBinFloor >= minBin && peakBinCeil <= maxBin) {
+      // 線性插值計算 peakFreq 位置的 dB 值
+      const dbFloor = spectrum[peakBinFloor];
+      const dbCeil = spectrum[peakBinCeil];
+      peakDbValue = dbFloor + (dbCeil - dbFloor) * binFraction;
+    }
+  }
+
   // 繪製 Power Spectrum 曲線
   ctx.strokeStyle = '#0066cc';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
 
   let firstPoint = true;
+  let pointsToRender = [];
   
+  // 收集所有 bin 點
   for (let i = minBin; i <= maxBin; i++) {
     const db = spectrum[i];
+    const freqHz = i * freqResolution;
+    pointsToRender.push({ bin: i, freqHz, db, isPeakPoint: false });
+  }
+  
+  // 如果 peakFreq 不在 bin 邊界上，插入一個該位置的點以確保曲線通過 peak
+  if (peakDbValue !== null && peakFreq !== null) {
+    const peakFreqHz = peakFreq * 1000;
+    // 找到應該插入的位置
+    let insertIndex = 0;
+    for (let i = 0; i < pointsToRender.length; i++) {
+      if (pointsToRender[i].freqHz < peakFreqHz) {
+        insertIndex = i + 1;
+      } else {
+        break;
+      }
+    }
+    // 檢查是否已經非常接近一個 bin（避免重複）
+    const nearbyThreshold = freqResolution * 0.1;
+    let shouldInsert = true;
+    if (insertIndex > 0 && Math.abs(pointsToRender[insertIndex - 1].freqHz - peakFreqHz) < nearbyThreshold) {
+      shouldInsert = false;
+    }
+    if (insertIndex < pointsToRender.length && Math.abs(pointsToRender[insertIndex].freqHz - peakFreqHz) < nearbyThreshold) {
+      shouldInsert = false;
+    }
+    if (shouldInsert) {
+      pointsToRender.splice(insertIndex, 0, { bin: -1, freqHz: peakFreqHz, db: peakDbValue, isPeakPoint: true });
+    }
+  }
+  
+  // 繪製曲線，通過所有點
+  for (let p = 0; p < pointsToRender.length; p++) {
+    const point = pointsToRender[p];
+    const db = point.db;
     const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
-    const x = leftPadding + ((i - minBin) / (maxBin - minBin)) * plotWidth;
+    
+    // 計算 x 座標（基於頻率百分比）
+    const freqPercent = (point.freqHz - minBinFreq) / (maxBinFreq - minBinFreq);
+    const x = leftPadding + freqPercent * plotWidth;
     const y = padding + plotHeight - normalizedDb * plotHeight;
 
     if (firstPoint) {
