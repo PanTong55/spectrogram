@@ -391,14 +391,18 @@ export function initFrequencyHover({
         channels.push(new Float32Array(channelData.slice(startSample, endSample)));
       }
 
-      // 計算 FFT 並找到峰值
+      // 獲取設置參數
+      const fftSize = window.__spectrogramSettings?.fftSize || 1024;
       const windowType = window.__spectrogramSettings?.windowType || 'hann';
-      const peakFreq = await calculatePeakFromCroppedAudio(
-        channels,
+
+      // 使用與 Power Spectrum 相同的方法計算峰值
+      const peakFreq = await calculatePeakFromSpectrum(
+        channels[0],
         sampleRate,
+        fftSize,
+        windowType,
         Flow,
-        Fhigh,
-        windowType
+        Fhigh
       );
 
       if (peakFreq !== null) {
@@ -417,8 +421,98 @@ export function initFrequencyHover({
     return null;
   }
 
+  // 從 Cropped Audio 的頻譜中計算峰值頻率 (與 Power Spectrum 保持一致)
+  async function calculatePeakFromSpectrum(audioData, sampleRate, fftSize, windowType, freqMin, freqMax) {
+    try {
+      if (!audioData || audioData.length === 0) return null;
+
+      // 應用窗口函數 (與 Power Spectrum 計算一致)
+      const windowed = applyWindow(audioData, windowType);
+
+      // 計算頻譜 (與 Power Spectrum 相同方式)
+      const spectrum = calculateSpectrumForPeakFinding(windowed, sampleRate, fftSize);
+      if (!spectrum) return null;
+
+      // 從頻譜中找到峰值 (與 Power Spectrum 相同方式)
+      const freqResolution = sampleRate / fftSize;
+      const minBinFreq = freqMin * 1000;
+      const maxBinFreq = freqMax * 1000;
+      const minBin = Math.max(0, Math.floor(minBinFreq / freqResolution));
+      const maxBin = Math.min(spectrum.length - 1, Math.floor(maxBinFreq / freqResolution));
+
+      if (minBin >= maxBin) return null;
+
+      // 在頻譜中找到最大值
+      let peakBin = minBin;
+      let peakDb = spectrum[minBin];
+
+      for (let i = minBin + 1; i <= maxBin; i++) {
+        if (spectrum[i] > peakDb) {
+          peakDb = spectrum[i];
+          peakBin = i;
+        }
+      }
+
+      // 如果峰值在中間，進行拋物線插值提高精度
+      if (peakBin > minBin && peakBin < maxBin) {
+        const db0 = spectrum[peakBin - 1];
+        const db1 = spectrum[peakBin];
+        const db2 = spectrum[peakBin + 1];
+
+        // 拋物線頂點公式
+        const a = (db2 - 2 * db1 + db0) / 2;
+        if (Math.abs(a) > 1e-10) {
+          const binCorrection = (db0 - db2) / (4 * a);
+          const refinedBin = peakBin + binCorrection;
+          const peakFreqHz = refinedBin * freqResolution;
+          return peakFreqHz / 1000; // 轉換為 kHz
+        }
+      }
+
+      // 沒有進行插值時，直接使用 bin 位置
+      const peakFreqHz = peakBin * freqResolution;
+      return peakFreqHz / 1000; // 轉換為 kHz
+    } catch (err) {
+      console.warn('calculatePeakFromSpectrum 錯誤:', err);
+      return null;
+    }
+  }
+
+  // 計算頻譜用於峰值尋找
+  function calculateSpectrumForPeakFinding(windowedData, sampleRate, fftSize) {
+    if (!windowedData || windowedData.length === 0) return null;
+
+    const freqResolution = sampleRate / fftSize;
+    const maxFreqToCompute = sampleRate / 2;
+    const spectrum = new Float32Array(Math.floor(maxFreqToCompute / freqResolution) + 1);
+
+    // 移除直流分量
+    let dcOffset = 0;
+    for (let i = 0; i < windowedData.length; i++) {
+      dcOffset += windowedData[i];
+    }
+    dcOffset /= windowedData.length;
+
+    const dcRemovedData = new Float32Array(windowedData.length);
+    for (let i = 0; i < windowedData.length; i++) {
+      dcRemovedData[i] = windowedData[i] - dcOffset;
+    }
+
+    // 計算每個頻率點的功率
+    for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
+      const freq = binIndex * freqResolution;
+      if (freq > maxFreqToCompute) break;
+
+      const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
+      spectrum[binIndex] = 20 * Math.log10(Math.sqrt(energy) + 1e-10);
+    }
+
+    return spectrum;
+  }
+
   // 從 cropped audio 計算峰值頻率 - 優化版，使用兩階段精確掃描 (應用窗口函數)
-  async function calculatePeakFromCroppedAudio(channels, sampleRate, freqMin, freqMax, windowType = 'hann') {
+  // 備註：此函數已廢棄，保留以供參考
+  async function calculatePeakFromCroppedAudio_deprecated(channels, sampleRate, freqMin, freqMax, windowType = 'hann') {
     try {
       if (!channels || channels.length === 0) return null;
 
