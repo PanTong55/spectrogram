@@ -190,7 +190,7 @@ function extractAudioData(wavesurfer, selection, sampleRate) {
 }
 
 /**
- * 計算 Power Spectrum (使用 FFT)
+ * 計算 Power Spectrum (使用 Goertzel 算法，與 Peak Freq 計算一致)
  */
 function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
   if (!audioData || audioData.length === 0) return null;
@@ -198,27 +198,59 @@ function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
   // 應用窗口函數
   const windowed = applyWindow(audioData, windowType);
 
-  // 進行零填充至 fftSize
-  const paddedData = new Float32Array(fftSize);
-  const copyLength = Math.min(windowed.length, fftSize);
-  for (let i = 0; i < copyLength; i++) {
-    paddedData[i] = windowed[i];
+  // freqMin 和 freqMax 需要計算的頻率範圍
+  const freqResolution = sampleRate / fftSize;
+  const maxFreqToCompute = sampleRate / 2; // Nyquist 頻率
+
+  // 計算頻譜 - 使用 Goertzel 算法進行逐頻率計算
+  const spectrum = new Float32Array(Math.floor(maxFreqToCompute / freqResolution) + 1);
+
+  // 預處理：移除直流分量（DC offset）
+  let dcOffset = 0;
+  for (let i = 0; i < windowed.length; i++) {
+    dcOffset += windowed[i];
+  }
+  dcOffset /= windowed.length;
+
+  const dcRemovedData = new Float32Array(windowed.length);
+  for (let i = 0; i < windowed.length; i++) {
+    dcRemovedData[i] = windowed[i] - dcOffset;
   }
 
-  // 執行 FFT
-  const fft = cooleyTukeyFFT(paddedData);
+  // 計算每個頻率點的功率 (使用 Goertzel 算法)
+  for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
+    const freq = binIndex * freqResolution;
+    if (freq > maxFreqToCompute) break;
 
-  // 計算功率譜
-  const spectrum = new Float32Array(fft.length / 2);
-  for (let i = 0; i < spectrum.length; i++) {
-    const real = fft[2 * i];
-    const imag = fft[2 * i + 1];
-    const magnitude = Math.sqrt(real * real + imag * imag);
-    // 轉換為 dB 並進行歸一化
-    spectrum[i] = 20 * Math.log10(magnitude + 1e-10);
+    const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
+    // 轉換為 dB
+    spectrum[binIndex] = 20 * Math.log10(Math.sqrt(energy) + 1e-10);
   }
 
   return spectrum;
+}
+
+/**
+ * Goertzel 算法 - 精確計算特定頻率的能量
+ */
+function goertzelEnergy(audioData, freq, sampleRate) {
+  const w = (2 * Math.PI * freq) / sampleRate;
+  const coeff = 2 * Math.cos(w);
+
+  let s0 = 0, s1 = 0, s2 = 0;
+
+  for (let i = 0; i < audioData.length; i++) {
+    s0 = audioData[i] + coeff * s1 - s2;
+    s2 = s1;
+    s1 = s0;
+  }
+
+  // 計算複數功率 (實部和虛部)
+  const realPart = s1 - s2 * Math.cos(w);
+  const imagPart = s2 * Math.sin(w);
+
+  const energy = realPart * realPart + imagPart * imagPart;
+  return energy;
 }
 
 /**
@@ -310,62 +342,6 @@ function createGaussWindow(n) {
 }
 
 /**
- * Cooley-Tukey FFT 演算法
- */
-function cooleyTukeyFFT(x) {
-  const n = x.length;
-  if (n <= 1) {
-    const result = new Float32Array(n * 2);
-    result[0] = x[0];
-    result[1] = 0;
-    return result;
-  }
-
-  // 確保 n 是 2 的冪
-  if ((n & (n - 1)) !== 0) {
-    const nextPowerOf2 = Math.pow(2, Math.ceil(Math.log2(n)));
-    const padded = new Float32Array(nextPowerOf2);
-    for (let i = 0; i < n; i++) {
-      padded[i] = x[i];
-    }
-    return cooleyTukeyFFT(padded);
-  }
-
-  // 拆分
-  const even = new Float32Array(n / 2);
-  const odd = new Float32Array(n / 2);
-  for (let i = 0; i < n / 2; i++) {
-    even[i] = x[2 * i];
-    odd[i] = x[2 * i + 1];
-  }
-
-  const evenFFT = cooleyTukeyFFT(even);
-  const oddFFT = cooleyTukeyFFT(odd);
-
-  const result = new Float32Array(n * 2);
-
-  for (let k = 0; k < n / 2; k++) {
-    const angle = (-2 * Math.PI * k) / n;
-    const wr = Math.cos(angle);
-    const wi = Math.sin(angle);
-
-    const oddReal = oddFFT[2 * k];
-    const oddImag = oddFFT[2 * k + 1];
-
-    const tReal = wr * oddReal - wi * oddImag;
-    const tImag = wr * oddImag + wi * oddReal;
-
-    result[2 * k] = evenFFT[2 * k] + tReal;
-    result[2 * k + 1] = evenFFT[2 * k + 1] + tImag;
-
-    result[2 * (k + n / 2)] = evenFFT[2 * k] - tReal;
-    result[2 * (k + n / 2) + 1] = evenFFT[2 * k + 1] - tImag;
-  }
-
-  return result;
-}
-
-/**
  * 繪製 Power Spectrum 圖表
  */
 function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize) {
@@ -396,8 +372,11 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     minDb = Math.min(minDb, spectrum[i]);
     maxDb = Math.max(maxDb, spectrum[i]);
   }
-  minDb = Math.max(minDb - 5, -120);
-  maxDb = Math.min(maxDb + 5, 0);
+  
+  // 調整 dB 範圍以提高視覺效果
+  const dbRange = maxDb - minDb;
+  minDb = maxDb - Math.max(dbRange, 60); // 至少 60dB 的動態範圍
+  maxDb = Math.max(maxDb, minDb + 1);
 
   // 繪製坐標軸
   ctx.strokeStyle = '#000000';
@@ -454,14 +433,16 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.lineWidth = 1.5;
   ctx.beginPath();
 
+  let firstPoint = true;
   for (let i = minBin; i <= maxBin; i++) {
     const db = spectrum[i];
-    const normalizedDb = (db - minDb) / (maxDb - minDb);
+    const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
     const x = padding + ((i - minBin) / (maxBin - minBin)) * plotWidth;
     const y = padding + plotHeight - normalizedDb * plotHeight;
 
-    if (i === minBin) {
+    if (firstPoint) {
       ctx.moveTo(x, y);
+      firstPoint = false;
     } else {
       ctx.lineTo(x, y);
     }
