@@ -1,5 +1,7 @@
 // modules/powerSpectrum.js
 
+import { initDropdown } from './dropdown.js';
+
 /**
  * 計算並顯示選定區域的 Power Spectrum
  */
@@ -23,9 +25,36 @@ export function showPowerSpectrumPopup({
   const ctx = canvas.getContext('2d');
   
   // 獲取控制元件
-  const typeSelect = popup.querySelector('#powerSpectrumWindowType');
-  const fftSelect = popup.querySelector('#powerSpectrumFFTSize');
+  const typeBtn = popup.querySelector('#powerSpectrumWindowType');
+  const fftBtn = popup.querySelector('#powerSpectrumFFTSize');
   const overlapInput = popup.querySelector('#powerSpectrumOverlap');
+
+  // 初始化 Dropdown 控制
+  const typeDropdown = initDropdown(typeBtn, [
+    { label: 'Blackman', value: 'blackman' },
+    { label: 'Gauss', value: 'gauss' },
+    { label: 'Hamming', value: 'hamming' },
+    { label: 'Hann', value: 'hann' },
+    { label: 'Rectangular', value: 'rectangular' },
+    { label: 'Triangular', value: 'triangular' }
+  ], {
+    onChange: () => redrawSpectrum()
+  });
+
+  const fftDropdown = initDropdown(fftBtn, [
+    { label: '512', value: '512' },
+    { label: '1024', value: '1024' },
+    { label: '2048', value: '2048' }
+  ], {
+    onChange: () => redrawSpectrum()
+  });
+
+  // 設置初始選項
+  const typeIndex = ['blackman', 'gauss', 'hamming', 'hann', 'rectangular', 'triangular'].indexOf(windowType);
+  typeDropdown.select(typeIndex >= 0 ? typeIndex : 3, { triggerOnChange: false }); // Default to 'hann'
+
+  const fftIndex = ['512', '1024', '2048'].indexOf(fftSize.toString());
+  fftDropdown.select(fftIndex >= 0 ? fftIndex : 1, { triggerOnChange: false }); // Default to '1024'
 
   // 提取選定區域的音頻數據
   let audioData = extractAudioData(wavesurfer, selection, sampleRate);
@@ -47,8 +76,12 @@ export function showPowerSpectrumPopup({
       }
     }
     
-    windowType = typeSelect.value;
-    fftSize = parseInt(fftSelect.value, 10);
+    // 從 dropdown 獲取當前值
+    const windowTypeItems = ['blackman', 'gauss', 'hamming', 'hann', 'rectangular', 'triangular'];
+    windowType = windowTypeItems[typeDropdown.selectedIndex] || 'hann';
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    fftSize = parseInt(fftSizeItems[fftDropdown.selectedIndex] || '1024', 10);
     
     // 獲取 overlap 值 (從控制面板)
     let overlapValue = overlap;
@@ -89,9 +122,7 @@ export function showPowerSpectrumPopup({
   // 初始繪製
   redrawSpectrum();
 
-  // 添加事件監聽器
-  typeSelect.addEventListener('change', redrawSpectrum);
-  fftSelect.addEventListener('change', redrawSpectrum);
+  // 添加事件監聽器（overlap input）
   overlapInput.addEventListener('change', redrawSpectrum);
 
   // 返回 popup 對象和更新函數
@@ -145,41 +176,33 @@ function createPopupWindow() {
   // Window Type 控制
   const typeControl = document.createElement('label');
   const typeLabel = document.createElement('span');
-  typeLabel.textContent = 'Window Type';
+  typeLabel.textContent = 'Type:';
   typeControl.appendChild(typeLabel);
   
-  const typeSelect = document.createElement('select');
-  typeSelect.id = 'powerSpectrumWindowType';
-  typeSelect.innerHTML = `
-    <option value="blackman">Blackman</option>
-    <option value="gauss">Gauss</option>
-    <option value="hamming">Hamming</option>
-    <option value="hann" selected>Hann</option>
-    <option value="rectangular">Rectangular</option>
-    <option value="triangular">Triangular</option>
-  `;
-  typeControl.appendChild(typeSelect);
+  const typeBtn = document.createElement('button');
+  typeBtn.id = 'powerSpectrumWindowType';
+  typeBtn.className = 'dropdown-button';
+  typeBtn.textContent = 'Hann';
+  typeControl.appendChild(typeBtn);
   controlPanel.appendChild(typeControl);
 
   // FFT Size 控制
   const fftControl = document.createElement('label');
   const fftLabel = document.createElement('span');
-  fftLabel.textContent = 'FFT';
+  fftLabel.textContent = 'FFT:';
   fftControl.appendChild(fftLabel);
   
-  const fftSelect = document.createElement('select');
-  fftSelect.id = 'powerSpectrumFFTSize';
-  fftSelect.innerHTML = `
-    <option value="1024" selected>1024</option>
-    <option value="2048">2048</option>
-  `;
-  fftControl.appendChild(fftSelect);
+  const fftBtn = document.createElement('button');
+  fftBtn.id = 'powerSpectrumFFTSize';
+  fftBtn.className = 'dropdown-button';
+  fftBtn.textContent = '1024';
+  fftControl.appendChild(fftBtn);
   controlPanel.appendChild(fftControl);
 
   // Overlap 控制
   const overlapControl = document.createElement('label');
   const overlapLabel = document.createElement('span');
-  overlapLabel.textContent = 'Overlap';
+  overlapLabel.textContent = 'Overlap:';
   overlapControl.appendChild(overlapLabel);
   
   const overlapInput = document.createElement('input');
