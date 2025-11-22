@@ -757,7 +757,13 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     }
   }
 
-  // 繪製 Power Spectrum 曲線
+  // 繪製 Power Spectrum 曲線（使用剪裁區域防止超出邊界）
+  ctx.save();
+  // 設定剪裁區域，確保曲線不會超出圖表邊界
+  ctx.beginPath();
+  ctx.rect(leftPadding, padding, plotWidth, plotHeight);
+  ctx.clip();
+
   ctx.strokeStyle = '#0066cc';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -818,6 +824,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   }
 
   ctx.stroke();
+  ctx.restore();
 
   // 繪製網格線 (可選)
   ctx.strokeStyle = '#e0e0e0';
