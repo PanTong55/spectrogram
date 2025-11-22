@@ -38,6 +38,16 @@ export function showPowerSpectrumPopup({
     windowType
   );
 
+  // 計算 Peak Frequency (應用窗口函數，與 Power Spectrum 計算一致)
+  const peakFreq = calculatePeakFrequencyFromSpectrum(
+    audioData,
+    sampleRate,
+    fftSize,
+    windowType,
+    selection.Flow,
+    selection.Fhigh
+  );
+
   // 繪製 Power Spectrum
   drawPowerSpectrum(
     ctx,
@@ -45,7 +55,8 @@ export function showPowerSpectrumPopup({
     sampleRate,
     selection.Flow,
     selection.Fhigh,
-    fftSize
+    fftSize,
+    peakFreq
   );
 }
 
@@ -204,6 +215,84 @@ function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
 }
 
 /**
+ * 從 Power Spectrum 中計算 Peak Frequency (應用窗口函數)
+ */
+function calculatePeakFrequencyFromSpectrum(audioData, sampleRate, fftSize, windowType, flowKHz, fhighKHz) {
+  if (!audioData || audioData.length === 0) return null;
+
+  // 應用相同的窗口函數和預處理
+  const windowed = applyWindow(audioData, windowType);
+
+  // 移除直流分量
+  let dcOffset = 0;
+  for (let i = 0; i < windowed.length; i++) {
+    dcOffset += windowed[i];
+  }
+  dcOffset /= windowed.length;
+
+  const dcRemovedData = new Float32Array(windowed.length);
+  for (let i = 0; i < windowed.length; i++) {
+    dcRemovedData[i] = windowed[i] - dcOffset;
+  }
+
+  const freqResolution = sampleRate / fftSize;
+  const freqMinHz = flowKHz * 1000;
+  const freqMaxHz = fhighKHz * 1000;
+  const nyquistFreq = sampleRate / 2;
+  const adjustedMaxHz = Math.min(freqMaxHz, nyquistFreq - 1);
+
+  // 第一階段：粗掃
+  let peakFreqCoarse = freqMinHz;
+  let peakEnergyCoarse = -Infinity;
+  const coarseStep = Math.max(20, (adjustedMaxHz - freqMinHz) / 30);
+
+  for (let freq = freqMinHz; freq <= adjustedMaxHz; freq += coarseStep) {
+    const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
+    if (energy > peakEnergyCoarse) {
+      peakEnergyCoarse = energy;
+      peakFreqCoarse = freq;
+    }
+  }
+
+  // 第二階段：精掃
+  let peakFreqFine = peakFreqCoarse;
+  let peakEnergyFine = peakEnergyCoarse;
+  const fineRangeHz = coarseStep * 1.5;
+  const fineStep = 1;
+
+  const fineMinHz = Math.max(freqMinHz, peakFreqCoarse - fineRangeHz);
+  const fineMaxHz = Math.min(adjustedMaxHz, peakFreqCoarse + fineRangeHz);
+
+  for (let freq = fineMinHz; freq <= fineMaxHz; freq += fineStep) {
+    const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
+    if (energy > peakEnergyFine) {
+      peakEnergyFine = energy;
+      peakFreqFine = freq;
+    }
+  }
+
+  // 第三階段：拋物線補間
+  if (peakFreqFine > fineMinHz && peakFreqFine < fineMaxHz) {
+    const freq0 = peakFreqFine - fineStep;
+    const freq1 = peakFreqFine;
+    const freq2 = peakFreqFine + fineStep;
+
+    const energy0 = goertzelEnergy(dcRemovedData, freq0, sampleRate);
+    const energy1 = peakEnergyFine;
+    const energy2 = goertzelEnergy(dcRemovedData, freq2, sampleRate);
+
+    const a = (energy2 - 2 * energy1 + energy0) / 2;
+    if (Math.abs(a) > 1e-10) {
+      const correction = (energy0 - energy2) / (4 * a);
+      peakFreqFine += correction * fineStep;
+    }
+  }
+
+  const bestFreqKHz = peakFreqFine / 1000;
+  return Math.max(flowKHz, Math.min(fhighKHz, bestFreqKHz));
+}
+
+/**
  * Goertzel 算法 - 精確計算特定頻率的能量
  */
 function goertzelEnergy(audioData, freq, sampleRate) {
@@ -317,7 +406,7 @@ function createGaussWindow(n) {
 /**
  * 繪製 Power Spectrum 圖表
  */
-function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize) {
+function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize, peakFreq) {
   if (!ctx || !spectrum) return;
 
   const width = ctx.canvas.width;
@@ -441,4 +530,35 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.lineTo(padding + plotWidth, y);
     ctx.stroke();
   }
+
+  // 繪製 Peak Frequency 垂直線和標籤
+  if (peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
+    const peakNormalized = (peakFreq - flowKHz) / (fhighKHz - flowKHz);
+    const peakX = padding + peakNormalized * plotWidth;
+
+    // 繪製垂直線
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(peakX, padding);
+    ctx.lineTo(peakX, padding + plotHeight);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 繪製 Peak Frequency 標籤
+    ctx.fillStyle = '#ff0000';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Peak: ${peakFreq.toFixed(1)} kHz`, peakX, padding - 10);
+  }
+}
+
+// 導出窗口函數和 Goertzel 工具，供其他模組使用
+export function getApplyWindowFunction() {
+  return applyWindow;
+}
+
+export function getGoertzelEnergyFunction() {
+  return goertzelEnergy;
 }

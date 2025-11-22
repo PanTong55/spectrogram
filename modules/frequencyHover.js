@@ -392,11 +392,13 @@ export function initFrequencyHover({
       }
 
       // 計算 FFT 並找到峰值
+      const windowType = window.__spectrogramSettings?.windowType || 'hann';
       const peakFreq = await calculatePeakFromCroppedAudio(
         channels,
         sampleRate,
         Flow,
-        Fhigh
+        Fhigh,
+        windowType
       );
 
       if (peakFreq !== null) {
@@ -415,14 +417,17 @@ export function initFrequencyHover({
     return null;
   }
 
-  // 從 cropped audio 計算峰值頻率 - 優化版，使用兩階段精確掃描
-  async function calculatePeakFromCroppedAudio(channels, sampleRate, freqMin, freqMax) {
+  // 從 cropped audio 計算峰值頻率 - 優化版，使用兩階段精確掃描 (應用窗口函數)
+  async function calculatePeakFromCroppedAudio(channels, sampleRate, freqMin, freqMax, windowType = 'hann') {
     try {
       if (!channels || channels.length === 0) return null;
 
       let audioData = channels[0]; // 使用第一個通道
       
       if (audioData.length < 32) return null; // 太短的音頻
+
+      // 應用窗口函數 (與 Power Spectrum 計算一致)
+      audioData = applyWindow(audioData, windowType);
 
       // freqMin 和 freqMax 已經是 kHz，需要轉換為 Hz
       const freqMinHz = freqMin * 1000;
@@ -521,6 +526,89 @@ export function initFrequencyHover({
     // 計算複數功率
     const energy = s1 * s1 + s2 * s2 - coeff * s1 * s2;
     return energy;
+  }
+
+  // 窗口函數實現 (與 powerSpectrum.js 相同)
+  function applyWindow(data, windowType) {
+    const n = data.length;
+    const windowed = new Float32Array(n);
+    let window;
+
+    switch (windowType.toLowerCase()) {
+      case 'blackman':
+        window = createBlackmanWindow(n);
+        break;
+      case 'hamming':
+        window = createHammingWindow(n);
+        break;
+      case 'hann':
+        window = createHannWindow(n);
+        break;
+      case 'triangular':
+        window = createTriangularWindow(n);
+        break;
+      case 'rectangular':
+        window = createRectangularWindow(n);
+        break;
+      case 'gauss':
+        window = createGaussWindow(n);
+        break;
+      default:
+        window = createHannWindow(n);
+    }
+
+    for (let i = 0; i < n; i++) {
+      windowed[i] = data[i] * window[i];
+    }
+
+    return windowed;
+  }
+
+  function createHannWindow(n) {
+    const w = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      w[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)));
+    }
+    return w;
+  }
+
+  function createHammingWindow(n) {
+    const w = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      w[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (n - 1));
+    }
+    return w;
+  }
+
+  function createBlackmanWindow(n) {
+    const w = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (2 * Math.PI * i) / (n - 1);
+      w[i] = 0.42 - 0.5 * Math.cos(x) + 0.08 * Math.cos(2 * x);
+    }
+    return w;
+  }
+
+  function createTriangularWindow(n) {
+    const w = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      w[i] = 1 - Math.abs((i - (n - 1) / 2) / ((n - 1) / 2));
+    }
+    return w;
+  }
+
+  function createRectangularWindow(n) {
+    return new Float32Array(n).fill(1);
+  }
+
+  function createGaussWindow(n) {
+    const w = new Float32Array(n);
+    const sigma = (n - 1) / 4;
+    for (let i = 0; i < n; i++) {
+      const x = i - (n - 1) / 2;
+      w[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+    }
+    return w;
   }
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
