@@ -361,27 +361,8 @@ export function initFrequencyHover({
   // 計算 selection area 內的峰值頻率
   async function calculatePeakFrequency(sel) {
     try {
-      // 優先使用 Power Spectrum Popup 的計算結果
-      if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-        const peakFreq = sel.powerSpectrumPopup.getPeakFrequency();
-        if (peakFreq !== null) {
-          sel.data.peakFreq = peakFreq;
-          if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
-            const timeExp = getTimeExpansionMode();
-            const freqMul = timeExp ? 10 : 1;
-            const dispPeakFreq = peakFreq * freqMul;
-            sel.tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
-          }
-          return peakFreq;
-        }
-      }
-
-      // 如果 Power Spectrum 未打開，則計算峰值
       const ws = getWavesurfer();
       if (!ws) return null;
-
-      const currentFile = ws.getMediaElement()?.src;
-      if (!currentFile) return null;
 
       const { startTime, endTime, Flow, Fhigh } = sel.data;
       const durationMs = (endTime - startTime) * 1000;
@@ -397,12 +378,8 @@ export function initFrequencyHover({
       const decodedData = ws.getDecodedData();
       if (!decodedData || !decodedData.getChannelData) return null;
 
-      // 獲取音頻樣本數據
-      const audioBuffer = decodedData;
-      
-      // 使用與 Power Spectrum 相同的設置參數（確保一致性）
-      // 注意：Peak Freq 計算固定使用 1024 FFT size
-      const fftSize = 1024;
+      // 使用與 Power Spectrum 完全相同的設置參數
+      const fftSize = 1024; // 與 Power Spectrum 相同固定為 1024
       const windowType = window.__spectrogramSettings?.windowType || 'hann';
       const overlap = window.__spectrogramSettings?.overlap || 'auto';
       const sampleRate = window.__spectrogramSettings?.sampleRate || 256000;
@@ -412,10 +389,10 @@ export function initFrequencyHover({
 
       if (endSample <= startSample) return null;
 
-      // 提取 crop 音頻數據 (使用統一的 sampleRate 計算)
-      const audioData = new Float32Array(audioBuffer.getChannelData(0).slice(startSample, endSample));
+      // 提取 crop 音頻數據
+      const audioData = new Float32Array(decodedData.getChannelData(0).slice(startSample, endSample));
 
-      // 使用與 Power Spectrum 相同的方法計算頻譜 (包含 overlap)
+      // 使用 Power Spectrum 的完全相同方法計算頻譜 (包含 overlap 支持)
       const spectrum = calculateSpectrumWithOverlap(
         audioData,
         sampleRate,
@@ -426,13 +403,12 @@ export function initFrequencyHover({
 
       if (!spectrum) return null;
 
-      // 使用 Power Spectrum 相同的峰值找到方法
+      // 使用 Power Spectrum 完全相同的峰值尋找方法
       const peakFreq = findPeakFrequency(spectrum, sampleRate, fftSize, Flow, Fhigh);
 
       if (peakFreq !== null) {
         sel.data.peakFreq = peakFreq;
         if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
-          const timeExp = getTimeExpansionMode();
           const freqMul = timeExp ? 10 : 1;
           const dispPeakFreq = peakFreq * freqMul;
           sel.tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
