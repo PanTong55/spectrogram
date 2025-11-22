@@ -1269,21 +1269,22 @@ export function initFrequencyHover({
       position: fixed;
       left: ${e.clientX}px;
       top: ${e.clientY}px;
-      background: white;
-      border: 1px solid #999;
-      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      z-index: 9999;
+      z-index: 1000;
       min-width: 150px;
       padding: 4px 0;
-      font-family: Arial, sans-serif;
-      font-size: 13px;
+      font-family: 'Noto Sans HK', sans-serif;
+      font-size: 12px;
     `;
 
     const menuItem = document.createElement('div');
     menuItem.textContent = 'Power Spectrum';
     menuItem.style.cssText = `
-      padding: 8px 16px;
+      padding: 4px 6px;
       cursor: pointer;
       user-select: none;
       color: #333;
