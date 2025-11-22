@@ -85,9 +85,17 @@ export function showPowerSpectrumPopup({
     
     const fftSizeItems = ['512', '1024', '2048'];
     fftSize = parseInt(fftSizeItems[fftDropdown.selectedIndex] || '1024', 10);
-    
-    // 獲取 overlap 值 (從控制面板)
+      // 存儲最後計算的峰值
+      lastPeakFreq = peakFreq;
     let overlapValue = overlap;
+      // 向 popup DOM 發射事件，告知外界峰值已更新（便於 tooltip 等其他元件同步）
+      try {
+        popup.dispatchEvent(new CustomEvent('peakUpdated', {
+          detail: { peakFreq }
+        }));
+      } catch (e) {
+        // 若 popup 尚不可用或調度失敗，忽略錯誤
+      }
     if (overlapInput.value.trim() !== '') {
       overlapValue = parseInt(overlapInput.value, 10);
     }

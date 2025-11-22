@@ -374,6 +374,23 @@ export function initFrequencyHover({
       // 只有 displayTime < 100ms 時才計算
       if (judgeDurationMs >= 100) return null;
 
+      // 如果 Power Spectrum popup 已開啟且已有計算結果，優先使用 popup 的 peak（確保 tooltip 與 popup 一致）
+      if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen && sel.powerSpectrumPopup.isOpen()) {
+        try {
+          const popupPeak = sel.powerSpectrumPopup.getPeakFrequency && sel.powerSpectrumPopup.getPeakFrequency();
+          if (popupPeak !== null && popupPeak !== undefined) {
+            sel.data.peakFreq = popupPeak;
+            if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
+              const freqMul = timeExp ? 10 : 1;
+              sel.tooltip.querySelector('.fpeak').textContent = (popupPeak * freqMul).toFixed(1);
+            }
+            return popupPeak;
+          }
+        } catch (e) {
+          // ignore and fallback to calculating locally
+        }
+      }
+
       // 獲取原始音頻緩衝
       const decodedData = ws.getDecodedData();
       if (!decodedData || !decodedData.getChannelData) return null;
@@ -488,9 +505,18 @@ export function initFrequencyHover({
     // 關閉 Power Spectrum popup (如果打開)
     if (sel.powerSpectrumPopup) {
       const popupElement = sel.powerSpectrumPopup.popup;
+      // 解除事件監聽器（如果有）以避免遺留引用
+      if (popupElement && sel._popupPeakListener) {
+        try {
+          popupElement.removeEventListener('peakUpdated', sel._popupPeakListener);
+        } catch (e) {}
+        delete sel._popupPeakListener;
+      }
       if (popupElement && document.body.contains(popupElement)) {
         popupElement.remove();
       }
+      // 清除對象引用
+      sel.powerSpectrumPopup = null;
     }
 
     const index = selections.indexOf(sel);
@@ -929,9 +955,14 @@ export function initFrequencyHover({
       // 關閉 Power Spectrum popup (如果打開)
       if (sel.powerSpectrumPopup) {
         const popupElement = sel.powerSpectrumPopup.popup;
+        if (popupElement && sel._popupPeakListener) {
+          try { popupElement.removeEventListener('peakUpdated', sel._popupPeakListener); } catch(e) {}
+          delete sel._popupPeakListener;
+        }
         if (popupElement && document.body.contains(popupElement)) {
           popupElement.remove();
         }
+        sel.powerSpectrumPopup = null;
       }
       viewer.removeChild(sel.rect);
       if (sel.tooltip) viewer.removeChild(sel.tooltip);
@@ -1019,6 +1050,42 @@ export function initFrequencyHover({
     // 跟踪 popup
     if (popupObj) {
       selection.powerSpectrumPopup = popupObj;
+
+      // 如果 popup DOM 支援事件，監聽 peakUpdated 事件以同步 tooltip 值
+      if (popupObj.popup && popupObj.popup.addEventListener) {
+        const peakListener = (ev) => {
+          try {
+            const peakFreq = ev?.detail?.peakFreq;
+            if (peakFreq !== null && peakFreq !== undefined) {
+              selection.data.peakFreq = peakFreq;
+              // 若有 tooltip，立即更新顯示
+              if (selection.tooltip && selection.tooltip.querySelector('.fpeak')) {
+                const freqMul = getTimeExpansionMode() ? 10 : 1;
+                selection.tooltip.querySelector('.fpeak').textContent = (peakFreq * freqMul).toFixed(1);
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        };
+
+        // attach and store listener on selection so we could remove later if needed
+        popupObj.popup.addEventListener('peakUpdated', peakListener);
+        // store reference for potential cleanup
+        selection._popupPeakListener = peakListener;
+      }
+
+      // 立即同步 popup 當前峰值（如已有）
+      try {
+        const currentPeak = popupObj.getPeakFrequency && popupObj.getPeakFrequency();
+        if (currentPeak !== null && currentPeak !== undefined) {
+          selection.data.peakFreq = currentPeak;
+          if (selection.tooltip && selection.tooltip.querySelector('.fpeak')) {
+            const freqMul = getTimeExpansionMode() ? 10 : 1;
+            selection.tooltip.querySelector('.fpeak').textContent = (currentPeak * freqMul).toFixed(1);
+          }
+        }
+      } catch (e) { /* ignore */ }
     }
   }
 
