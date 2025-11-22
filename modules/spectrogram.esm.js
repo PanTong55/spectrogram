@@ -260,23 +260,13 @@ class h extends s {
         this._resampleCache = {};
         // precomputed uint8 colormap (RGBA 0-255)
         this._colorMapUint = new Uint8ClampedArray(256 * 4);
-        // ===== OPT: Precomputed Uint32 colormap =====
-        this._colorMapUint32 = new Uint32Array(256);
         if (this.colorMap && this._colorMapUint) {
             for (let ii = 0; ii < 256; ii++) {
                 const cc = this.colorMap[ii] || [0, 0, 0, 1];
-                const rr = Math.round(255 * cc[0]);
-                const gg = Math.round(255 * cc[1]);
-                const bb = Math.round(255 * cc[2]);
-                const aa = Math.round(255 * cc[3]);
-                
-                this._colorMapUint[ii * 4] = rr;
-                this._colorMapUint[ii * 4 + 1] = gg;
-                this._colorMapUint[ii * 4 + 2] = bb;
-                this._colorMapUint[ii * 4 + 3] = aa;
-                
-                // ===== OPT: Store as Uint32 (RGBA order) =====
-                this._colorMapUint32[ii] = (aa << 24) | (bb << 16) | (gg << 8) | rr;
+                this._colorMapUint[ii * 4] = Math.round(255 * cc[0]);
+                this._colorMapUint[ii * 4 + 1] = Math.round(255 * cc[1]);
+                this._colorMapUint[ii * 4 + 2] = Math.round(255 * cc[2]);
+                this._colorMapUint[ii * 4 + 3] = Math.round(255 * cc[3]);
             }
         }
     }
@@ -369,91 +359,63 @@ class h extends s {
                 e.fillStyle = `rgba(${i[0]}, ${i[1]}, ${i[2]}, ${i[3]})`,
                 e.fillRect(0, 0, r, s * t.length)
             }
-            
-            // ===== OPT: Precompute peak colors as Uint32 =====
-            const colorHighPeak32 = (255 << 24) | (252 << 16) | (112 << 8) | 255;  // #FF70FC
-            const colorPeak32 = (255 << 24) | (0 << 16) | (0 << 8) | 255;          // #FF0000
-            
             for (let h = 0; h < t.length; h++) {
-                const rawFreqData = t[h]
-                  , l = rawFreqData.length
-                  , c = new ImageData(r, l)
+                const o = this.resample(t[h])
+                  , l = o[0].length
+                  , c = new ImageData(r,l)
                   , channelPeakBands = this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[h] ? this.peakBandArrayPerChannel[h] : [];
                 
-                // ===== OPT: Wrap ImageData buffer as Uint32Array =====
-                const dataU32 = new Uint32Array(c.data.buffer);
+                const cacheKey = `${t[h].length}:${r}`;
+                const mapping = this._resampleCache[cacheKey];
                 
-                const cacheKey = `${rawFreqData.length}:${r}`;
-                let mapping = this._resampleCache[cacheKey];
-                
-                // ===== OPT #3: Inline Resampling - compute indices directly in rendering loop =====
-                // Pre-compute resampling mapping if not cached
-                if (!mapping) {
-                    mapping = new Array(r);
-                    const invIn = 1 / rawFreqData.length;
-                    const invOut = 1 / r;
-                    for (let a = 0; a < r; a++) {
-                        const contrib = [];
-                        for (let n = 0; n < rawFreqData.length; n++) {
-                            const s = n * invIn;
-                            const h = s + invIn;
-                            const o = a * invOut;
-                            const l = o + invOut;
-                            const c = Math.max(0, Math.min(h, l) - Math.max(s, o));
-                            if (c > 0)
-                                contrib.push([n, c / invOut]);
-                        }
-                        mapping[a] = contrib;
-                    }
-                    this._resampleCache[cacheKey] = mapping;
-                }
-                
-                // Render pixels using direct sampling
-                for (let x = 0; x < r; x++) {
-                    const contrib = mapping[x];
-                    
-                    // Inline resample calculation for this column
-                    let accum = 0;
-                    for (let j = 0; j < contrib.length; j++) {
-                        const srcIdx = contrib[j][0];
-                        const weight = contrib[j][1];
-                        accum += weight * rawFreqData[srcIdx];
-                    }
-                    
-                    let idx = accum;
-                    if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
-                    
-                    // ===== OPT: Start with precomputed Uint32 color =====
-                    let color32 = this._colorMapUint32[idx];
-                    
-                    // Peak Mode 渲染邏輯
-                    if (this.options.peakMode && mapping && mapping[x]) {
-                        let isPeakColumn = false;
-                        let isHighPeak = false;
+                for (let t = 0; t < o.length; t++)
+                    for (let e = 0; e < o[t].length; e++) {
+                        let idx = o[t][e];
+                        if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
+                        const cmapBase = idx * 4;
+                        const i = 4 * ((l - e - 1) * r + t);
                         
-                        for (let m = 0; m < mapping[x].length; m++) {
-                            const sourceIdx = mapping[x][m][0];
+                        // Peak Mode 渲染邏輯
+                        let isPeakColumn = false;
+                        let isHighPeak = false; // 用於標記是否為高強度峰值
+
+                        if (this.options.peakMode && mapping && mapping[t]) {
+                          for (let m = 0; m < mapping[t].length; m++) {
+                            const sourceIdx = mapping[t][m][0];
+                            
+                            // 獲取峰值數據對象
                             const peakData = channelPeakBands[sourceIdx];
                             
-                            if (peakData && peakData.bin === sourceIdx) {
-                                isPeakColumn = true;
-                                isHighPeak = peakData.isHigh;
-                                break;
+                            // 檢查數據是否存在且當前 Bin 匹配
+                            if (peakData && peakData.bin === e) {
+                              isPeakColumn = true;
+                              isHighPeak = peakData.isHigh; // 讀取是否超過70%
+                              break;
                             }
+                          }
                         }
                         
                         if (isPeakColumn) {
-                            color32 = isHighPeak ? colorHighPeak32 : colorPeak32;
+                          if (isHighPeak) {
+                              // 超過 70% 顯示為 #FF70FC (RGB: 255, 112, 252)
+                              c.data[i] = 255;      // R
+                              c.data[i + 1] = 112;    // G
+                              c.data[i + 2] = 252;  // B
+                              c.data[i + 3] = 255;  // A
+                          } else {
+                              // 普通峰值顯示紅色
+                              c.data[i] = 255;      // R
+                              c.data[i + 1] = 0;    // G
+                              c.data[i + 2] = 0;    // B
+                              c.data[i + 3] = 255;  // A
+                          }
+                        } else {
+                          c.data[i] = this._colorMapUint[cmapBase];
+                          c.data[i + 1] = this._colorMapUint[cmapBase + 1];
+                          c.data[i + 2] = this._colorMapUint[cmapBase + 2];
+                          c.data[i + 3] = this._colorMapUint[cmapBase + 3];
                         }
                     }
-                    
-                    // Fill entire column with this value
-                    for (let y = 0; y < l; y++) {
-                        const pixelIdx = (l - y - 1) * r + x;
-                        // ===== OPT: Single 32-bit write instead of 4x 8-bit writes =====
-                        dataU32[pixelIdx] = color32;
-                    }
-                }
                 const u = this.hzToScale(a) / this.hzToScale(i)
                   , f = this.hzToScale(n) / this.hzToScale(i)
                   , p = Math.min(1, f);
@@ -626,94 +588,87 @@ class h extends s {
         const rangeDBReciprocal = 255 / this.rangeDB;
         
         if (this.options.peakMode) {
-            // ===== OPT #1: Single-pass approach - eliminate Double FFT =====
-            // 第一遍：只為了找全局最大峰值（快速掃描）
+            // 1. 第一次掃描：找出全局最大峰值
             let globalMaxPeakValue = 0;
-            const tempFFT = new a(r, n, this.windowFunc, this.alpha);
             
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e);
-                let a = 0;
-                for (; a + r < s.length; ) {
-                    tempFFT.peak = 0;
-                    const spectrumData = tempFFT.calculateSpectrum(s.subarray(a, a + r));
-                    
-                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
-                        globalMaxPeakValue = Math.max(globalMaxPeakValue, spectrumData[k] || 0);
-                    }
-                    a += r - o;
-                }
-            }
-            
-            // 計算閾值一次
-            const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
-            const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
-            const highPeakThreshold = globalMaxPeakValue * 0.7;
-            
-            // 第二遍：收集數據（復用同一個 FFT 對象避免重複分配 & 重複 FFT）
-            for (let e = 0; e < i; e++) {
-                const s = t.getChannelData(e);
-                const freqDataArray = [];
-                const channelPeakBands = [];
                 let a = 0;
                 
                 for (; a + r < s.length; ) {
                     const tSlice = s.subarray(a, a + r);
-                    const freqData = new Uint8Array(r / 2);
-                    
-                    // 復用 FFT 對象，無需新建
                     l.peak = 0;
-                    const spectrumData = l.calculateSpectrum(tSlice);
+                    let spectrumData = l.calculateSpectrum(tSlice);
                     
-                    // 在同一次 FFT 中找峰值和生成頻譜
-                    let peakBand = Math.max(0, minBinFull);
-                    let peakValue = spectrumData[peakBand] || 0;
-                    
+                    let peakValueInRange = 0;
                     for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
-                        const val = spectrumData[k] || 0;
-                        if (val > peakValue) {
-                            peakValue = val;
-                            peakBand = k;
-                        }
+                      peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
                     }
                     
-                    // 記錄峰值數據
-                    if (peakValue >= peakThreshold) {
-                        channelPeakBands.push({
-                            bin: peakBand,
-                            isHigh: peakValue >= highPeakThreshold
-                        });
+                    globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
+                    a += r - o;
+                }
+            }
+            
+            // 2. 計算閾值：基本顯示閾值 (40%) 和 高峰值變色閾值 (70%)
+            const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
+            const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
+            const highPeakThreshold = globalMaxPeakValue * 0.7; // 新增：70% 閾值
+            
+            // 3. 第二次掃描：記錄數據
+            for (let e = 0; e < i; e++) {
+                const s = t.getChannelData(e)
+                  , i = []
+                  , channelPeakBands = [];
+                let a = 0;
+                for (; a + r < s.length; ) {
+                    const tSlice = s.subarray(a, a + r)
+                        , e = new Uint8Array(r / 2);
+                    
+                    l.peak = 0;
+                    let spectrumData = l.calculateSpectrum(tSlice);
+                    
+                    let peakBandInRange = Math.max(0, minBinFull);
+                    let peakValueInRange = spectrumData[peakBandInRange] || 0;
+                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
+                      if ((spectrumData[k] || 0) > peakValueInRange) {
+                        peakValueInRange = spectrumData[k];
+                        peakBandInRange = k;
+                      }
+                    }
+                    
+                    // 修改：存儲對象而不是單純的索引
+                    if (peakValueInRange >= peakThreshold) {
+                      channelPeakBands.push({
+                          bin: peakBandInRange,
+                          isHigh: peakValueInRange >= highPeakThreshold // 標記是否超過 70%
+                      });
                     } else {
-                        channelPeakBands.push(null);
+                      channelPeakBands.push(null);
                     }
                     
-                    // 計算頻譜（無需重複 FFT）
-                    let specData = spectrumData;
-                    if (c) {
-                        specData = this.applyFilterBank(spectrumData, c);
-                    }
+                    let n = spectrumData;
+                    c && (n = this.applyFilterBank(n, c));
                     
                     const startBin = c ? 0 : minBinFull;
                     const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
                     
                     for (let t = startBin; t < endBin; t++) {
-                        const val = specData[t] > 1e-12 ? specData[t] : 1e-12;
-                        const dB = 20 * Math.log10(val);
-                        if (dB < gainDBNegRange) {
-                            freqData[t] = 0;
-                        } else if (dB > gainDBNeg) {
-                            freqData[t] = 255;
+                        const s = n[t] > 1e-12 ? n[t] : 1e-12
+                          , r = 20 * Math.log10(s);
+                        if (r < gainDBNegRange) {
+                            e[t] = 0;
+                        } else if (r > gainDBNeg) {
+                            e[t] = 255;
                         } else {
-                            freqData[t] = (dB + this.gainDB) * rangeDBReciprocal + 256;
+                            e[t] = (r + this.gainDB) * rangeDBReciprocal + 256;
                         }
                     }
-                    
-                    freqDataArray.push(freqData);
-                    a += r - o;
+                    i.push(e),
+                    a += r - o
                 }
-                
                 this.peakBandArrayPerChannel.push(channelPeakBands);
-                h.push(freqDataArray);
+                h.push(i)
             }
         } else {
             // Peak Mode 禁用時的邏輯
@@ -802,8 +757,6 @@ class h extends s {
             }
     }
     resample(t) {
-        // ===== OPT #3: Deprecated - rendering now uses inline resampling =====
-        // This method is kept for backwards compatibility but is no longer used in render path
         const outW = this.getWidth()
           , out = []
           , invIn = 1 / t.length;
