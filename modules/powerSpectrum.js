@@ -696,8 +696,9 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     minDb = maxDb - 60;
   }
   
-  // 在 maxDb 上加 5dB 的間距（向更接近0的方向），防止曲線頂部被 crop 掉
-  maxDb = maxDb + 5;
+  // 在 maxDb 上加 5dB 的間距（向更接近0但仍為負數），防止曲線頂部被 crop 掉
+  // 注意：加 5 表示向上移動 5dB（如 -10 變成 -5），因為負數值更大
+  maxDb = Math.min(maxDb + 5, 0); // 確保 maxDb 不會超過 0
   
   // 重新確保 minDb < maxDb（在實數軸上）
   if (minDb >= maxDb) {
@@ -734,15 +735,25 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.textBaseline = 'middle';
   const dbSteps = 4;
   for (let i = 0; i <= dbSteps; i++) {
-    // 從上到下：maxDb（小負數或接近0） 到 minDb（大負數）
+    // 從上到下：maxDb（接近0或小負數） 到 minDb（更小的負數）
     const db = maxDb - ((maxDb - minDb) * i) / dbSteps;
     const y = topPadding + (plotHeight * i) / dbSteps;
     ctx.beginPath();
     ctx.moveTo(leftPadding - 5, y);
     ctx.lineTo(leftPadding, y);
     ctx.stroke();
-    // 確保顯示負數格式
-    ctx.fillText(db.toFixed(0), leftPadding - 15, y);
+    
+    // 格式化 dB 值：確保負數顯示，0 不需要負號
+    let dbLabel;
+    const dbRounded = Math.round(db);
+    if (dbRounded === 0) {
+      dbLabel = '0';
+    } else if (dbRounded < 0) {
+      dbLabel = dbRounded.toString();
+    } else {
+      dbLabel = '-' + dbRounded.toString();
+    }
+    ctx.fillText(dbLabel, leftPadding - 15, y);
   }
 
   // 繪製軸標籤
