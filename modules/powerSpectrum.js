@@ -697,7 +697,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
-  const padding = 45;  // 減少上方 5px (從 50 改為 45)
+  const padding = 20;  // 減少上方 5px (從 50 改為 45)
   const leftPadding = 65;  // 增加左邊 padding 以容納 Y 軸標題
   const plotWidth = width - leftPadding - padding;
   const plotHeight = height - padding * 2;
@@ -838,7 +838,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
     // 繪製垂直線
     ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
     ctx.moveTo(peakX, padding);
