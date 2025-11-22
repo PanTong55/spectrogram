@@ -588,24 +588,46 @@ class h extends s {
         const rangeDBReciprocal = 255 / this.rangeDB;
         
         if (this.options.peakMode) {
-            // ✅ 優化：消除雙 FFT - 單次掃描同時進行所有運算
+            // 1. 第一次掃描：找出全局最大峰值
             let globalMaxPeakValue = 0;
-            let peakBandArrayPerChannelTemp = [];
-            let hTemp = [];
             
-            // 預掃描：第一遍同時收集全局最大值和初始數據
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e);
                 let a = 0;
-                let channelPeakBands = [];
-                let channelData = [];
                 
                 for (; a + r < s.length; ) {
                     const tSlice = s.subarray(a, a + r);
                     l.peak = 0;
                     let spectrumData = l.calculateSpectrum(tSlice);
                     
-                    // 在單次 FFT 中找出該幀的峰值
+                    let peakValueInRange = 0;
+                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
+                      peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
+                    }
+                    
+                    globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
+                    a += r - o;
+                }
+            }
+            
+            // 2. 計算閾值：基本顯示閾值 (40%) 和 高峰值變色閾值 (70%)
+            const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
+            const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
+            const highPeakThreshold = globalMaxPeakValue * 0.7; // 新增：70% 閾值
+            
+            // 3. 第二次掃描：記錄數據
+            for (let e = 0; e < i; e++) {
+                const s = t.getChannelData(e)
+                  , i = []
+                  , channelPeakBands = [];
+                let a = 0;
+                for (; a + r < s.length; ) {
+                    const tSlice = s.subarray(a, a + r)
+                        , e = new Uint8Array(r / 2);
+                    
+                    l.peak = 0;
+                    let spectrumData = l.calculateSpectrum(tSlice);
+                    
                     let peakBandInRange = Math.max(0, minBinFull);
                     let peakValueInRange = spectrumData[peakBandInRange] || 0;
                     for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
@@ -615,46 +637,14 @@ class h extends s {
                       }
                     }
                     
-                    // 同時記錄全局最大值
-                    globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
-                    
-                    // 暫時存儲數據以供第二遍使用
-                    channelData.push({
-                        spectrumData: spectrumData,
-                        peakBand: peakBandInRange,
-                        peakValue: peakValueInRange
-                    });
-                    channelPeakBands.push(null); // 暫時占位
-                    a += r - o;
-                }
-                peakBandArrayPerChannelTemp.push({ channelPeakBands, channelData });
-                hTemp.push([]);
-            }
-            
-            // 2. 計算閾值：基本顯示閾值 (40%) 和 高峰值變色閾值 (70%)
-            const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
-            const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
-            const highPeakThreshold = globalMaxPeakValue * 0.7;
-            
-            // 3. 第二遍：使用已計算的 FFT 數據生成圖像
-            for (let e = 0; e < i; e++) {
-                const channelInfo = peakBandArrayPerChannelTemp[e];
-                const channelPeakBands = channelInfo.channelPeakBands;
-                const channelData = channelInfo.channelData;
-                const i = [];
-                
-                for (let idx = 0; idx < channelData.length; idx++) {
-                    const { spectrumData, peakBand, peakValue } = channelData[idx];
-                    const e = new Uint8Array(r / 2);
-                    
-                    // 更新峰值數據
-                    if (peakValue >= peakThreshold) {
-                        channelPeakBands[idx] = {
-                            bin: peakBand,
-                            isHigh: peakValue >= highPeakThreshold
-                        };
+                    // 修改：存儲對象而不是單純的索引
+                    if (peakValueInRange >= peakThreshold) {
+                      channelPeakBands.push({
+                          bin: peakBandInRange,
+                          isHigh: peakValueInRange >= highPeakThreshold // 標記是否超過 70%
+                      });
                     } else {
-                        channelPeakBands[idx] = null;
+                      channelPeakBands.push(null);
                     }
                     
                     let n = spectrumData;
@@ -674,10 +664,11 @@ class h extends s {
                             e[t] = (r + this.gainDB) * rangeDBReciprocal + 256;
                         }
                     }
-                    i.push(e);
+                    i.push(e),
+                    a += r - o
                 }
                 this.peakBandArrayPerChannel.push(channelPeakBands);
-                h.push(i);
+                h.push(i)
             }
         } else {
             // Peak Mode 禁用時的邏輯
