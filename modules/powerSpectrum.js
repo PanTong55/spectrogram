@@ -12,11 +12,10 @@ export function showPowerSpectrumPopup({
 }) {
   if (!wavesurfer || !selection) return null;
 
-  let {
-    windowType = 'hann',
-    sampleRate = 256000,
-    overlap = 'auto'
-  } = currentSettings;
+  // 確保始終使用最新的全局設置，保證與 Tooltip 一致
+  let windowType = window.__spectrogramSettings?.windowType || currentSettings.windowType || 'hann';
+  let sampleRate = window.__spectrogramSettings?.sampleRate || currentSettings.sampleRate || 256000;
+  let overlap = window.__spectrogramSettings?.overlap || currentSettings.overlap || 'auto';
   
   let fftSize = 1024; // 固定預設為 1024，不從 currentSettings 獲取
 
@@ -93,17 +92,6 @@ export function showPowerSpectrumPopup({
       overlapValue = parseInt(overlapInput.value, 10);
     }
 
-    // DEBUG: 記錄計算參數
-    console.log('PowerSpectrum - Params:', {
-      fftSize,
-      windowType,
-      overlapValue,
-      Flow: selection.Flow,
-      Fhigh: selection.Fhigh,
-      audioDataLength: audioData.length,
-      sampleRate
-    });
-
     // 計算 Power Spectrum (包含 overlap 參數)
     const spectrum = calculatePowerSpectrumWithOverlap(
       audioData,
@@ -121,12 +109,6 @@ export function showPowerSpectrumPopup({
       selection.Flow,
       selection.Fhigh
     );
-
-    // DEBUG: 記錄峰值計算結果
-    console.log('PowerSpectrum - PeakFreq Result:', {
-      peakFreq,
-      spectrumLength: spectrum.length
-    });
 
     // 存儲最後計算的峰值
     lastPeakFreq = peakFreq;

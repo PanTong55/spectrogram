@@ -403,25 +403,8 @@ export function initFrequencyHover({
 
       if (!spectrum) return null;
 
-      // DEBUG: 記錄計算參數
-      console.log('Tooltip - Params:', {
-        fftSize,
-        windowType,
-        overlap,
-        Flow,
-        Fhigh,
-        audioDataLength: audioData.length,
-        sampleRate
-      });
-
       // 使用 Power Spectrum 完全相同的峰值尋找方法
       const peakFreq = findPeakFrequency(spectrum, sampleRate, fftSize, Flow, Fhigh);
-
-      // DEBUG: 記錄峰值計算結果
-      console.log('Tooltip - PeakFreq Result:', {
-        peakFreq,
-        spectrumLength: spectrum.length
-      });
 
       if (peakFreq !== null) {
         sel.data.peakFreq = peakFreq;
