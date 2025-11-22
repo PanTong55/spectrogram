@@ -145,7 +145,7 @@ function createPopupWindow() {
   // Window Type 控制
   const typeControl = document.createElement('label');
   const typeLabel = document.createElement('span');
-  typeLabel.textContent = 'Type:';
+  typeLabel.textContent = 'Window Type';
   typeControl.appendChild(typeLabel);
   
   const typeSelect = document.createElement('select');
@@ -164,7 +164,7 @@ function createPopupWindow() {
   // FFT Size 控制
   const fftControl = document.createElement('label');
   const fftLabel = document.createElement('span');
-  fftLabel.textContent = 'FFT:';
+  fftLabel.textContent = 'FFT';
   fftControl.appendChild(fftLabel);
   
   const fftSelect = document.createElement('select');
@@ -179,7 +179,7 @@ function createPopupWindow() {
   // Overlap 控制
   const overlapControl = document.createElement('label');
   const overlapLabel = document.createElement('span');
-  overlapLabel.textContent = 'Overlap:';
+  overlapLabel.textContent = 'Overlap';
   overlapControl.appendChild(overlapLabel);
   
   const overlapInput = document.createElement('input');
