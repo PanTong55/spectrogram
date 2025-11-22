@@ -815,24 +815,14 @@ export function initFrequencyHover({
   
         updateSelections();
 
-        // 如果 Power Spectrum popup 打開，加入 300ms 防抖後更新它
+        // 如果 Power Spectrum popup 打開，即時更新它
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-          // 清除之前的防抖計時
-          if (popupUpdateTimeout) {
-            clearTimeout(popupUpdateTimeout);
-          }
-          // 設置新的防抖計時，延遲 300ms 後更新
-          popupUpdateTimeout = setTimeout(() => {
-            if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-              sel.powerSpectrumPopup.update({
-                startTime: sel.data.startTime,
-                endTime: sel.data.endTime,
-                Flow: sel.data.Flow,
-                Fhigh: sel.data.Fhigh
-              });
-            }
-            popupUpdateTimeout = null;
-          }, 300);
+          sel.powerSpectrumPopup.update({
+            startTime: sel.data.startTime,
+            endTime: sel.data.endTime,
+            Flow: sel.data.Flow,
+            Fhigh: sel.data.Fhigh
+          });
         }
 
         // 即時計算峰值，確保與 Power Spectrum 同步
