@@ -92,7 +92,19 @@ export function showPowerSpectrumPopup({
   // 添加事件監聽器
   typeSelect.addEventListener('change', redrawSpectrum);
   fftSelect.addEventListener('change', redrawSpectrum);
+  
+  // Overlap input: 支持 change 事件和防抖的 input 事件 (用於 arrow key)
   overlapInput.addEventListener('change', redrawSpectrum);
+  
+  let overlapInputTimeout = null;
+  overlapInput.addEventListener('input', () => {
+    if (overlapInputTimeout) {
+      clearTimeout(overlapInputTimeout);
+    }
+    overlapInputTimeout = setTimeout(() => {
+      redrawSpectrum();
+    }, 300);
+  });
 
   // 返回 popup 對象和更新函數
   return {
@@ -175,7 +187,7 @@ function createPopupWindow() {
   `;
   const typeLabel = document.createElement('span');
   typeLabel.textContent = 'Type:';
-  typeLabel.style.fontWeight = 'bold';
+  typeLabel.style.fontWeight = 'normal';
   typeControl.appendChild(typeLabel);
   
   const typeSelect = document.createElement('select');
@@ -207,7 +219,7 @@ function createPopupWindow() {
   `;
   const fftLabel = document.createElement('span');
   fftLabel.textContent = 'FFT:';
-  fftLabel.style.fontWeight = 'bold';
+  fftLabel.style.fontWeight = 'normal';
   fftControl.appendChild(fftLabel);
   
   const fftSelect = document.createElement('select');
@@ -220,7 +232,6 @@ function createPopupWindow() {
     cursor: pointer;
   `;
   fftSelect.innerHTML = `
-    <option value="512">512</option>
     <option value="1024" selected>1024</option>
     <option value="2048">2048</option>
   `;
@@ -236,7 +247,7 @@ function createPopupWindow() {
   `;
   const overlapLabel = document.createElement('span');
   overlapLabel.textContent = 'Overlap:';
-  overlapLabel.style.fontWeight = 'bold';
+  overlapLabel.style.fontWeight = 'normal';
   overlapControl.appendChild(overlapLabel);
   
   const overlapInput = document.createElement('input');
@@ -686,7 +697,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
-  const padding = 50;
+  const padding = 45;  // 減少上方 5px (從 50 改為 45)
   const leftPadding = 65;  // 增加左邊 padding 以容納 Y 軸標題
   const plotWidth = width - leftPadding - padding;
   const plotHeight = height - padding * 2;
@@ -758,7 +769,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 12px Arial';
-  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 10);
+  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height + 10);
 
   ctx.save();
   ctx.translate(12, padding + plotHeight / 2);
@@ -839,7 +850,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.fillStyle = '#ff0000';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 10);
+    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 15);
   }
 }
 
