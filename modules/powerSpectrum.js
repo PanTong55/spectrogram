@@ -39,13 +39,20 @@ export function showPowerSpectrumPopup({
   const redrawSpectrum = () => {
     windowType = typeSelect.value;
     fftSize = parseInt(fftSelect.value, 10);
+    
+    // 獲取 overlap 值 (從控制面板)
+    let overlapValue = overlap;
+    if (overlapInput.value.trim() !== '') {
+      overlapValue = parseInt(overlapInput.value, 10);
+    }
 
-    // 計算 Power Spectrum
-    const spectrum = calculatePowerSpectrum(
+    // 計算 Power Spectrum (包含 overlap 參數)
+    const spectrum = calculatePowerSpectrumWithOverlap(
       audioData,
       sampleRate,
       fftSize,
-      windowType
+      windowType,
+      overlapValue
     );
 
     // 計算 Peak Frequency - 直接從頻譜中找到峰值 (與顯示的曲線對應)
@@ -75,6 +82,7 @@ export function showPowerSpectrumPopup({
   // 添加事件監聽器
   typeSelect.addEventListener('change', redrawSpectrum);
   fftSelect.addEventListener('change', redrawSpectrum);
+  overlapInput.addEventListener('change', redrawSpectrum);
 }
 
 /**
@@ -293,6 +301,87 @@ function extractAudioData(wavesurfer, selection, sampleRate) {
     console.error('Error extracting audio data:', err);
     return null;
   }
+}
+
+/**
+ * 計算 Power Spectrum (使用 Goertzel 算法，考慮 Overlap)
+ */
+function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, overlap = 'auto') {
+  if (!audioData || audioData.length === 0) return null;
+
+  // 如果音頻短於 FFT 大小，直接計算單幀
+  if (audioData.length < fftSize) {
+    return calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType);
+  }
+
+  // 確定 hop size (每幀之間的步長)
+  let hopSize;
+  if (overlap === 'auto' || overlap === '') {
+    // 預設 50% overlap
+    hopSize = Math.floor(fftSize / 2);
+  } else {
+    const overlapPercent = parseInt(overlap, 10);
+    if (isNaN(overlapPercent) || overlapPercent < 0 || overlapPercent > 99) {
+      hopSize = Math.floor(fftSize / 2);
+    } else {
+      hopSize = Math.floor(fftSize * (1 - overlapPercent / 100));
+    }
+  }
+
+  // 確保 hopSize > 0
+  hopSize = Math.max(1, hopSize);
+
+  const freqResolution = sampleRate / fftSize;
+  const maxFreqToCompute = sampleRate / 2;
+  const spectrum = new Float32Array(Math.floor(maxFreqToCompute / freqResolution) + 1);
+  let spectrumCount = 0;
+
+  // 對音頻進行分幀處理
+  for (let offset = 0; offset + fftSize <= audioData.length; offset += hopSize) {
+    const frameData = audioData.slice(offset, offset + fftSize);
+    
+    // 計算該幀的頻譜
+    const windowed = applyWindow(frameData, windowType);
+
+    // 預處理：移除直流分量
+    let dcOffset = 0;
+    for (let i = 0; i < windowed.length; i++) {
+      dcOffset += windowed[i];
+    }
+    dcOffset /= windowed.length;
+
+    const dcRemovedData = new Float32Array(windowed.length);
+    for (let i = 0; i < windowed.length; i++) {
+      dcRemovedData[i] = windowed[i] - dcOffset;
+    }
+
+    // 計算該幀的功率
+    for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
+      const freq = binIndex * freqResolution;
+      if (freq > maxFreqToCompute) break;
+
+      const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
+      const db = 20 * Math.log10(Math.sqrt(energy) + 1e-10);
+      
+      if (spectrumCount === 0) {
+        spectrum[binIndex] = db;
+      } else {
+        // 累加功率值用於後期平均
+        spectrum[binIndex] += db;
+      }
+    }
+
+    spectrumCount++;
+  }
+
+  // 如果有多個幀，計算平均頻譜
+  if (spectrumCount > 1) {
+    for (let i = 0; i < spectrum.length; i++) {
+      spectrum[i] /= spectrumCount;
+    }
+  }
+
+  return spectrum;
 }
 
 /**
