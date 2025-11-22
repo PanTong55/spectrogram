@@ -38,12 +38,11 @@ export function showPowerSpectrumPopup({
     windowType
   );
 
-  // 計算 Peak Frequency (應用窗口函數，與 Power Spectrum 計算一致)
-  const peakFreq = calculatePeakFrequencyFromSpectrum(
-    audioData,
+  // 計算 Peak Frequency - 直接從頻譜中找到峰值 (與顯示的曲線對應)
+  const peakFreq = findPeakFrequencyFromSpectrum(
+    spectrum,
     sampleRate,
     fftSize,
-    windowType,
     selection.Flow,
     selection.Fhigh
   );
@@ -215,7 +214,54 @@ function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
 }
 
 /**
+ * 從 Power Spectrum 頻譜數組中找到峰值頻率 (直接對應顯示的曲線)
+ */
+function findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz) {
+  if (!spectrum || spectrum.length === 0) return null;
+
+  const freqResolution = sampleRate / fftSize;
+  const minBinFreq = flowKHz * 1000;
+  const maxBinFreq = fhighKHz * 1000;
+  const minBin = Math.max(0, Math.floor(minBinFreq / freqResolution));
+  const maxBin = Math.min(spectrum.length - 1, Math.floor(maxBinFreq / freqResolution));
+
+  if (minBin >= maxBin) return null;
+
+  // 在頻譜中找到最大值
+  let peakBin = minBin;
+  let peakDb = spectrum[minBin];
+
+  for (let i = minBin + 1; i <= maxBin; i++) {
+    if (spectrum[i] > peakDb) {
+      peakDb = spectrum[i];
+      peakBin = i;
+    }
+  }
+
+  // 如果峰值在中間，進行拋物線插值提高精度
+  if (peakBin > minBin && peakBin < maxBin) {
+    const db0 = spectrum[peakBin - 1];
+    const db1 = spectrum[peakBin];
+    const db2 = spectrum[peakBin + 1];
+
+    // 拋物線頂點公式
+    const a = (db2 - 2 * db1 + db0) / 2;
+    if (Math.abs(a) > 1e-10) {
+      const binCorrection = (db0 - db2) / (4 * a);
+      const refinedBin = peakBin + binCorrection;
+      const peakFreqHz = refinedBin * freqResolution;
+      return peakFreqHz / 1000; // 轉換為 kHz
+    }
+  }
+
+  // 沒有進行插值時，直接使用 bin 位置
+  const peakFreqHz = peakBin * freqResolution;
+  return peakFreqHz / 1000; // 轉換為 kHz
+}
+
+/**
  * 從 Power Spectrum 中計算 Peak Frequency (應用窗口函數)
+ * 備註：此函數仍保留用於 frequencyHover.js 中的 tooltip 計算
  */
 function calculatePeakFrequencyFromSpectrum(audioData, sampleRate, fftSize, windowType, flowKHz, fhighKHz) {
   if (!audioData || audioData.length === 0) return null;
