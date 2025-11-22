@@ -720,7 +720,7 @@ export function initFrequencyHover({
     let resizing = false;
     let lockedHorizontal = null;
     let lockedVertical = null;
-    let powerSpectrumUpdateTimer = null;  // 防抖計時器
+    let lastPowerSpectrumUpdateTime = 0;  // 記錄上次更新時間
   
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
@@ -816,23 +816,20 @@ export function initFrequencyHover({
   
         updateSelections();
 
-        // 如果 Power Spectrum popup 打開，使用防抖進行即時更新（300ms）
+        // 如果 Power Spectrum popup 打開，使用節流進行更新（每 30ms 更新一次）
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-          // 清除之前的防抖計時器
-          if (powerSpectrumUpdateTimer) {
-            clearTimeout(powerSpectrumUpdateTimer);
-          }
+          const currentTime = Date.now();
           
-          // 設置新的防抖計時器
-          powerSpectrumUpdateTimer = setTimeout(() => {
+          // 只有在距離上次更新超過 30ms 時才進行更新
+          if (currentTime - lastPowerSpectrumUpdateTime >= 30) {
             sel.powerSpectrumPopup.update({
               startTime: sel.data.startTime,
               endTime: sel.data.endTime,
               Flow: sel.data.Flow,
               Fhigh: sel.data.Fhigh
             });
-            powerSpectrumUpdateTimer = null;
-          }, 300);
+            lastPowerSpectrumUpdateTime = currentTime;
+          }
         }
 
         // 即時計算峰值，確保與 Power Spectrum 同步
@@ -853,12 +850,6 @@ export function initFrequencyHover({
         lockedHorizontal = null;
         lockedVertical = null;
         
-        // 清除防抖計時器，並進行最終更新
-        if (powerSpectrumUpdateTimer) {
-          clearTimeout(powerSpectrumUpdateTimer);
-          powerSpectrumUpdateTimer = null;
-        }
-        
         // Resize 完成後，立即進行最終的 Power Spectrum 更新
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
           sel.powerSpectrumPopup.update({
@@ -868,6 +859,9 @@ export function initFrequencyHover({
             Fhigh: sel.data.Fhigh
           });
         }
+        
+        // 重置更新計時器
+        lastPowerSpectrumUpdateTime = 0;
         
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
