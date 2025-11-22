@@ -133,7 +133,7 @@ function createPopupWindow() {
   const canvasContainer = document.createElement('div');
   canvasContainer.style.cssText = `
     flex: 1;
-    padding: 6px 16px 16px 16px;
+    padding: 5px;
     background: #fafafa;
     overflow: hidden;
     display: flex;
@@ -737,7 +737,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.moveTo(x, padding + plotHeight);
     ctx.lineTo(x, padding + plotHeight + 5);
     ctx.stroke();
-    ctx.fillText(freq.toFixed(1), x, padding + plotHeight + 20);
+    ctx.fillText(freq.toFixed(1), x, padding + plotHeight + 15);
   }
 
   // 繪製能量軸標籤 (Y-axis，Unit: dB)
