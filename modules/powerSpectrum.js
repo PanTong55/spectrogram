@@ -365,9 +365,11 @@ function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windo
       const avgEnergy = spectrum[i] / spectrumCount;
       // RMS 值
       const rms = Math.sqrt(avgEnergy);
-      // 相對於全幅值 (Full Scale) 的 dB：20 * log10(RMS / 1.0)
-      // 對於 16-bit 音頻，Full Scale = 1.0（歸一化後）
-      spectrum[i] = 20 * Math.log10(Math.max(rms, 1e-8));
+      // 計算 Power Spectrum Density (PSD)：歸一化為單位頻率的功率
+      // PSD = (RMS^2) / (fftSize)
+      // 轉換為 dB：10 * log10(PSD)
+      const psd = (rms * rms) / fftSize;
+      spectrum[i] = 10 * Math.log10(Math.max(psd, 1e-16));
     }
   }
 
@@ -410,8 +412,11 @@ function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
     const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
     // RMS 值
     const rms = Math.sqrt(energy);
-    // 相對於全幅值 (Full Scale) 的 dB：20 * log10(RMS / 1.0)
-    spectrum[binIndex] = 20 * Math.log10(Math.max(rms, 1e-8));
+    // 計算 Power Spectrum Density (PSD)
+    // PSD = (RMS^2) / (fftSize)
+    // 轉換為 dB：10 * log10(PSD)
+    const psd = (rms * rms) / fftSize;
+    spectrum[binIndex] = 10 * Math.log10(Math.max(psd, 1e-16));
   }
 
   return spectrum;
