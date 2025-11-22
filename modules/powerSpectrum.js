@@ -688,14 +688,20 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   }
   
   // 調整 dB 範圍以提高視覺效果
+  // 注意：由於 dB 值是負數，minDb 會是最負的值（最小），maxDb 會是最接近0的值（最大）
   const dbRange = maxDb - minDb;
-  minDb = maxDb - Math.max(dbRange, 60); // 至少 60dB 的動態範圍
   
-  // 在 maxDb 上加 5dB 的間距，防止曲線頂部被 crop 掉
+  // 確保至少 60dB 的動態範圍，minDb 應該更小（更負）
+  if (dbRange < 60) {
+    minDb = maxDb - 60;
+  }
+  
+  // 在 maxDb 上加 5dB 的間距（向更接近0的方向），防止曲線頂部被 crop 掉
   maxDb = maxDb + 5;
-  // 確保 minDb 小於 maxDb
+  
+  // 重新確保 minDb < maxDb（在實數軸上）
   if (minDb >= maxDb) {
-    minDb = maxDb - Math.max(dbRange, 60);
+    minDb = maxDb - 60;
   }
 
   // 繪製坐標軸
@@ -728,12 +734,14 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.textBaseline = 'middle';
   const dbSteps = 4;
   for (let i = 0; i <= dbSteps; i++) {
+    // 從上到下：maxDb（小負數或接近0） 到 minDb（大負數）
     const db = maxDb - ((maxDb - minDb) * i) / dbSteps;
     const y = topPadding + (plotHeight * i) / dbSteps;
     ctx.beginPath();
     ctx.moveTo(leftPadding - 5, y);
     ctx.lineTo(leftPadding, y);
     ctx.stroke();
+    // 確保顯示負數格式
     ctx.fillText(db.toFixed(0), leftPadding - 15, y);
   }
 
