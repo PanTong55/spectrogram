@@ -697,7 +697,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
-  const padding = 20;  // 減少上方 5px (從 50 改為 45)
+  const padding = 45;  // 減少上方 5px (從 50 改為 45)
   const leftPadding = 65;  // 增加左邊 padding 以容納 Y 軸標題
   const plotWidth = width - leftPadding - padding;
   const plotHeight = height - padding * 2;
@@ -748,7 +748,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.moveTo(x, padding + plotHeight);
     ctx.lineTo(x, padding + plotHeight + 5);
     ctx.stroke();
-    ctx.fillText(freq.toFixed(1), x, padding + plotHeight + 20);
+    ctx.fillText(freq.toFixed(1), x, padding + plotHeight - 10);
   }
 
   // 繪製能量軸標籤 (Y-axis，Unit: dB)
@@ -769,7 +769,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 12px Arial';
-  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height + 10);
+  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 20);
 
   ctx.save();
   ctx.translate(12, padding + plotHeight / 2);
