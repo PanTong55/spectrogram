@@ -212,12 +212,12 @@ export function initDragDropLoader({
     if (!isFileDrag(e)) return;
     e.preventDefault();
     dragCounter--;
-    // 只有當 dragCounter <= 0 且有檔案已載入時，才隱藏 overlay
-    // 如果沒有檔案，drop-overlay 應該保持顯示
+    // 只有當 dragCounter <= 0 且 spectrogram 已解碼繪製時，才隱藏 overlay
+    // 如果 spectrogram 還未解碼繪製，drop-overlay 應該保持顯示
     if (dragCounter <= 0) {
       dragCounter = 0;
-      const fileList = getFileList();
-      if (fileList && fileList.length > 0) {
+      const duration = wavesurfer ? wavesurfer.getDuration() : 0;
+      if (duration > 0) {
         hideOverlay();
       }
     }
