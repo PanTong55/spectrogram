@@ -720,6 +720,7 @@ export function initFrequencyHover({
     let resizing = false;
     let lockedHorizontal = null;
     let lockedVertical = null;
+    let powerSpectrumUpdateTimer = null;  // 防抖計時器
   
     // 只負責顯示滑鼠 cursor
     rect.addEventListener('mousemove', (e) => {
@@ -815,14 +816,23 @@ export function initFrequencyHover({
   
         updateSelections();
 
-        // 如果 Power Spectrum popup 打開，即時更新它
+        // 如果 Power Spectrum popup 打開，使用防抖進行即時更新（300ms）
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-          sel.powerSpectrumPopup.update({
-            startTime: sel.data.startTime,
-            endTime: sel.data.endTime,
-            Flow: sel.data.Flow,
-            Fhigh: sel.data.Fhigh
-          });
+          // 清除之前的防抖計時器
+          if (powerSpectrumUpdateTimer) {
+            clearTimeout(powerSpectrumUpdateTimer);
+          }
+          
+          // 設置新的防抖計時器
+          powerSpectrumUpdateTimer = setTimeout(() => {
+            sel.powerSpectrumPopup.update({
+              startTime: sel.data.startTime,
+              endTime: sel.data.endTime,
+              Flow: sel.data.Flow,
+              Fhigh: sel.data.Fhigh
+            });
+            powerSpectrumUpdateTimer = null;
+          }, 300);
         }
 
         // 即時計算峰值，確保與 Power Spectrum 同步
@@ -842,6 +852,23 @@ export function initFrequencyHover({
         isResizing = false;
         lockedHorizontal = null;
         lockedVertical = null;
+        
+        // 清除防抖計時器，並進行最終更新
+        if (powerSpectrumUpdateTimer) {
+          clearTimeout(powerSpectrumUpdateTimer);
+          powerSpectrumUpdateTimer = null;
+        }
+        
+        // Resize 完成後，立即進行最終的 Power Spectrum 更新
+        if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
+          sel.powerSpectrumPopup.update({
+            startTime: sel.data.startTime,
+            endTime: sel.data.endTime,
+            Flow: sel.data.Flow,
+            Fhigh: sel.data.Fhigh
+          });
+        }
+        
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
 
