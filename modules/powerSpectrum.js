@@ -109,7 +109,7 @@ function createPopupWindow() {
   const popup = document.createElement('div');
   popup.className = 'map-popup modal-popup';
   popup.style.width = '500px';
-  popup.style.height = '580px';
+  popup.style.height = '500px';
 
   // 建立 Drag Bar (標題欄)
   const dragBar = document.createElement('div');
@@ -687,7 +687,8 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
   const padding = 50;
-  const plotWidth = width - padding * 2;
+  const leftPadding = 65;  // 增加左邊 padding 以容納 Y 軸標題
+  const plotWidth = width - leftPadding - padding;
   const plotHeight = height - padding * 2;
 
   // 清除背景
@@ -719,9 +720,9 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.strokeStyle = '#000000';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(padding, padding);
-  ctx.lineTo(padding, padding + plotHeight);
-  ctx.lineTo(padding + plotWidth, padding + plotHeight);
+  ctx.moveTo(leftPadding, padding);
+  ctx.lineTo(leftPadding, padding + plotHeight);
+  ctx.lineTo(leftPadding + plotWidth, padding + plotHeight);
   ctx.stroke();
 
   // 繪製頻率軸標籤 (X-axis，Unit: kHz)
@@ -731,7 +732,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   const freqSteps = 5;
   for (let i = 0; i <= freqSteps; i++) {
     const freq = flowKHz + (fhighKHz - flowKHz) * (i / freqSteps);
-    const x = padding + (plotWidth * i) / freqSteps;
+    const x = leftPadding + (plotWidth * i) / freqSteps;
     ctx.beginPath();
     ctx.moveTo(x, padding + plotHeight);
     ctx.lineTo(x, padding + plotHeight + 5);
@@ -747,20 +748,20 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     const db = maxDb - ((maxDb - minDb) * i) / dbSteps;
     const y = padding + (plotHeight * i) / dbSteps;
     ctx.beginPath();
-    ctx.moveTo(padding - 5, y);
-    ctx.lineTo(padding, y);
+    ctx.moveTo(leftPadding - 5, y);
+    ctx.lineTo(leftPadding, y);
     ctx.stroke();
-    ctx.fillText(db.toFixed(0), padding - 15, y);
+    ctx.fillText(db.toFixed(0), leftPadding - 15, y);
   }
 
   // 繪製軸標籤
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 12px Arial';
-  ctx.fillText('Frequency (kHz)', padding + plotWidth / 2, height - 10);
+  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 10);
 
   ctx.save();
-  ctx.translate(15, padding + plotHeight / 2);
+  ctx.translate(12, padding + plotHeight / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.fillText('Energy (dB)', 0, 0);
   ctx.restore();
@@ -771,10 +772,19 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.beginPath();
 
   let firstPoint = true;
+  let peakDbInRange = -Infinity;  // 追蹤實際繪製的最高點
+  let peakBinInRange = minBin;
+  
   for (let i = minBin; i <= maxBin; i++) {
     const db = spectrum[i];
+    // 追蹤在顯示範圍內的最高點
+    if (db > peakDbInRange) {
+      peakDbInRange = db;
+      peakBinInRange = i;
+    }
+    
     const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
-    const x = padding + ((i - minBin) / (maxBin - minBin)) * plotWidth;
+    const x = leftPadding + ((i - minBin) / (maxBin - minBin)) * plotWidth;
     const y = padding + plotHeight - normalizedDb * plotHeight;
 
     if (firstPoint) {
@@ -786,12 +796,16 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   }
 
   ctx.stroke();
+  
+  // 計算實際繪製曲線的最高峰頻率 (用於紅線)
+  const actualPeakFreqHz = peakBinInRange * freqResolution;
+  const actualPeakFreq = actualPeakFreqHz / 1000; // 轉換為 kHz
 
   // 繪製網格線 (可選)
   ctx.strokeStyle = '#e0e0e0';
   ctx.lineWidth = 0.5;
   for (let i = 1; i < freqSteps; i++) {
-    const x = padding + (plotWidth * i) / freqSteps;
+    const x = leftPadding + (plotWidth * i) / freqSteps;
     ctx.beginPath();
     ctx.moveTo(x, padding);
     ctx.lineTo(x, padding + plotHeight);
@@ -801,15 +815,15 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   for (let i = 1; i < dbSteps; i++) {
     const y = padding + (plotHeight * i) / dbSteps;
     ctx.beginPath();
-    ctx.moveTo(padding, y);
-    ctx.lineTo(padding + plotWidth, y);
+    ctx.moveTo(leftPadding, y);
+    ctx.lineTo(leftPadding + plotWidth, y);
     ctx.stroke();
   }
 
-  // 繪製 Peak Frequency 垂直線和標籤
-  if (peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
-    const peakNormalized = (peakFreq - flowKHz) / (fhighKHz - flowKHz);
-    const peakX = padding + peakNormalized * plotWidth;
+  // 繪製 Peak Frequency 垂直線和標籤 (使用實際繪製的最高峰)
+  if (actualPeakFreq !== null && actualPeakFreq >= flowKHz && actualPeakFreq <= fhighKHz) {
+    const peakNormalized = (actualPeakFreq - flowKHz) / (fhighKHz - flowKHz);
+    const peakX = leftPadding + peakNormalized * plotWidth;
 
     // 繪製垂直線
     ctx.strokeStyle = '#ff0000';
@@ -825,7 +839,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.fillStyle = '#ff0000';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Peak: ${peakFreq.toFixed(1)} kHz`, peakX, padding - 10);
+    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 10);
   }
 }
 
