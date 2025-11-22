@@ -383,19 +383,20 @@ export function initFrequencyHover({
 
       // 獲取音頻樣本數據
       const audioBuffer = decodedData;
-      const sampleRate = audioBuffer.sampleRate;
+      
+      // 使用與 Power Spectrum 相同的設置參數（確保一致性）
+      const fftSize = window.__spectrogramSettings?.fftSize || 1024;
+      const windowType = window.__spectrogramSettings?.windowType || 'hann';
+      const overlap = window.__spectrogramSettings?.overlap || 'auto';
+      const sampleRate = window.__spectrogramSettings?.sampleRate || 256000;
+
       const startSample = Math.floor(startTime * sampleRate);
       const endSample = Math.floor(endTime * sampleRate);
 
       if (endSample <= startSample) return null;
 
-      // 提取 crop 音頻數據
+      // 提取 crop 音頻數據 (使用統一的 sampleRate 計算)
       const audioData = new Float32Array(audioBuffer.getChannelData(0).slice(startSample, endSample));
-
-      // 獲取設置參數
-      const fftSize = window.__spectrogramSettings?.fftSize || 1024;
-      const windowType = window.__spectrogramSettings?.windowType || 'hann';
-      const overlap = window.__spectrogramSettings?.overlap || 'auto';
 
       // 使用與 Power Spectrum 相同的方法計算頻譜 (包含 overlap)
       const spectrum = calculateSpectrumWithOverlap(
