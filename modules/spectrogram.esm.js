@@ -258,35 +258,17 @@ class h extends s {
         this._filterBankCache = {};
         // cache for resample mappings keyed by inputLen:outputWidth
         this._resampleCache = {};
-        
-        // --- 優化開始: 預計算 Uint32 顏色表 ---
+        // precomputed uint8 colormap (RGBA 0-255)
         this._colorMapUint = new Uint8ClampedArray(256 * 4);
-        this._colorMap32 = new Uint32Array(256); // 新增: 32位顏色緩存
-
-        if (this.colorMap) {
+        if (this.colorMap && this._colorMapUint) {
             for (let ii = 0; ii < 256; ii++) {
                 const cc = this.colorMap[ii] || [0, 0, 0, 1];
-                const r = Math.round(255 * cc[0]);
-                const g = Math.round(255 * cc[1]);
-                const b = Math.round(255 * cc[2]);
-                const a = Math.round(255 * cc[3]);
-                
-                this._colorMapUint[ii * 4] = r;
-                this._colorMapUint[ii * 4 + 1] = g;
-                this._colorMapUint[ii * 4 + 2] = b;
-                this._colorMapUint[ii * 4 + 3] = a;
-
-                // 預計算 Little Endian (ABGR) 格式的整數，用於快速寫入
-                this._colorMap32[ii] = (a << 24) | (b << 16) | (g << 8) | r;
+                this._colorMapUint[ii * 4] = Math.round(255 * cc[0]);
+                this._colorMapUint[ii * 4 + 1] = Math.round(255 * cc[1]);
+                this._colorMapUint[ii * 4 + 2] = Math.round(255 * cc[2]);
+                this._colorMapUint[ii * 4 + 3] = Math.round(255 * cc[3]);
             }
         }
-        // 預計算特殊顏色的 Uint32 值
-        // #FF70FC (RGB: 255, 112, 252) -> ABGR: 255, 252, 112, 255
-        this._highPeakColor32 = (255 << 24) | (252 << 16) | (112 << 8) | 255;
-        
-        // 紅色 (RGB: 255, 0, 0) -> ABGR: 255, 0, 0, 255
-        this._peakColor32 = (255 << 24) | (0 << 16) | (0 << 8) | 255;
-        // --- 優化結束 ---
     }
     onInit() {
         this.container = this.container || this.wavesurfer.getWrapper(),
@@ -360,114 +342,91 @@ class h extends s {
             e && this.drawSpectrogram(this.getFrequencies(e))
         }
     }
-drawSpectrogram(t) {
-        if (!t || t.length === 0) return;
-        
-        isNaN(t[0][0]) || (t = [t]);
-        this.wrapper.style.height = this.height * t.length + "px";
-        this.canvas.width = this.getWidth();
+    drawSpectrogram(t) {
+        isNaN(t[0][0]) || (t = [t]),
+        this.wrapper.style.height = this.height * t.length + "px",
+        this.canvas.width = this.getWidth(),
         this.canvas.height = this.height * t.length;
-        
-        const ctx = this.spectrCc;
-        const h = this.height;
-        const w = this.getWidth();
-        
-        if (!ctx) return;
-
-        // 填充背景色
-        const bgPixel = this._colorMap32[this._colorMap32.length - 1] || 0;
-        // 注意: 這裡fillRect仍需字符串，或者我们可以直接操作Buffer。
-        // 為保持兼容簡單，用原方法填充背景，覆蓋操作很快
-        const i = this.colorMap[this.colorMap.length - 1];
-        ctx.fillStyle = `rgba(${i[0]}, ${i[1]}, ${i[2]}, ${i[3]})`;
-        ctx.fillRect(0, 0, w, h * t.length);
-
-        // 計算 Peak Mode 閾值 (在渲染時計算，因為我們現在才有了最終的 globalMaxPeakValue)
-        const peakThreshold = this.globalMaxPeakValue * (this.options.peakThreshold || 0.4);
-        const highPeakThreshold = this.globalMaxPeakValue * 0.7;
-
-        for (let ch = 0; ch < t.length; ch++) {
-            const channelData = t[ch];
-            const channelPeakInfos = this.peakBandArrayPerChannel[ch];
-            
-            // 創建圖像數據緩衝區
-            const imgData = ctx.createImageData(w, h);
-            // 使用 Uint32Array 視圖來操作像素 (Little Endian systems: ABGR)
-            const data32 = new Uint32Array(imgData.data.buffer);
-            
-            const dataLen = channelData.length;
-            const timeScale = dataLen / w; // 用於直接計算採樣索引
-            
-            const bins = channelData[0].length;
-            const freqScale = bins / h; // 簡單的頻率縮放
-            
-            // 優化: 雙重循環反轉 (X軸優先，因為圖像數據是行優先存儲的，但這裡為了邏輯清晰保持 X->Y)
-            // 為了最大化緩存命中，我們應該儘量按內存順序寫入，但頻譜圖是垂直繪製的
-            
-            for (let x = 0; x < w; x++) {
-                // 1. 內聯重採樣 (Inline Resampling) - Nearest Neighbor
-                // 直接計算當前像素 X 對應原始數據的哪一列
-                const srcIdx = Math.floor(x * timeScale);
-                const safeSrcIdx = Math.min(dataLen - 1, srcIdx);
-                
-                const colData = channelData[safeSrcIdx];
-                const colPeakInfo = channelPeakInfos[safeSrcIdx];
-
-                // 預先判斷該列的 Peak 狀態
-                let peakBin = -1;
-                let isHighPeak = false;
-                
-                if (this.options.peakMode && colPeakInfo && colPeakInfo.val >= peakThreshold) {
-                     peakBin = colPeakInfo.bin;
-                     isHighPeak = colPeakInfo.val >= highPeakThreshold;
-                }
-
-                // 2. 繪製該列的所有像素 (Y軸)
-                for (let y = 0; y < h; y++) {
-                    // 頻譜圖通常低頻在下，高頻在上。canvas y=0 是頂部。
-                    // 計算對應的頻率 Bin 索引
-                    const invertedY = h - y - 1; 
-                    // 如果沒有縮放 (bins == h)，直接映射。否則簡單縮放
-                    const binIdx = Math.floor(invertedY * freqScale); 
-                    
-                    // 計算 Buffer 中的索引 (行優先: y * w + x)
-                    const pixelIndex = y * w + x;
-                    
-                    // 判斷是否是 Peak 點
-                    // 注意: 這裡需要處理縮放帶來的模糊。如果縮放比例大，可能需要檢查範圍
-                    // 為了效能，這裡採用精確匹配或簡單範圍匹配
-                    let isPeakPixel = false;
-                    if (peakBin >= 0) {
-                        if (Math.abs(binIdx - peakBin) < Math.max(1, freqScale)) {
-                             isPeakPixel = true;
-                        }
-                    }
-
-                    if (isPeakPixel) {
-                        if (isHighPeak) {
-                            data32[pixelIndex] = this._highPeakColor32; // #FF70FC
-                        } else {
-                            data32[pixelIndex] = this._peakColor32;     // 紅色
-                        }
-                    } else {
-                        // 普通頻譜顏色
-                        // 安全檢查
-                        const val = colData[Math.min(bins-1, binIdx)] || 0;
-                        data32[pixelIndex] = this._colorMap32[val];
-                    }
-                }
+        const e = this.spectrCc
+          , s = this.height
+          , r = this.getWidth()
+          , i = this.buffer.sampleRate / 2
+          , a = this.frequencyMin
+          , n = this.frequencyMax;
+        if (e) {
+            if (n > i) {
+                const i = this.colorMap[this.colorMap.length - 1];
+                e.fillStyle = `rgba(${i[0]}, ${i[1]}, ${i[2]}, ${i[3]})`,
+                e.fillRect(0, 0, r, s * t.length)
             }
-            
-            // 將構建好的圖像放到 Canvas 上
-            // 計算垂直位置
-            const yPos = h * ch;
-            createImageBitmap(imgData).then(bmp => {
-                ctx.drawImage(bmp, 0, yPos);
-            });
+            for (let h = 0; h < t.length; h++) {
+                const o = this.resample(t[h])
+                  , l = o[0].length
+                  , c = new ImageData(r,l)
+                  , channelPeakBands = this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[h] ? this.peakBandArrayPerChannel[h] : [];
+                
+                const cacheKey = `${t[h].length}:${r}`;
+                const mapping = this._resampleCache[cacheKey];
+                
+                for (let t = 0; t < o.length; t++)
+                    for (let e = 0; e < o[t].length; e++) {
+                        let idx = o[t][e];
+                        if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
+                        const cmapBase = idx * 4;
+                        const i = 4 * ((l - e - 1) * r + t);
+                        
+                        // Peak Mode 渲染邏輯
+                        let isPeakColumn = false;
+                        let isHighPeak = false; // 用於標記是否為高強度峰值
+
+                        if (this.options.peakMode && mapping && mapping[t]) {
+                          for (let m = 0; m < mapping[t].length; m++) {
+                            const sourceIdx = mapping[t][m][0];
+                            
+                            // 獲取峰值數據對象
+                            const peakData = channelPeakBands[sourceIdx];
+                            
+                            // 檢查數據是否存在且當前 Bin 匹配
+                            if (peakData && peakData.bin === e) {
+                              isPeakColumn = true;
+                              isHighPeak = peakData.isHigh; // 讀取是否超過70%
+                              break;
+                            }
+                          }
+                        }
+                        
+                        if (isPeakColumn) {
+                          if (isHighPeak) {
+                              // 超過 70% 顯示為 #FF70FC (RGB: 255, 112, 252)
+                              c.data[i] = 255;      // R
+                              c.data[i + 1] = 112;    // G
+                              c.data[i + 2] = 252;  // B
+                              c.data[i + 3] = 255;  // A
+                          } else {
+                              // 普通峰值顯示紅色
+                              c.data[i] = 255;      // R
+                              c.data[i + 1] = 0;    // G
+                              c.data[i + 2] = 0;    // B
+                              c.data[i + 3] = 255;  // A
+                          }
+                        } else {
+                          c.data[i] = this._colorMapUint[cmapBase];
+                          c.data[i + 1] = this._colorMapUint[cmapBase + 1];
+                          c.data[i + 2] = this._colorMapUint[cmapBase + 2];
+                          c.data[i + 3] = this._colorMapUint[cmapBase + 3];
+                        }
+                    }
+                const u = this.hzToScale(a) / this.hzToScale(i)
+                  , f = this.hzToScale(n) / this.hzToScale(i)
+                  , p = Math.min(1, f);
+                createImageBitmap(c, 0, Math.round(l * (1 - p)), r, Math.round(l * (p - u))).then((t => {
+                    e.drawImage(t, 0, s * (h + 1 - p / f), r, s * p / f)
+                }
+                ))
+            }
+            this.options.labels && this.loadLabels(this.options.labelsBackground, "12px", "12px", "", this.options.labelsColor, this.options.labelsHzColor || this.options.labelsColor, "center", "#specLabels", t.length),
+            this.emit("ready")
         }
-        
-        this.options.labels && this.loadLabels(this.options.labelsBackground, "12px", "12px", "", this.options.labelsColor, this.options.labelsHzColor || this.options.labelsColor, "center", "#specLabels", t.length);
-        this.emit("ready");
     }
     createFilterBank(t, e, s, r) {
                 // cache by scale name + params to avoid rebuilding
