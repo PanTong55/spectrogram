@@ -685,7 +685,13 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   // 調整 dB 範圍以提高視覺效果
   const dbRange = maxDb - minDb;
   minDb = maxDb - Math.max(dbRange, 60); // 至少 60dB 的動態範圍
-  maxDb = Math.max(maxDb, minDb + 1);
+  
+  // 在 maxDb 上加 5dB 的間距，防止曲線頂部被 crop 掉
+  maxDb = maxDb + 5;
+  // 確保 minDb 小於 maxDb
+  if (minDb >= maxDb) {
+    minDb = maxDb - Math.max(dbRange, 60);
+  }
 
   // 繪製坐標軸
   ctx.strokeStyle = '#000000';
