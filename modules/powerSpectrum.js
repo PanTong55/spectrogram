@@ -13,11 +13,12 @@ export function showPowerSpectrumPopup({
   if (!wavesurfer || !selection) return null;
 
   let {
-    fftSize = 1024,
     windowType = 'hann',
     sampleRate = 256000,
     overlap = 'auto'
   } = currentSettings;
+  
+  let fftSize = 1024; // 固定預設為 1024，不從 currentSettings 獲取
 
   // 建立 Popup Window
   const popup = createPopupWindow();
