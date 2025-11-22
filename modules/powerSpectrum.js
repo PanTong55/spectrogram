@@ -728,6 +728,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.fillStyle = '#000000';
   ctx.font = '12px Arial';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
   const freqSteps = 5;
   for (let i = 0; i <= freqSteps; i++) {
     const freq = flowKHz + (fhighKHz - flowKHz) * (i / freqSteps);
@@ -736,7 +737,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.moveTo(x, padding + plotHeight);
     ctx.lineTo(x, padding + plotHeight + 5);
     ctx.stroke();
-    ctx.fillText(freq.toFixed(1), x, height - 25);  // 使用固定的高度位置
+    ctx.fillText(freq.toFixed(1), x, padding + plotHeight + 20);
   }
 
   // 繪製能量軸標籤 (Y-axis，Unit: dB)
@@ -837,7 +838,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.fillStyle = '#ff0000';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 15);
+    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 20);
   }
 }
 
