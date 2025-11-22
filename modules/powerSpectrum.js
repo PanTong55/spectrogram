@@ -133,7 +133,7 @@ function createPopupWindow() {
   const canvasContainer = document.createElement('div');
   canvasContainer.style.cssText = `
     flex: 1;
-    padding: 16px;
+    padding: 6px 16px 16px 16px;
     background: #fafafa;
     overflow: hidden;
     display: flex;
@@ -175,7 +175,7 @@ function createPopupWindow() {
   `;
   const typeLabel = document.createElement('span');
   typeLabel.textContent = 'Type:';
-  typeLabel.style.fontWeight = 'bold';
+  typeLabel.style.fontWeight = 'normal';
   typeControl.appendChild(typeLabel);
   
   const typeSelect = document.createElement('select');
@@ -207,7 +207,7 @@ function createPopupWindow() {
   `;
   const fftLabel = document.createElement('span');
   fftLabel.textContent = 'FFT:';
-  fftLabel.style.fontWeight = 'bold';
+  fftLabel.style.fontWeight = 'normal';
   fftControl.appendChild(fftLabel);
   
   const fftSelect = document.createElement('select');
@@ -235,7 +235,7 @@ function createPopupWindow() {
   `;
   const overlapLabel = document.createElement('span');
   overlapLabel.textContent = 'Overlap:';
-  overlapLabel.style.fontWeight = 'bold';
+  overlapLabel.style.fontWeight = 'normal';
   overlapControl.appendChild(overlapLabel);
   
   const overlapInput = document.createElement('input');
@@ -757,7 +757,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 12px Arial';
-  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 10);
+  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 5);
 
   ctx.save();
   ctx.translate(12, padding + plotHeight / 2);
@@ -826,7 +826,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
     // 繪製垂直線
     ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
     ctx.moveTo(peakX, padding);
@@ -838,7 +838,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.fillStyle = '#ff0000';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 10);
+    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 15);
   }
 }
 

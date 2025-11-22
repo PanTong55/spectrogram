@@ -2286,6 +2286,7 @@ input.tag-button.editing {
   display: flex;
   gap: 20px;
   align-items: center;
+  justify-content: center;
   font-size: 13px;
 }
 
@@ -2297,7 +2298,7 @@ input.tag-button.editing {
 }
 
 .power-spectrum-controls span {
-  font-weight: bold;
+  font-weight: normal;
   white-space: nowrap;
 }
 
