@@ -361,6 +361,22 @@ export function initFrequencyHover({
   // 計算 selection area 內的峰值頻率
   async function calculatePeakFrequency(sel) {
     try {
+      // 優先使用 Power Spectrum Popup 的計算結果
+      if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
+        const peakFreq = sel.powerSpectrumPopup.getPeakFrequency();
+        if (peakFreq !== null) {
+          sel.data.peakFreq = peakFreq;
+          if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
+            const timeExp = getTimeExpansionMode();
+            const freqMul = timeExp ? 10 : 1;
+            const dispPeakFreq = peakFreq * freqMul;
+            sel.tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
+          }
+          return peakFreq;
+        }
+      }
+
+      // 如果 Power Spectrum 未打開，則計算峰值
       const ws = getWavesurfer();
       if (!ws) return null;
 

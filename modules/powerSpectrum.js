@@ -65,6 +65,9 @@ export function showPowerSpectrumPopup({
     return null;
   }
 
+  // 用於存儲最後計算的峰值頻率
+  let lastPeakFreq = null;
+
   // 繪製函數
   const redrawSpectrum = (newSelection) => {
     // 如果提供了新的 selection 數據，更新它並重新提取音頻
@@ -108,6 +111,9 @@ export function showPowerSpectrumPopup({
       selection.Fhigh
     );
 
+    // 存儲最後計算的峰值
+    lastPeakFreq = peakFreq;
+
     // 繪製 Power Spectrum
     drawPowerSpectrum(
       ctx,
@@ -130,7 +136,8 @@ export function showPowerSpectrumPopup({
   return {
     popup,
     update: redrawSpectrum,
-    isOpen: () => document.body.contains(popup)
+    isOpen: () => document.body.contains(popup),
+    getPeakFrequency: () => lastPeakFreq
   };
 }
 
