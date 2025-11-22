@@ -1,6 +1,6 @@
 import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
-import { showPowerSpectrumPopup } from './powerSpectrum.js';
+import { showPowerSpectrumPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './powerSpectrum.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -390,25 +390,26 @@ export function initFrequencyHover({
       if (endSample <= startSample) return null;
 
       // 提取 crop 音頻數據
-      const channels = [];
-      for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
-        const channelData = audioBuffer.getChannelData(i);
-        channels.push(new Float32Array(channelData.slice(startSample, endSample)));
-      }
+      const audioData = new Float32Array(audioBuffer.getChannelData(0).slice(startSample, endSample));
 
       // 獲取設置參數
       const fftSize = window.__spectrogramSettings?.fftSize || 1024;
       const windowType = window.__spectrogramSettings?.windowType || 'hann';
+      const overlap = window.__spectrogramSettings?.overlap || 'auto';
 
-      // 使用與 Power Spectrum 相同的方法計算峰值
-      const peakFreq = await calculatePeakFromSpectrum(
-        channels[0],
+      // 使用與 Power Spectrum 相同的方法計算頻譜 (包含 overlap)
+      const spectrum = calculateSpectrumWithOverlap(
+        audioData,
         sampleRate,
         fftSize,
         windowType,
-        Flow,
-        Fhigh
+        overlap
       );
+
+      if (!spectrum) return null;
+
+      // 使用 Power Spectrum 相同的峰值找到方法
+      const peakFreq = findPeakFrequency(spectrum, sampleRate, fftSize, Flow, Fhigh);
 
       if (peakFreq !== null) {
         sel.data.peakFreq = peakFreq;
@@ -424,290 +425,6 @@ export function initFrequencyHover({
       console.warn('計算峰值頻率時出錯:', err);
     }
     return null;
-  }
-
-  // 從 Cropped Audio 的頻譜中計算峰值頻率 (與 Power Spectrum 保持一致)
-  async function calculatePeakFromSpectrum(audioData, sampleRate, fftSize, windowType, freqMin, freqMax) {
-    try {
-      if (!audioData || audioData.length === 0) return null;
-
-      // 應用窗口函數 (與 Power Spectrum 計算一致)
-      const windowed = applyWindow(audioData, windowType);
-
-      // 計算頻譜 (與 Power Spectrum 相同方式)
-      const spectrum = calculateSpectrumForPeakFinding(windowed, sampleRate, fftSize);
-      if (!spectrum) return null;
-
-      // 從頻譜中找到峰值 (與 Power Spectrum 相同方式)
-      const freqResolution = sampleRate / fftSize;
-      const minBinFreq = freqMin * 1000;
-      const maxBinFreq = freqMax * 1000;
-      const minBin = Math.max(0, Math.floor(minBinFreq / freqResolution));
-      const maxBin = Math.min(spectrum.length - 1, Math.floor(maxBinFreq / freqResolution));
-
-      if (minBin >= maxBin) return null;
-
-      // 在頻譜中找到最大值
-      let peakBin = minBin;
-      let peakDb = spectrum[minBin];
-
-      for (let i = minBin + 1; i <= maxBin; i++) {
-        if (spectrum[i] > peakDb) {
-          peakDb = spectrum[i];
-          peakBin = i;
-        }
-      }
-
-      // 如果峰值在中間，進行拋物線插值提高精度
-      if (peakBin > minBin && peakBin < maxBin) {
-        const db0 = spectrum[peakBin - 1];
-        const db1 = spectrum[peakBin];
-        const db2 = spectrum[peakBin + 1];
-
-        // 拋物線頂點公式
-        const a = (db2 - 2 * db1 + db0) / 2;
-        if (Math.abs(a) > 1e-10) {
-          const binCorrection = (db0 - db2) / (4 * a);
-          const refinedBin = peakBin + binCorrection;
-          const peakFreqHz = refinedBin * freqResolution;
-          return peakFreqHz / 1000; // 轉換為 kHz
-        }
-      }
-
-      // 沒有進行插值時，直接使用 bin 位置
-      const peakFreqHz = peakBin * freqResolution;
-      return peakFreqHz / 1000; // 轉換為 kHz
-    } catch (err) {
-      console.warn('calculatePeakFromSpectrum 錯誤:', err);
-      return null;
-    }
-  }
-
-  // 計算頻譜用於峰值尋找
-  function calculateSpectrumForPeakFinding(windowedData, sampleRate, fftSize) {
-    if (!windowedData || windowedData.length === 0) return null;
-
-    const freqResolution = sampleRate / fftSize;
-    const maxFreqToCompute = sampleRate / 2;
-    const spectrum = new Float32Array(Math.floor(maxFreqToCompute / freqResolution) + 1);
-
-    // 移除直流分量
-    let dcOffset = 0;
-    for (let i = 0; i < windowedData.length; i++) {
-      dcOffset += windowedData[i];
-    }
-    dcOffset /= windowedData.length;
-
-    const dcRemovedData = new Float32Array(windowedData.length);
-    for (let i = 0; i < windowedData.length; i++) {
-      dcRemovedData[i] = windowedData[i] - dcOffset;
-    }
-
-    // 計算每個頻率點的功率
-    for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
-      const freq = binIndex * freqResolution;
-      if (freq > maxFreqToCompute) break;
-
-      const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
-      spectrum[binIndex] = 20 * Math.log10(Math.sqrt(energy) + 1e-10);
-    }
-
-    return spectrum;
-  }
-
-  // 從 cropped audio 計算峰值頻率 - 優化版，使用兩階段精確掃描 (應用窗口函數)
-  // 備註：此函數已廢棄，保留以供參考
-  async function calculatePeakFromCroppedAudio_deprecated(channels, sampleRate, freqMin, freqMax, windowType = 'hann') {
-    try {
-      if (!channels || channels.length === 0) return null;
-
-      let audioData = channels[0]; // 使用第一個通道
-      
-      if (audioData.length < 32) return null; // 太短的音頻
-
-      // 應用窗口函數 (與 Power Spectrum 計算一致)
-      audioData = applyWindow(audioData, windowType);
-
-      // freqMin 和 freqMax 已經是 kHz，需要轉換為 Hz
-      const freqMinHz = freqMin * 1000;
-      const freqMaxHz = freqMax * 1000;
-
-      // Nyquist 頻率限制
-      const nyquistFreq = sampleRate / 2;
-      if (freqMinHz >= nyquistFreq) return null;
-      const adjustedMaxHz = Math.min(freqMaxHz, nyquistFreq - 1);
-
-      // 預處理：移除直流分量（DC offset）
-      let dcOffset = 0;
-      for (let i = 0; i < audioData.length; i++) {
-        dcOffset += audioData[i];
-      }
-      dcOffset /= audioData.length;
-      
-      audioData = audioData.map(sample => sample - dcOffset);
-
-      // 第一階段：粗掃，快速找到粗略的峰值位置
-      let peakFreqCoarse = freqMinHz;
-      let peakEnergyCoarse = -Infinity;
-      const coarseStep = Math.max(20, (adjustedMaxHz - freqMinHz) / 30);
-
-      for (let freq = freqMinHz; freq <= adjustedMaxHz; freq += coarseStep) {
-        const energy = goertzelEnergy(audioData, freq, sampleRate);
-        if (energy > peakEnergyCoarse) {
-          peakEnergyCoarse = energy;
-          peakFreqCoarse = freq;
-        }
-      }
-
-      // 第二階段：精掃，在粗掃結果周圍進行精確搜索
-      let peakFreqFine = peakFreqCoarse;
-      let peakEnergyFine = peakEnergyCoarse;
-      const fineRangeHz = coarseStep * 1.5;
-      const fineStep = 1; // 1Hz 精度
-
-      const fineMinHz = Math.max(freqMinHz, peakFreqCoarse - fineRangeHz);
-      const fineMaxHz = Math.min(adjustedMaxHz, peakFreqCoarse + fineRangeHz);
-
-      for (let freq = fineMinHz; freq <= fineMaxHz; freq += fineStep) {
-        const energy = goertzelEnergy(audioData, freq, sampleRate);
-        if (energy > peakEnergyFine) {
-          peakEnergyFine = energy;
-          peakFreqFine = freq;
-        }
-      }
-
-      // 第三階段：亞像素精度（拋物線補間）
-      if (peakFreqFine > fineMinHz && peakFreqFine < fineMaxHz) {
-        const freq0 = peakFreqFine - fineStep;
-        const freq1 = peakFreqFine;
-        const freq2 = peakFreqFine + fineStep;
-
-        const energy0 = goertzelEnergy(audioData, freq0, sampleRate);
-        const energy1 = peakEnergyFine;
-        const energy2 = goertzelEnergy(audioData, freq2, sampleRate);
-
-        // 拋物線補間：找到峰值的精確位置
-        const a = (energy2 - 2 * energy1 + energy0) / 2;
-        if (Math.abs(a) > 1e-10) {
-          const correction = (energy0 - energy2) / (4 * a);
-          peakFreqFine += correction * fineStep;
-        }
-      }
-
-      const bestFreqKHz = peakFreqFine / 1000;
-
-      // 驗證計算結果
-      if (peakEnergyFine <= 0 || bestFreqKHz < freqMin || bestFreqKHz > freqMax) {
-        // 如果計算失敗，返回頻率範圍的中點
-        return (freqMin + freqMax) / 2;
-      }
-
-      return Math.max(freqMin, Math.min(freqMax, bestFreqKHz));
-    } catch (err) {
-      console.warn('calculatePeakFromCroppedAudio 錯誤:', err);
-      return null;
-    }
-  }
-
-  // Goertzel 演算法輔助函數
-  function goertzelEnergy(audioData, freq, sampleRate) {
-    const w = (2 * Math.PI * freq) / sampleRate;
-    const coeff = 2 * Math.cos(w);
-    
-    let s0 = 0, s1 = 0, s2 = 0;
-    
-    for (let i = 0; i < audioData.length; i++) {
-      s0 = audioData[i] + coeff * s1 - s2;
-      s2 = s1;
-      s1 = s0;
-    }
-    
-    // 計算複數功率
-    const energy = s1 * s1 + s2 * s2 - coeff * s1 * s2;
-    return energy;
-  }
-
-  // 窗口函數實現 (與 powerSpectrum.js 相同)
-  function applyWindow(data, windowType) {
-    const n = data.length;
-    const windowed = new Float32Array(n);
-    let window;
-
-    switch (windowType.toLowerCase()) {
-      case 'blackman':
-        window = createBlackmanWindow(n);
-        break;
-      case 'hamming':
-        window = createHammingWindow(n);
-        break;
-      case 'hann':
-        window = createHannWindow(n);
-        break;
-      case 'triangular':
-        window = createTriangularWindow(n);
-        break;
-      case 'rectangular':
-        window = createRectangularWindow(n);
-        break;
-      case 'gauss':
-        window = createGaussWindow(n);
-        break;
-      default:
-        window = createHannWindow(n);
-    }
-
-    for (let i = 0; i < n; i++) {
-      windowed[i] = data[i] * window[i];
-    }
-
-    return windowed;
-  }
-
-  function createHannWindow(n) {
-    const w = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      w[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)));
-    }
-    return w;
-  }
-
-  function createHammingWindow(n) {
-    const w = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      w[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (n - 1));
-    }
-    return w;
-  }
-
-  function createBlackmanWindow(n) {
-    const w = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      const x = (2 * Math.PI * i) / (n - 1);
-      w[i] = 0.42 - 0.5 * Math.cos(x) + 0.08 * Math.cos(2 * x);
-    }
-    return w;
-  }
-
-  function createTriangularWindow(n) {
-    const w = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      w[i] = 1 - Math.abs((i - (n - 1) / 2) / ((n - 1) / 2));
-    }
-    return w;
-  }
-
-  function createRectangularWindow(n) {
-    return new Float32Array(n).fill(1);
-  }
-
-  function createGaussWindow(n) {
-    const w = new Float32Array(n);
-    const sigma = (n - 1) / 4;
-    for (let i = 0; i < n; i++) {
-      const x = i - (n - 1) / 2;
-      w[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
-    }
-    return w;
   }
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {

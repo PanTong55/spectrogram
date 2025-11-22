@@ -2384,10 +2384,10 @@ input.tag-button.editing {
   border-radius:5px;
   cursor: pointer;
   user-select: none;
-  color: rgba(0,0,0,0.1);
+  color: #333;
   text-align: center;
 }
 
 .selection-context-menu-item:hover {
-  background: #f0f0f0;
+  background: rgba(0,0,0,0.1);
 }

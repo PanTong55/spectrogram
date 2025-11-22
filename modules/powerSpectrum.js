@@ -810,3 +810,12 @@ export function getApplyWindowFunction() {
 export function getGoertzelEnergyFunction() {
   return goertzelEnergy;
 }
+
+// 導出 Power Spectrum 計算函數，供 frequencyHover.js 使用
+export function calculateSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, overlap) {
+  return calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, overlap);
+}
+
+export function findPeakFrequency(spectrum, sampleRate, fftSize, flowKHz, fhighKHz) {
+  return findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz);
+}
