@@ -385,7 +385,8 @@ export function initFrequencyHover({
       const audioBuffer = decodedData;
       
       // 使用與 Power Spectrum 相同的設置參數（確保一致性）
-      const fftSize = window.__spectrogramSettings?.fftSize || 1024;
+      // 注意：Peak Freq 計算固定使用 1024 FFT size
+      const fftSize = 1024;
       const windowType = window.__spectrogramSettings?.windowType || 'hann';
       const overlap = window.__spectrogramSettings?.overlap || 'auto';
       const sampleRate = window.__spectrogramSettings?.sampleRate || 256000;
