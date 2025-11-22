@@ -10,7 +10,7 @@ export function showPowerSpectrumPopup({
 }) {
   if (!wavesurfer || !selection) return;
 
-  const {
+  let {
     fftSize = 1024,
     windowType = 'hann',
     sampleRate = 256000,
@@ -21,6 +21,11 @@ export function showPowerSpectrumPopup({
   const popup = createPopupWindow();
   const canvas = popup.querySelector('canvas');
   const ctx = canvas.getContext('2d');
+  
+  // 獲取控制元件
+  const typeSelect = popup.querySelector('#powerSpectrumWindowType');
+  const fftSelect = popup.querySelector('#powerSpectrumFFTSize');
+  const overlapInput = popup.querySelector('#powerSpectrumOverlap');
 
   // 提取選定區域的音頻數據
   const audioData = extractAudioData(wavesurfer, selection, sampleRate);
@@ -30,33 +35,46 @@ export function showPowerSpectrumPopup({
     return;
   }
 
-  // 計算 Power Spectrum
-  const spectrum = calculatePowerSpectrum(
-    audioData,
-    sampleRate,
-    fftSize,
-    windowType
-  );
+  // 繪製函數
+  const redrawSpectrum = () => {
+    windowType = typeSelect.value;
+    fftSize = parseInt(fftSelect.value, 10);
 
-  // 計算 Peak Frequency - 直接從頻譜中找到峰值 (與顯示的曲線對應)
-  const peakFreq = findPeakFrequencyFromSpectrum(
-    spectrum,
-    sampleRate,
-    fftSize,
-    selection.Flow,
-    selection.Fhigh
-  );
+    // 計算 Power Spectrum
+    const spectrum = calculatePowerSpectrum(
+      audioData,
+      sampleRate,
+      fftSize,
+      windowType
+    );
 
-  // 繪製 Power Spectrum
-  drawPowerSpectrum(
-    ctx,
-    spectrum,
-    sampleRate,
-    selection.Flow,
-    selection.Fhigh,
-    fftSize,
-    peakFreq
-  );
+    // 計算 Peak Frequency - 直接從頻譜中找到峰值 (與顯示的曲線對應)
+    const peakFreq = findPeakFrequencyFromSpectrum(
+      spectrum,
+      sampleRate,
+      fftSize,
+      selection.Flow,
+      selection.Fhigh
+    );
+
+    // 繪製 Power Spectrum
+    drawPowerSpectrum(
+      ctx,
+      spectrum,
+      sampleRate,
+      selection.Flow,
+      selection.Fhigh,
+      fftSize,
+      peakFreq
+    );
+  };
+
+  // 初始繪製
+  redrawSpectrum();
+
+  // 添加事件監聽器
+  typeSelect.addEventListener('change', redrawSpectrum);
+  fftSelect.addEventListener('change', redrawSpectrum);
 }
 
 /**
@@ -66,7 +84,7 @@ function createPopupWindow() {
   const popup = document.createElement('div');
   popup.className = 'map-popup modal-popup';
   popup.style.width = '500px';
-  popup.style.height = '500px';
+  popup.style.height = '580px';
 
   // 建立 Drag Bar (標題欄)
   const dragBar = document.createElement('div');
@@ -99,7 +117,7 @@ function createPopupWindow() {
 
   const canvas = document.createElement('canvas');
   canvas.width = 468;
-  canvas.height = 420;
+  canvas.height = 380;
   canvas.style.cssText = `
     width: 100%;
     height: 100%;
@@ -109,6 +127,111 @@ function createPopupWindow() {
 
   canvasContainer.appendChild(canvas);
   popup.appendChild(canvasContainer);
+
+  // 建立控制面板
+  const controlPanel = document.createElement('div');
+  controlPanel.className = 'power-spectrum-controls';
+  controlPanel.style.cssText = `
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-top: 1px solid #ddd;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    font-size: 13px;
+  `;
+
+  // Window Type 控制
+  const typeControl = document.createElement('label');
+  typeControl.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `;
+  const typeLabel = document.createElement('span');
+  typeLabel.textContent = 'Type:';
+  typeLabel.style.fontWeight = 'bold';
+  typeControl.appendChild(typeLabel);
+  
+  const typeSelect = document.createElement('select');
+  typeSelect.id = 'powerSpectrumWindowType';
+  typeSelect.style.cssText = `
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+  `;
+  typeSelect.innerHTML = `
+    <option value="blackman">Blackman</option>
+    <option value="gauss">Gauss</option>
+    <option value="hamming">Hamming</option>
+    <option value="hann" selected>Hann</option>
+    <option value="rectangular">Rectangular</option>
+    <option value="triangular">Triangular</option>
+  `;
+  typeControl.appendChild(typeSelect);
+  controlPanel.appendChild(typeControl);
+
+  // FFT Size 控制
+  const fftControl = document.createElement('label');
+  fftControl.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `;
+  const fftLabel = document.createElement('span');
+  fftLabel.textContent = 'FFT:';
+  fftLabel.style.fontWeight = 'bold';
+  fftControl.appendChild(fftLabel);
+  
+  const fftSelect = document.createElement('select');
+  fftSelect.id = 'powerSpectrumFFTSize';
+  fftSelect.style.cssText = `
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+  `;
+  fftSelect.innerHTML = `
+    <option value="512">512</option>
+    <option value="1024" selected>1024</option>
+    <option value="2048">2048</option>
+  `;
+  fftControl.appendChild(fftSelect);
+  controlPanel.appendChild(fftControl);
+
+  // Overlap 控制
+  const overlapControl = document.createElement('label');
+  overlapControl.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  `;
+  const overlapLabel = document.createElement('span');
+  overlapLabel.textContent = 'Overlap:';
+  overlapLabel.style.fontWeight = 'bold';
+  overlapControl.appendChild(overlapLabel);
+  
+  const overlapInput = document.createElement('input');
+  overlapInput.id = 'powerSpectrumOverlap';
+  overlapInput.type = 'number';
+  overlapInput.placeholder = 'Auto';
+  overlapInput.min = '1';
+  overlapInput.max = '99';
+  overlapInput.step = '1';
+  overlapInput.style.cssText = `
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+    width: 60px;
+  `;
+  overlapControl.appendChild(overlapInput);
+  controlPanel.appendChild(overlapControl);
+
+  popup.appendChild(controlPanel);
   
   document.body.appendChild(popup);
 
