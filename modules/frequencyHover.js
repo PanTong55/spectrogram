@@ -771,9 +771,6 @@ export function initFrequencyHover({
       resizing = true;
       isResizing = true;
       e.preventDefault();
-
-      // 防抖計時器用於 resize 時的峰值計算
-      let peakUpdateTimeout = null;
   
       const moveHandler = (e) => {
         if (!resizing) return;
@@ -826,21 +823,16 @@ export function initFrequencyHover({
           });
         }
 
-        // 防抖：在 resize 時每 300ms 更新一次峰值
-        if (peakUpdateTimeout) {
-          clearTimeout(peakUpdateTimeout);
+        // 即時計算峰值，確保與 Power Spectrum 同步
+        const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
+        const timeExp = getTimeExpansionMode();
+        const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+        
+        if (judgeDurationMs < 100) {
+          calculatePeakFrequency(sel).catch(err => {
+            console.error('Resize 時計算峰值頻率失敗:', err);
+          });
         }
-        peakUpdateTimeout = setTimeout(() => {
-          const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
-          const timeExp = getTimeExpansionMode();
-          const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
-          
-          if (judgeDurationMs < 100) {
-            calculatePeakFrequency(sel).catch(err => {
-              console.error('Resize 時計算峰值頻率失敗:', err);
-            });
-          }
-        }, 300);
       };
   
       const upHandler = () => {
