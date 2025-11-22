@@ -2179,6 +2179,7 @@ input.tag-button.editing {
 
 .freq-menu-item:hover {
   background-color: rgba(0,0,0,0.1);
+  border-radius:5px;
 }
 
 .freq-menu-item.disabled {
@@ -2320,13 +2321,15 @@ input.tag-button.editing {
   padding: 4px 8px;
   border: 1px solid #ccc;
   border-radius: 3px;
-  font-size: 12px;
+  font-size: 14px;
+  font-family: 'Noto Sans HK', sans-serif;
   cursor: pointer;
   background: white;
 }
 
 .power-spectrum-controls input[type="number"] {
   width: 60px;
+  height:20px;
 }
 
 /* === Power Spectrum Popup === */
@@ -2338,7 +2341,7 @@ input.tag-button.editing {
   border: 1px solid #ccc;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1500;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
 }
@@ -2365,13 +2368,12 @@ input.tag-button.editing {
 
 /* === Selection Context Menu === */
 .selection-context-menu {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
-  min-width: 150px;
+  min-width: 120px;
   padding: 4px 0;
   font-family: 'Noto Sans HK', sans-serif;
   font-size: 12px;
@@ -2379,9 +2381,10 @@ input.tag-button.editing {
 
 .selection-context-menu-item {
   padding: 4px 6px;
+  border-radius:5px;
   cursor: pointer;
   user-select: none;
-  color: #333;
+  color: rgba(0,0,0,0.1);
   text-align: center;
 }
 
