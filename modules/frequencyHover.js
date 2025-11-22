@@ -1265,38 +1265,13 @@ export function initFrequencyHover({
 
     const menu = document.createElement('div');
     menu.className = 'selection-context-menu';
-    menu.style.cssText = `
-      position: fixed;
-      left: ${e.clientX}px;
-      top: ${e.clientY}px;
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      z-index: 1000;
-      min-width: 150px;
-      padding: 4px 0;
-      font-family: 'Noto Sans HK', sans-serif;
-      font-size: 12px;
-    `;
+    menu.style.position = 'fixed';
+    menu.style.left = `${e.clientX}px`;
+    menu.style.top = `${e.clientY}px`;
 
     const menuItem = document.createElement('div');
+    menuItem.className = 'selection-context-menu-item';
     menuItem.textContent = 'Power Spectrum';
-    menuItem.style.cssText = `
-      padding: 4px 6px;
-      cursor: pointer;
-      user-select: none;
-      color: #333;
-    `;
-
-    menuItem.addEventListener('mouseenter', () => {
-      menuItem.style.background = '#f0f0f0';
-    });
-
-    menuItem.addEventListener('mouseleave', () => {
-      menuItem.style.background = 'white';
-    });
 
     menuItem.addEventListener('click', () => {
       handleShowPowerSpectrum(selection);

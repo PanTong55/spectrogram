@@ -2315,3 +2315,101 @@ input.tag-button.editing {
 .power-spectrum-controls input[type="number"] {
   width: 60px;
 }
+
+/* === Power Spectrum Popup === */
+.power-spectrum-popup {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+}
+
+.power-spectrum-popup.modal-popup {
+  background: white;
+}
+
+.popup-drag-bar {
+  background: linear-gradient(to bottom, #f9f9f9, #f0f0f0);
+  border-bottom: 1px solid #d0d0d0;
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+  user-select: none;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.popup-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+}
+
+.popup-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.popup-close-btn:hover {
+  color: #000;
+}
+
+.power-spectrum-canvas-container {
+  flex: 1;
+  padding: 6px 16px 16px 16px;
+  background: #fafafa;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.power-spectrum-canvas-container canvas {
+  width: 100%;
+  height: 100%;
+  background: white;
+  border: 1px solid #ddd;
+}
+
+/* === Selection Context Menu === */
+.selection-context-menu {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 150px;
+  padding: 4px 0;
+  font-family: 'Noto Sans HK', sans-serif;
+  font-size: 12px;
+}
+
+.selection-context-menu-item {
+  padding: 4px 6px;
+  cursor: pointer;
+  user-select: none;
+  color: #333;
+  text-align: center;
+}
+
+.selection-context-menu-item:hover {
+  background: #f0f0f0;
+}

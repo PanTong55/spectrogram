@@ -107,9 +107,7 @@ export function showPowerSpectrumPopup({
  */
 function createPopupWindow() {
   const popup = document.createElement('div');
-  popup.className = 'map-popup modal-popup';
-  popup.style.width = '500px';
-  popup.style.height = '500px';
+  popup.className = 'power-spectrum-popup modal-popup';
 
   // 建立 Drag Bar (標題欄)
   const dragBar = document.createElement('div');
@@ -131,24 +129,11 @@ function createPopupWindow() {
 
   // 建立 Canvas 容器
   const canvasContainer = document.createElement('div');
-  canvasContainer.style.cssText = `
-    flex: 1;
-    padding: 5px;
-    background: #fafafa;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  `;
+  canvasContainer.className = 'power-spectrum-canvas-container';
 
   const canvas = document.createElement('canvas');
   canvas.width = 468;
   canvas.height = 380;
-  canvas.style.cssText = `
-    width: 100%;
-    height: 100%;
-    background: white;
-    border: 1px solid #ddd;
-  `;
 
   canvasContainer.appendChild(canvas);
   popup.appendChild(canvasContainer);
@@ -156,37 +141,15 @@ function createPopupWindow() {
   // 建立控制面板
   const controlPanel = document.createElement('div');
   controlPanel.className = 'power-spectrum-controls';
-  controlPanel.style.cssText = `
-    padding: 12px 16px;
-    background: #f5f5f5;
-    border-top: 1px solid #ddd;
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    font-size: 13px;
-  `;
 
   // Window Type 控制
   const typeControl = document.createElement('label');
-  typeControl.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  `;
   const typeLabel = document.createElement('span');
   typeLabel.textContent = 'Type:';
-  typeLabel.style.fontWeight = 'normal';
   typeControl.appendChild(typeLabel);
   
   const typeSelect = document.createElement('select');
   typeSelect.id = 'powerSpectrumWindowType';
-  typeSelect.style.cssText = `
-    padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-    cursor: pointer;
-  `;
   typeSelect.innerHTML = `
     <option value="blackman">Blackman</option>
     <option value="gauss">Gauss</option>
@@ -200,25 +163,12 @@ function createPopupWindow() {
 
   // FFT Size 控制
   const fftControl = document.createElement('label');
-  fftControl.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  `;
   const fftLabel = document.createElement('span');
   fftLabel.textContent = 'FFT:';
-  fftLabel.style.fontWeight = 'normal';
   fftControl.appendChild(fftLabel);
   
   const fftSelect = document.createElement('select');
   fftSelect.id = 'powerSpectrumFFTSize';
-  fftSelect.style.cssText = `
-    padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-    cursor: pointer;
-  `;
   fftSelect.innerHTML = `
     <option value="1024" selected>1024</option>
     <option value="2048">2048</option>
@@ -228,14 +178,8 @@ function createPopupWindow() {
 
   // Overlap 控制
   const overlapControl = document.createElement('label');
-  overlapControl.style.cssText = `
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  `;
   const overlapLabel = document.createElement('span');
   overlapLabel.textContent = 'Overlap:';
-  overlapLabel.style.fontWeight = 'normal';
   overlapControl.appendChild(overlapLabel);
   
   const overlapInput = document.createElement('input');
@@ -245,13 +189,6 @@ function createPopupWindow() {
   overlapInput.min = '1';
   overlapInput.max = '99';
   overlapInput.step = '1';
-  overlapInput.style.cssText = `
-    padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 12px;
-    width: 60px;
-  `;
   overlapControl.appendChild(overlapInput);
   controlPanel.appendChild(overlapControl);
 
