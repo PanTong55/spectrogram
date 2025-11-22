@@ -656,7 +656,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
   const width = ctx.canvas.width;
   const height = ctx.canvas.height;
-  const padding = 50;
+  const padding = 40;
   const leftPadding = 65;  // 增加左邊 padding 以容納 Y 軸標題
   const plotWidth = width - leftPadding - padding;
   const plotHeight = height - padding * 2;

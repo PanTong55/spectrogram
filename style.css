@@ -1334,8 +1334,12 @@ input.tag-button.editing {
 
 /* Power Spectrum Popup dropdown buttons */
 #powerSpectrumWindowType.dropdown-button {
-  width: 80px;
+  width: 120px;
   text-align: left;
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 #powerSpectrumFFTSize.dropdown-button {
