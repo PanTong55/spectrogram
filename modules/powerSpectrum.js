@@ -93,6 +93,17 @@ export function showPowerSpectrumPopup({
       overlapValue = parseInt(overlapInput.value, 10);
     }
 
+    // DEBUG: 記錄計算參數
+    console.log('PowerSpectrum - Params:', {
+      fftSize,
+      windowType,
+      overlapValue,
+      Flow: selection.Flow,
+      Fhigh: selection.Fhigh,
+      audioDataLength: audioData.length,
+      sampleRate
+    });
+
     // 計算 Power Spectrum (包含 overlap 參數)
     const spectrum = calculatePowerSpectrumWithOverlap(
       audioData,
@@ -110,6 +121,12 @@ export function showPowerSpectrumPopup({
       selection.Flow,
       selection.Fhigh
     );
+
+    // DEBUG: 記錄峰值計算結果
+    console.log('PowerSpectrum - PeakFreq Result:', {
+      peakFreq,
+      spectrumLength: spectrum.length
+    });
 
     // 存儲最後計算的峰值
     lastPeakFreq = peakFreq;
@@ -220,6 +237,7 @@ function createPopupWindow() {
   overlapInput.min = '1';
   overlapInput.max = '99';
   overlapInput.step = '1';
+  // 不設置初始值，保持空白表示 'auto'
   overlapControl.appendChild(overlapInput);
   controlPanel.appendChild(overlapControl);
 
