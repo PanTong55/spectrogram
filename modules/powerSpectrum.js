@@ -736,7 +736,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.moveTo(x, padding + plotHeight);
     ctx.lineTo(x, padding + plotHeight + 5);
     ctx.stroke();
-    ctx.fillText(freq.toFixed(1), x, padding + plotHeight + 20);
+    ctx.fillText(freq.toFixed(1), x, height - 25);  // 使用固定的高度位置
   }
 
   // 繪製能量軸標籤 (Y-axis，Unit: dB)
@@ -771,20 +771,20 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.beginPath();
 
   let firstPoint = true;
-  let peakDbInRange = -Infinity;  // 追蹤實際繪製的最高點
-  let peakBinInRange = minBin;
+  let peakYValue = -Infinity;  // 追蹤歸一化後的最高視覺點
+  let peakFreqForLine = flowKHz;  // 用於紅線的頻率
   
   for (let i = minBin; i <= maxBin; i++) {
     const db = spectrum[i];
-    // 追蹤在顯示範圍內的最高點
-    if (db > peakDbInRange) {
-      peakDbInRange = db;
-      peakBinInRange = i;
-    }
-    
     const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
     const x = leftPadding + ((i - minBin) / (maxBin - minBin)) * plotWidth;
     const y = padding + plotHeight - normalizedDb * plotHeight;
+
+    // 追蹤視覺上的最高點 (最小的y值，因為y軸反向)
+    if (y < peakYValue || peakYValue === -Infinity) {
+      peakYValue = y;
+      peakFreqForLine = flowKHz + (fhighKHz - flowKHz) * ((i - minBin) / (maxBin - minBin));
+    }
 
     if (firstPoint) {
       ctx.moveTo(x, y);
@@ -796,9 +796,8 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
 
   ctx.stroke();
   
-  // 計算實際繪製曲線的最高峰頻率 (用於紅線)
-  const actualPeakFreqHz = peakBinInRange * freqResolution;
-  const actualPeakFreq = actualPeakFreqHz / 1000; // 轉換為 kHz
+  // 使用視覺上的最高峰頻率用於紅線
+  const actualPeakFreq = peakFreqForLine;
 
   // 繪製網格線 (可選)
   ctx.strokeStyle = '#e0e0e0';
