@@ -839,11 +839,18 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   for (let p = 0; p < pointsToRender.length; p++) {
     const point = pointsToRender[p];
     const db = point.db;
-    const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
+    
+    // 歸一化 dB 值到 0-1 範圍
+    // minDb 是最負的值（最小），maxDb 是最接近 0 的值（最大）
+    // normalizedDb = 0 表示最底部（minDb），normalizedDb = 1 表示最頂部（maxDb）
+    let normalizedDb = (db - minDb) / (maxDb - minDb);
+    // 確保在有效範圍內（防止浮點數誤差）
+    normalizedDb = Math.max(0, Math.min(1, normalizedDb));
     
     // 計算 x 座標（基於頻率百分比）
     const freqPercent = (point.freqHz - minBinFreq) / (maxBinFreq - minBinFreq);
     const x = leftPadding + freqPercent * plotWidth;
+    // y 座標：normalizedDb = 0 時在底部（topPadding + plotHeight），normalizedDb = 1 時在頂部（topPadding）
     const y = topPadding + plotHeight - normalizedDb * plotHeight;
 
     if (firstPoint) {
