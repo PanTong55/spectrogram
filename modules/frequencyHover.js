@@ -1,6 +1,6 @@
 import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
-import { showPowerSpectrumPopup, calculatePeakFrequencyForSelection } from './powerSpectrum.js';
+import { showPowerSpectrumPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './powerSpectrum.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -381,14 +381,37 @@ export function initFrequencyHover({
       const decodedData = ws.getDecodedData();
       if (!decodedData || !decodedData.getChannelData) return null;
 
-      // 使用 Power Spectrum 相同的方法計算峰值頻率
-      const peakFreq = await calculatePeakFrequencyForSelection(
-        decodedData,
-        startTime,
-        endTime,
-        Flow,
-        Fhigh
+      // 獲取音頻樣本數據
+      const audioBuffer = decodedData;
+      
+      // 使用與 Power Spectrum 相同的設置參數（確保一致性）
+      // 注意：Peak Freq 計算固定使用 1024 FFT size
+      const fftSize = 1024;
+      const windowType = window.__spectrogramSettings?.windowType || 'hann';
+      const overlap = window.__spectrogramSettings?.overlap || 'auto';
+      const sampleRate = window.__spectrogramSettings?.sampleRate || 256000;
+
+      const startSample = Math.floor(startTime * sampleRate);
+      const endSample = Math.floor(endTime * sampleRate);
+
+      if (endSample <= startSample) return null;
+
+      // 提取 crop 音頻數據 (使用統一的 sampleRate 計算)
+      const audioData = new Float32Array(audioBuffer.getChannelData(0).slice(startSample, endSample));
+
+      // 使用與 Power Spectrum 相同的方法計算頻譜 (包含 overlap)
+      const spectrum = calculateSpectrumWithOverlap(
+        audioData,
+        sampleRate,
+        fftSize,
+        windowType,
+        overlap
       );
+
+      if (!spectrum) return null;
+
+      // 使用 Power Spectrum 相同的峰值找到方法
+      const peakFreq = findPeakFrequency(spectrum, sampleRate, fftSize, Flow, Fhigh);
 
       if (peakFreq !== null) {
         sel.data.peakFreq = peakFreq;
