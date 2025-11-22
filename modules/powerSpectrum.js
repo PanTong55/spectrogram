@@ -757,7 +757,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 12px Arial';
-  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 5);
+  ctx.fillText('Frequency (kHz)', leftPadding + plotWidth / 2, height - 20);
 
   ctx.save();
   ctx.translate(12, padding + plotHeight / 2);
