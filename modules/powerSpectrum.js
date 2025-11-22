@@ -339,29 +339,25 @@ function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windo
       dcRemovedData[i] = windowed[i] - dcOffset;
     }
 
-    // 計算該幀的功率
+    // 計算該幀的能量 (在時域中累加，不在 dB 域)
     for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
       const freq = binIndex * freqResolution;
       if (freq > maxFreqToCompute) break;
 
       const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
-      const db = 20 * Math.log10(Math.sqrt(energy) + 1e-10);
-      
-      if (spectrumCount === 0) {
-        spectrum[binIndex] = db;
-      } else {
-        // 累加功率值用於後期平均
-        spectrum[binIndex] += db;
-      }
+      // 累加時域能量值（不轉換為 dB）
+      spectrum[binIndex] += energy;
     }
 
     spectrumCount++;
   }
 
-  // 如果有多個幀，計算平均頻譜
-  if (spectrumCount > 1) {
+  // 計算平均能量，然後轉換為 dB
+  if (spectrumCount > 0) {
     for (let i = 0; i < spectrum.length; i++) {
-      spectrum[i] /= spectrumCount;
+      const avgEnergy = spectrum[i] / spectrumCount;
+      // 只在所有幀處理完後一次性轉換為 dB
+      spectrum[i] = 20 * Math.log10(Math.sqrt(avgEnergy) + 1e-10);
     }
   }
 
