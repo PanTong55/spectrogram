@@ -2256,3 +2256,23 @@ input.tag-button.editing {
 .map-marker-survey:hover {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
+
+/* === Power Spectrum 菜單 === */
+.selection-context-menu {
+  user-select: none;
+  font-family: Arial, sans-serif;
+}
+
+.selection-context-menu div {
+  transition: background 0.15s ease;
+}
+
+.selection-context-menu div:hover {
+  background: #e8e8e8 !important;
+}
+
+/* === Power Spectrum Popup === */
+.power-spectrum-popup {
+  user-select: none;
+  font-family: Arial, sans-serif;
+}

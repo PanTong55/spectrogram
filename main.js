@@ -1530,3 +1530,11 @@ window.addEventListener('beforeunload', (e) => {
   e.preventDefault();
   e.returnValue = '';
 });
+
+// 暴露 spectrogram 設置供 Power Spectrum 使用
+window.__spectrogramSettings = {
+  get fftSize() { return currentFftSize; },
+  get windowType() { return currentWindowType; },
+  get sampleRate() { return currentSampleRate; },
+  get overlap() { return currentOverlap; }
+};

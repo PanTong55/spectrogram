@@ -1,5 +1,6 @@
 import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
+import { showPowerSpectrumPopup } from './powerSpectrum.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -558,6 +559,12 @@ export function initFrequencyHover({
         hoveredSelection = null;
       }
     });
+    
+    // 添加右鍵菜單処理
+    selObj.rect.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      showSelectionContextMenu(e, selObj);
+    });
 
     // 如果 duration < 100ms，自動計算峰值頻率
     // 使用判斷時間（已考慮 Time Expansion）
@@ -1027,6 +1034,87 @@ export function initFrequencyHover({
       element.style.top = `${newY}px`;
     }, { passive: true });
     window.addEventListener('mouseup', () => { isDragging = false; });
+  }
+
+  // 顯示 selection area 的右鍵菜單
+  function showSelectionContextMenu(e, selection) {
+    // 移除舊菜單
+    const existingMenu = document.querySelector('.selection-context-menu');
+    if (existingMenu) existingMenu.remove();
+
+    const menu = document.createElement('div');
+    menu.className = 'selection-context-menu';
+    menu.style.cssText = `
+      position: fixed;
+      left: ${e.clientX}px;
+      top: ${e.clientY}px;
+      background: white;
+      border: 1px solid #999;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      z-index: 9999;
+      min-width: 150px;
+      padding: 4px 0;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+    `;
+
+    const menuItem = document.createElement('div');
+    menuItem.textContent = 'Power Spectrum';
+    menuItem.style.cssText = `
+      padding: 8px 16px;
+      cursor: pointer;
+      user-select: none;
+      color: #333;
+    `;
+
+    menuItem.addEventListener('mouseenter', () => {
+      menuItem.style.background = '#f0f0f0';
+    });
+
+    menuItem.addEventListener('mouseleave', () => {
+      menuItem.style.background = 'white';
+    });
+
+    menuItem.addEventListener('click', () => {
+      handleShowPowerSpectrum(selection);
+      menu.remove();
+    });
+
+    menu.appendChild(menuItem);
+    document.body.appendChild(menu);
+
+    // 點擊其他地方關閉菜單
+    const closeMenu = (event) => {
+      if (!menu.contains(event.target)) {
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
+      }
+    };
+
+    setTimeout(() => {
+      document.addEventListener('click', closeMenu);
+    }, 0);
+  }
+
+  // 處理顯示 Power Spectrum
+  function handleShowPowerSpectrum(selection) {
+    const ws = getWavesurfer();
+    if (!ws) return;
+
+    // 取得當前設置 (需要從 main.js 傳入或通過全局狀態)
+    const currentSettings = {
+      fftSize: window.__spectrogramSettings?.fftSize || 1024,
+      windowType: window.__spectrogramSettings?.windowType || 'hann',
+      sampleRate: window.__spectrogramSettings?.sampleRate || 256000,
+      overlap: window.__spectrogramSettings?.overlap || 'auto'
+    };
+
+    showPowerSpectrumPopup({
+      selection: selection.data,
+      wavesurfer: ws,
+      currentSettings
+    });
   }
 
   return {
