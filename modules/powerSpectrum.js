@@ -8,7 +8,7 @@ export function showPowerSpectrumPopup({
   wavesurfer,
   currentSettings = {}
 }) {
-  if (!wavesurfer || !selection) return;
+  if (!wavesurfer || !selection) return null;
 
   let {
     fftSize = 1024,
@@ -28,15 +28,25 @@ export function showPowerSpectrumPopup({
   const overlapInput = popup.querySelector('#powerSpectrumOverlap');
 
   // 提取選定區域的音頻數據
-  const audioData = extractAudioData(wavesurfer, selection, sampleRate);
+  let audioData = extractAudioData(wavesurfer, selection, sampleRate);
   if (!audioData) {
     console.error('Failed to extract audio data');
     popup.remove();
-    return;
+    return null;
   }
 
   // 繪製函數
-  const redrawSpectrum = () => {
+  const redrawSpectrum = (newSelection) => {
+    // 如果提供了新的 selection 數據，更新它並重新提取音頻
+    if (newSelection) {
+      Object.assign(selection, newSelection);
+      audioData = extractAudioData(wavesurfer, selection, sampleRate);
+      if (!audioData) {
+        console.error('Failed to extract audio data after selection update');
+        return;
+      }
+    }
+    
     windowType = typeSelect.value;
     fftSize = parseInt(fftSelect.value, 10);
     
@@ -83,6 +93,13 @@ export function showPowerSpectrumPopup({
   typeSelect.addEventListener('change', redrawSpectrum);
   fftSelect.addEventListener('change', redrawSpectrum);
   overlapInput.addEventListener('change', redrawSpectrum);
+
+  // 返回 popup 對象和更新函數
+  return {
+    popup,
+    update: redrawSpectrum,
+    isOpen: () => document.body.contains(popup)
+  };
 }
 
 /**

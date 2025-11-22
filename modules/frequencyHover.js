@@ -330,6 +330,11 @@ export function initFrequencyHover({
   });
 
   viewer.addEventListener('contextmenu', (e) => {
+    // 如果右鍵在 selection area 上，不要顯示 persistent-line，直接返回
+    if (e.target.closest('.selection-rect')) {
+      return;
+    }
+    
     if (!persistentLinesEnabled || disablePersistentLinesForScrollbar || isOverTooltip) return;
     if (e.target.closest('.selection-expand-btn') || e.target.closest('.selection-fit-btn') || e.target.closest('.selection-btn-group')) return;
     e.preventDefault();
@@ -706,7 +711,16 @@ export function initFrequencyHover({
   }
 
   function createTooltip(left, top, width, height, Fhigh, Flow, Bandwidth, Duration, rectObj, startTime, endTime) {
-    const selObj = { data: { startTime, endTime, Flow, Fhigh }, rect: rectObj, tooltip: null, expandBtn: null, closeBtn: null, btnGroup: null, durationLabel: null };
+    const selObj = { 
+      data: { startTime, endTime, Flow, Fhigh }, 
+      rect: rectObj, 
+      tooltip: null, 
+      expandBtn: null, 
+      closeBtn: null, 
+      btnGroup: null, 
+      durationLabel: null,
+      powerSpectrumPopup: null  // 跟踪打開的 Power Spectrum popup
+    };
 
     // 根據 Time Expansion 模式計算用於判斷的持續時間
     const timeExp = getTimeExpansionMode();
@@ -760,6 +774,14 @@ export function initFrequencyHover({
   }
 
   function removeSelection(sel) {
+    // 關閉 Power Spectrum popup (如果打開)
+    if (sel.powerSpectrumPopup) {
+      const popupElement = sel.powerSpectrumPopup.popup;
+      if (popupElement && document.body.contains(popupElement)) {
+        popupElement.remove();
+      }
+    }
+
     const index = selections.indexOf(sel);
     if (index !== -1) {
       viewer.removeChild(selections[index].rect);
@@ -1059,6 +1081,16 @@ export function initFrequencyHover({
   
         updateSelections();
 
+        // 如果 Power Spectrum popup 打開，即時更新它
+        if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
+          sel.powerSpectrumPopup.update({
+            startTime: sel.data.startTime,
+            endTime: sel.data.endTime,
+            Flow: sel.data.Flow,
+            Fhigh: sel.data.Fhigh
+          });
+        }
+
         // 防抖：在 resize 時每 300ms 更新一次峰值
         if (peakUpdateTimeout) {
           clearTimeout(peakUpdateTimeout);
@@ -1191,6 +1223,13 @@ export function initFrequencyHover({
 
   function clearSelections() {
     selections.forEach(sel => {
+      // 關閉 Power Spectrum popup (如果打開)
+      if (sel.powerSpectrumPopup) {
+        const popupElement = sel.powerSpectrumPopup.popup;
+        if (popupElement && document.body.contains(popupElement)) {
+          popupElement.remove();
+        }
+      }
       viewer.removeChild(sel.rect);
       if (sel.tooltip) viewer.removeChild(sel.tooltip);
     });
@@ -1292,11 +1331,16 @@ export function initFrequencyHover({
       overlap: window.__spectrogramSettings?.overlap || 'auto'
     };
 
-    showPowerSpectrumPopup({
+    const popupObj = showPowerSpectrumPopup({
       selection: selection.data,
       wavesurfer: ws,
       currentSettings
     });
+
+    // 跟踪 popup
+    if (popupObj) {
+      selection.powerSpectrumPopup = popupObj;
+    }
   }
 
   return {
