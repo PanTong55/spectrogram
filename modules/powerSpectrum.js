@@ -743,20 +743,12 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   ctx.beginPath();
 
   let firstPoint = true;
-  let peakYValue = -Infinity;  // 追蹤歸一化後的最高視覺點
-  let peakFreqForLine = flowKHz;  // 用於紅線的頻率
   
   for (let i = minBin; i <= maxBin; i++) {
     const db = spectrum[i];
     const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
     const x = leftPadding + ((i - minBin) / (maxBin - minBin)) * plotWidth;
     const y = padding + plotHeight - normalizedDb * plotHeight;
-
-    // 追蹤視覺上的最高點 (最小的y值，因為y軸反向)
-    if (y < peakYValue || peakYValue === -Infinity) {
-      peakYValue = y;
-      peakFreqForLine = flowKHz + (fhighKHz - flowKHz) * ((i - minBin) / (maxBin - minBin));
-    }
 
     if (firstPoint) {
       ctx.moveTo(x, y);
@@ -767,9 +759,6 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
   }
 
   ctx.stroke();
-  
-  // 使用視覺上的最高峰頻率用於紅線
-  const actualPeakFreq = peakFreqForLine;
 
   // 繪製網格線 (可選)
   ctx.strokeStyle = '#e0e0e0';
@@ -790,9 +779,9 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.stroke();
   }
 
-  // 繪製 Peak Frequency 垂直線和標籤 (使用實際繪製的最高峰)
-  if (actualPeakFreq !== null && actualPeakFreq >= flowKHz && actualPeakFreq <= fhighKHz) {
-    const peakNormalized = (actualPeakFreq - flowKHz) / (fhighKHz - flowKHz);
+  // 繪製 Peak Frequency 垂直線和標籤 (使用 Power Spectrum 計算出的峰值頻率)
+  if (peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
+    const peakNormalized = (peakFreq - flowKHz) / (fhighKHz - flowKHz);
     const peakX = leftPadding + peakNormalized * plotWidth;
 
     // 繪製垂直線
@@ -809,7 +798,7 @@ function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize
     ctx.fillStyle = '#ff0000';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Peak: ${actualPeakFreq.toFixed(1)} kHz`, peakX, padding - 20);
+    ctx.fillText(`Peak: ${peakFreq.toFixed(1)} kHz`, peakX, padding - 20);
   }
 }
 
