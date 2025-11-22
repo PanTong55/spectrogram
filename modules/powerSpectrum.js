@@ -65,6 +65,9 @@ export function showPowerSpectrumPopup({
     return null;
   }
 
+  // 保存最新計算的 peak frequency
+  let lastPeakFreq = null;
+
   // 繪製函數
   const redrawSpectrum = (newSelection) => {
     // 如果提供了新的 selection 數據，更新它並重新提取音頻
@@ -107,6 +110,9 @@ export function showPowerSpectrumPopup({
       selection.Flow,
       selection.Fhigh
     );
+    
+    // 保存最新的 peak frequency
+    lastPeakFreq = peakFreq;
 
     // 繪製 Power Spectrum
     drawPowerSpectrum(
@@ -130,7 +136,8 @@ export function showPowerSpectrumPopup({
   return {
     popup,
     update: redrawSpectrum,
-    isOpen: () => document.body.contains(popup)
+    isOpen: () => document.body.contains(popup),
+    getPeakFreq: () => lastPeakFreq
   };
 }
 
@@ -819,4 +826,47 @@ export function calculateSpectrumWithOverlap(audioData, sampleRate, fftSize, win
 
 export function findPeakFrequency(spectrum, sampleRate, fftSize, flowKHz, fhighKHz) {
   return findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz);
+}
+
+/**
+ * 計算 selection 區域的 peak frequency
+ * 使用統一的方法確保與 Power Spectrum Popup 的結果一致
+ */
+export async function calculatePeakFrequencyForSelection(audioBuffer, startTime, endTime, flowKHz, fhighKHz) {
+  try {
+    if (!audioBuffer || !audioBuffer.getChannelData) return null;
+
+    // 使用固定的 FFT size (1024) 和 sampleRate (256000) 確保一致性
+    const fftSize = 1024;
+    const sampleRate = 256000;
+    const windowType = 'hann';
+    const overlap = 'auto';
+
+    const startSample = Math.floor(startTime * sampleRate);
+    const endSample = Math.floor(endTime * sampleRate);
+
+    if (endSample <= startSample) return null;
+
+    // 提取 crop 音頻數據
+    const audioData = new Float32Array(audioBuffer.getChannelData(0).slice(startSample, endSample));
+
+    // 使用相同的方法計算頻譜
+    const spectrum = calculatePowerSpectrumWithOverlap(
+      audioData,
+      sampleRate,
+      fftSize,
+      windowType,
+      overlap
+    );
+
+    if (!spectrum) return null;
+
+    // 使用相同的峰值尋找方法
+    const peakFreq = findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz);
+
+    return peakFreq;
+  } catch (err) {
+    console.warn('計算 selection peak frequency 時出錯:', err);
+    return null;
+  }
 }
