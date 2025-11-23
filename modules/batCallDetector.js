@@ -492,6 +492,23 @@ export class BatCallDetector {
     const flowHz = flowKHz * 1000;
     const fhighHz = fhighKHz * 1000;
     
+    // DEBUG: 記錄 firstFrame 的 power 範圍
+    let frameMaxPower = -Infinity;
+    let frameMinPower = Infinity;
+    let frameMaxPowerBinIdx = 0;
+    
+    for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+      const power = firstFramePower[binIdx];
+      if (power > frameMaxPower) {
+        frameMaxPower = power;
+        frameMaxPowerBinIdx = binIdx;
+      }
+      frameMinPower = Math.min(frameMinPower, power);
+    }
+    
+    const frameMaxFreq_kHz = freqBins[frameMaxPowerBinIdx] / 1000;
+    console.log(`[DEBUG] First Frame - Max Power: ${frameMaxPower.toFixed(2)} dB at ${frameMaxFreq_kHz.toFixed(2)} kHz, Min Power: ${frameMinPower.toFixed(2)} dB`);
+    
     // 測試閾值範圍：-24 到 -50 dB
     const thresholdRange = [];
     for (let threshold = -24; threshold >= -50; threshold--) {
@@ -502,12 +519,14 @@ export class BatCallDetector {
     const measurements = [];
     
     for (const threshold of thresholdRange) {
-      let startFreq_Hz = fhighHz;  // 默認值為上邊界
+      let startFreq_Hz = null;  // 改為 null，而不是預設為 fhighHz
+      let foundBin = false;
       
-      // 從高到低掃描頻率 bin
+      // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
         if (firstFramePower[binIdx] > threshold) {
           startFreq_Hz = freqBins[binIdx];
+          foundBin = true;
           
           // 嘗試線性插值以獲得更高精度
           if (binIdx < firstFramePower.length - 1) {
@@ -524,10 +543,17 @@ export class BatCallDetector {
         }
       }
       
+      // 如果沒有找到超過閾值的 bin，則無法測量此閾值
+      // 這表示閾值太高，超過了第一幀中的最大功率
+      if (!foundBin) {
+        startFreq_Hz = null;
+      }
+      
       measurements.push({
         threshold: threshold,
         startFreq_Hz: startFreq_Hz,
-        startFreq_kHz: startFreq_Hz / 1000
+        startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
+        foundBin: foundBin
       });
     }
     
@@ -538,21 +564,29 @@ export class BatCallDetector {
     // - 正常情況：閾值從 -24 一路降低到 -50，Start Frequency 應該平緩變化 (1-2 kHz)
     // - 異常情況：突然出現大幅頻率跳變 (>3 kHz)，表示進入了回聲/反彈區域
     // - 最優閾值：異常發生前的那個值
+    // 
+    // 重要：只有當 foundBin === true 時才進行比較
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
     
-    // DEBUG: 記錄所有測量（可選）
+    // DEBUG: 記錄所有測量
     const debugLog = [];
     
-    // 從第二個測量開始，比較與前一個測量的差異
-    for (let i = 1; i < measurements.length; i++) {
-      const prevFreq_kHz = measurements[i - 1].startFreq_kHz;
-      const currFreq_kHz = measurements[i].startFreq_kHz;
+    // 只收集成功找到 bin 的測量
+    const validMeasurements = measurements.filter(m => m.foundBin);
+    
+    console.log(`[DEBUG] Total measurements: ${measurements.length}, Valid measurements (foundBin=true): ${validMeasurements.length}`);
+    console.log('[DEBUG] All measurements:', measurements);
+    
+    // 從第二個有效測量開始，比較與前一個測量的差異
+    for (let i = 1; i < validMeasurements.length; i++) {
+      const prevFreq_kHz = validMeasurements[i - 1].startFreq_kHz;
+      const currFreq_kHz = validMeasurements[i].startFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       debugLog.push({
-        thresholdBefore: measurements[i - 1].threshold,
-        thresholdCurrent: measurements[i].threshold,
+        thresholdBefore: validMeasurements[i - 1].threshold,
+        thresholdCurrent: validMeasurements[i].threshold,
         freqBefore: prevFreq_kHz.toFixed(2),
         freqCurrent: currFreq_kHz.toFixed(2),
         freqDiff: freqDifference.toFixed(2)
@@ -562,18 +596,23 @@ export class BatCallDetector {
       // 異常通常表現為 >= 5-10 kHz 的跳躍
       if (freqDifference > 3) {
         // 選擇異常前的閾值（這是最後一個"正常"測量）
-        optimalThreshold = measurements[i - 1].threshold;
-        console.log('異常檢測到！頻率差異:', freqDifference.toFixed(2), 'kHz');
-        console.log('選擇異常前的閾值:', optimalThreshold, 'dB');
-        console.log('計算過程:', debugLog);
+        optimalThreshold = validMeasurements[i - 1].threshold;
+        console.log('✓ 異常檢測到！頻率差異:', freqDifference.toFixed(2), 'kHz');
+        console.log('✓ 選擇異常前的閾值:', optimalThreshold, 'dB');
+        console.log('✓ 計算過程 (有效測量):', debugLog);
         break;
       }
     }
     
     // 如果沒有偵測到明顯異常，使用最後一個有效的測量
-    if (optimalThreshold === -24) {
-      console.log('未偵測到明顯異常，使用預設最保守值: -24 dB');
-      console.log('完整計算過程:', debugLog);
+    if (optimalThreshold === -24 && validMeasurements.length > 0) {
+      console.log('✗ 未偵測到明顯異常（頻率變化 ≤ 3 kHz）');
+      console.log('✗ 使用最後一個有效測量的閾值');
+      optimalThreshold = validMeasurements[validMeasurements.length - 1].threshold;
+      console.log('✗ 計算過程 (有效測量):', debugLog);
+    } else if (validMeasurements.length === 0) {
+      console.log('✗ 警告：所有測量都無效（firstFrame 中無數據超過閾值）');
+      optimalThreshold = -24;
     }
     
     // 確保返回值在有效範圍內
