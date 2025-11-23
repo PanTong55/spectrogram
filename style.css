@@ -2339,8 +2339,8 @@ input.tag-button.editing {
 /* === Power Spectrum Popup === */
 .power-spectrum-popup {
   position: fixed;
-  width: 500px;
-  height: 785px;
+  width: 450px;
+  height: 805px;
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
@@ -2356,8 +2356,8 @@ input.tag-button.editing {
 
 .power-spectrum-canvas-container {
   flex: 0 0 auto;
-  width: 488px;
-  height: 488px;
+  width: 438px;
+  height: 438px;
   padding: 5px 5px 2px 5px;
   overflow: hidden;
   display: flex;
@@ -2365,8 +2365,8 @@ input.tag-button.editing {
 }
 
 .power-spectrum-canvas-container canvas {
-  width: 488px;
-  height: 488px;
+  width: 438px;
+  height: 438px;
   border-radius: 5px;
   background: white;
   border: 1px solid #ddd;

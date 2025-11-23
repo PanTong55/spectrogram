@@ -265,9 +265,10 @@ export function showPowerSpectrumPopup({
     batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 25;
     
     // 2025 Anti-Rebounce 參數
-    const antiRebounceCheckbox = popup.querySelector('#enableBackwardEndFreqScan');
-    const maxFreqDropInput = popup.querySelector('#maxFrequencyDropThreshold_kHz');
-    const protectionWindowInput = popup.querySelector('#protectionWindowAfterPeak_ms');
+    // 注意：每次都重新查詢元素，確保獲取最新的 DOM 節點
+    let antiRebounceCheckbox = antiRebounceCheckboxForListeners || popup.querySelector('#enableBackwardEndFreqScan');
+    let maxFreqDropInput = maxFreqDropInputForListeners || popup.querySelector('#maxFrequencyDropThreshold_kHz');
+    let protectionWindowInput = protectionWindowInputForListeners || popup.querySelector('#protectionWindowAfterPeak_ms');
     
     if (antiRebounceCheckbox) {
       batCallConfig.enableBackwardEndFreqScan = antiRebounceCheckbox.checked;

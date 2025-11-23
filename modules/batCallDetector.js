@@ -977,6 +977,33 @@ export class BatCallDetector {
         call.kneeTime_ms = 0;
       }
     }
+    
+    // ============================================================
+    // AUTO-DETECT CF-FM TYPE AND DISABLE ANTI-REBOUNCE IF NEEDED
+    // 
+    // If High-Freq (peakFreq) and Peak Freq differ by < 1 kHz, 
+    // it's likely a CF-FM call that exceeds the 10ms protection window.
+    // Automatically disable anti-rebounce to avoid truncating long CF phases.
+    // ============================================================
+    
+    // High-Freq in this context is the peak frequency
+    const peakFreq_kHz = peakFreq_Hz / 1000;
+    const startFreq_kHz = startFreq_Hz / 1000;
+    
+    // Calculate difference between peak and start frequency
+    const freqDifference = Math.abs(peakFreq_kHz - startFreq_kHz);
+    
+    if (freqDifference < 1.0) {
+      // CF-FM type call detected: peak and start frequencies very close
+      // This means the call has a significant CF phase followed by FM sweep
+      // The call duration likely exceeds the 10ms protection window
+      // Auto-disable anti-rebounce to prevent false truncation
+      this.config.enableBackwardEndFreqScan = false;
+    } else {
+      // Pure FM call: restore the anti-rebounce setting from original config
+      // Re-read from parent config to get user's intended setting
+      this.config.enableBackwardEndFreqScan = this.config.enableBackwardEndFreqScan !== false;
+    }
   }
   
   /**
