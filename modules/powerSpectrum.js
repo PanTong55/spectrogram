@@ -6,6 +6,11 @@ import { BatCallDetector } from './batCallDetector.js';
 /**
  * 全局存儲 bat-call-controls 的配置值
  * 用於在新窗口中記憶之前設置的參數
+ * 
+ * 2025 Anti-Rebounce Parameters:
+ * - enableBackwardEndFreqScan: 從後往前掃描 -24 dB 輪廓
+ * - maxFrequencyDropThreshold_kHz: 最大頻率下降規則（鎖定）
+ * - protectionWindowAfterPeak_ms: 峰值後的保護窗（10 ms）
  */
 window.__batCallControlsMemory = window.__batCallControlsMemory || {
   callThreshold_dB: -24,
@@ -13,7 +18,11 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   characteristicFreq_percentEnd: 20,
   minCallDuration_ms: 1,
   fftSize: '1024',
-  hopPercent: 25
+  hopPercent: 25,
+  // 2025 Anti-Rebounce
+  enableBackwardEndFreqScan: true,
+  maxFrequencyDropThreshold_kHz: 10,
+  protectionWindowAfterPeak_ms: 10
 };
 
 /**
@@ -55,7 +64,11 @@ export function showPowerSpectrumPopup({
     maxGapBridge_ms: 0,
     freqResolution_Hz: 1,
     callType: 'auto',
-    cfRegionThreshold_dB: -30
+    cfRegionThreshold_dB: -30,
+    // 2025 Anti-Rebounce Parameters
+    enableBackwardEndFreqScan: memory.enableBackwardEndFreqScan !== false,
+    maxFrequencyDropThreshold_kHz: memory.maxFrequencyDropThreshold_kHz || 10,
+    protectionWindowAfterPeak_ms: memory.protectionWindowAfterPeak_ms || 10
   };
 
   // 建立 Popup Window
@@ -219,6 +232,11 @@ export function showPowerSpectrumPopup({
   const batCallMinDurationInput = popup.querySelector('#minCallDuration_ms');
   const batCallHopPercentInput = popup.querySelector('#hopPercent');
   const batCallFFTSizeBtn = popup.querySelector('#batCallFFTSize');
+  
+  // 2025 Anti-Rebounce Controls
+  const antiRebounceCheckboxForListeners = popup.querySelector('#enableBackwardEndFreqScan');
+  const maxFreqDropInputForListeners = popup.querySelector('#maxFrequencyDropThreshold_kHz');
+  const protectionWindowInputForListeners = popup.querySelector('#protectionWindowAfterPeak_ms');
 
   // 初始化 FFT Size Dropdown
   const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
@@ -246,6 +264,21 @@ export function showPowerSpectrumPopup({
     batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 1;
     batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 25;
     
+    // 2025 Anti-Rebounce 參數
+    const antiRebounceCheckbox = popup.querySelector('#enableBackwardEndFreqScan');
+    const maxFreqDropInput = popup.querySelector('#maxFrequencyDropThreshold_kHz');
+    const protectionWindowInput = popup.querySelector('#protectionWindowAfterPeak_ms');
+    
+    if (antiRebounceCheckbox) {
+      batCallConfig.enableBackwardEndFreqScan = antiRebounceCheckbox.checked;
+    }
+    if (maxFreqDropInput) {
+      batCallConfig.maxFrequencyDropThreshold_kHz = parseFloat(maxFreqDropInput.value) || 10;
+    }
+    if (protectionWindowInput) {
+      batCallConfig.protectionWindowAfterPeak_ms = parseFloat(protectionWindowInput.value) || 10;
+    }
+    
     // 保存到全局記憶中
     window.__batCallControlsMemory = {
       callThreshold_dB: batCallConfig.callThreshold_dB,
@@ -253,7 +286,11 @@ export function showPowerSpectrumPopup({
       characteristicFreq_percentEnd: batCallConfig.characteristicFreq_percentEnd,
       minCallDuration_ms: batCallConfig.minCallDuration_ms,
       fftSize: batCallConfig.fftSize.toString(),
-      hopPercent: batCallConfig.hopPercent
+      hopPercent: batCallConfig.hopPercent,
+      // 2025 Anti-Rebounce
+      enableBackwardEndFreqScan: batCallConfig.enableBackwardEndFreqScan,
+      maxFrequencyDropThreshold_kHz: batCallConfig.maxFrequencyDropThreshold_kHz,
+      protectionWindowAfterPeak_ms: batCallConfig.protectionWindowAfterPeak_ms
     };
     
     // 更新 detector 配置
@@ -325,6 +362,33 @@ export function showPowerSpectrumPopup({
     batCallHopPercentInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
   addNumberInputKeyboardSupport(batCallHopPercentInput);
+
+  // 2025 Anti-Rebounce Control Listeners
+  
+  // Anti-Rebounce Checkbox
+  if (antiRebounceCheckboxForListeners) {
+    antiRebounceCheckboxForListeners.addEventListener('change', updateBatCallConfig);
+  }
+
+  // Max Frequency Drop Input
+  if (maxFreqDropInputForListeners) {
+    maxFreqDropInputForListeners.addEventListener('change', updateBatCallConfig);
+    maxFreqDropInputForListeners.addEventListener('input', () => {
+      clearTimeout(maxFreqDropInputForListeners._updateTimeout);
+      maxFreqDropInputForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
+    });
+    addNumberInputKeyboardSupport(maxFreqDropInputForListeners);
+  }
+
+  // Protection Window Input
+  if (protectionWindowInputForListeners) {
+    protectionWindowInputForListeners.addEventListener('change', updateBatCallConfig);
+    protectionWindowInputForListeners.addEventListener('input', () => {
+      clearTimeout(protectionWindowInputForListeners._updateTimeout);
+      protectionWindowInputForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
+    });
+    addNumberInputKeyboardSupport(protectionWindowInputForListeners);
+  }
 
   // 返回 popup 對象和更新函數
   return {
@@ -569,6 +633,68 @@ function createPopupWindow() {
   hopPercentInput.title = 'Hop size percentage (overlap = 100 - hopPercent)';
   hopPercentControl.appendChild(hopPercentInput);
   batCallControlPanel.appendChild(hopPercentControl);
+
+  // ============================================================
+  // 2025 ANTI-REBOUNCE CONTROLS
+  // ============================================================
+  
+  // enableBackwardEndFreqScan (Checkbox)
+  const antiRebounceControl = document.createElement('label');
+  const antiRebounceCheckbox = document.createElement('input');
+  antiRebounceCheckbox.id = 'enableBackwardEndFreqScan';
+  antiRebounceCheckbox.type = 'checkbox';
+  antiRebounceCheckbox.checked = window.__batCallControlsMemory.enableBackwardEndFreqScan !== false;
+  antiRebounceCheckbox.title = 'Anti-rebounce: Backward scan from end to find clean cutoff';
+  antiRebounceControl.appendChild(antiRebounceCheckbox);
+  
+  const antiRebounceLabel = document.createElement('span');
+  antiRebounceLabel.textContent = 'Anti-Rebounce:';
+  antiRebounceControl.appendChild(antiRebounceLabel);
+  batCallControlPanel.appendChild(antiRebounceControl);
+
+  // maxFrequencyDropThreshold_kHz (Number input)
+  const maxFreqDropControl = document.createElement('label');
+  const maxFreqDropLabel = document.createElement('span');
+  maxFreqDropLabel.textContent = 'Max Freq Drop:';
+  maxFreqDropControl.appendChild(maxFreqDropLabel);
+  
+  const maxFreqDropInput = document.createElement('input');
+  maxFreqDropInput.id = 'maxFrequencyDropThreshold_kHz';
+  maxFreqDropInput.type = 'number';
+  maxFreqDropInput.value = window.__batCallControlsMemory.maxFrequencyDropThreshold_kHz.toString();
+  maxFreqDropInput.min = '1';
+  maxFreqDropInput.max = '50';
+  maxFreqDropInput.step = '0.5';
+  maxFreqDropInput.title = 'Maximum frequency drop threshold (kHz) - triggers lock';
+  maxFreqDropControl.appendChild(maxFreqDropInput);
+  
+  const maxFreqDropUnit = document.createElement('span');
+  maxFreqDropUnit.textContent = 'kHz';
+  maxFreqDropUnit.style.marginRight = '1em';
+  maxFreqDropControl.appendChild(maxFreqDropUnit);
+  batCallControlPanel.appendChild(maxFreqDropControl);
+
+  // protectionWindowAfterPeak_ms (Number input)
+  const protectionWindowControl = document.createElement('label');
+  const protectionWindowLabel = document.createElement('span');
+  protectionWindowLabel.textContent = 'Protect. Window:';
+  protectionWindowControl.appendChild(protectionWindowLabel);
+  
+  const protectionWindowInput = document.createElement('input');
+  protectionWindowInput.id = 'protectionWindowAfterPeak_ms';
+  protectionWindowInput.type = 'number';
+  protectionWindowInput.value = window.__batCallControlsMemory.protectionWindowAfterPeak_ms.toString();
+  protectionWindowInput.min = '1';
+  protectionWindowInput.max = '100';
+  protectionWindowInput.step = '1';
+  protectionWindowInput.title = 'Protection window after peak energy (ms)';
+  protectionWindowControl.appendChild(protectionWindowInput);
+  
+  const protectionWindowUnit = document.createElement('span');
+  protectionWindowUnit.textContent = 'ms';
+  protectionWindowUnit.style.marginRight = '1em';
+  protectionWindowControl.appendChild(protectionWindowUnit);
+  batCallControlPanel.appendChild(protectionWindowControl);
 
   popup.appendChild(batCallControlPanel);
 

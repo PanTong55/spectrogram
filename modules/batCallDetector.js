@@ -13,6 +13,11 @@ import { getApplyWindowFunction, getGoertzelEnergyFunction } from './powerSpectr
 
 /**
  * Bat Call Detection Configuration (Professional Standards)
+ * 
+ * 2025 Anti-Rebounce Upgrade:
+ * - Backward scanning for -24dB contour cutoff
+ * - Maximum frequency drop detection (10 kHz threshold)
+ * - 10 ms protection window after peak energy
  */
 export const DEFAULT_DETECTION_CONFIG = {
   // Energy threshold (dB below maximum within frequency range)
@@ -53,6 +58,25 @@ export const DEFAULT_DETECTION_CONFIG = {
   
   // For CF-FM calls: minimum power requirement in characteristic freq region (dB)
   cfRegionThreshold_dB: -30,
+  
+  // ============================================================
+  // 2025 ANTI-REBOUNCE (Anti-Echo/Reflection) PARAMETERS
+  // ============================================================
+  // These parameters protect against reverberations in tunnels, forests, buildings
+  
+  // Trick 1: Backward scanning for end frequency detection
+  // When enabled, scan from end towards start to find -24dB cutoff (prevents rebounce tail)
+  enableBackwardEndFreqScan: true,
+  
+  // Trick 2: Maximum Frequency Drop Rule (kHz)
+  // Once frequency drops by this amount below peak, lock and don't accept further increases
+  // Typical: 10 kHz (standard in Avisoft, SonoBat, Kaleidoscope)
+  maxFrequencyDropThreshold_kHz: 10,
+  
+  // Trick 3: Protection window after peak energy (ms)
+  // Only accept call content within this duration after peak energy frame
+  // Typical: 10 ms (at 384kHz ≈ 75-80 frames, at 256kHz ≈ 50-54 frames)
+  protectionWindowAfterPeak_ms: 10,
 };
 
 /**
@@ -513,9 +537,20 @@ export class BatCallDetector {
     call.peakPower_dB = peakPower_dB;
     
     // ============================================================
-    // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
-    // 當 startEndThreshold_dB 改變時，應該找到新的 call 邊界時間
     // ============================================================
+    // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
+    // 
+    // 2025 ANTI-REBOUNCE UPGRADE:
+    // - Backward scanning for clean end frequency detection
+    // - Maximum frequency drop rule to lock end frame
+    // - 10ms protection window after peak energy
+    // ============================================================
+    const { 
+      enableBackwardEndFreqScan,
+      maxFrequencyDropThreshold_kHz,
+      protectionWindowAfterPeak_ms
+    } = this.config;
+    
     const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB
     
     // 找到第一個幀，其中有信號超過閾值
@@ -535,22 +570,103 @@ export class BatCallDetector {
       }
     }
     
-    // 找到最後一個幀，其中有信號超過閾值
+    // TRICK 1 & 3: Find end frame with anti-rebounce protection
+    // 
+    // Standard method: Backward scan from end to find -24dB cutoff
+    // + Maximum frequency drop detection (Trick 2)
+    // + Protection window limit (Trick 3)
+    // ============================================================
     let newEndFrameIdx = spectrogram.length - 1;
-    for (let frameIdx = spectrogram.length - 1; frameIdx >= 0; frameIdx--) {
-      const framePower = spectrogram[frameIdx];
-      let frameHasSignal = false;
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        if (framePower[binIdx] > startThreshold_dB) {
+    
+    // Calculate frame limit for Trick 3 (10ms protection window)
+    const protectionFrameLimit = Math.round(
+      (protectionWindowAfterPeak_ms / 1000) / (timeFrames[1] - timeFrames[0])
+    );
+    const maxFrameIdxAllowed = Math.min(
+      peakFrameIdx + protectionFrameLimit,
+      spectrogram.length - 1
+    );
+    
+    // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
+    // This is TRICK 1: Find from end backwards, stop at first frame below -24dB
+    if (enableBackwardEndFreqScan) {
+      let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
+      let freqDropDetected = false;
+      let maxFrequencySeenSoFar = 0;
+      
+      // Scan backward from end, but respect the 10ms protection window
+      const scanStartFrame = Math.min(maxFrameIdxAllowed, spectrogram.length - 1);
+      
+      for (let frameIdx = scanStartFrame; frameIdx >= peakFrameIdx; frameIdx--) {
+        const framePower = spectrogram[frameIdx];
+        let frameHasSignal = false;
+        let framePeakFreq = 0;
+        
+        // Find peak frequency in this frame
+        let frameMaxPower = -Infinity;
+        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+          if (framePower[binIdx] > frameMaxPower) {
+            frameMaxPower = framePower[binIdx];
+            framePeakFreq = freqBins[binIdx] / 1000; // Convert to kHz
+          }
+        }
+        
+        // Check if frame has signal above threshold
+        if (frameMaxPower > startThreshold_dB) {
           frameHasSignal = true;
+          
+          // TRICK 2: Maximum Frequency Drop Rule
+          // If frequency drops too much, lock it and don't accept further increases
+          if (frameIdx < spectrogram.length - 1) {
+            const nextFramePower = spectrogram[frameIdx + 1];
+            let nextFramePeakFreq = 0;
+            let nextFrameMaxPower = -Infinity;
+            for (let binIdx = 0; binIdx < nextFramePower.length; binIdx++) {
+              if (nextFramePower[binIdx] > nextFrameMaxPower) {
+                nextFrameMaxPower = nextFramePower[binIdx];
+                nextFramePeakFreq = freqBins[binIdx] / 1000;
+              }
+            }
+            
+            const frequencyDrop = nextFramePeakFreq - framePeakFreq;
+            if (frequencyDrop > maxFrequencyDropThreshold_kHz && !freqDropDetected) {
+              // Large frequency drop detected - this is likely where call ends
+              freqDropDetected = true;
+              lastValidEndFrame = frameIdx + 1; // Lock at this point
+              break; // Stop scanning
+            }
+          }
+          
+          // Track maximum frequency for drop detection
+          maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
+          lastValidEndFrame = frameIdx;
+        } else if (frameHasSignal === false && lastValidEndFrame > peakFrameIdx) {
+          // Found first frame below threshold (TRICK 1: backward cutoff)
           break;
         }
       }
-      if (frameHasSignal) {
-        newEndFrameIdx = frameIdx;
-        break;
+      
+      newEndFrameIdx = lastValidEndFrame;
+    } else {
+      // Original forward scanning method (without anti-rebounce)
+      for (let frameIdx = spectrogram.length - 1; frameIdx >= 0; frameIdx--) {
+        const framePower = spectrogram[frameIdx];
+        let frameHasSignal = false;
+        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+          if (framePower[binIdx] > startThreshold_dB) {
+            frameHasSignal = true;
+            break;
+          }
+        }
+        if (frameHasSignal) {
+          newEndFrameIdx = frameIdx;
+          break;
+        }
       }
     }
+    
+    // 確保 end frame 不超過保護窗限制
+    newEndFrameIdx = Math.min(newEndFrameIdx, maxFrameIdxAllowed);
     
     // 更新時間邊界
     if (newStartFrameIdx < timeFrames.length) {
