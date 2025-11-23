@@ -404,11 +404,12 @@ export class BatCallDetector {
    * - Kaleidoscope: Multi-frame analysis with robustness checks
    * - BatSound: Peak prominence and edge detection
    * 
-   * Updates call.peakFreq, startFreq, endFreq, characteristicFreq, bandwidth
+   * Updates call.peakFreq, startFreq, endFreq, characteristicFreq, bandwidth, duration
    */
   measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution) {
     const { startEndThreshold_dB, characteristicFreq_percentEnd } = this.config;
     const spectrogram = call.spectrogram;  // [timeFrame][freqBin]
+    const timeFrames = call.timeFrames;    // Time points for each frame
     
     if (spectrogram.length === 0) return;
     
@@ -434,12 +435,62 @@ export class BatCallDetector {
     call.peakPower_dB = peakPower_dB;
     
     // ============================================================
+    // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
+    // 當 startEndThreshold_dB 改變時，應該找到新的 call 邊界時間
+    // ============================================================
+    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB
+    
+    // 找到第一個幀，其中有信號超過閾值
+    let newStartFrameIdx = 0;
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      let frameHasSignal = false;
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        if (framePower[binIdx] > startThreshold_dB) {
+          frameHasSignal = true;
+          break;
+        }
+      }
+      if (frameHasSignal) {
+        newStartFrameIdx = frameIdx;
+        break;
+      }
+    }
+    
+    // 找到最後一個幀，其中有信號超過閾值
+    let newEndFrameIdx = spectrogram.length - 1;
+    for (let frameIdx = spectrogram.length - 1; frameIdx >= 0; frameIdx--) {
+      const framePower = spectrogram[frameIdx];
+      let frameHasSignal = false;
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        if (framePower[binIdx] > startThreshold_dB) {
+          frameHasSignal = true;
+          break;
+        }
+      }
+      if (frameHasSignal) {
+        newEndFrameIdx = frameIdx;
+        break;
+      }
+    }
+    
+    // 更新時間邊界
+    if (newStartFrameIdx < timeFrames.length) {
+      call.startTime_s = timeFrames[newStartFrameIdx];
+    }
+    if (newEndFrameIdx < timeFrames.length - 1) {
+      call.endTime_s = timeFrames[Math.min(newEndFrameIdx + 1, timeFrames.length - 1)];
+    }
+    
+    // 重新計算 Duration（基於更新後的時間邊界）
+    call.calculateDuration();
+    
+    // ============================================================
     // STEP 2: Find start frequency from first frame
     // Professional standard: threshold at -24dB below global peak
     // This is the highest frequency in the call (from first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
-    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB
     const firstFramePower = spectrogram[0];
     let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
