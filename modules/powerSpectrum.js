@@ -1,6 +1,7 @@
 // modules/powerSpectrum.js
 
 import { initDropdown } from './dropdown.js';
+import { BatCallDetector } from './batCallDetector.js';
 
 /**
  * 計算並顯示選定區域的 Power Spectrum
@@ -66,9 +67,16 @@ export function showPowerSpectrumPopup({
 
   // 用於存儲最後計算的峰值頻率
   let lastPeakFreq = null;
+  
+  // 初始化 Bat Call Detector
+  const detector = new BatCallDetector({
+    windowType: windowType,
+    fftSize: 2048,  // 高解析度
+    hopPercent: 25
+  });
 
   // 繪製函數
-  const redrawSpectrum = (newSelection) => {
+  const redrawSpectrum = async (newSelection) => {
     // 如果提供了新的 selection 數據，更新它並重新提取音頻
     if (newSelection) {
       Object.assign(selection, newSelection);
@@ -107,6 +115,27 @@ export function showPowerSpectrumPopup({
       selection.Flow,
       selection.Fhigh
     );
+    
+    // 使用 Bat Call Detector 檢測並測量參數
+    try {
+      const calls = await detector.detectCalls(
+        audioData,
+        sampleRate,
+        selection.Flow,
+        selection.Fhigh
+      );
+      
+      if (calls.length > 0) {
+        const call = calls[0];  // 取第一個偵測到的 call
+        updateParametersDisplay(popup, call);
+      } else {
+        // 如果沒有偵測到 call，但有 peak freq，仍然顯示它
+        updateParametersDisplay(popup, null, peakFreq);
+      }
+    } catch (err) {
+      console.error('Bat call detection error:', err);
+      updateParametersDisplay(popup, null, peakFreq);
+    }
 
     // 存儲最後計算的峰值
     lastPeakFreq = peakFreq;
@@ -177,7 +206,7 @@ function createPopupWindow() {
   canvasContainer.className = 'power-spectrum-canvas-container';
 
   const canvas = document.createElement('canvas');
-  canvas.width = 468;
+  canvas.width = 488;
   canvas.height = 380;
 
   canvasContainer.appendChild(canvas);
@@ -231,6 +260,53 @@ function createPopupWindow() {
   controlPanel.appendChild(overlapControl);
 
   popup.appendChild(controlPanel);
+
+  // 建立參數顯示面板
+  const paramPanel = document.createElement('div');
+  paramPanel.className = 'bat-call-parameters-panel';
+  paramPanel.id = 'batCallParametersPanel';
+  
+  const paramTable = document.createElement('table');
+  paramTable.className = 'bat-call-parameters-table';
+  paramTable.innerHTML = `
+    <tr>
+      <td class="param-label">Type:</td>
+      <td class="param-value call-type">-</td>
+      <td class="param-unit"></td>
+    </tr>
+    <tr>
+      <td class="param-label">Peak Freq:</td>
+      <td class="param-value peak-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Start Freq:</td>
+      <td class="param-value start-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">End Freq:</td>
+      <td class="param-value end-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Char. Freq:</td>
+      <td class="param-value char-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Bandwidth:</td>
+      <td class="param-value bandwidth">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Duration:</td>
+      <td class="param-value duration">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+  `;
+  paramPanel.appendChild(paramTable);
+  popup.appendChild(paramPanel);
   
   document.body.appendChild(popup);
 
@@ -910,3 +986,39 @@ export function calculateSpectrumWithOverlap(audioData, sampleRate, fftSize, win
 export function findPeakFrequency(spectrum, sampleRate, fftSize, flowKHz, fhighKHz) {
   return findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz);
 }
+
+/**
+ * 更新參數顯示面板
+ */
+function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
+  const paramPanel = popup.querySelector('#batCallParametersPanel');
+  if (!paramPanel) return;
+  
+  const callTypeEl = paramPanel.querySelector('.call-type');
+  const peakFreqEl = paramPanel.querySelector('.peak-freq');
+  const startFreqEl = paramPanel.querySelector('.start-freq');
+  const endFreqEl = paramPanel.querySelector('.end-freq');
+  const charFreqEl = paramPanel.querySelector('.char-freq');
+  const bandwidthEl = paramPanel.querySelector('.bandwidth');
+  const durationEl = paramPanel.querySelector('.duration');
+  
+  if (batCall) {
+    callTypeEl.textContent = batCall.callType || '-';
+    peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
+    startFreqEl.textContent = batCall.startFreq_kHz?.toFixed(2) || '-';
+    endFreqEl.textContent = batCall.endFreq_kHz?.toFixed(2) || '-';
+    charFreqEl.textContent = batCall.characteristicFreq_kHz?.toFixed(2) || '-';
+    bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
+    durationEl.textContent = batCall.duration_ms?.toFixed(2) || '-';
+  } else {
+    // 只顯示 peak freq，其他為空
+    callTypeEl.textContent = '-';
+    peakFreqEl.textContent = peakFreqFallback?.toFixed(2) || '-';
+    startFreqEl.textContent = '-';
+    endFreqEl.textContent = '-';
+    charFreqEl.textContent = '-';
+    bandwidthEl.textContent = '-';
+    durationEl.textContent = '-';
+  }
+}
+
