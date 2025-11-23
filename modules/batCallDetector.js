@@ -1095,6 +1095,14 @@ export class BatCallDetector {
     // Calculate difference between peak and start frequency
     const freqDifference = Math.abs(peakFreq_kHz - startFreq_kHz);
     
+    // ============================================================
+    // Save actual used threshold value (after Auto mode calculation)
+    // This allows UI to reflect the real value being used
+    // ============================================================
+    if (this.config.startEndThreshold_dB_isAuto === true) {
+      this.config.startEndThreshold_dB = startEndThreshold_dB;
+    }
+    
     if (freqDifference < 1.0) {
       // CF-FM type call detected: peak and start frequencies very close
       // This means the call has a significant CF phase followed by FM sweep
