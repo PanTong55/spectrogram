@@ -730,23 +730,31 @@ export class BatCallDetector {
     const smoothedFrequencies = this.savitzkyGolay(frameFrequencies, 5, 2);
     
     // STEP 6.3: Calculate 1st derivative (frequency change rate)
+    // Note: firstDerivatives[i] represents derivative at frame i+1 position
     const firstDerivatives = [];
+    const firstDerivIndices = [];  // Track corresponding frame indices
+    
     for (let i = 0; i < smoothedFrequencies.length - 1; i++) {
       const freqChange = smoothedFrequencies[i + 1] - smoothedFrequencies[i];
       const timeDelta = (i + 1 < timeFrames.length) ? 
         (timeFrames[i + 1] - timeFrames[i]) : 0.001; // Prevent division by zero
       
       firstDerivatives.push(freqChange / timeDelta);
+      firstDerivIndices.push(i + 1);  // This derivative is at frame i+1
     }
     
     // STEP 6.4: Calculate 2nd derivative (acceleration of frequency change)
+    // Note: secondDerivatives[i] represents 2nd derivative at frame i+2 position
     const secondDerivatives = [];
+    const secondDerivIndices = [];  // Track corresponding frame indices
+    
     for (let i = 0; i < firstDerivatives.length - 1; i++) {
       const derivChange = firstDerivatives[i + 1] - firstDerivatives[i];
-      const timeDelta = (i + 1 < timeFrames.length) ? 
-        (timeFrames[i + 1] - timeFrames[i]) : 0.001;
+      const timeDelta = (i + 2 < timeFrames.length) ? 
+        (timeFrames[i + 2] - timeFrames[i + 1]) : 0.001;
       
       secondDerivatives.push(derivChange / timeDelta);
+      secondDerivIndices.push(i + 2);  // This 2nd derivative is at frame i+2
     }
     
     // STEP 6.5: Find knee point - minimum 2nd derivative (most negative)
@@ -758,7 +766,7 @@ export class BatCallDetector {
     for (let i = 0; i < secondDerivatives.length; i++) {
       if (secondDerivatives[i] < minSecondDeriv) {
         minSecondDeriv = secondDerivatives[i];
-        kneeIdx = i;
+        kneeIdx = secondDerivIndices[i];  // Use mapped frame index
       }
     }
     
@@ -787,7 +795,7 @@ export class BatCallDetector {
         }
         
         if (frameMax > fallbackThreshold) {
-          kneeIdx = i;
+          kneeIdx = i;  // Direct frame index from spectrogram
           break;
         }
       }
