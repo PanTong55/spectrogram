@@ -391,24 +391,24 @@ function createPopupWindow() {
       <td class="param-label">Peak Freq:</td>
       <td class="param-value peak-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Knee Freq:</td>
-      <td class="param-value knee-freq">-</td>
-      <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
       <td class="param-label">Char. Freq:</td>
       <td class="param-value char-freq">-</td>
       <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Knee Freq:</td>
+      <td class="param-value knee-freq">-</td>
+      <td class="param-unit">kHz</td>      
+      <td class="param-label">Knee Time:</td>
+      <td class="param-value knee-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
       <td class="param-label">Bandwidth:</td>
       <td class="param-value bandwidth">-</td>
       <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
       <td class="param-label">Duration:</td>
       <td class="param-value duration">-</td>
-      <td class="param-unit">ms</td>
-      <td class="param-label">Knee Time:</td>
-      <td class="param-value knee-time">-</td>
       <td class="param-unit">ms</td>
     </tr>
   `;

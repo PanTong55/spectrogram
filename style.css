@@ -2340,7 +2340,7 @@ input.tag-button.editing {
 .power-spectrum-popup {
   position: fixed;
   width: 500px;
-  height: 765px;
+  height: 785px;
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
@@ -2404,7 +2404,7 @@ input.tag-button.editing {
   background: #f5f5f5;
   border-radius: 5px;
   margin: 5px;
-  max-height: 150px;
+  max-height: 120px;
   overflow-y: auto;
   font-size: 12px;
   font-family: 'Noto Sans HK', 'Courier New', monospace;
