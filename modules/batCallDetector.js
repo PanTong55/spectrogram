@@ -215,6 +215,11 @@ export class BatCallDetector {
       
       call.calculateDuration();
       
+      // 驗證: 過濾不符合最小時長要求的 call
+      if (call.duration_ms < this.config.minCallDuration_ms) {
+        return null;  // 標記為無效，之後過濾掉
+      }
+      
       // Measure frequency parameters from spectrogram
       // This will calculate startFreq, endFreq, peakFreq, etc.
       this.measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution);
@@ -252,7 +257,7 @@ export class BatCallDetector {
       call.callType = CallTypeClassifier.classify(call);
       
       return call;
-    });
+    }).filter(call => call !== null);  // 移除不符合條件的 call
     
     return calls;
   }
