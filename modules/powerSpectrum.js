@@ -4,6 +4,19 @@ import { initDropdown } from './dropdown.js';
 import { BatCallDetector } from './batCallDetector.js';
 
 /**
+ * 全局存儲 bat-call-controls 的配置值
+ * 用於在新窗口中記憶之前設置的參數
+ */
+window.__batCallControlsMemory = window.__batCallControlsMemory || {
+  callThreshold_dB: -24,
+  startEndThreshold_dB: -24,
+  characteristicFreq_percentEnd: 20,
+  minCallDuration_ms: 1,
+  fftSize: '1024',
+  hopPercent: 25
+};
+
+/**
  * 計算並顯示選定區域的 Power Spectrum
  */
 export function showPowerSpectrumPopup({
@@ -29,14 +42,16 @@ export function showPowerSpectrumPopup({
   };
 
   // Bat Call Detection 配置：控制蝙蝠叫聲檢測的參數
+  // 使用記憶的值作為預設值
+  const memory = window.__batCallControlsMemory;
   let batCallConfig = {
     windowType: windowType,
-    callThreshold_dB: -24,
-    startEndThreshold_dB: -24,
-    characteristicFreq_percentEnd: 20,
-    minCallDuration_ms: 1,
-    fftSize: 1024,
-    hopPercent: 25,
+    callThreshold_dB: memory.callThreshold_dB,
+    startEndThreshold_dB: memory.startEndThreshold_dB,
+    characteristicFreq_percentEnd: memory.characteristicFreq_percentEnd,
+    minCallDuration_ms: memory.minCallDuration_ms,
+    fftSize: parseInt(memory.fftSize) || 1024,
+    hopPercent: memory.hopPercent,
     maxGapBridge_ms: 0,
     freqResolution_Hz: 1,
     callType: 'auto',
@@ -231,11 +246,48 @@ export function showPowerSpectrumPopup({
     batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 1;
     batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 25;
     
+    // 保存到全局記憶中
+    window.__batCallControlsMemory = {
+      callThreshold_dB: batCallConfig.callThreshold_dB,
+      startEndThreshold_dB: batCallConfig.startEndThreshold_dB,
+      characteristicFreq_percentEnd: batCallConfig.characteristicFreq_percentEnd,
+      minCallDuration_ms: batCallConfig.minCallDuration_ms,
+      fftSize: batCallConfig.fftSize.toString(),
+      hopPercent: batCallConfig.hopPercent
+    };
+    
     // 更新 detector 配置
     detector.config = { ...batCallConfig };
     
     // 只進行 Bat Call 分析，不重新計算 Power Spectrum
     await updateBatCallAnalysis(lastPeakFreq);
+  };
+
+  /**
+   * 為 type="number" 的 input 添加上下鍵支持
+   */
+  const addNumberInputKeyboardSupport = (inputElement) => {
+    inputElement.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = parseFloat(inputElement.step) || 1;
+        const currentValue = parseFloat(inputElement.value) || 0;
+        const max = inputElement.max ? parseFloat(inputElement.max) : Infinity;
+        const newValue = Math.min(currentValue + step, max);
+        inputElement.value = newValue;
+        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const step = parseFloat(inputElement.step) || 1;
+        const currentValue = parseFloat(inputElement.value) || 0;
+        const min = inputElement.min ? parseFloat(inputElement.min) : -Infinity;
+        const newValue = Math.max(currentValue - step, min);
+        inputElement.value = newValue;
+        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
   };
 
   // 為所有輸入框添加事件監聽器
@@ -244,30 +296,35 @@ export function showPowerSpectrumPopup({
     clearTimeout(batCallThresholdInput._updateTimeout);
     batCallThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
+  addNumberInputKeyboardSupport(batCallThresholdInput);
 
   batCallStartEndThresholdInput.addEventListener('change', updateBatCallConfig);
   batCallStartEndThresholdInput.addEventListener('input', () => {
     clearTimeout(batCallStartEndThresholdInput._updateTimeout);
     batCallStartEndThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
+  addNumberInputKeyboardSupport(batCallStartEndThresholdInput);
 
   batCallCharFreqPercentInput.addEventListener('change', updateBatCallConfig);
   batCallCharFreqPercentInput.addEventListener('input', () => {
     clearTimeout(batCallCharFreqPercentInput._updateTimeout);
     batCallCharFreqPercentInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
+  addNumberInputKeyboardSupport(batCallCharFreqPercentInput);
 
   batCallMinDurationInput.addEventListener('change', updateBatCallConfig);
   batCallMinDurationInput.addEventListener('input', () => {
     clearTimeout(batCallMinDurationInput._updateTimeout);
     batCallMinDurationInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
+  addNumberInputKeyboardSupport(batCallMinDurationInput);
 
   batCallHopPercentInput.addEventListener('change', updateBatCallConfig);
   batCallHopPercentInput.addEventListener('input', () => {
     clearTimeout(batCallHopPercentInput._updateTimeout);
     batCallHopPercentInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
+  addNumberInputKeyboardSupport(batCallHopPercentInput);
 
   // 返回 popup 對象和更新函數
   return {
@@ -429,7 +486,7 @@ function createPopupWindow() {
   const callThresholdInput = document.createElement('input');
   callThresholdInput.id = 'callThreshold_dB';
   callThresholdInput.type = 'number';
-  callThresholdInput.value = '-24';
+  callThresholdInput.value = window.__batCallControlsMemory.callThreshold_dB.toString();
   callThresholdInput.step = '1';
   callThresholdInput.title = 'Energy threshold (dB)';
   callThresholdControl.appendChild(callThresholdInput);
@@ -444,7 +501,7 @@ function createPopupWindow() {
   const startEndThresholdInput = document.createElement('input');
   startEndThresholdInput.id = 'startEndThreshold_dB';
   startEndThresholdInput.type = 'number';
-  startEndThresholdInput.value = '-24';
+  startEndThresholdInput.value = window.__batCallControlsMemory.startEndThreshold_dB.toString();
   startEndThresholdInput.step = '1';
   startEndThresholdInput.title = 'Start/End frequency threshold (dB)';
   startEndThresholdControl.appendChild(startEndThresholdInput);
@@ -459,7 +516,7 @@ function createPopupWindow() {
   const charFreqPercentInput = document.createElement('input');
   charFreqPercentInput.id = 'characteristicFreq_percentEnd';
   charFreqPercentInput.type = 'number';
-  charFreqPercentInput.value = '20';
+  charFreqPercentInput.value = window.__batCallControlsMemory.characteristicFreq_percentEnd.toString();
   charFreqPercentInput.min = '1';
   charFreqPercentInput.max = '100';
   charFreqPercentInput.step = '1';
@@ -476,7 +533,7 @@ function createPopupWindow() {
   const minDurationInput = document.createElement('input');
   minDurationInput.id = 'minCallDuration_ms';
   minDurationInput.type = 'number';
-  minDurationInput.value = '1';
+  minDurationInput.value = window.__batCallControlsMemory.minCallDuration_ms.toString();
   minDurationInput.min = '1';
   minDurationInput.step = '1';
   minDurationInput.title = 'Minimum call duration (ms)';
@@ -492,7 +549,7 @@ function createPopupWindow() {
   const fftSizeBtn = document.createElement('button');
   fftSizeBtn.id = 'batCallFFTSize';
   fftSizeBtn.className = 'dropdown-button';
-  fftSizeBtn.textContent = '1024';
+  fftSizeBtn.textContent = window.__batCallControlsMemory.fftSize;
   fftSizeControl.appendChild(fftSizeBtn);
   batCallControlPanel.appendChild(fftSizeControl);
 
@@ -505,7 +562,7 @@ function createPopupWindow() {
   const hopPercentInput = document.createElement('input');
   hopPercentInput.id = 'hopPercent';
   hopPercentInput.type = 'number';
-  hopPercentInput.value = '25';
+  hopPercentInput.value = window.__batCallControlsMemory.hopPercent.toString();
   hopPercentInput.min = '1';
   hopPercentInput.max = '99';
   hopPercentInput.step = '1';
@@ -519,6 +576,17 @@ function createPopupWindow() {
 
   // 拖動功能
   makeDraggable(popup, dragBar);
+
+  // 返回 popup 和 bat-call-controls 的輸入框對象
+  // 便於外層函數訪問這些輸入框
+  popup.batCallInputs = {
+    callThresholdInput,
+    startEndThresholdInput,
+    charFreqPercentInput,
+    minDurationInput,
+    hopPercentInput,
+    fftSizeBtn
+  };
 
   return popup;
 }
