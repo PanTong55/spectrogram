@@ -270,11 +270,6 @@ function createPopupWindow() {
   paramTable.className = 'bat-call-parameters-table';
   paramTable.innerHTML = `
     <tr>
-      <td class="param-label">Type:</td>
-      <td class="param-value call-type">-</td>
-      <td class="param-unit"></td>
-    </tr>
-    <tr>
       <td class="param-label">Peak Freq:</td>
       <td class="param-value peak-freq">-</td>
       <td class="param-unit">kHz</td>
@@ -287,6 +282,16 @@ function createPopupWindow() {
     <tr>
       <td class="param-label">End Freq:</td>
       <td class="param-value end-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Low Freq:</td>
+      <td class="param-value low-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">High Freq:</td>
+      <td class="param-value high-freq">-</td>
       <td class="param-unit">kHz</td>
     </tr>
     <tr>
@@ -994,28 +999,31 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const paramPanel = popup.querySelector('#batCallParametersPanel');
   if (!paramPanel) return;
   
-  const callTypeEl = paramPanel.querySelector('.call-type');
   const peakFreqEl = paramPanel.querySelector('.peak-freq');
   const startFreqEl = paramPanel.querySelector('.start-freq');
   const endFreqEl = paramPanel.querySelector('.end-freq');
+  const lowFreqEl = paramPanel.querySelector('.low-freq');
+  const highFreqEl = paramPanel.querySelector('.high-freq');
   const charFreqEl = paramPanel.querySelector('.char-freq');
   const bandwidthEl = paramPanel.querySelector('.bandwidth');
   const durationEl = paramPanel.querySelector('.duration');
   
   if (batCall) {
-    callTypeEl.textContent = batCall.callType || '-';
     peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
     startFreqEl.textContent = batCall.startFreq_kHz?.toFixed(2) || '-';
     endFreqEl.textContent = batCall.endFreq_kHz?.toFixed(2) || '-';
+    lowFreqEl.textContent = batCall.Flow ? (batCall.Flow / 1000).toFixed(2) : '-';
+    highFreqEl.textContent = batCall.Fhigh?.toFixed(2) || '-';
     charFreqEl.textContent = batCall.characteristicFreq_kHz?.toFixed(2) || '-';
     bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
     durationEl.textContent = batCall.duration_ms?.toFixed(2) || '-';
   } else {
     // 只顯示 peak freq，其他為空
-    callTypeEl.textContent = '-';
     peakFreqEl.textContent = peakFreqFallback?.toFixed(2) || '-';
     startFreqEl.textContent = '-';
     endFreqEl.textContent = '-';
+    lowFreqEl.textContent = '-';
+    highFreqEl.textContent = '-';
     charFreqEl.textContent = '-';
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
