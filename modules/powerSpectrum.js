@@ -291,7 +291,7 @@ function createPopupWindow() {
   
   const titleSpan = document.createElement('span');
   titleSpan.className = 'popup-title';
-  titleSpan.textContent = 'Power Spectrum';
+  titleSpan.textContent = 'Call analysis';
   dragBar.appendChild(titleSpan);
 
   const closeBtn = document.createElement('button');
@@ -362,6 +362,50 @@ function createPopupWindow() {
   controlPanel.appendChild(overlapControl);
 
   popup.appendChild(controlPanel);
+
+  // 建立參數顯示面板
+  const paramPanel = document.createElement('div');
+  paramPanel.className = 'bat-call-parameters-panel';
+  paramPanel.id = 'batCallParametersPanel';
+  
+  const paramTable = document.createElement('table');
+  paramTable.className = 'bat-call-parameters-table';
+  paramTable.innerHTML = `
+    <tr>
+      <td class="param-label">Start Freq:</td>
+      <td class="param-value start-freq">-</td>
+      <td class="param-unit">kHz</td>
+      <td class="param-label">End Freq:</td>
+      <td class="param-value end-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">High Freq:</td>
+      <td class="param-value high-freq">-</td>
+      <td class="param-unit">kHz</td>
+      <td class="param-label">Low Freq:</td>
+      <td class="param-value low-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>    
+    <tr>
+      <td class="param-label">Peak Freq:</td>
+      <td class="param-value peak-freq">-</td>
+      <td class="param-unit">kHz</td>
+      <td class="param-label">Char. Freq:</td>
+      <td class="param-value char-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
+      <td class="param-label">Bandwidth:</td>
+      <td class="param-value bandwidth">-</td>
+      <td class="param-unit">kHz</td>
+      <td class="param-label">Duration:</td>
+      <td class="param-value duration">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+  `;
+  paramPanel.appendChild(paramTable);
+  popup.appendChild(paramPanel);
 
   // 建立 Bat Call 檢測參數控制面板
   const batCallControlPanel = document.createElement('div');
@@ -463,50 +507,6 @@ function createPopupWindow() {
 
   popup.appendChild(batCallControlPanel);
 
-  // 建立參數顯示面板
-  const paramPanel = document.createElement('div');
-  paramPanel.className = 'bat-call-parameters-panel';
-  paramPanel.id = 'batCallParametersPanel';
-  
-  const paramTable = document.createElement('table');
-  paramTable.className = 'bat-call-parameters-table';
-  paramTable.innerHTML = `
-    <tr>
-      <td class="param-label">Start Freq:</td>
-      <td class="param-value start-freq">-</td>
-      <td class="param-unit">kHz</td>
-      <td class="param-label">End Freq:</td>
-      <td class="param-value end-freq">-</td>
-      <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
-      <td class="param-label">High Freq:</td>
-      <td class="param-value high-freq">-</td>
-      <td class="param-unit">kHz</td>
-      <td class="param-label">Low Freq:</td>
-      <td class="param-value low-freq">-</td>
-      <td class="param-unit">kHz</td>
-    </tr>    
-    <tr>
-      <td class="param-label">Peak Freq:</td>
-      <td class="param-value peak-freq">-</td>
-      <td class="param-unit">kHz</td>
-      <td class="param-label">Char. Freq:</td>
-      <td class="param-value char-freq">-</td>
-      <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
-      <td class="param-label">Bandwidth:</td>
-      <td class="param-value bandwidth">-</td>
-      <td class="param-unit">kHz</td>
-      <td class="param-label">Duration:</td>
-      <td class="param-value duration">-</td>
-      <td class="param-unit">ms</td>
-    </tr>
-  `;
-  paramPanel.appendChild(paramTable);
-  popup.appendChild(paramPanel);
-  
   document.body.appendChild(popup);
 
   // 拖動功能

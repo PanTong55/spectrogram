@@ -1026,7 +1026,7 @@ export function initFrequencyHover({
 
     const menuItem = document.createElement('div');
     menuItem.className = 'selection-context-menu-item';
-    menuItem.textContent = 'Power Spectrum';
+    menuItem.textContent = 'Call analysis';
 
     menuItem.addEventListener('click', () => {
       handleShowPowerSpectrum(selection);
@@ -1054,6 +1054,11 @@ export function initFrequencyHover({
     const ws = getWavesurfer();
     if (!ws) return;
 
+    // 隱藏對應 selection 的 tooltip
+    if (selection.tooltip) {
+      selection.tooltip.style.display = 'none';
+    }
+
     // 取得當前設置 (需要從 main.js 傳入或通過全局狀態)
     const currentSettings = {
       fftSize: window.__spectrogramSettings?.fftSize || 1024,
@@ -1071,6 +1076,17 @@ export function initFrequencyHover({
     // 跟踪 popup
     if (popupObj) {
       selection.powerSpectrumPopup = popupObj;
+
+      // 監聽 popup 關閉，重新顯示 tooltip
+      const popupElement = popupObj.popup || popupObj;
+      const closeBtn = popupElement.querySelector('.popup-close-btn');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+          if (selection.tooltip) {
+            selection.tooltip.style.display = 'block';
+          }
+        });
+      }
 
       // 如果 popup DOM 支援事件，監聽 peakUpdated 事件以同步 tooltip 值
       if (popupObj.popup && popupObj.popup.addEventListener) {
