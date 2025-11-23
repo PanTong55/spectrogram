@@ -207,15 +207,20 @@ export function showPowerSpectrumPopup({
       );
       
       // 更新 UI 以反映實際使用的 startEndThreshold 值
-      // Auto mode 時：顯示計算出的實際值
-      // Manual mode 時：顯示用戶設定的值（應該已經與 config 同步）
+      // Auto mode 時：灰色顯示 "Auto (-40)" 格式
+      // Manual mode 時：顯示用戶設定的值
       if (batCallStartEndThresholdInput) {
         if (detector.config.startEndThreshold_dB_isAuto === true) {
-          // Auto 模式：顯示計算出的實際值
-          batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
+          // Auto 模式：顯示 "Auto (計算值)" 格式，並設定灰色樣式
+          const calculatedValue = detector.config.startEndThreshold_dB;
+          batCallStartEndThresholdInput.value = `Auto (${calculatedValue})`;
+          batCallStartEndThresholdInput.style.color = '#999';  // 灰色
+          batCallStartEndThresholdInput.style.fontStyle = 'italic';
         } else {
-          // Manual 模式：保持用戶輸入的值
+          // Manual 模式：保持用戶輸入的值，黑色文字
           batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
+          batCallStartEndThresholdInput.style.color = '#000';  // 黑色
+          batCallStartEndThresholdInput.style.fontStyle = 'normal';
         }
       }
       
@@ -276,14 +281,28 @@ export function showPowerSpectrumPopup({
     batCallConfig.callThreshold_dB = parseFloat(batCallThresholdInput.value) || -24;
     
     // 處理 Start/End Threshold 的 Auto/Manual 模式
-    // 新 UI：Text input 空白 = Auto，有值 = Manual
+    // 新 UI 格式：
+    // - Auto 模式：顯示 "Auto (-40)" 或空白 → 設定 isAuto = true
+    // - Manual 模式：顯示具體數值 "-40" → 設定 isAuto = false
     const startEndValue = batCallStartEndThresholdInput.value.trim();
     
-    if (startEndValue === '' || startEndValue.toLowerCase() === 'auto') {
-      // Auto 模式（空白或明確 "Auto"）
+    if (startEndValue === '' || 
+        startEndValue.toLowerCase().startsWith('auto') || 
+        startEndValue.toLowerCase() === 'auto') {
+      // Auto 模式（空白或以 "Auto" 開頭）
       batCallConfig.startEndThreshold_dB_isAuto = true;
       batCallConfig.startEndThreshold_dB = -24;  // 預設值，會被 findOptimalStartEndThreshold 覆蓋
-      batCallStartEndThresholdInput.value = '';  // 保持空白
+      // Auto 模式不修改顯示，由 updateBatCallAnalysis 更新
+    } else if (startEndValue.toLowerCase().includes('auto')) {
+      // 可能是計算後的格式 "Auto (-40)"，提取數值
+      batCallConfig.startEndThreshold_dB_isAuto = true;
+      const match = startEndValue.match(/\(([^)]+)\)/);
+      if (match && !isNaN(parseFloat(match[1]))) {
+        // 如果用戶編輯了這個值，從括號內提取
+        batCallConfig.startEndThreshold_dB = parseFloat(match[1]);
+      } else {
+        batCallConfig.startEndThreshold_dB = -24;
+      }
     } else {
       // Manual 模式：嘗試解析為數字
       const numValue = parseFloat(startEndValue);
@@ -294,7 +313,6 @@ export function showPowerSpectrumPopup({
         // 無效輸入，回退到 Auto
         batCallConfig.startEndThreshold_dB_isAuto = true;
         batCallConfig.startEndThreshold_dB = -24;
-        batCallStartEndThresholdInput.value = '';
       }
     }
     
@@ -348,12 +366,19 @@ export function showPowerSpectrumPopup({
       if (e.key === 'ArrowUp') {
         e.preventDefault();
         
-        // 特殊處理 startEndThreshold input（支持空白 = "Auto"）
+        // 特殊處理 startEndThreshold input
+        // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
         if (inputElement.id === 'startEndThreshold_dB') {
           const currentValue = inputElement.value.trim().toLowerCase();
-          if (currentValue === '' || currentValue === 'auto') {
+          
+          // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
+          if (currentValue === '' || 
+              currentValue === 'auto' ||
+              currentValue.startsWith('auto')) {
             // 從 Auto 切換到 -24
             inputElement.value = '-24';
+            inputElement.style.color = '#000';
+            inputElement.style.fontStyle = 'normal';
           } else {
             // 數值增加
             const numValue = parseFloat(currentValue);
@@ -376,12 +401,19 @@ export function showPowerSpectrumPopup({
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         
-        // 特殊處理 startEndThreshold input（支持空白 = "Auto"）
+        // 特殊處理 startEndThreshold input
+        // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
         if (inputElement.id === 'startEndThreshold_dB') {
           const currentValue = inputElement.value.trim().toLowerCase();
-          if (currentValue === '' || currentValue === 'auto') {
+          
+          // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
+          if (currentValue === '' || 
+              currentValue === 'auto' ||
+              currentValue.startsWith('auto')) {
             // 從 Auto 切換到 -50
             inputElement.value = '-50';
+            inputElement.style.color = '#000';
+            inputElement.style.fontStyle = 'normal';
           } else {
             // 數值減少
             const numValue = parseFloat(currentValue);
@@ -651,11 +683,15 @@ function createPopupWindow() {
   // 根據模式初始化顯示
   const isAutoMode = window.__batCallControlsMemory.startEndThreshold_dB_isAuto !== false;
   if (isAutoMode) {
-    // Auto 模式：空白，依靠 placeholder
-    startEndThresholdInput.value = '';
+    // Auto 模式：顯示 "Auto" 格式，灰色樣式
+    startEndThresholdInput.value = '';  // 初始時為空白，等待第一次計算
+    startEndThresholdInput.style.color = '#999';
+    startEndThresholdInput.style.fontStyle = 'italic';
   } else {
-    // Manual 模式：顯示具體值
+    // Manual 模式：顯示具體值，黑色樣式
     startEndThresholdInput.value = window.__batCallControlsMemory.startEndThreshold_dB.toString();
+    startEndThresholdInput.style.color = '#000';
+    startEndThresholdInput.style.fontStyle = 'normal';
   }
   
   startEndThresholdControl.appendChild(startEndThresholdInput);

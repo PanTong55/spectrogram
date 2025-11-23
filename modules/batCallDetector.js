@@ -531,8 +531,18 @@ export class BatCallDetector {
       });
     }
     
-    // 找出第一個導致 Start Freq 大幅變化的臨界點
-    let optimalThreshold = -24;  // 默認使用最寬鬆的設定
+    // ============================================================
+    // 算法改進：找出第一個導致 Start Freq 異常變化的臨界點
+    // 
+    // 原理：
+    // - 正常情況：閾值從 -24 一路降低到 -50，Start Frequency 應該平緩變化 (1-2 kHz)
+    // - 異常情況：突然出現大幅頻率跳變 (>3 kHz)，表示進入了回聲/反彈區域
+    // - 最優閾值：異常發生前的那個值
+    // ============================================================
+    let optimalThreshold = -24;  // 默認使用最保守的設定
+    
+    // DEBUG: 記錄所有測量（可選）
+    const debugLog = [];
     
     // 從第二個測量開始，比較與前一個測量的差異
     for (let i = 1; i < measurements.length; i++) {
@@ -540,13 +550,30 @@ export class BatCallDetector {
       const currFreq_kHz = measurements[i].startFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
+      debugLog.push({
+        thresholdBefore: measurements[i - 1].threshold,
+        thresholdCurrent: measurements[i].threshold,
+        freqBefore: prevFreq_kHz.toFixed(2),
+        freqCurrent: currFreq_kHz.toFixed(2),
+        freqDiff: freqDifference.toFixed(2)
+      });
+      
       // 如果頻率差異超過 3 kHz，說明進入可疑區域
       // 異常通常表現為 >= 5-10 kHz 的跳躍
       if (freqDifference > 3) {
         // 選擇異常前的閾值（這是最後一個"正常"測量）
         optimalThreshold = measurements[i - 1].threshold;
+        console.log('異常檢測到！頻率差異:', freqDifference.toFixed(2), 'kHz');
+        console.log('選擇異常前的閾值:', optimalThreshold, 'dB');
+        console.log('計算過程:', debugLog);
         break;
       }
+    }
+    
+    // 如果沒有偵測到明顯異常，使用最後一個有效的測量
+    if (optimalThreshold === -24) {
+      console.log('未偵測到明顯異常，使用預設最保守值: -24 dB');
+      console.log('完整計算過程:', debugLog);
     }
     
     // 確保返回值在有效範圍內
