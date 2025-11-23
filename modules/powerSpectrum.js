@@ -15,6 +15,7 @@ import { BatCallDetector } from './batCallDetector.js';
 window.__batCallControlsMemory = window.__batCallControlsMemory || {
   callThreshold_dB: -24,
   startEndThreshold_dB: -24,
+  startEndThreshold_dB_isAuto: true,  // Auto mode for Start/End Threshold
   characteristicFreq_percentEnd: 20,
   minCallDuration_ms: 1,
   fftSize: '1024',
@@ -57,6 +58,7 @@ export function showPowerSpectrumPopup({
     windowType: windowType,
     callThreshold_dB: memory.callThreshold_dB,
     startEndThreshold_dB: memory.startEndThreshold_dB,
+    startEndThreshold_dB_isAuto: memory.startEndThreshold_dB_isAuto !== false,  // Auto mode (default true)
     characteristicFreq_percentEnd: memory.characteristicFreq_percentEnd,
     minCallDuration_ms: memory.minCallDuration_ms,
     fftSize: parseInt(memory.fftSize) || 1024,
@@ -227,6 +229,7 @@ export function showPowerSpectrumPopup({
   // 初始化 Bat Call Controls 事件監聽器
   // ========================================================
   const batCallThresholdInput = popup.querySelector('#callThreshold_dB');
+  const batCallStartEndThresholdAutoCheckbox = popup.querySelector('#startEndThreshold_isAuto');
   const batCallStartEndThresholdInput = popup.querySelector('#startEndThreshold_dB');
   const batCallCharFreqPercentInput = popup.querySelector('#characteristicFreq_percentEnd');
   const batCallMinDurationInput = popup.querySelector('#minCallDuration_ms');
@@ -259,7 +262,21 @@ export function showPowerSpectrumPopup({
   // 通用函數：更新所有 Bat Call 配置
   const updateBatCallConfig = async () => {
     batCallConfig.callThreshold_dB = parseFloat(batCallThresholdInput.value) || -24;
-    batCallConfig.startEndThreshold_dB = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    
+    // 處理 Start/End Threshold 的 Auto/Manual 模式
+    if (batCallStartEndThresholdAutoCheckbox) {
+      batCallConfig.startEndThreshold_dB_isAuto = batCallStartEndThresholdAutoCheckbox.checked;
+      // 如果不是 Auto 模式，讀取手動值
+      if (!batCallStartEndThresholdAutoCheckbox.checked) {
+        batCallConfig.startEndThreshold_dB = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      }
+      // 如果是 Auto 模式，startEndThreshold_dB 會在 measureFrequencyParameters 中自動計算
+    } else {
+      // 備用方案：如果無法找到 Auto checkbox，假設為 Manual 模式
+      batCallConfig.startEndThreshold_dB_isAuto = false;
+      batCallConfig.startEndThreshold_dB = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    }
+    
     batCallConfig.characteristicFreq_percentEnd = parseInt(batCallCharFreqPercentInput.value) || 20;
     batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 1;
     batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 25;
@@ -284,6 +301,7 @@ export function showPowerSpectrumPopup({
     window.__batCallControlsMemory = {
       callThreshold_dB: batCallConfig.callThreshold_dB,
       startEndThreshold_dB: batCallConfig.startEndThreshold_dB,
+      startEndThreshold_dB_isAuto: batCallConfig.startEndThreshold_dB_isAuto,
       characteristicFreq_percentEnd: batCallConfig.characteristicFreq_percentEnd,
       minCallDuration_ms: batCallConfig.minCallDuration_ms,
       fftSize: batCallConfig.fftSize.toString(),
@@ -342,6 +360,11 @@ export function showPowerSpectrumPopup({
     batCallStartEndThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
   addNumberInputKeyboardSupport(batCallStartEndThresholdInput);
+
+  // Start/End Threshold Auto/Manual mode toggle
+  if (batCallStartEndThresholdAutoCheckbox) {
+    batCallStartEndThresholdAutoCheckbox.addEventListener('change', updateBatCallConfig);
+  }
 
   batCallCharFreqPercentInput.addEventListener('change', updateBatCallConfig);
   batCallCharFreqPercentInput.addEventListener('input', () => {
@@ -557,20 +580,54 @@ function createPopupWindow() {
   callThresholdControl.appendChild(callThresholdInput);
   batCallControlPanel.appendChild(callThresholdControl);
 
-  // startEndThreshold_dB 控制
+  // startEndThreshold_dB 控制 (Auto 和 Manual 模式)
   const startEndThresholdControl = document.createElement('label');
   const startEndThresholdLabel = document.createElement('span');
   startEndThresholdLabel.textContent = 'Start/End Thresh:';
   startEndThresholdControl.appendChild(startEndThresholdLabel);
   
+  // Auto/Manual checkbox
+  const startEndThresholdAutoCheckbox = document.createElement('input');
+  startEndThresholdAutoCheckbox.id = 'startEndThreshold_isAuto';
+  startEndThresholdAutoCheckbox.type = 'checkbox';
+  startEndThresholdAutoCheckbox.checked = window.__batCallControlsMemory.startEndThreshold_dB_isAuto !== false;
+  startEndThresholdAutoCheckbox.title = 'Toggle Auto/Manual mode for Start/End Threshold';
+  startEndThresholdControl.appendChild(startEndThresholdAutoCheckbox);
+  
+  const autoLabel = document.createElement('span');
+  autoLabel.textContent = 'Auto';
+  autoLabel.style.fontSize = '0.85em';
+  autoLabel.style.marginLeft = '2px';
+  startEndThresholdControl.appendChild(autoLabel);
+  
+  // Manual input (hidden when Auto is enabled)
   const startEndThresholdInput = document.createElement('input');
   startEndThresholdInput.id = 'startEndThreshold_dB';
   startEndThresholdInput.type = 'number';
   startEndThresholdInput.value = window.__batCallControlsMemory.startEndThreshold_dB.toString();
   startEndThresholdInput.step = '1';
-  startEndThresholdInput.title = 'Start/End frequency threshold (dB)';
+  startEndThresholdInput.min = '-50';
+  startEndThresholdInput.max = '-6';
+  startEndThresholdInput.title = 'Manual Start/End frequency threshold (dB)';
+  startEndThresholdInput.style.marginLeft = '4px';
+  // 初始化時隱藏 Manual input（如果 Auto 開啟）
+  if (startEndThresholdAutoCheckbox.checked) {
+    startEndThresholdInput.style.display = 'none';
+  }
   startEndThresholdControl.appendChild(startEndThresholdInput);
   batCallControlPanel.appendChild(startEndThresholdControl);
+  
+  // Auto/Manual 模式切換事件監聽器
+  startEndThresholdAutoCheckbox.addEventListener('change', () => {
+    if (startEndThresholdAutoCheckbox.checked) {
+      // 切換到 Auto 模式
+      startEndThresholdInput.style.display = 'none';
+    } else {
+      // 切換到 Manual 模式
+      startEndThresholdInput.style.display = 'inline';
+    }
+    updateBatCallConfig();
+  });
 
   // characteristicFreq_percentEnd 控制
   const charFreqPercentControl = document.createElement('label');

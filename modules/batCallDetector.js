@@ -463,9 +463,98 @@ export class BatCallDetector {
     
     return smoothed;
   }
-  
+
   /**
-   * Phase 2: Measure precise frequency parameters
+   * Find optimal Start/End Threshold by testing range and detecting anomalies
+   * 
+   * Algorithm:
+   * 1. Test threshold values from -24 dB down to -50 dB (step: 1 dB)
+   * 2. For each threshold, measure Start Frequency
+   * 3. Track frequency differences between consecutive thresholds
+   * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
+   * 5. Return that threshold as the optimal value
+   * 
+   * Rationale:
+   * - Normal noise floor gradually extends range → smooth frequency changes (1-3 kHz)
+   * - Rebounce/overestimation causes sudden jumps → large frequency diff (>5 kHz)
+   * - Optimal threshold is just before the jump occurs (avoiding overestimation)
+   * 
+   * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
+   * @param {Array} freqBins - Frequency bin centers (Hz)
+   * @param {number} flowKHz - Lower frequency bound (kHz)
+   * @param {number} fhighKHz - Upper frequency bound (kHz)
+   * @returns {number} Optimal threshold (dB) in range [-50, -24]
+   */
+  findOptimalStartEndThreshold(spectrogram, freqBins, flowKHz, fhighKHz) {
+    if (spectrogram.length === 0) return -24;
+
+    const firstFramePower = spectrogram[0];
+    const flowHz = flowKHz * 1000;
+    const fhighHz = fhighKHz * 1000;
+    
+    // 測試閾值範圍：-24 到 -50 dB
+    const thresholdRange = [];
+    for (let threshold = -24; threshold >= -50; threshold--) {
+      thresholdRange.push(threshold);
+    }
+    
+    // 為每個閾值測量 Start Frequency
+    const measurements = [];
+    
+    for (const threshold of thresholdRange) {
+      let startFreq_Hz = fhighHz;  // 默認值為上邊界
+      
+      // 從高到低掃描頻率 bin
+      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (firstFramePower[binIdx] > threshold) {
+          startFreq_Hz = freqBins[binIdx];
+          
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx < firstFramePower.length - 1) {
+            const thisPower = firstFramePower[binIdx];
+            const nextPower = firstFramePower[binIdx + 1];
+            
+            if (nextPower < threshold && thisPower > threshold) {
+              const powerRatio = (thisPower - threshold) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            }
+          }
+          break;
+        }
+      }
+      
+      measurements.push({
+        threshold: threshold,
+        startFreq_Hz: startFreq_Hz,
+        startFreq_kHz: startFreq_Hz / 1000
+      });
+    }
+    
+    // 找出第一個導致 Start Freq 大幅變化的臨界點
+    let optimalThreshold = -24;  // 默認使用最寬鬆的設定
+    
+    // 從第二個測量開始，比較與前一個測量的差異
+    for (let i = 1; i < measurements.length; i++) {
+      const prevFreq_kHz = measurements[i - 1].startFreq_kHz;
+      const currFreq_kHz = measurements[i].startFreq_kHz;
+      const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
+      
+      // 如果頻率差異超過 3 kHz，說明進入可疑區域
+      // 異常通常表現為 >= 5-10 kHz 的跳躍
+      if (freqDifference > 3.0) {
+        // 選擇異常前的閾值（這是最後一個"正常"測量）
+        optimalThreshold = measurements[i - 1].threshold;
+        break;
+      }
+    }
+    
+    // 確保返回值在有效範圍內
+    return Math.max(Math.min(optimalThreshold, -24), -50);
+  }
+
+  /**
+   * Phase 2: Measure precise
    * Based on Avisoft SASLab Pro, SonoBat, Kaleidoscope Pro, and BatSound standards
    * 
    * Reference implementations:
@@ -477,11 +566,24 @@ export class BatCallDetector {
    * Updates call.peakFreq, startFreq, endFreq, characteristicFreq, bandwidth, duration
    */
   measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution) {
-    const { startEndThreshold_dB, characteristicFreq_percentEnd } = this.config;
+    let { startEndThreshold_dB, characteristicFreq_percentEnd } = this.config;
     const spectrogram = call.spectrogram;  // [timeFrame][freqBin]
     const timeFrames = call.timeFrames;    // Time points for each frame
     
     if (spectrogram.length === 0) return;
+    
+    // ============================================================
+    // AUTO MODE: If startEndThreshold_dB_isAuto is enabled,
+    // automatically find optimal threshold before proceeding
+    // ============================================================
+    if (this.config.startEndThreshold_dB_isAuto === true) {
+      startEndThreshold_dB = this.findOptimalStartEndThreshold(
+        spectrogram,
+        freqBins,
+        flowKHz,
+        fhighKHz
+      );
+    }
     
     // ============================================================
     // STEP 1: Find peak frequency (highest power across entire call)
