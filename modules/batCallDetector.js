@@ -39,7 +39,7 @@ export const DEFAULT_DETECTION_CONFIG = {
   windowType: 'hann',
   
   // FFT size for high resolution
-  fftSize: 2048,
+  fftSize: 1024,
   
   // Time resolution (STFT hop size as percentage of FFT size)
   hopPercent: 25,  // 75% overlap = 25% hop
@@ -99,6 +99,9 @@ export class BatCall {
     this.endFreq_kHz = null;        // End frequency (kHz) - from -18dB threshold
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.bandwidth_kHz = null;      // Bandwidth = startFreq - endFreq
+    
+    this.Flow = null;               // Low frequency boundary (Hz) - from detection range
+    this.Fhigh = null;              // High frequency boundary (kHz) - from detection range
     
     this.peakPower_dB = null;       // Peak power in dB
     this.startPower_dB = null;      // Power at start frequency
@@ -208,6 +211,8 @@ export class BatCallDetector {
       call.spectrogram = powerMatrix.slice(segment.startFrame, segment.endFrame + 1);
       call.timeFrames = timeFrames.slice(segment.startFrame, segment.endFrame + 2);
       call.freqBins = freqBins;
+      call.Flow = flowKHz * 1000;   // Store low frequency boundary in Hz
+      call.Fhigh = fhighKHz;        // Store high frequency boundary in kHz
       
       call.calculateDuration();
       
@@ -557,6 +562,8 @@ export class BatCallDetector {
     const call = new BatCall();
     call.peakFreq_kHz = peakFreq_Hz ? peakFreq_Hz / 1000 : null;
     call.peakPower_dB = peakPower_dB;
+    call.Flow = flowKHz * 1000;     // Store low frequency boundary in Hz
+    call.Fhigh = fhighKHz;          // Store high frequency boundary in kHz
     
     return call;
   }
