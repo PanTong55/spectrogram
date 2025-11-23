@@ -2339,8 +2339,8 @@ input.tag-button.editing {
 /* === Power Spectrum Popup === */
 .power-spectrum-popup {
   position: fixed;
-  width: 520px;
-  height: 820px;
+  width: 500px;
+  height: 765px;
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
@@ -2358,7 +2358,7 @@ input.tag-button.editing {
   flex: 0 0 auto;
   width: 488px;
   height: 488px;
-  padding: 5px 5px 0px 5px;
+  padding: 5px 5px 2px 5px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2400,9 +2400,10 @@ input.tag-button.editing {
 
 /* === Bat Call Parameters Panel === */
 .bat-call-parameters-panel {
-  padding: 8px 10px;
+  padding: 5px;
   background: #f5f5f5;
-  border-top: 1px solid #ddd;
+  border-radius: 5px;
+  margin: 5px;
   max-height: 150px;
   overflow-y: auto;
   font-size: 12px;
