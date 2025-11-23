@@ -206,13 +206,17 @@ export function showPowerSpectrumPopup({
         selection.Fhigh
       );
       
-      // 更新 UI 以反映實際使用的 startEndThreshold 值（Auto mode 時）
-      if (detector.config.startEndThreshold_dB_isAuto === true && batCallStartEndThresholdInput) {
-        // Auto 模式：顯示空白（placeholder 會顯示 "Auto"）
-        batCallStartEndThresholdInput.value = '';
-      } else if (detector.config.startEndThreshold_dB_isAuto === false && batCallStartEndThresholdInput) {
-        // Manual 模式或顯示計算出的實際值
-        batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
+      // 更新 UI 以反映實際使用的 startEndThreshold 值
+      // Auto mode 時：顯示計算出的實際值
+      // Manual mode 時：顯示用戶設定的值（應該已經與 config 同步）
+      if (batCallStartEndThresholdInput) {
+        if (detector.config.startEndThreshold_dB_isAuto === true) {
+          // Auto 模式：顯示計算出的實際值
+          batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
+        } else {
+          // Manual 模式：保持用戶輸入的值
+          batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
+        }
       }
       
       if (calls.length > 0) {

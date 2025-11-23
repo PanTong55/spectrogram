@@ -542,7 +542,7 @@ export class BatCallDetector {
       
       // 如果頻率差異超過 3 kHz，說明進入可疑區域
       // 異常通常表現為 >= 5-10 kHz 的跳躍
-      if (freqDifference > 3000) {
+      if (freqDifference > 3) {
         // 選擇異常前的閾值（這是最後一個"正常"測量）
         optimalThreshold = measurements[i - 1].threshold;
         break;
@@ -1096,13 +1096,17 @@ export class BatCallDetector {
     const freqDifference = Math.abs(peakFreq_kHz - startFreq_kHz);
     
     // ============================================================
-    // Save actual used threshold value (after Auto mode calculation)
+    // IMPORTANT: Save actual used threshold value (after Auto mode calculation)
     // This allows UI to reflect the real value being used
+    // Must be done BEFORE any further modifications to config
     // ============================================================
     if (this.config.startEndThreshold_dB_isAuto === true) {
       this.config.startEndThreshold_dB = startEndThreshold_dB;
     }
     
+    // ============================================================
+    // CF-FM AUTO-DETECTION
+    // ============================================================
     if (freqDifference < 1.0) {
       // CF-FM type call detected: peak and start frequencies very close
       // This means the call has a significant CF phase followed by FM sweep
