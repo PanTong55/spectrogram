@@ -391,16 +391,24 @@ function createPopupWindow() {
       <td class="param-label">Peak Freq:</td>
       <td class="param-value peak-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Char. Freq:</td>
-      <td class="param-value char-freq">-</td>
+      <td class="param-label">Knee Freq:</td>
+      <td class="param-value knee-freq">-</td>
       <td class="param-unit">kHz</td>
     </tr>
     <tr>
+      <td class="param-label">Char. Freq:</td>
+      <td class="param-value char-freq">-</td>
+      <td class="param-unit">kHz</td>
       <td class="param-label">Bandwidth:</td>
       <td class="param-value bandwidth">-</td>
       <td class="param-unit">kHz</td>
+    </tr>
+    <tr>
       <td class="param-label">Duration:</td>
       <td class="param-value duration">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">Knee Time:</td>
+      <td class="param-value knee-time">-</td>
       <td class="param-unit">ms</td>
     </tr>
   `;
@@ -1198,9 +1206,11 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const endFreqEl = paramPanel.querySelector('.end-freq');
   const lowFreqEl = paramPanel.querySelector('.low-freq');
   const highFreqEl = paramPanel.querySelector('.high-freq');
+  const kneeFreqEl = paramPanel.querySelector('.knee-freq');
   const charFreqEl = paramPanel.querySelector('.char-freq');
   const bandwidthEl = paramPanel.querySelector('.bandwidth');
   const durationEl = paramPanel.querySelector('.duration');
+  const kneeTimeEl = paramPanel.querySelector('.knee-time');
   
   if (batCall) {
     peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
@@ -1208,9 +1218,11 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     endFreqEl.textContent = batCall.endFreq_kHz?.toFixed(2) || '-';
     lowFreqEl.textContent = batCall.Flow ? (batCall.Flow / 1000).toFixed(2) : '-';
     highFreqEl.textContent = batCall.Fhigh?.toFixed(2) || '-';
+    kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';
     charFreqEl.textContent = batCall.characteristicFreq_kHz?.toFixed(2) || '-';
     bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
     durationEl.textContent = batCall.duration_ms?.toFixed(2) || '-';
+    kneeTimeEl.textContent = batCall.kneeTime_ms?.toFixed(2) || '-';
   } else {
     // 只顯示 peak freq，其他為空
     peakFreqEl.textContent = peakFreqFallback?.toFixed(2) || '-';
@@ -1218,9 +1230,11 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     endFreqEl.textContent = '-';
     lowFreqEl.textContent = '-';
     highFreqEl.textContent = '-';
+    kneeFreqEl.textContent = '-';
     charFreqEl.textContent = '-';
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
+    kneeTimeEl.textContent = '-';
   }
 }
 

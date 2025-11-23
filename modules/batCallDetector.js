@@ -99,6 +99,8 @@ export class BatCall {
     this.startFreq_kHz = null;      // Start frequency (kHz) - from first frame above -24dB threshold
     this.endFreq_kHz = null;        // End frequency (kHz) - from last frame above -24dB threshold
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
+    this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
+    this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
     this.bandwidth_kHz = null;      // Bandwidth = startFreq - endFreq
     
     this.Flow = null;               // Low frequency boundary (Hz) - from detection range
@@ -169,9 +171,11 @@ export class BatCall {
       'Peak Freq [kHz]': this.peakFreq_kHz?.toFixed(2) || '-',
       'Start Freq [kHz]': this.startFreq_kHz?.toFixed(2) || '-',
       'End Freq [kHz]': this.endFreq_kHz?.toFixed(2) || '-',
+      'Knee Freq [kHz]': this.kneeFreq_kHz?.toFixed(2) || '-',
       'Characteristic Freq [kHz]': this.characteristicFreq_kHz?.toFixed(2) || '-',
       'Bandwidth [kHz]': this.bandwidth_kHz?.toFixed(2) || '-',
       'Peak Power [dB]': this.peakPower_dB?.toFixed(1) || '-',
+      'Knee Time [ms]': this.kneeTime_ms?.toFixed(2) || '-',
     };
   }
 }
@@ -637,6 +641,101 @@ export class BatCallDetector {
     
     // Calculate bandwidth
     call.calculateBandwidth();
+    
+    // ============================================================
+    // STEP 6: Calculate Knee Frequency and Knee Time
+    // 
+    // COMMERCIAL STANDARD: Avisoft, SonoBat, Kaleidoscope, BatSound
+    // 
+    // Knee point: Maximum frequency slope (derivative) within the call
+    // For CF-FM calls: Transition between constant frequency (CF) and 
+    //                  frequency modulation (FM) phases
+    // For pure FM calls: Point of maximum rate of change
+    // 
+    // Algorithm:
+    // 1. Calculate dominant frequency for each time frame
+    // 2. Calculate frequency slope between consecutive frames
+    // 3. Find frame with maximum absolute slope = knee point
+    // 4. Convert frame index to time and frequency values
+    // ============================================================
+    
+    // Calculate dominant frequency per frame (weighted by power)
+    const frameFrequencies = [];
+    const frameSlopes = [];
+    
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      
+      // Method 1: Find weighted average frequency in this frame
+      // (Similar to characteristic frequency calculation)
+      let totalPower = 0;
+      let weightedFreq = 0;
+      let frameMax = -Infinity;
+      
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        frameMax = Math.max(frameMax, framePower[binIdx]);
+      }
+      
+      // Use -6dB threshold (half power) to define "significant" region
+      const significantThreshold = frameMax - 6;
+      
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        const power = framePower[binIdx];
+        if (power > significantThreshold) {
+          // Weight by power in dB scale
+          const linearPower = Math.pow(10, power / 10);
+          totalPower += linearPower;
+          weightedFreq += linearPower * freqBins[binIdx];
+        }
+      }
+      
+      // Store weighted average frequency for this frame
+      if (totalPower > 0) {
+        frameFrequencies.push(weightedFreq / totalPower);
+      } else {
+        frameFrequencies.push(peakFreq_Hz); // Fallback to peak
+      }
+    }
+    
+    // Calculate frequency slopes between consecutive frames
+    for (let i = 0; i < frameFrequencies.length - 1; i++) {
+      const freqChange = frameFrequencies[i + 1] - frameFrequencies[i];
+      // Frame duration (time between frame centers)
+      const timeDelta = (i + 1 < timeFrames.length) ? 
+        (timeFrames[i + 1] - timeFrames[i]) : 
+        (timeFrames[i] - timeFrames[Math.max(0, i - 1)]);
+      
+      const slope = timeDelta > 0 ? (freqChange / timeDelta) : 0;
+      frameSlopes.push(slope);
+    }
+    
+    // Find knee point: maximum absolute slope
+    let maxSlopeIdx = -1;
+    let maxSlope = -Infinity;
+    
+    for (let i = 0; i < frameSlopes.length; i++) {
+      const absSlope = Math.abs(frameSlopes[i]);
+      if (absSlope > maxSlope) {
+        maxSlope = absSlope;
+        maxSlopeIdx = i;
+      }
+    }
+    
+    // Set knee frequency and knee time
+    if (maxSlopeIdx >= 0 && maxSlopeIdx < frameFrequencies.length) {
+      call.kneeFreq_kHz = frameFrequencies[maxSlopeIdx] / 1000;
+      
+      // Knee time is the time at the knee frame
+      if (maxSlopeIdx < timeFrames.length) {
+        call.kneeTime_ms = (timeFrames[maxSlopeIdx] - call.startTime_s) * 1000;
+      }
+    } else {
+      // Fallback: use peak frequency and its time
+      call.kneeFreq_kHz = peakFreq_Hz / 1000;
+      if (peakFrameIdx < timeFrames.length) {
+        call.kneeTime_ms = (timeFrames[peakFrameIdx] - call.startTime_s) * 1000;
+      }
+    }
   }
   
   /**
