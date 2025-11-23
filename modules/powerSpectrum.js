@@ -627,31 +627,25 @@ function createPopupWindow() {
   paramTable.className = 'bat-call-parameters-table';
   paramTable.innerHTML = `
     <tr>
-      <td class="param-label">Peak Freq:</td>
-      <td class="param-value peak-freq">-</td>
-      <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
       <td class="param-label">Start Freq:</td>
       <td class="param-value start-freq">-</td>
       <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
       <td class="param-label">End Freq:</td>
       <td class="param-value end-freq">-</td>
-      <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
-      <td class="param-label">Low Freq:</td>
-      <td class="param-value low-freq">-</td>
       <td class="param-unit">kHz</td>
     </tr>
     <tr>
       <td class="param-label">High Freq:</td>
       <td class="param-value high-freq">-</td>
       <td class="param-unit">kHz</td>
-    </tr>
+      <td class="param-label">Low Freq:</td>
+      <td class="param-value low-freq">-</td>
+      <td class="param-unit">kHz</td>
+    </tr>    
     <tr>
+      <td class="param-label">Peak Freq:</td>
+      <td class="param-value peak-freq">-</td>
+      <td class="param-unit">kHz</td>
       <td class="param-label">Char. Freq:</td>
       <td class="param-value char-freq">-</td>
       <td class="param-unit">kHz</td>
@@ -660,8 +654,6 @@ function createPopupWindow() {
       <td class="param-label">Bandwidth:</td>
       <td class="param-value bandwidth">-</td>
       <td class="param-unit">kHz</td>
-    </tr>
-    <tr>
       <td class="param-label">Duration:</td>
       <td class="param-value duration">-</td>
       <td class="param-unit">ms</td>

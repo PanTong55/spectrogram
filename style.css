@@ -2460,6 +2460,7 @@ input.tag-button.editing {
   border-radius: 5px;
   gap: 8px;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   font-size: 12px;
   border-top: 1px solid #ddd;
@@ -2496,5 +2497,8 @@ input.tag-button.editing {
 
 .bat-call-controls .dropdown-button {
   padding: 3px 8px;
+  text-align:left;
+  width: 60px;
+  height: 25px;
   cursor: pointer;
 }
