@@ -211,13 +211,19 @@ export class BatCallDetector {
       call.spectrogram = powerMatrix.slice(segment.startFrame, segment.endFrame + 1);
       call.timeFrames = timeFrames.slice(segment.startFrame, segment.endFrame + 2);
       call.freqBins = freqBins;
-      call.Flow = flowKHz * 1000;   // Store low frequency boundary in Hz
-      call.Fhigh = fhighKHz;        // Store high frequency boundary in kHz
       
       call.calculateDuration();
       
       // Measure frequency parameters from spectrogram
+      // This will calculate startFreq, endFreq, peakFreq, etc.
       this.measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution);
+      
+      // COMMERCIAL STANDARD: Set Flow and Fhigh based on actual call frequency range
+      // (Avisoft, SonoBat, Kaleidoscope, BatSound all use this approach)
+      // Flow = lowest frequency in the call (in Hz)
+      // Fhigh = highest frequency in the call (in kHz)
+      call.Flow = call.endFreq_kHz * 1000;   // Convert kHz to Hz
+      call.Fhigh = call.startFreq_kHz;       // Already in kHz
       
       // Classify call type (CF, FM, or CF-FM)
       call.callType = CallTypeClassifier.classify(call);
@@ -589,9 +595,13 @@ export class BatCallDetector {
   /**
    * Direct measurement for user-selected region (no detection, just measurement)
    * Used when user explicitly selects an area
+   * 
+   * Commercial standard (Avisoft, SonoBat, Kaleidoscope, BatSound):
+   * Flow = lowest detectable frequency in selection (Hz)
+   * Fhigh = highest detectable frequency in selection (kHz)
    */
   measureDirectSelection(audioData, sampleRate, flowKHz, fhighKHz) {
-    const { fftSize, windowType } = this.config;
+    const { fftSize, windowType, startEndThreshold_dB } = this.config;
     
     // Apply window
     const windowed = this.applyWindow(audioData, windowType);
@@ -613,10 +623,13 @@ export class BatCallDetector {
       Math.floor(fhighKHz * 1000 / freqResolution)
     );
     
-    // Measure peak frequency
+    // Measure peak frequency and find frequency range
     let peakFreq_Hz = null;
     let peakPower_dB = -Infinity;
+    let lowestFreq_Hz = null;
+    let highestFreq_Hz = null;
     
+    // First pass: find peak
     for (let binIdx = minBin; binIdx <= maxBin; binIdx++) {
       const freqHz = binIdx * freqResolution;
       const energy = this.goertzelEnergy(dcRemoved, freqHz, sampleRate);
@@ -630,11 +643,48 @@ export class BatCallDetector {
       }
     }
     
+    // Second pass: find frequency range based on -18dB threshold from peak
+    // (Commercial standard from Avisoft)
+    if (peakPower_dB > -Infinity) {
+      const threshold_dB = peakPower_dB + startEndThreshold_dB; // Typically -18dB
+      
+      // Find lowest frequency above threshold
+      for (let binIdx = minBin; binIdx <= maxBin; binIdx++) {
+        const freqHz = binIdx * freqResolution;
+        const energy = this.goertzelEnergy(dcRemoved, freqHz, sampleRate);
+        const rms = Math.sqrt(energy);
+        const psd = (rms * rms) / fftSize;
+        const powerDb = 10 * Math.log10(Math.max(psd, 1e-16));
+        
+        if (powerDb > threshold_dB) {
+          lowestFreq_Hz = freqHz;
+          break;
+        }
+      }
+      
+      // Find highest frequency above threshold
+      for (let binIdx = maxBin; binIdx >= minBin; binIdx--) {
+        const freqHz = binIdx * freqResolution;
+        const energy = this.goertzelEnergy(dcRemoved, freqHz, sampleRate);
+        const rms = Math.sqrt(energy);
+        const psd = (rms * rms) / fftSize;
+        const powerDb = 10 * Math.log10(Math.max(psd, 1e-16));
+        
+        if (powerDb > threshold_dB) {
+          highestFreq_Hz = freqHz;
+          break;
+        }
+      }
+    }
+    
     const call = new BatCall();
     call.peakFreq_kHz = peakFreq_Hz ? peakFreq_Hz / 1000 : null;
     call.peakPower_dB = peakPower_dB;
-    call.Flow = flowKHz * 1000;     // Store low frequency boundary in Hz
-    call.Fhigh = fhighKHz;          // Store high frequency boundary in kHz
+    
+    // Set Flow and Fhigh based on detected frequency range
+    // If no valid range found, use analysis window bounds
+    call.Flow = lowestFreq_Hz ? lowestFreq_Hz : (flowKHz * 1000);     // Hz
+    call.Fhigh = highestFreq_Hz ? (highestFreq_Hz / 1000) : fhighKHz; // kHz
     
     return call;
   }
