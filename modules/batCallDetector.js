@@ -492,9 +492,12 @@ export class BatCallDetector {
     const flowHz = flowKHz * 1000;
     const fhighHz = fhighKHz * 1000;
     
-    // DEBUG: 記錄 firstFrame 的 power 範圍
+    // ============================================================
+    // 第一步：找出 firstFrame 的 peak power（與 STEP 1 相同）
+    // 這是必要的，因為在 STEP 2 中計算 startThreshold 時需要：
+    // startThreshold_dB = peakPower_dB + startEndThreshold_dB
+    // ============================================================
     let frameMaxPower = -Infinity;
-    let frameMinPower = Infinity;
     let frameMaxPowerBinIdx = 0;
     
     for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
@@ -503,11 +506,10 @@ export class BatCallDetector {
         frameMaxPower = power;
         frameMaxPowerBinIdx = binIdx;
       }
-      frameMinPower = Math.min(frameMinPower, power);
     }
     
     const frameMaxFreq_kHz = freqBins[frameMaxPowerBinIdx] / 1000;
-    console.log(`[DEBUG] First Frame - Max Power: ${frameMaxPower.toFixed(2)} dB at ${frameMaxFreq_kHz.toFixed(2)} kHz, Min Power: ${frameMinPower.toFixed(2)} dB`);
+    console.log(`[DEBUG] First Frame - Max Power: ${frameMaxPower.toFixed(2)} dB at ${frameMaxFreq_kHz.toFixed(2)} kHz`);
     
     // 測試閾值範圍：-24 到 -50 dB
     const thresholdRange = [];
@@ -516,25 +518,35 @@ export class BatCallDetector {
     }
     
     // 為每個閾值測量 Start Frequency
+    // 重點：使用與 STEP 2 相同的公式計算 startThreshold_dB
     const measurements = [];
     
     for (const threshold of thresholdRange) {
-      let startFreq_Hz = null;  // 改為 null，而不是預設為 fhighHz
+      // ============================================================
+      // 關鍵修復：使用與 STEP 2 相同的計算方式
+      // startThreshold_dB = frameMaxPower + threshold
+      // 而不是直接用 threshold
+      // ============================================================
+      const actualThreshold_dB = frameMaxPower + threshold;
+      
+      let startFreq_Hz = null;
       let foundBin = false;
       
-      // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
+      // 從高到低掃描頻率 bin，找第一個超過實際閾值的 bin
+      // 這與 STEP 2 的掃描方向和邏輯完全相同
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (firstFramePower[binIdx] > threshold) {
+        if (firstFramePower[binIdx] > actualThreshold_dB) {
           startFreq_Hz = freqBins[binIdx];
           foundBin = true;
           
           // 嘗試線性插值以獲得更高精度
+          // 這與 STEP 2 中的插值邏輯完全相同
           if (binIdx < firstFramePower.length - 1) {
             const thisPower = firstFramePower[binIdx];
             const nextPower = firstFramePower[binIdx + 1];
             
-            if (nextPower < threshold && thisPower > threshold) {
-              const powerRatio = (thisPower - threshold) / (thisPower - nextPower);
+            if (nextPower < actualThreshold_dB && thisPower > actualThreshold_dB) {
+              const powerRatio = (thisPower - actualThreshold_dB) / (thisPower - nextPower);
               const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
               startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
             }
@@ -543,14 +555,13 @@ export class BatCallDetector {
         }
       }
       
-      // 如果沒有找到超過閾值的 bin，則無法測量此閾值
-      // 這表示閾值太高，超過了第一幀中的最大功率
       if (!foundBin) {
         startFreq_Hz = null;
       }
       
       measurements.push({
         threshold: threshold,
+        actualThreshold_dB: actualThreshold_dB,
         startFreq_Hz: startFreq_Hz,
         startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
         foundBin: foundBin
@@ -587,6 +598,8 @@ export class BatCallDetector {
       debugLog.push({
         thresholdBefore: validMeasurements[i - 1].threshold,
         thresholdCurrent: validMeasurements[i].threshold,
+        actualThresholdBefore: validMeasurements[i - 1].actualThreshold_dB.toFixed(2),
+        actualThresholdCurrent: validMeasurements[i].actualThreshold_dB.toFixed(2),
         freqBefore: prevFreq_kHz.toFixed(2),
         freqCurrent: currFreq_kHz.toFixed(2),
         freqDiff: freqDifference.toFixed(2)
