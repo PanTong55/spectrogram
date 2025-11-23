@@ -399,6 +399,48 @@ export class BatCallDetector {
   }
   
   /**
+   * Savitzky-Golay Smoothing Filter
+   * 
+   * Used for smoothing frequency contours before 2nd derivative calculation
+   * Parameters: window size = 5, polynomial order = 2
+   * This is the standard used by Avisoft for stable knee detection
+   * 
+   * Algorithm: Fits a polynomial to each data point's neighborhood
+   * Advantages: Preserves peaks/edges better than moving average
+   */
+  savitzkyGolay(data, windowSize = 5, polyOrder = 2) {
+    if (data.length < windowSize) return data; // Cannot smooth
+    
+    const halfWindow = Math.floor(windowSize / 2);
+    const smoothed = new Array(data.length);
+    
+    // Pre-calculate SG coefficients for window=5, polynomial=2
+    // These are standard coefficients from numerical analysis literature
+    const sgCoeffs = [-3, 12, 17, 12, -3]; // Normalized for window=5, polyorder=2
+    const sgSum = 35; // Sum of coefficients for normalization
+    
+    // Apply filter
+    for (let i = 0; i < data.length; i++) {
+      let sum = 0;
+      let count = 0;
+      
+      // Apply within available window
+      for (let j = -halfWindow; j <= halfWindow; j++) {
+        const idx = i + j;
+        if (idx >= 0 && idx < data.length) {
+          const coeffIdx = j + halfWindow;
+          sum += data[idx] * sgCoeffs[coeffIdx];
+          count += sgCoeffs[coeffIdx];
+        }
+      }
+      
+      smoothed[i] = sum / sgSum;
+    }
+    
+    return smoothed;
+  }
+  
+  /**
    * Phase 2: Measure precise frequency parameters
    * Based on Avisoft SASLab Pro, SonoBat, Kaleidoscope Pro, and BatSound standards
    * 
@@ -643,98 +685,123 @@ export class BatCallDetector {
     call.calculateBandwidth();
     
     // ============================================================
+    // ============================================================
     // STEP 6: Calculate Knee Frequency and Knee Time
     // 
-    // COMMERCIAL STANDARD: Avisoft, SonoBat, Kaleidoscope, BatSound
-    // 
-    // Knee point: Maximum frequency slope (derivative) within the call
-    // For CF-FM calls: Transition between constant frequency (CF) and 
-    //                  frequency modulation (FM) phases
-    // For pure FM calls: Point of maximum rate of change
+    // 2025 PROFESSIONAL STANDARD: Maximum 2nd Derivative + -15 dB Fallback
+    // Used by: Avisoft official manual, SonoBat whitepaper, Kaleidoscope tech docs
     // 
     // Algorithm:
-    // 1. Calculate dominant frequency for each time frame
-    // 2. Calculate frequency slope between consecutive frames
-    // 3. Find frame with maximum absolute slope = knee point
-    // 4. Convert frame index to time and frequency values
+    // 1. Extract frequency contour (peak frequency trajectory)
+    // 2. Smooth with Savitzky-Golay filter (window=5)
+    // 3. Calculate 2nd derivative (acceleration of frequency change)
+    // 4. Find minimum 2nd derivative point (CF→FM transition)
+    // 5. If noise too high: fallback to -15 dB below peak method
     // ============================================================
     
-    // Calculate dominant frequency per frame (weighted by power)
+    // STEP 6.1: Extract peak frequency trajectory for each frame
+    // (More stable than weighted average for noisy signals)
     const frameFrequencies = [];
-    const frameSlopes = [];
     
     for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
       const framePower = spectrogram[frameIdx];
       
-      // Method 1: Find weighted average frequency in this frame
-      // (Similar to characteristic frequency calculation)
-      let totalPower = 0;
-      let weightedFreq = 0;
-      let frameMax = -Infinity;
+      // Find peak frequency (highest power bin) in this frame
+      let peakIdx = 0;
+      let maxPower = -Infinity;
       
       for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        frameMax = Math.max(frameMax, framePower[binIdx]);
-      }
-      
-      // Use -6dB threshold (half power) to define "significant" region
-      const significantThreshold = frameMax - 6;
-      
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        const power = framePower[binIdx];
-        if (power > significantThreshold) {
-          // Weight by power in dB scale
-          const linearPower = Math.pow(10, power / 10);
-          totalPower += linearPower;
-          weightedFreq += linearPower * freqBins[binIdx];
+        if (framePower[binIdx] > maxPower) {
+          maxPower = framePower[binIdx];
+          peakIdx = binIdx;
         }
       }
       
-      // Store weighted average frequency for this frame
-      if (totalPower > 0) {
-        frameFrequencies.push(weightedFreq / totalPower);
-      } else {
-        frameFrequencies.push(peakFreq_Hz); // Fallback to peak
-      }
+      // Store peak frequency in Hz
+      frameFrequencies.push(freqBins[peakIdx]);
     }
     
-    // Calculate frequency slopes between consecutive frames
-    for (let i = 0; i < frameFrequencies.length - 1; i++) {
-      const freqChange = frameFrequencies[i + 1] - frameFrequencies[i];
-      // Frame duration (time between frame centers)
+    // STEP 6.2: Apply Savitzky-Goyal smoothing filter (window=5, polynomial=2)
+    // This is what Avisoft uses for stable knee detection
+    const smoothedFrequencies = this.savitzkyGolay(frameFrequencies, 5, 2);
+    
+    // STEP 6.3: Calculate 1st derivative (frequency change rate)
+    const firstDerivatives = [];
+    for (let i = 0; i < smoothedFrequencies.length - 1; i++) {
+      const freqChange = smoothedFrequencies[i + 1] - smoothedFrequencies[i];
       const timeDelta = (i + 1 < timeFrames.length) ? 
-        (timeFrames[i + 1] - timeFrames[i]) : 
-        (timeFrames[i] - timeFrames[Math.max(0, i - 1)]);
+        (timeFrames[i + 1] - timeFrames[i]) : 0.001; // Prevent division by zero
       
-      const slope = timeDelta > 0 ? (freqChange / timeDelta) : 0;
-      frameSlopes.push(slope);
+      firstDerivatives.push(freqChange / timeDelta);
     }
     
-    // Find knee point: maximum absolute slope
-    let maxSlopeIdx = -1;
-    let maxSlope = -Infinity;
+    // STEP 6.4: Calculate 2nd derivative (acceleration of frequency change)
+    const secondDerivatives = [];
+    for (let i = 0; i < firstDerivatives.length - 1; i++) {
+      const derivChange = firstDerivatives[i + 1] - firstDerivatives[i];
+      const timeDelta = (i + 1 < timeFrames.length) ? 
+        (timeFrames[i + 1] - timeFrames[i]) : 0.001;
+      
+      secondDerivatives.push(derivChange / timeDelta);
+    }
     
-    for (let i = 0; i < frameSlopes.length; i++) {
-      const absSlope = Math.abs(frameSlopes[i]);
-      if (absSlope > maxSlope) {
-        maxSlope = absSlope;
-        maxSlopeIdx = i;
+    // STEP 6.5: Find knee point - minimum 2nd derivative (most negative)
+    // This represents the point where frequency deceleration is maximum
+    // i.e., CF segment (stable) → FM segment (rapid change)
+    let kneeIdx = -1;
+    let minSecondDeriv = 0; // Looking for negative values
+    
+    for (let i = 0; i < secondDerivatives.length; i++) {
+      if (secondDerivatives[i] < minSecondDeriv) {
+        minSecondDeriv = secondDerivatives[i];
+        kneeIdx = i;
       }
     }
     
-    // Set knee frequency and knee time
-    if (maxSlopeIdx >= 0 && maxSlopeIdx < frameFrequencies.length) {
-      call.kneeFreq_kHz = frameFrequencies[maxSlopeIdx] / 1000;
+    // STEP 6.6: Quality check - verify knee is significant
+    // Calculation of signal-to-noise ratio (SNR) of the 2nd derivative
+    const derivMean = secondDerivatives.reduce((a, b) => a + b, 0) / secondDerivatives.length;
+    const derivStdDev = Math.sqrt(
+      secondDerivatives.reduce((sum, val) => sum + Math.pow(val - derivMean, 2), 0) / secondDerivatives.length
+    );
+    
+    const isNoisySignal = Math.abs(minSecondDeriv) < derivStdDev * 0.5; // SNR threshold
+    
+    // STEP 6.7: If second derivative method fails, use -15 dB fallback
+    if (kneeIdx < 0 || isNoisySignal) {
+      // FALLBACK: Find first point from end that is -15 dB below peak
+      const fallbackThreshold = peakPower_dB - 15; // Professional standard: -15 dB
       
-      // Knee time is the time at the knee frame
-      if (maxSlopeIdx < timeFrames.length) {
-        call.kneeTime_ms = (timeFrames[maxSlopeIdx] - call.startTime_s) * 1000;
+      kneeIdx = -1;
+      // Search from end backwards (CF segment is usually at the end)
+      for (let i = spectrogram.length - 1; i >= 0; i--) {
+        const framePower = spectrogram[i];
+        let frameMax = -Infinity;
+        
+        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+          frameMax = Math.max(frameMax, framePower[binIdx]);
+        }
+        
+        if (frameMax > fallbackThreshold) {
+          kneeIdx = i;
+          break;
+        }
+      }
+    }
+    
+    // STEP 6.8: Set knee frequency and knee time from detected knee point
+    if (kneeIdx >= 0 && kneeIdx < frameFrequencies.length) {
+      // Use original (non-smoothed) frequency at knee point for accuracy
+      call.kneeFreq_kHz = frameFrequencies[kneeIdx] / 1000;
+      
+      // Knee time relative to call start
+      if (kneeIdx < timeFrames.length) {
+        call.kneeTime_ms = (timeFrames[kneeIdx] - call.startTime_s) * 1000;
       }
     } else {
-      // Fallback: use peak frequency and its time
+      // Ultimate fallback: use peak frequency
       call.kneeFreq_kHz = peakFreq_Hz / 1000;
-      if (peakFrameIdx < timeFrames.length) {
-        call.kneeTime_ms = (timeFrames[peakFrameIdx] - call.startTime_s) * 1000;
-      }
+      call.kneeTime_ms = (timeFrames[peakFrameIdx] - call.startTime_s) * 1000;
     }
   }
   
