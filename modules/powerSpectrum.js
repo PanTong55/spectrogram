@@ -167,6 +167,263 @@ export function showPowerSpectrumPopup({
   // 添加事件監聽器（overlap input）
   overlapInput.addEventListener('change', redrawSpectrum);
 
+  // ========================================================
+  // 初始化 Bat Call Controls 事件監聽器
+  // ========================================================
+  const batCallThresholdInput = popup.querySelector('#callThreshold_dB');
+  const batCallStartEndThresholdInput = popup.querySelector('#startEndThreshold_dB');
+  const batCallCharFreqPercentInput = popup.querySelector('#characteristicFreq_percentEnd');
+  const batCallMinDurationInput = popup.querySelector('#minCallDuration_ms');
+  const batCallHopPercentInput = popup.querySelector('#hopPercent');
+  const batCallFFTSizeBtn = popup.querySelector('#batCallFFTSize');
+
+  // 初始化 FFT Size Dropdown
+  const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
+    { label: '512', value: '512' },
+    { label: '1024', value: '1024' },
+    { label: '2048', value: '2048' }
+  ], {
+    onChange: async () => {
+      // 更新檢測器配置並重新繪製
+      const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+      const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+      const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+      const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+      
+      const fftSizeItems = ['512', '1024', '2048'];
+      const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+      detector.config.callThreshold_dB = callThreshold;
+      detector.config.startEndThreshold_dB = startEndThreshold;
+      detector.config.characteristicFreq_percentEnd = charFreqPercent;
+      detector.config.minCallDuration_ms = minDuration;
+      detector.config.fftSize = fftSize;
+      detector.config.hopPercent = hopPercent;
+
+      await redrawSpectrum();
+    }
+  });
+
+  // 設置初始選項
+  batCallFFTDropdown.select(1, { triggerOnChange: false }); // Default to '1024'
+
+  // 為所有輸入框添加事件監聽器
+  batCallThresholdInput.addEventListener('change', async () => {
+    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+    detector.config.callThreshold_dB = callThreshold;
+    detector.config.startEndThreshold_dB = startEndThreshold;
+    detector.config.characteristicFreq_percentEnd = charFreqPercent;
+    detector.config.minCallDuration_ms = minDuration;
+    detector.config.fftSize = fftSize;
+    detector.config.hopPercent = hopPercent;
+
+    await redrawSpectrum();
+  });
+
+  batCallThresholdInput.addEventListener('input', () => {
+    clearTimeout(batCallThresholdInput._updateTimeout);
+    batCallThresholdInput._updateTimeout = setTimeout(async () => {
+      const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+      const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+      const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+      const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+      
+      const fftSizeItems = ['512', '1024', '2048'];
+      const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+      detector.config.callThreshold_dB = callThreshold;
+      detector.config.startEndThreshold_dB = startEndThreshold;
+      detector.config.characteristicFreq_percentEnd = charFreqPercent;
+      detector.config.minCallDuration_ms = minDuration;
+      detector.config.fftSize = fftSize;
+      detector.config.hopPercent = hopPercent;
+
+      await redrawSpectrum();
+    }, 30);
+  });
+
+  batCallStartEndThresholdInput.addEventListener('change', async () => {
+    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+    detector.config.callThreshold_dB = callThreshold;
+    detector.config.startEndThreshold_dB = startEndThreshold;
+    detector.config.characteristicFreq_percentEnd = charFreqPercent;
+    detector.config.minCallDuration_ms = minDuration;
+    detector.config.fftSize = fftSize;
+    detector.config.hopPercent = hopPercent;
+
+    await redrawSpectrum();
+  });
+
+  batCallStartEndThresholdInput.addEventListener('input', () => {
+    clearTimeout(batCallStartEndThresholdInput._updateTimeout);
+    batCallStartEndThresholdInput._updateTimeout = setTimeout(async () => {
+      const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+      const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+      const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+      const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+      
+      const fftSizeItems = ['512', '1024', '2048'];
+      const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+      detector.config.callThreshold_dB = callThreshold;
+      detector.config.startEndThreshold_dB = startEndThreshold;
+      detector.config.characteristicFreq_percentEnd = charFreqPercent;
+      detector.config.minCallDuration_ms = minDuration;
+      detector.config.fftSize = fftSize;
+      detector.config.hopPercent = hopPercent;
+
+      await redrawSpectrum();
+    }, 30);
+  });
+
+  batCallCharFreqPercentInput.addEventListener('change', async () => {
+    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+    detector.config.callThreshold_dB = callThreshold;
+    detector.config.startEndThreshold_dB = startEndThreshold;
+    detector.config.characteristicFreq_percentEnd = charFreqPercent;
+    detector.config.minCallDuration_ms = minDuration;
+    detector.config.fftSize = fftSize;
+    detector.config.hopPercent = hopPercent;
+
+    await redrawSpectrum();
+  });
+
+  batCallCharFreqPercentInput.addEventListener('input', () => {
+    clearTimeout(batCallCharFreqPercentInput._updateTimeout);
+    batCallCharFreqPercentInput._updateTimeout = setTimeout(async () => {
+      const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+      const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+      const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+      const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+      
+      const fftSizeItems = ['512', '1024', '2048'];
+      const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+      detector.config.callThreshold_dB = callThreshold;
+      detector.config.startEndThreshold_dB = startEndThreshold;
+      detector.config.characteristicFreq_percentEnd = charFreqPercent;
+      detector.config.minCallDuration_ms = minDuration;
+      detector.config.fftSize = fftSize;
+      detector.config.hopPercent = hopPercent;
+
+      await redrawSpectrum();
+    }, 30);
+  });
+
+  batCallMinDurationInput.addEventListener('change', async () => {
+    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+    detector.config.callThreshold_dB = callThreshold;
+    detector.config.startEndThreshold_dB = startEndThreshold;
+    detector.config.characteristicFreq_percentEnd = charFreqPercent;
+    detector.config.minCallDuration_ms = minDuration;
+    detector.config.fftSize = fftSize;
+    detector.config.hopPercent = hopPercent;
+
+    await redrawSpectrum();
+  });
+
+  batCallMinDurationInput.addEventListener('input', () => {
+    clearTimeout(batCallMinDurationInput._updateTimeout);
+    batCallMinDurationInput._updateTimeout = setTimeout(async () => {
+      const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+      const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+      const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+      const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+      
+      const fftSizeItems = ['512', '1024', '2048'];
+      const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+      detector.config.callThreshold_dB = callThreshold;
+      detector.config.startEndThreshold_dB = startEndThreshold;
+      detector.config.characteristicFreq_percentEnd = charFreqPercent;
+      detector.config.minCallDuration_ms = minDuration;
+      detector.config.fftSize = fftSize;
+      detector.config.hopPercent = hopPercent;
+
+      await redrawSpectrum();
+    }, 30);
+  });
+
+  batCallHopPercentInput.addEventListener('change', async () => {
+    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+    detector.config.callThreshold_dB = callThreshold;
+    detector.config.startEndThreshold_dB = startEndThreshold;
+    detector.config.characteristicFreq_percentEnd = charFreqPercent;
+    detector.config.minCallDuration_ms = minDuration;
+    detector.config.fftSize = fftSize;
+    detector.config.hopPercent = hopPercent;
+
+    await redrawSpectrum();
+  });
+
+  batCallHopPercentInput.addEventListener('input', () => {
+    clearTimeout(batCallHopPercentInput._updateTimeout);
+    batCallHopPercentInput._updateTimeout = setTimeout(async () => {
+      const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+      const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+      const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+      const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+      const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+      
+      const fftSizeItems = ['512', '1024', '2048'];
+      const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+      detector.config.callThreshold_dB = callThreshold;
+      detector.config.startEndThreshold_dB = startEndThreshold;
+      detector.config.characteristicFreq_percentEnd = charFreqPercent;
+      detector.config.minCallDuration_ms = minDuration;
+      detector.config.fftSize = fftSize;
+      detector.config.hopPercent = hopPercent;
+
+      await redrawSpectrum();
+    }, 30);
+  });
+
   // 返回 popup 對象和更新函數
   return {
     popup,
@@ -207,7 +464,7 @@ function createPopupWindow() {
 
   const canvas = document.createElement('canvas');
   canvas.width = 488;
-  canvas.height = 380;
+  canvas.height = 488;
 
   canvasContainer.appendChild(canvas);
   popup.appendChild(canvasContainer);
@@ -417,84 +674,6 @@ function createPopupWindow() {
 
   // 拖動功能
   makeDraggable(popup, dragBar);
-
-  // ========================================================
-  // 初始化 Bat Call Controls 事件監聽器
-  // ========================================================
-  const batCallThresholdInput = popup.querySelector('#callThreshold_dB');
-  const batCallStartEndThresholdInput = popup.querySelector('#startEndThreshold_dB');
-  const batCallCharFreqPercentInput = popup.querySelector('#characteristicFreq_percentEnd');
-  const batCallMinDurationInput = popup.querySelector('#minCallDuration_ms');
-  const batCallHopPercentInput = popup.querySelector('#hopPercent');
-  const batCallFFTSizeBtn = popup.querySelector('#batCallFFTSize');
-
-  // 初始化 FFT Size Dropdown
-  const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
-    { label: '512', value: '512' },
-    { label: '1024', value: '1024' },
-    { label: '2048', value: '2048' }
-  ], {
-    onChange: () => updateDetectorAndRedraw()
-  });
-
-  // 設置初始選項
-  batCallFFTDropdown.select(1, { triggerOnChange: false }); // Default to '1024'
-
-  // 更新檢測器配置並重新繪製的函數
-  const updateDetectorAndRedraw = async () => {
-    // 獲取所有控制面板的值
-    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
-    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
-    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
-    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
-    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
-    
-    const fftSizeItems = ['512', '1024', '2048'];
-    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
-
-    // 更新 detector 配置
-    detector.config.callThreshold_dB = callThreshold;
-    detector.config.startEndThreshold_dB = startEndThreshold;
-    detector.config.characteristicFreq_percentEnd = charFreqPercent;
-    detector.config.minCallDuration_ms = minDuration;
-    detector.config.fftSize = fftSize;
-    detector.config.hopPercent = hopPercent;
-
-    // 重新繪製頻譜並更新參數
-    await redrawSpectrum();
-  };
-
-  // 為所有輸入框添加事件監聽器
-  batCallThresholdInput.addEventListener('change', updateDetectorAndRedraw);
-  batCallThresholdInput.addEventListener('input', () => {
-    // 實時更新但稍微延遲以避免過度計算
-    clearTimeout(batCallThresholdInput._updateTimeout);
-    batCallThresholdInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
-  });
-
-  batCallStartEndThresholdInput.addEventListener('change', updateDetectorAndRedraw);
-  batCallStartEndThresholdInput.addEventListener('input', () => {
-    clearTimeout(batCallStartEndThresholdInput._updateTimeout);
-    batCallStartEndThresholdInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
-  });
-
-  batCallCharFreqPercentInput.addEventListener('change', updateDetectorAndRedraw);
-  batCallCharFreqPercentInput.addEventListener('input', () => {
-    clearTimeout(batCallCharFreqPercentInput._updateTimeout);
-    batCallCharFreqPercentInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
-  });
-
-  batCallMinDurationInput.addEventListener('change', updateDetectorAndRedraw);
-  batCallMinDurationInput.addEventListener('input', () => {
-    clearTimeout(batCallMinDurationInput._updateTimeout);
-    batCallMinDurationInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
-  });
-
-  batCallHopPercentInput.addEventListener('change', updateDetectorAndRedraw);
-  batCallHopPercentInput.addEventListener('input', () => {
-    clearTimeout(batCallHopPercentInput._updateTimeout);
-    batCallHopPercentInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
-  });
 
   return popup;
 }
