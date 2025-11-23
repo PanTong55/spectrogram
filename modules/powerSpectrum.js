@@ -47,7 +47,13 @@ export function showPowerSpectrumPopup({
     { label: '1024', value: '1024' },
     { label: '2048', value: '2048' }
   ], {
-    onChange: () => redrawSpectrum()
+    onChange: () => {
+      // 同時更新 detector 配置
+      const fftSizeItems = ['512', '1024', '2048'];
+      const newFftSize = parseInt(fftSizeItems[fftDropdown.selectedIndex] || '1024', 10);
+      detector.config.fftSize = newFftSize;
+      redrawSpectrum();
+    }
   });
 
   // 設置初始選項
@@ -87,12 +93,13 @@ export function showPowerSpectrumPopup({
       }
     }
     
-    // 從 dropdown 獲取當前值
+    // 從 dropdown 獲取當前值（只適用於 Power Spectrum 控制面板）
     const windowTypeItems = ['blackman', 'gauss', 'hamming', 'hann', 'rectangular', 'triangular'];
     windowType = windowTypeItems[typeDropdown.selectedIndex] || 'hann';
     
-    const fftSizeItems = ['512', '1024', '2048'];
-    fftSize = parseInt(fftSizeItems[fftDropdown.selectedIndex] || '1024', 10);
+    // 使用 detector.config 中的 FFT 大小（由 Bat Call Controls 或 Power Spectrum 設置）
+    fftSize = detector.config.fftSize;
+    
     let overlapValue = overlap;
     if (overlapInput.value.trim() !== '') {
       overlapValue = parseInt(overlapInput.value, 10);
