@@ -20,7 +20,8 @@ export const DEFAULT_DETECTION_CONFIG = {
   callThreshold_dB: -24,
   
   // Start/End frequency threshold (dB below peak for finding edges)
-  startEndThreshold_dB: -18,
+  // Changed from -18 to -24 for more conservative edge detection
+  startEndThreshold_dB: -24,
   
   // Characteristic frequency is defined as lowest or average frequency 
   // in the last 10-20% of the call duration
@@ -95,8 +96,8 @@ export class BatCall {
     this.duration_ms = null;        // Total duration (milliseconds)
     
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
-    this.startFreq_kHz = null;      // Start frequency (kHz) - from -18dB threshold
-    this.endFreq_kHz = null;        // End frequency (kHz) - from -18dB threshold
+    this.startFreq_kHz = null;      // Start frequency (kHz) - from first frame above -24dB threshold
+    this.endFreq_kHz = null;        // End frequency (kHz) - from last frame above -24dB threshold
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.bandwidth_kHz = null;      // Bandwidth = startFreq - endFreq
     
@@ -219,11 +220,33 @@ export class BatCallDetector {
       this.measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution);
       
       // COMMERCIAL STANDARD: Set Flow and Fhigh based on actual call frequency range
-      // (Avisoft, SonoBat, Kaleidoscope, BatSound all use this approach)
-      // Flow = lowest frequency in the call (in Hz)
-      // Fhigh = highest frequency in the call (in kHz)
-      call.Flow = call.endFreq_kHz * 1000;   // Convert kHz to Hz
-      call.Fhigh = call.startFreq_kHz;       // Already in kHz
+      // Frequency terminology (must be distinguished):
+      // ============================================================
+      // START.FREQ (startFreq_kHz): 
+      //   = Frequency value at the 1st frame of call signal
+      //   = Highest frequency in the entire call (for downward FM)
+      //   = Derived from first frame above -24dB threshold
+      // 
+      // END.FREQ (endFreq_kHz):
+      //   = Frequency value at the last frame of call signal
+      //   = Lowest frequency in the entire call (for downward FM)
+      //   = Derived from last frame above -24dB threshold
+      // 
+      // HIGH.FREQ (Fhigh):
+      //   = Highest frequency present during entire call
+      //   = Maximum frequency value across all call frames
+      //   = For downward FM: same as startFreq_kHz
+      //   = Unit: kHz
+      // 
+      // LOW.FREQ (Flow):
+      //   = Lowest frequency present during entire call
+      //   = Minimum frequency value across all call frames
+      //   = For downward FM: same as endFreq_kHz
+      //   = Unit: Hz
+      // ============================================================
+      // Avisoft, SonoBat, Kaleidoscope, BatSound all use this approach
+      call.Flow = call.endFreq_kHz * 1000;   // Lowest freq in call (Hz)
+      call.Fhigh = call.startFreq_kHz;       // Highest freq in call (kHz)
       
       // Classify call type (CF, FM, or CF-FM)
       call.callType = CallTypeClassifier.classify(call);
@@ -407,10 +430,11 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 2: Find start frequency from first frame
-    // Professional standard: threshold at -18dB below global peak
+    // Professional standard: threshold at -24dB below global peak
+    // This is the highest frequency in the call (from first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
-    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -18dB
+    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB
     const firstFramePower = spectrogram[0];
     let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
@@ -439,7 +463,8 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 3: Find end frequency from last frame
-    // Professional standard: threshold at -18dB below global peak
+    // Professional standard: threshold at -24dB below global peak
+    // This is the lowest frequency in the call (from last frame)
     // Search from LOW to HIGH frequency (normal bin order)
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
@@ -643,10 +668,10 @@ export class BatCallDetector {
       }
     }
     
-    // Second pass: find frequency range based on -18dB threshold from peak
-    // (Commercial standard from Avisoft)
+    // Second pass: find frequency range based on -24dB threshold from peak
+    // (Commercial standard from Avisoft, SonoBat)
     if (peakPower_dB > -Infinity) {
-      const threshold_dB = peakPower_dB + startEndThreshold_dB; // Typically -18dB
+      const threshold_dB = peakPower_dB + startEndThreshold_dB; // Typically -24dB
       
       // Find lowest frequency above threshold
       for (let binIdx = minBin; binIdx <= maxBin; binIdx++) {
@@ -682,7 +707,10 @@ export class BatCallDetector {
     call.peakPower_dB = peakPower_dB;
     
     // Set Flow and Fhigh based on detected frequency range
-    // If no valid range found, use analysis window bounds
+    // (Commercial standard from Avisoft, SonoBat, Kaleidoscope, BatSound)
+    // Flow = Lowest frequency in the selection (Hz)
+    // Fhigh = Highest frequency in the selection (kHz)
+    // Note: For direct user selection, may not have complete frequency sweep
     call.Flow = lowestFreq_Hz ? lowestFreq_Hz : (flowKHz * 1000);     // Hz
     call.Fhigh = highestFreq_Hz ? (highestFreq_Hz / 1000) : fhighKHz; // kHz
     
