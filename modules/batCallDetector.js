@@ -542,7 +542,7 @@ export class BatCallDetector {
       
       // 如果頻率差異超過 3 kHz，說明進入可疑區域
       // 異常通常表現為 >= 5-10 kHz 的跳躍
-      if (freqDifference > 3.0) {
+      if (freqDifference > 3000) {
         // 選擇異常前的閾值（這是最後一個"正常"測量）
         optimalThreshold = measurements[i - 1].threshold;
         break;
