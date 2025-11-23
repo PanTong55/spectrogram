@@ -261,6 +261,106 @@ function createPopupWindow() {
 
   popup.appendChild(controlPanel);
 
+  // 建立 Bat Call 檢測參數控制面板
+  const batCallControlPanel = document.createElement('div');
+  batCallControlPanel.className = 'bat-call-controls';
+  batCallControlPanel.id = 'batCallControlsPanel';
+
+  // callThreshold_dB 控制
+  const callThresholdControl = document.createElement('label');
+  const callThresholdLabel = document.createElement('span');
+  callThresholdLabel.textContent = 'Call Thresh:';
+  callThresholdControl.appendChild(callThresholdLabel);
+  
+  const callThresholdInput = document.createElement('input');
+  callThresholdInput.id = 'callThreshold_dB';
+  callThresholdInput.type = 'number';
+  callThresholdInput.value = '-24';
+  callThresholdInput.step = '1';
+  callThresholdInput.title = 'Energy threshold (dB)';
+  callThresholdControl.appendChild(callThresholdInput);
+  batCallControlPanel.appendChild(callThresholdControl);
+
+  // startEndThreshold_dB 控制
+  const startEndThresholdControl = document.createElement('label');
+  const startEndThresholdLabel = document.createElement('span');
+  startEndThresholdLabel.textContent = 'Start/End Thresh:';
+  startEndThresholdControl.appendChild(startEndThresholdLabel);
+  
+  const startEndThresholdInput = document.createElement('input');
+  startEndThresholdInput.id = 'startEndThreshold_dB';
+  startEndThresholdInput.type = 'number';
+  startEndThresholdInput.value = '-24';
+  startEndThresholdInput.step = '1';
+  startEndThresholdInput.title = 'Start/End frequency threshold (dB)';
+  startEndThresholdControl.appendChild(startEndThresholdInput);
+  batCallControlPanel.appendChild(startEndThresholdControl);
+
+  // characteristicFreq_percentEnd 控制
+  const charFreqPercentControl = document.createElement('label');
+  const charFreqPercentLabel = document.createElement('span');
+  charFreqPercentLabel.textContent = 'Char Freq %:';
+  charFreqPercentControl.appendChild(charFreqPercentLabel);
+  
+  const charFreqPercentInput = document.createElement('input');
+  charFreqPercentInput.id = 'characteristicFreq_percentEnd';
+  charFreqPercentInput.type = 'number';
+  charFreqPercentInput.value = '20';
+  charFreqPercentInput.min = '1';
+  charFreqPercentInput.max = '100';
+  charFreqPercentInput.step = '1';
+  charFreqPercentInput.title = 'Characteristic frequency percentage end';
+  charFreqPercentControl.appendChild(charFreqPercentInput);
+  batCallControlPanel.appendChild(charFreqPercentControl);
+
+  // minCallDuration_ms 控制
+  const minDurationControl = document.createElement('label');
+  const minDurationLabel = document.createElement('span');
+  minDurationLabel.textContent = 'Min Duration:';
+  minDurationControl.appendChild(minDurationLabel);
+  
+  const minDurationInput = document.createElement('input');
+  minDurationInput.id = 'minCallDuration_ms';
+  minDurationInput.type = 'number';
+  minDurationInput.value = '1';
+  minDurationInput.min = '1';
+  minDurationInput.step = '1';
+  minDurationInput.title = 'Minimum call duration (ms)';
+  minDurationControl.appendChild(minDurationInput);
+  batCallControlPanel.appendChild(minDurationControl);
+
+  // fftSize 控制 (Dropdown)
+  const fftSizeControl = document.createElement('label');
+  const fftSizeLabel = document.createElement('span');
+  fftSizeLabel.textContent = 'FFT Size:';
+  fftSizeControl.appendChild(fftSizeLabel);
+  
+  const fftSizeBtn = document.createElement('button');
+  fftSizeBtn.id = 'batCallFFTSize';
+  fftSizeBtn.className = 'dropdown-button';
+  fftSizeBtn.textContent = '1024';
+  fftSizeControl.appendChild(fftSizeBtn);
+  batCallControlPanel.appendChild(fftSizeControl);
+
+  // hopPercent 控制
+  const hopPercentControl = document.createElement('label');
+  const hopPercentLabel = document.createElement('span');
+  hopPercentLabel.textContent = 'Hop %:';
+  hopPercentControl.appendChild(hopPercentLabel);
+  
+  const hopPercentInput = document.createElement('input');
+  hopPercentInput.id = 'hopPercent';
+  hopPercentInput.type = 'number';
+  hopPercentInput.value = '25';
+  hopPercentInput.min = '1';
+  hopPercentInput.max = '99';
+  hopPercentInput.step = '1';
+  hopPercentInput.title = 'Hop size percentage (overlap = 100 - hopPercent)';
+  hopPercentControl.appendChild(hopPercentInput);
+  batCallControlPanel.appendChild(hopPercentControl);
+
+  popup.appendChild(batCallControlPanel);
+
   // 建立參數顯示面板
   const paramPanel = document.createElement('div');
   paramPanel.className = 'bat-call-parameters-panel';
@@ -317,6 +417,84 @@ function createPopupWindow() {
 
   // 拖動功能
   makeDraggable(popup, dragBar);
+
+  // ========================================================
+  // 初始化 Bat Call Controls 事件監聽器
+  // ========================================================
+  const batCallThresholdInput = popup.querySelector('#callThreshold_dB');
+  const batCallStartEndThresholdInput = popup.querySelector('#startEndThreshold_dB');
+  const batCallCharFreqPercentInput = popup.querySelector('#characteristicFreq_percentEnd');
+  const batCallMinDurationInput = popup.querySelector('#minCallDuration_ms');
+  const batCallHopPercentInput = popup.querySelector('#hopPercent');
+  const batCallFFTSizeBtn = popup.querySelector('#batCallFFTSize');
+
+  // 初始化 FFT Size Dropdown
+  const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
+    { label: '512', value: '512' },
+    { label: '1024', value: '1024' },
+    { label: '2048', value: '2048' }
+  ], {
+    onChange: () => updateDetectorAndRedraw()
+  });
+
+  // 設置初始選項
+  batCallFFTDropdown.select(1, { triggerOnChange: false }); // Default to '1024'
+
+  // 更新檢測器配置並重新繪製的函數
+  const updateDetectorAndRedraw = async () => {
+    // 獲取所有控制面板的值
+    const callThreshold = parseFloat(batCallThresholdInput.value) || -24;
+    const startEndThreshold = parseFloat(batCallStartEndThresholdInput.value) || -24;
+    const charFreqPercent = parseInt(batCallCharFreqPercentInput.value) || 20;
+    const minDuration = parseInt(batCallMinDurationInput.value) || 1;
+    const hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    
+    const fftSizeItems = ['512', '1024', '2048'];
+    const fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+
+    // 更新 detector 配置
+    detector.config.callThreshold_dB = callThreshold;
+    detector.config.startEndThreshold_dB = startEndThreshold;
+    detector.config.characteristicFreq_percentEnd = charFreqPercent;
+    detector.config.minCallDuration_ms = minDuration;
+    detector.config.fftSize = fftSize;
+    detector.config.hopPercent = hopPercent;
+
+    // 重新繪製頻譜並更新參數
+    await redrawSpectrum();
+  };
+
+  // 為所有輸入框添加事件監聽器
+  batCallThresholdInput.addEventListener('change', updateDetectorAndRedraw);
+  batCallThresholdInput.addEventListener('input', () => {
+    // 實時更新但稍微延遲以避免過度計算
+    clearTimeout(batCallThresholdInput._updateTimeout);
+    batCallThresholdInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
+  });
+
+  batCallStartEndThresholdInput.addEventListener('change', updateDetectorAndRedraw);
+  batCallStartEndThresholdInput.addEventListener('input', () => {
+    clearTimeout(batCallStartEndThresholdInput._updateTimeout);
+    batCallStartEndThresholdInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
+  });
+
+  batCallCharFreqPercentInput.addEventListener('change', updateDetectorAndRedraw);
+  batCallCharFreqPercentInput.addEventListener('input', () => {
+    clearTimeout(batCallCharFreqPercentInput._updateTimeout);
+    batCallCharFreqPercentInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
+  });
+
+  batCallMinDurationInput.addEventListener('change', updateDetectorAndRedraw);
+  batCallMinDurationInput.addEventListener('input', () => {
+    clearTimeout(batCallMinDurationInput._updateTimeout);
+    batCallMinDurationInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
+  });
+
+  batCallHopPercentInput.addEventListener('change', updateDetectorAndRedraw);
+  batCallHopPercentInput.addEventListener('input', () => {
+    clearTimeout(batCallHopPercentInput._updateTimeout);
+    batCallHopPercentInput._updateTimeout = setTimeout(updateDetectorAndRedraw, 500);
+  });
 
   return popup;
 }

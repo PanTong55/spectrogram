@@ -2340,7 +2340,7 @@ input.tag-button.editing {
 .power-spectrum-popup {
   position: fixed;
   width: 520px;
-  height: 620px;
+  height: 820px;
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
@@ -2447,4 +2447,52 @@ input.tag-button.editing {
 
 .bat-call-parameters-table tr:last-child td {
   border-bottom: none;
+}
+
+/* === Bat Call Controls Panel === */
+.bat-call-controls {
+  padding: 5px;
+  margin: 5px;
+  background: #f5f5f5;
+  display: flex;
+  border-radius: 5px;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+  border-top: 1px solid #ddd;
+}
+
+.bat-call-controls label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.bat-call-controls span {
+  font-weight: 600;
+  color: #333;
+  font-size: 11px;
+}
+
+.bat-call-controls input[type="number"],
+.bat-call-controls .dropdown-button {
+  padding: 3px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: 'Noto Sans HK', sans-serif;
+  background: white;
+}
+
+.bat-call-controls input[type="number"] {
+  width: 45px;
+  height: 18px;
+}
+
+.bat-call-controls .dropdown-button {
+  padding: 3px 8px;
+  cursor: pointer;
 }
