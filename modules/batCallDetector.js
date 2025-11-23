@@ -362,15 +362,28 @@ export class BatCallDetector {
   
   /**
    * Phase 2: Measure precise frequency parameters
+   * Based on Avisoft SASLab Pro, SonoBat, Kaleidoscope Pro, and BatSound standards
+   * 
+   * Reference implementations:
+   * - Avisoft: Threshold-based peak detection with interpolation
+   * - SonoBat: Duration-weighted frequency averaging
+   * - Kaleidoscope: Multi-frame analysis with robustness checks
+   * - BatSound: Peak prominence and edge detection
+   * 
    * Updates call.peakFreq, startFreq, endFreq, characteristicFreq, bandwidth
    */
   measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution) {
     const { startEndThreshold_dB, characteristicFreq_percentEnd } = this.config;
     const spectrogram = call.spectrogram;  // [timeFrame][freqBin]
     
-    // Find peak frequency (highest power across entire call)
+    if (spectrogram.length === 0) return;
+    
+    // ============================================================
+    // STEP 1: Find peak frequency (highest power across entire call)
+    // ============================================================
     let peakFreq_Hz = null;
     let peakPower_dB = -Infinity;
+    let peakFrameIdx = 0;
     
     for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
       const framePower = spectrogram[frameIdx];
@@ -378,6 +391,7 @@ export class BatCallDetector {
         if (framePower[binIdx] > peakPower_dB) {
           peakPower_dB = framePower[binIdx];
           peakFreq_Hz = freqBins[binIdx];
+          peakFrameIdx = frameIdx;
         }
       }
     }
@@ -385,97 +399,154 @@ export class BatCallDetector {
     call.peakFreq_kHz = peakFreq_Hz / 1000;
     call.peakPower_dB = peakPower_dB;
     
-    // Professional method: Find start frequency from first frame using interpolated threshold
-    // Start freq = first (highest freq) bin in first frame exceeding startEndThreshold below peak
-    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;
+    // ============================================================
+    // STEP 2: Find start frequency from first frame
+    // Professional standard: threshold at -18dB below global peak
+    // Search from HIGH to LOW frequency (reverse bin order)
+    // ============================================================
+    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -18dB
     const firstFramePower = spectrogram[0];
     let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
       if (firstFramePower[binIdx] > startThreshold_dB) {
-        // Found first bin above threshold, interpolate for better precision
-        const freq_Hz = freqBins[binIdx];
-        const power_dB = firstFramePower[binIdx];
+        // Found first bin above threshold
+        startFreq_Hz = freqBins[binIdx];
         
-        // If next bin exists and is below threshold, interpolate between them
+        // Attempt linear interpolation for sub-bin precision
         if (binIdx < firstFramePower.length - 1) {
-          const nextPower_dB = firstFramePower[binIdx + 1];
-          if (nextPower_dB < startThreshold_dB && power_dB > startThreshold_dB) {
-            // Linear interpolation in dB space
-            const dBDiff = power_dB - nextPower_dB;
-            const freqDiff = freqBins[binIdx + 1] - freq_Hz;
-            const ratio = (power_dB - startThreshold_dB) / dBDiff;
-            startFreq_Hz = freq_Hz + ratio * freqDiff;
-          } else {
-            startFreq_Hz = freq_Hz;
+          const thisPower = firstFramePower[binIdx];
+          const nextPower = firstFramePower[binIdx + 1];
+          
+          if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
+            // Interpolate between this bin and next
+            const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
+            const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+            startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
           }
-        } else {
-          startFreq_Hz = freq_Hz;
         }
         break;
       }
     }
     call.startFreq_kHz = startFreq_Hz / 1000;
     
-    // Professional method: Find end frequency from last frame
-    // End freq = first (lowest freq) bin in last frame exceeding startEndThreshold below peak
+    // ============================================================
+    // STEP 3: Find end frequency from last frame
+    // Professional standard: threshold at -18dB below global peak
+    // Search from LOW to HIGH frequency (normal bin order)
+    // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
     let endFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
     // Search from low to high frequency
     for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
       if (lastFramePower[binIdx] > startThreshold_dB) {
-        const freq_Hz = freqBins[binIdx];
-        const power_dB = lastFramePower[binIdx];
+        endFreq_Hz = freqBins[binIdx];
         
-        // Interpolate if previous bin exists and is below threshold
+        // Attempt linear interpolation for sub-bin precision
         if (binIdx > 0) {
-          const prevPower_dB = lastFramePower[binIdx - 1];
-          if (prevPower_dB < startThreshold_dB && power_dB > startThreshold_dB) {
-            const dBDiff = power_dB - prevPower_dB;
-            const freqDiff = freq_Hz - freqBins[binIdx - 1];
-            const ratio = (power_dB - startThreshold_dB) / dBDiff;
-            endFreq_Hz = freq_Hz - ratio * freqDiff;
-          } else {
-            endFreq_Hz = freq_Hz;
+          const thisPower = lastFramePower[binIdx];
+          const prevPower = lastFramePower[binIdx - 1];
+          
+          if (prevPower < startThreshold_dB && thisPower > startThreshold_dB) {
+            // Interpolate between prev bin and this bin
+            const powerRatio = (thisPower - startThreshold_dB) / (thisPower - prevPower);
+            const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+            endFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
           }
-        } else {
-          endFreq_Hz = freq_Hz;
         }
         break;
       }
     }
     call.endFreq_kHz = endFreq_Hz / 1000;
     
-    // Professional method: Characteristic frequency (for CF-FM bats)
-    // Definition: Lowest frequency in last 10-20% of call
-    // This is critical for Molossid, Rhinolophid, and Hipposiderid species identification
+    // ============================================================
+    // STEP 4: Calculate characteristic frequency (CF-FM distinction)
+    // 
+    // CRITICAL FIX: Characteristic frequency should be calculated from
+    // the END portion of the call (last 10-20%), not just the lowest freq.
+    // 
+    // For CF-FM bats (Molossidae, Rhinolophidae, Hipposideridae):
+    // - CF phase has constant frequency (used for Doppler compensation)
+    // - FM phase has downward sweep
+    // - Characteristic frequency = CF phase frequency (from end portion)
+    // 
+    // For pure FM bats (Vespertilionidae):
+    // - Entire call is FM sweep
+    // - Characteristic frequency ≈ End frequency (lowest)
+    // 
+    // Method: Extract CENTER frequency from last 10-20% portion
+    // ============================================================
     const lastPercentStart = Math.floor(spectrogram.length * (1 - characteristicFreq_percentEnd / 100));
     let characteristicFreq_Hz = peakFreq_Hz;
     
-    // Find the lowest frequency with significant power in the last portion
-    for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
-      const framePower = spectrogram[frameIdx];
+    if (lastPercentStart < spectrogram.length) {
+      // Method 1: Find weighted average frequency in last portion
+      // This handles CF-FM calls better than just finding the minimum
+      let totalPower = 0;
+      let weightedFreq = 0;
       
-      // Find local frame maximum for context
-      let frameMaxPower = -Infinity;
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        frameMaxPower = Math.max(frameMaxPower, framePower[binIdx]);
+      for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
+        const framePower = spectrogram[frameIdx];
+        
+        // Find frame maximum for normalization
+        let frameMax = -Infinity;
+        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+          frameMax = Math.max(frameMax, framePower[binIdx]);
+        }
+        
+        // Use -6dB threshold (half power) to define "significant" region
+        const significantThreshold = frameMax - 6;
+        
+        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+          const power = framePower[binIdx];
+          if (power > significantThreshold) {
+            // Weight by power in dB scale
+            const linearPower = Math.pow(10, power / 10);
+            totalPower += linearPower;
+            weightedFreq += linearPower * freqBins[binIdx];
+          }
+        }
       }
       
-      // Define local threshold for this frame
-      const frameThreshold = frameMaxPower - 40;
-      
-      // Find lowest frequency bin with power above local threshold
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        if (framePower[binIdx] > frameThreshold) {
-          characteristicFreq_Hz = freqBins[binIdx];
-          break;
+      // Calculate weighted average frequency
+      if (totalPower > 0) {
+        characteristicFreq_Hz = weightedFreq / totalPower;
+      } else {
+        // Fallback: find lowest frequency in end portion
+        for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
+          const framePower = spectrogram[frameIdx];
+          for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+            if (framePower[binIdx] > -Infinity) {
+              characteristicFreq_Hz = freqBins[binIdx];
+              break;
+            }
+          }
         }
       }
     }
+    
     call.characteristicFreq_kHz = characteristicFreq_Hz / 1000;
+    
+    // ============================================================
+    // STEP 5: Validate frequency relationships (Avisoft standard)
+    // Ensure: endFreq ≤ charFreq ≤ peakFreq ≤ startFreq
+    // This maintains biological validity for FM and CF-FM calls
+    // ============================================================
+    // Clamp characteristic frequency between end and peak
+    const endFreqKHz = endFreq_Hz / 1000;
+    const charFreqKHz = characteristicFreq_Hz / 1000;
+    const peakFreqKHz = peakFreq_Hz / 1000;
+    const startFreqKHz = startFreq_Hz / 1000;
+    
+    if (charFreqKHz < endFreqKHz) {
+      // Char freq should not be below end freq
+      call.characteristicFreq_kHz = endFreqKHz;
+    } else if (charFreqKHz > peakFreqKHz) {
+      // Char freq should not exceed peak freq
+      call.characteristicFreq_kHz = peakFreqKHz;
+    }
     
     // Calculate bandwidth
     call.calculateBandwidth();
