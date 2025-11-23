@@ -563,6 +563,10 @@ export class BatCallDetector {
     }
     call.startFreq_kHz = startFreq_Hz / 1000;
     
+    // STEP 2.5: Record the time point of start frequency (first frame with signal)
+    // This is used as the reference point for knee time calculation
+    const startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
+    
     // ============================================================
     // STEP 3: Find end frequency from last frame
     // Professional standard: threshold at -24dB below global peak
@@ -791,23 +795,20 @@ export class BatCallDetector {
     
     // STEP 6.8: Set knee frequency and knee time from detected knee point
     // 
-    // IMPORTANT: kneeIdx is an index into frameFrequencies array, which has
-    // the same length as spectrogram. timeFrames[0] is the start of this spectrogram segment.
-    // To get knee time relative to the call START, we need to account for any 
-    // refinement done in STEP 1.5 (where startTime_s may have been updated).
+    // CORRECTION (User requirement):
+    // Knee Time = Knee frequency 的時間 - Start frequency 的時間
+    // i.e., the time offset from when Start Frequency is detected to when Knee occurs
     //
-    // The correct formula is:
-    // kneeTime_ms = (timeFrames[kneeIdx] - timeFrames[0]) * 1000
-    // This gives time relative to spectrogram start, which equals call duration start point.
+    // startFreqTime_s = time of first frame (STEP 2.5)
+    // timeFrames[kneeIdx] = time when knee is detected
+    // kneeTime_ms = (timeFrames[kneeIdx] - startFreqTime_s) * 1000
     if (kneeIdx >= 0 && kneeIdx < frameFrequencies.length) {
       // Use original (non-smoothed) frequency at knee point for accuracy
       call.kneeFreq_kHz = frameFrequencies[kneeIdx] / 1000;
       
-      // Knee time relative to spectrogram start (which is refined call start from STEP 1.5)
+      // Knee time = time from start frequency to knee point
       if (kneeIdx >= 0 && kneeIdx < timeFrames.length) {
-        // timeFrames[0] is always the start of the spectrogram segment
-        // which after STEP 1.5 should match call.startTime_s
-        call.kneeTime_ms = (timeFrames[kneeIdx] - timeFrames[0]) * 1000;
+        call.kneeTime_ms = (timeFrames[kneeIdx] - startFreqTime_s) * 1000;
       } else {
         call.kneeTime_ms = 0;
       }
@@ -815,7 +816,7 @@ export class BatCallDetector {
       // Ultimate fallback: use peak frequency
       call.kneeFreq_kHz = peakFreq_Hz / 1000;
       if (peakFrameIdx >= 0 && peakFrameIdx < timeFrames.length) {
-        call.kneeTime_ms = (timeFrames[peakFrameIdx] - timeFrames[0]) * 1000;
+        call.kneeTime_ms = (timeFrames[peakFrameIdx] - startFreqTime_s) * 1000;
       } else {
         call.kneeTime_ms = 0;
       }
