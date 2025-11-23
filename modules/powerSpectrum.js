@@ -675,10 +675,13 @@ function createPopupWindow() {
   // Input field (可顯示 Auto 或具體數值)
   const startEndThresholdInput = document.createElement('input');
   startEndThresholdInput.id = 'startEndThreshold_dB';
-  startEndThresholdInput.type = 'text';
+  startEndThresholdInput.type = 'number';
   startEndThresholdInput.placeholder = 'Auto';
-  startEndThresholdInput.title = 'Auto or Manual Start/End frequency threshold';
+  startEndThresholdInput.title = 'Auto or Manual Start/End frequency threshold (-60 to -24)';
   startEndThresholdInput.style.width = '60px';
+  startEndThresholdInput.min = '-60';
+  startEndThresholdInput.max = '-24';
+  startEndThresholdInput.step = '1';
   
   // 根據模式初始化顯示
   const isAutoMode = window.__batCallControlsMemory.startEndThreshold_dB_isAuto !== false;
