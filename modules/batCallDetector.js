@@ -475,9 +475,9 @@ export class BatCallDetector {
    * 5. Return that threshold as the optimal value
    * 
    * CRITICAL: Must use the SAME calculation as measureFrequencyParameters:
-   * - Find peak power in first frame
-   * - Calculate relative threshold: startThreshold_dB = peakPower_dB + testThreshold_dB
-   * - Measure Start Frequency using this relative threshold
+   * - Find GLOBAL peak power across entire spectrogram (not just first frame)
+   * - Calculate relative threshold: startThreshold_dB = globalPeakPower + testThreshold_dB
+   * - Measure Start Frequency from first frame using this relative threshold
    * 
    * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
    * @param {Array} freqBins - Frequency bin centers (Hz)
@@ -492,22 +492,19 @@ export class BatCallDetector {
     const flowHz = flowKHz * 1000;
     const fhighHz = fhighKHz * 1000;
     
-    // STEP 1: Find peak power in first frame (same as measureFrequencyParameters)
-    let frameMaxPower = -Infinity;
-    let frameMinPower = Infinity;
-    let frameMaxPowerBinIdx = 0;
+    // CRITICAL: Find GLOBAL peak power across entire spectrogram
+    // This is exactly what measureFrequencyParameters does in STEP 1
+    let globalPeakPower_dB = -Infinity;
     
-    for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
-      const power = firstFramePower[binIdx];
-      if (power > frameMaxPower) {
-        frameMaxPower = power;
-        frameMaxPowerBinIdx = binIdx;
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        globalPeakPower_dB = Math.max(globalPeakPower_dB, framePower[binIdx]);
       }
-      frameMinPower = Math.min(frameMinPower, power);
     }
     
-    const frameMaxFreq_kHz = freqBins[frameMaxPowerBinIdx] / 1000;
-    console.log(`[DEBUG] First Frame - Max Power: ${frameMaxPower.toFixed(2)} dB at ${frameMaxFreq_kHz.toFixed(2)} kHz, Min Power: ${frameMinPower.toFixed(2)} dB`);
+    console.log(`[DEBUG] Global Peak Power: ${globalPeakPower_dB.toFixed(2)} dB`);
+    console.log(`[DEBUG] First Frame Max Power: ${Math.max(...firstFramePower).toFixed(2)} dB`);
     
     // 測試閾值範圍：-24 到 -50 dB
     const thresholdRange = [];
@@ -516,16 +513,16 @@ export class BatCallDetector {
     }
     
     // 為每個閾值測量 Start Frequency
-    // CRITICAL: 使用與 measureFrequencyParameters 相同的計算方法
+    // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
       let startFreq_Hz = null;
       let foundBin = false;
       
-      // 計算相對於峰值的閾值（與 measureFrequencyParameters 相同）
-      // startThreshold_dB = peakPower_dB + testThreshold_dB
-      const startThreshold_dB = frameMaxPower + testThreshold_dB;
+      // 使用全局峰值計算相對閾值（與 measureFrequencyParameters 完全相同）
+      // Line 728: const startThreshold_dB = peakPower_dB + startEndThreshold_dB;
+      const startThreshold_dB = globalPeakPower_dB + testThreshold_dB;
       
       // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
       // 這是找 Start Frequency（最高的頻率）的正確方法
@@ -579,10 +576,10 @@ export class BatCallDetector {
     const validMeasurements = measurements.filter(m => m.foundBin);
     
     console.log(`[DEBUG] Total measurements: ${measurements.length}, Valid measurements (foundBin=true): ${validMeasurements.length}`);
-    console.log('[DEBUG] Measurement details:', validMeasurements.map(m => ({
-      testThreshold: m.threshold,
-      relativeThreshold: m.startThreshold_dB.toFixed(2),
-      startFreq: m.startFreq_kHz !== null ? m.startFreq_kHz.toFixed(2) : 'null'
+    console.log('[DEBUG] Valid measurement details:', validMeasurements.map(m => ({
+      testThreshold: `${m.threshold} dB`,
+      absThreshold: `${m.startThreshold_dB.toFixed(2)} dB`,
+      startFreq: `${m.startFreq_kHz.toFixed(2)} kHz`
     })));
     
     // 從第二個有效測量開始，比較與前一個測量的差異
@@ -619,7 +616,7 @@ export class BatCallDetector {
       optimalThreshold = validMeasurements[validMeasurements.length - 1].threshold;
       console.log('✗ 計算過程 (有效測量):', debugLog);
     } else if (validMeasurements.length === 0) {
-      console.log('✗ 警告：所有測量都無效（firstFrame 中無數據超過閾值）');
+      console.log('✗ 警告：所有測量都無效（firstFrame 中無數據超過絕對閾值）');
       optimalThreshold = -24;
     }
     
