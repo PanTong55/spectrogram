@@ -469,15 +469,15 @@ export class BatCallDetector {
    * 
    * Algorithm:
    * 1. Test threshold values from -24 dB down to -50 dB (step: 1 dB)
-   * 2. For each threshold, measure Start Frequency
+   * 2. For each threshold, measure Start Frequency using SAME method as measureFrequencyParameters
    * 3. Track frequency differences between consecutive thresholds
    * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
    * 5. Return that threshold as the optimal value
    * 
-   * Rationale:
-   * - Normal noise floor gradually extends range → smooth frequency changes (1-3 kHz)
-   * - Rebounce/overestimation causes sudden jumps → large frequency diff (>5 kHz)
-   * - Optimal threshold is just before the jump occurs (avoiding overestimation)
+   * CRITICAL: Must use the SAME calculation as measureFrequencyParameters:
+   * - Find peak power in first frame
+   * - Calculate relative threshold: startThreshold_dB = peakPower_dB + testThreshold_dB
+   * - Measure Start Frequency using this relative threshold
    * 
    * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
    * @param {Array} freqBins - Frequency bin centers (Hz)
@@ -492,7 +492,7 @@ export class BatCallDetector {
     const flowHz = flowKHz * 1000;
     const fhighHz = fhighKHz * 1000;
     
-    // DEBUG: 記錄 firstFrame 的 power 範圍
+    // STEP 1: Find peak power in first frame (same as measureFrequencyParameters)
     let frameMaxPower = -Infinity;
     let frameMinPower = Infinity;
     let frameMaxPowerBinIdx = 0;
@@ -516,15 +516,21 @@ export class BatCallDetector {
     }
     
     // 為每個閾值測量 Start Frequency
+    // CRITICAL: 使用與 measureFrequencyParameters 相同的計算方法
     const measurements = [];
     
-    for (const threshold of thresholdRange) {
-      let startFreq_Hz = null;  // 改為 null，而不是預設為 fhighHz
+    for (const testThreshold_dB of thresholdRange) {
+      let startFreq_Hz = null;
       let foundBin = false;
       
+      // 計算相對於峰值的閾值（與 measureFrequencyParameters 相同）
+      // startThreshold_dB = peakPower_dB + testThreshold_dB
+      const startThreshold_dB = frameMaxPower + testThreshold_dB;
+      
       // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
+      // 這是找 Start Frequency（最高的頻率）的正確方法
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (firstFramePower[binIdx] > threshold) {
+        if (firstFramePower[binIdx] > startThreshold_dB) {
           startFreq_Hz = freqBins[binIdx];
           foundBin = true;
           
@@ -533,8 +539,8 @@ export class BatCallDetector {
             const thisPower = firstFramePower[binIdx];
             const nextPower = firstFramePower[binIdx + 1];
             
-            if (nextPower < threshold && thisPower > threshold) {
-              const powerRatio = (thisPower - threshold) / (thisPower - nextPower);
+            if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
+              const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
               const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
               startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
             }
@@ -544,13 +550,13 @@ export class BatCallDetector {
       }
       
       // 如果沒有找到超過閾值的 bin，則無法測量此閾值
-      // 這表示閾值太高，超過了第一幀中的最大功率
       if (!foundBin) {
         startFreq_Hz = null;
       }
       
       measurements.push({
-        threshold: threshold,
+        threshold: testThreshold_dB,
+        startThreshold_dB: startThreshold_dB,
         startFreq_Hz: startFreq_Hz,
         startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
         foundBin: foundBin
@@ -569,16 +575,18 @@ export class BatCallDetector {
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
     
-    // DEBUG: 記錄所有測量
-    const debugLog = [];
-    
     // 只收集成功找到 bin 的測量
     const validMeasurements = measurements.filter(m => m.foundBin);
     
     console.log(`[DEBUG] Total measurements: ${measurements.length}, Valid measurements (foundBin=true): ${validMeasurements.length}`);
-    console.log('[DEBUG] All measurements:', measurements);
+    console.log('[DEBUG] Measurement details:', validMeasurements.map(m => ({
+      testThreshold: m.threshold,
+      relativeThreshold: m.startThreshold_dB.toFixed(2),
+      startFreq: m.startFreq_kHz !== null ? m.startFreq_kHz.toFixed(2) : 'null'
+    })));
     
     // 從第二個有效測量開始，比較與前一個測量的差異
+    const debugLog = [];
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].startFreq_kHz;
       const currFreq_kHz = validMeasurements[i].startFreq_kHz;
