@@ -735,85 +735,74 @@ export class BatCallDetector {
       spectrogram.length - 1
     );
     
-    // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
+    // ANTI-REBOUNCE: Forward scan from peak to find clean cutoff
     // Handle both FM (Frequency Modulated) and CF (Constant Frequency) calls:
-    // - FM/Sweep: Stop when frequency drops significantly (TRICK 2), then apply protection window
-    // - CF/QCF: Scan to end, stop when signal strength weakens for consecutive frames
+    // Strategy: Scan forward from peak, track power trend
+    // When power drops and then rises again, stop at the drop point (reject echo/rebounce)
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
-      let freqDropDetected = false;
-      let freqDropFrameIdx = -1; // Remember where frequency drop was detected
-      let maxFrequencySeenSoFar = 0;
-      let consecutiveWeakFrames = 0; // Track consecutive frames with weak signal
-      const weakSignalThreshold = 3; // Stop after 3 consecutive frames with weak signal
+      let maxPowerSeenSinceLastDrop = -Infinity;
+      let lastDropFrameIdx = -1; // Track where power last dropped
+      let powerTrendBelowThreshold = false; // Flag when we drop below threshold
       
-      // Scan backward from END (not limited by protection window initially)
-      // For CF/QCF: let it scan to the real end of signal
-      // For FM: frequency drop will stop it early, then apply protection window
-      const scanStartFrame = spectrogram.length - 1;
-      
-      for (let frameIdx = scanStartFrame; frameIdx >= peakFrameIdx; frameIdx--) {
+      // Forward scan from peak towards end
+      // Look for the pattern: strong signal → drop → (possible recovery/echo → reject it)
+      for (let frameIdx = peakFrameIdx; frameIdx < spectrogram.length; frameIdx++) {
         const framePower = spectrogram[frameIdx];
-        let frameHasSignal = false;
-        let framePeakFreq = 0;
         
-        // Find peak frequency in this frame
+        // Find peak power in this frame
         let frameMaxPower = -Infinity;
         for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
           if (framePower[binIdx] > frameMaxPower) {
             frameMaxPower = framePower[binIdx];
-            framePeakFreq = freqBins[binIdx] / 1000; // Convert to kHz
           }
         }
         
-        // Check if frame has signal above threshold
+        // Check signal status
         if (frameMaxPower > endThreshold_dB) {
-          frameHasSignal = true;
-          consecutiveWeakFrames = 0; // Reset weak frame counter when signal returns
+          // Frame has valid signal above threshold
+          if (powerTrendBelowThreshold) {
+            // Signal came back after dropping below threshold
+            // This is likely an echo/rebounce - stop here
+            if (lastDropFrameIdx >= peakFrameIdx) {
+              lastValidEndFrame = lastDropFrameIdx - 1; // Use frame before drop
+            }
+            break;
+          }
           
-          // TRICK 2: Maximum Frequency Drop Rule (for FM/Sweep detection)
-          // If frequency drops too much, lock it and apply protection window
-          if (frameIdx < spectrogram.length - 1 && !freqDropDetected) {
+          // Track power trend for drop detection
+          if (frameMaxPower < maxPowerSeenSinceLastDrop - 3) {
+            // Significant power drop (> 3dB) detected
+            lastDropFrameIdx = frameIdx;
+            powerTrendBelowThreshold = false; // Reset, we're still above threshold
+          }
+          maxPowerSeenSinceLastDrop = Math.max(maxPowerSeenSinceLastDrop, frameMaxPower);
+          lastValidEndFrame = frameIdx;
+        } else {
+          // Frame dropped below threshold
+          powerTrendBelowThreshold = true;
+          
+          // Check if this is truly the end or just a dip
+          // If next frame comes back strong, it's likely echo
+          if (frameIdx < spectrogram.length - 1) {
             const nextFramePower = spectrogram[frameIdx + 1];
-            let nextFramePeakFreq = 0;
             let nextFrameMaxPower = -Infinity;
             for (let binIdx = 0; binIdx < nextFramePower.length; binIdx++) {
               if (nextFramePower[binIdx] > nextFrameMaxPower) {
                 nextFrameMaxPower = nextFramePower[binIdx];
-                nextFramePeakFreq = freqBins[binIdx] / 1000;
               }
             }
             
-            const frequencyDrop = nextFramePeakFreq - framePeakFreq;
-            if (frequencyDrop > maxFrequencyDropThreshold_kHz) {
-              // Large frequency drop detected - this is likely where FM call ends
-              freqDropDetected = true;
-              freqDropFrameIdx = frameIdx + 1; // Lock at this point
-              // Now apply protection window limit for safety against echoes
-              if (frameIdx + 1 <= maxFrameIdxAllowed) {
-                lastValidEndFrame = frameIdx + 1;
+            if (nextFrameMaxPower > endThreshold_dB) {
+              // Next frame has signal again - this is echo/rebounce
+              // Stop at frame before this dip
+              if (lastValidEndFrame > peakFrameIdx) {
+                break;
               }
-              break; // Stop scanning for FM calls
             }
-          }
-          
-          // For CF/QCF: track the end frame but keep scanning to find natural ending
-          if (!freqDropDetected) {
-            lastValidEndFrame = frameIdx;
-            maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
-          }
-        } else {
-          // Frame has weak signal (below threshold)
-          if (!freqDropDetected) {
-            // Only count consecutive weak frames for CF/QCF calls (no frequency drop yet)
-            consecutiveWeakFrames++;
-            
-            // For CF/QCF calls: accept occasional weak frames, but stop after multiple weak frames
-            // This handles cases where signal strength fluctuates near the -27dB boundary
-            if (consecutiveWeakFrames >= weakSignalThreshold && lastValidEndFrame > peakFrameIdx) {
-              // Found clean cutoff: multiple consecutive frames below threshold
-              break;
-            }
+          } else {
+            // We reached the end of spectrogram below threshold
+            break;
           }
         }
       }
