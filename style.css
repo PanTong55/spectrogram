@@ -2344,7 +2344,7 @@ input.tag-button.editing {
 .power-spectrum-popup {
   position: fixed;
   width: 450px;
-  height: 805px;
+  height: 770px;
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;

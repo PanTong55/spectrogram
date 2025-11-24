@@ -216,13 +216,11 @@ export function showPowerSpectrumPopup({
           batCallStartEndThresholdInput.value = '';  // 清空 value
           batCallStartEndThresholdInput.placeholder = `Auto (${calculatedValue})`;  // 更新 placeholder
           batCallStartEndThresholdInput.style.color = '#999';  // 灰色
-          batCallStartEndThresholdInput.style.fontStyle = 'italic';
         } else {
           // Manual 模式：保持用戶輸入的值，黑色文字
           batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
           batCallStartEndThresholdInput.placeholder = 'Auto';  // 恢復預設 placeholder
           batCallStartEndThresholdInput.style.color = '#000';  // 黑色
-          batCallStartEndThresholdInput.style.fontStyle = 'normal';
         }
       }
       
@@ -668,7 +666,7 @@ function createPopupWindow() {
   startEndThresholdInput.type = 'number';
   startEndThresholdInput.placeholder = 'Auto';
   startEndThresholdInput.title = 'Auto or Manual Start/End frequency threshold (-60 to -24)';
-  startEndThresholdInput.style.width = '60px';
+  startEndThresholdInput.style.width = '65px';
   startEndThresholdInput.min = '-60';
   startEndThresholdInput.max = '-24';
   startEndThresholdInput.step = '1';
@@ -789,14 +787,13 @@ function createPopupWindow() {
   
   const maxFreqDropUnit = document.createElement('span');
   maxFreqDropUnit.textContent = 'kHz';
-  maxFreqDropUnit.style.marginRight = '1em';
   maxFreqDropControl.appendChild(maxFreqDropUnit);
   batCallControlPanel.appendChild(maxFreqDropControl);
 
   // protectionWindowAfterPeak_ms (Number input)
   const protectionWindowControl = document.createElement('label');
   const protectionWindowLabel = document.createElement('span');
-  protectionWindowLabel.textContent = 'Protect. Window:';
+  protectionWindowLabel.textContent = 'Protect Window:';
   protectionWindowControl.appendChild(protectionWindowLabel);
   
   const protectionWindowInput = document.createElement('input');
@@ -811,7 +808,6 @@ function createPopupWindow() {
   
   const protectionWindowUnit = document.createElement('span');
   protectionWindowUnit.textContent = 'ms';
-  protectionWindowUnit.style.marginRight = '1em';
   protectionWindowControl.appendChild(protectionWindowUnit);
   batCallControlPanel.appendChild(protectionWindowControl);
 
