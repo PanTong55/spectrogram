@@ -653,9 +653,9 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>4 kHz) - 立即停止
+      // 保險機制 1：超大幅頻率跳變 (>5 kHz) - 立即停止
       // ============================================================
-      if (freqDifference > 4.0) {
+      if (freqDifference > 5.0) {
         // 超大幅異常，立即停止測試
         // 選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
