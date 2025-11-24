@@ -735,10 +735,10 @@ export class BatCallDetector {
       spectrogram.length - 1
     );
     
-    // ANTI-REBOUNCE: Forward scan from peak to find natural end
-    // Professional approach: Use energy trend analysis instead of absolute thresholds
+    // ANTI-REBOUNCE: Forward scan from peak to find natural end with rebounce detection
+    // Professional approach: Use energy trend analysis + rebounce detection
     // - FM/Sweep: Stop when frequency drops significantly (TRICK 2)
-    // - CF/QCF: Find where energy gradually decays below peak (natural end point)
+    // - CF/QCF: Find where energy gradually decays, handling rebounds
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx;
       let freqDropDetected = false;
@@ -747,6 +747,11 @@ export class BatCallDetector {
       // This softer threshold (-18dB vs -27dB) better handles natural decay in CF/QCF calls
       const sustainedEnergyThreshold = peakPower_dB - 18; // 18dB drop from peak
       let lastFrameAboveSustainedThreshold = peakFrameIdx;
+      
+      // REBOUNCE DETECTION: Track consecutive frames below threshold
+      const rebounceConfirmationFrames = 3; // Need 3+ consecutive weak frames to confirm end
+      let consecutiveWeakFrames = 0;
+      let lastStrongFrameIdx = peakFrameIdx;
       
       // Scan FORWARD from peak to END to find natural decay point
       for (let frameIdx = peakFrameIdx; frameIdx < spectrogram.length; frameIdx++) {
@@ -785,12 +790,21 @@ export class BatCallDetector {
         // Track sustained energy above -18dB threshold (for CF/QCF)
         if (!freqDropDetected) {
           if (frameMaxPower > sustainedEnergyThreshold) {
+            // Signal is still strong
             lastFrameAboveSustainedThreshold = frameIdx;
             lastValidEndFrame = frameIdx;
-          }
-          // If signal drops below -18dB, stop tracking
-          else if (frameMaxPower <= sustainedEnergyThreshold && frameIdx > peakFrameIdx) {
-            break; // Stop scanning once energy permanently drops below threshold
+            lastStrongFrameIdx = frameIdx;
+            consecutiveWeakFrames = 0; // Reset weak frame counter
+          } else {
+            // Signal dropped below -18dB - potential end or rebounce
+            consecutiveWeakFrames++;
+            
+            // If we see many consecutive weak frames, confirm the end
+            if (consecutiveWeakFrames >= rebounceConfirmationFrames) {
+              // Confirmed end: signal stayed weak for 3+ frames, likely not a rebounce
+              break;
+            }
+            // Otherwise, continue scanning to check for rebounce
           }
         }
       }
