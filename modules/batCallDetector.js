@@ -736,9 +736,10 @@ export class BatCallDetector {
     );
     
     // ANTI-REBOUNCE: Forward scan from peak to find natural end
-    // Professional approach: Use energy trend analysis instead of absolute thresholds
+    // Professional approach: Use energy trend analysis + monotonic decay detection
     // - FM/Sweep: Stop when frequency drops significantly (TRICK 2)
-    // - CF/QCF: Find where energy gradually decays below peak (natural end point)
+    // - CF/QCF: Energy monotonically decreases until call ends
+    //   Special rule: If energy rises after falling = rebounce signal detected → STOP immediately
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx;
       let freqDropDetected = false;
@@ -747,6 +748,11 @@ export class BatCallDetector {
       // This softer threshold (-18dB vs -27dB) better handles natural decay in CF/QCF calls
       const sustainedEnergyThreshold = peakPower_dB - 18; // 18dB drop from peak
       let lastFrameAboveSustainedThreshold = peakFrameIdx;
+      
+      // Track energy for monotonic decay detection
+      let lastFrameMaxPower = peakPower_dB;
+      let hasStartedDecaying = false;
+      let lastValidEndBeforeRebounce = peakFrameIdx;
       
       // Scan FORWARD from peak to END to find natural decay point
       for (let frameIdx = peakFrameIdx; frameIdx < spectrogram.length; frameIdx++) {
@@ -782,27 +788,48 @@ export class BatCallDetector {
           }
         }
         
-        // Track sustained energy above -18dB threshold (for CF/QCF)
+        // CF/QCF monotonic decay detection
         if (!freqDropDetected) {
+          // Track if energy has started declining from peak
+          if (frameMaxPower < lastFrameMaxPower) {
+            hasStartedDecaying = true;
+            lastValidEndBeforeRebounce = frameIdx;
+          }
+          
+          // CRITICAL: Detect rebounce (energy rises after falling)
+          // This indicates original CF/QCF call has ended, rebounce starting
+          if (hasStartedDecaying && frameMaxPower > lastFrameMaxPower && frameIdx > peakFrameIdx + 1) {
+            // Energy rose after falling = rebounce detected!
+            // Use the frame where energy was lowest before rising
+            newEndFrameIdx = lastValidEndBeforeRebounce;
+            break;
+          }
+          
+          // Track sustained energy above -18dB threshold
           if (frameMaxPower > sustainedEnergyThreshold) {
             lastFrameAboveSustainedThreshold = frameIdx;
             lastValidEndFrame = frameIdx;
           }
-          // If signal drops below -18dB, stop tracking
+          // If signal drops permanently below -18dB, stop
           else if (frameMaxPower <= sustainedEnergyThreshold && frameIdx > peakFrameIdx) {
-            break; // Stop scanning once energy permanently drops below threshold
+            // No rebounce detected, just natural decay below threshold
+            newEndFrameIdx = lastFrameAboveSustainedThreshold;
+            break;
           }
+          
+          lastFrameMaxPower = frameMaxPower;
         }
       }
       
-      // Determine final end frame based on call type
-      if (!freqDropDetected) {
-        // CF/QCF call: use last frame with sustained energy (-18dB threshold)
-        // This is the natural end point where CF/QCF signal decays
-        newEndFrameIdx = lastFrameAboveSustainedThreshold;
-      } else {
-        // FM call: already set by frequency drop detection
-        newEndFrameIdx = lastValidEndFrame;
+      // Determine final end frame if loop completed without special conditions
+      if (newEndFrameIdx === spectrogram.length - 1 || newEndFrameIdx === 0) {
+        if (!freqDropDetected) {
+          // CF/QCF call: use last frame with sustained energy
+          newEndFrameIdx = lastFrameAboveSustainedThreshold;
+        } else {
+          // FM call: already set by frequency drop detection
+          newEndFrameIdx = lastValidEndFrame;
+        }
       }
     } else {
       // Original forward scanning method (without anti-rebounce)
