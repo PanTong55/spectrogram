@@ -1,6 +1,7 @@
 import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
 import { showPowerSpectrumPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './powerSpectrum.js';
+import { BatCallDetector } from './batCallDetector.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -545,19 +546,23 @@ export function initFrequencyHover({
     const dispFlow = Flow * freqMul;
     const dispBandwidth = Bandwidth * freqMul;
     const dispDurationMs = (Duration * 1000) / timeDiv;
-    const dispSlope = dispDurationMs > 0 ? (dispBandwidth / dispDurationMs) : 0;
+    
     tooltip.innerHTML = `
       <table class="freq-tooltip-table">
         <tr>
-          <td class="label">Freq.High:</td>
+          <td class="label">High Freq:</td>
           <td class="value"><span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
-          <td class="label">Freq.Low:</td>
+          <td class="label">Low Freq:</td>
           <td class="value"><span class="flow">${dispFlow.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
-          <td class="label">Freq.Peak:</td>
+          <td class="label">Knee Freq:</td>
+          <td class="value"><span class="kneefreq">-</span> kHz</td>
+        </tr>
+        <tr>
+          <td class="label">Peak Freq:</td>
           <td class="value"><span class="fpeak">-</span> kHz</td>
         </tr>
         <tr>
@@ -567,10 +572,6 @@ export function initFrequencyHover({
         <tr>
           <td class="label">Duration:</td>
           <td class="value"><span class="duration">${dispDurationMs.toFixed(1)}</span> ms</td>
-        </tr>
-        <tr>  
-          <td class="label">Avg.Slope:</td>
-          <td class="value"><span class="slope">${dispSlope.toFixed(1)}</span> kHz/ms</td>
         </tr>
       </table>
       <div class="tooltip-close-btn">×</div>
@@ -715,6 +716,62 @@ export function initFrequencyHover({
     tooltip.style.top = `${top}px`;
   }
 
+  // 計算 BatCallDetector 參數（High Freq, Low Freq, Knee Freq, Peak Freq, Bandwidth, Duration）
+  async function calculateBatCallParameters(sel) {
+    try {
+      const ws = getWavesurfer();
+      if (!ws) return;
+
+      const decodedData = ws.getDecodedData();
+      if (!decodedData || !decodedData.getChannelData) return;
+
+      const { startTime, endTime, Flow, Fhigh } = sel.data;
+      const sampleRate = ws.sampleRate || window.__spectrogramSettings?.sampleRate || 256000;
+
+      // 提取該 selection 區域的音頻數據
+      const startSample = Math.floor(startTime * sampleRate);
+      const endSample = Math.floor(endTime * sampleRate);
+
+      if (endSample <= startSample) return;
+
+      const channelData = decodedData.getChannelData(0);
+      const audioData = new Float32Array(channelData.slice(startSample, endSample));
+
+      // 使用全局記憶中的 bat call 配置
+      const config = window.__batCallControlsMemory || {
+        callThreshold_dB: -24,
+        startEndThreshold_dB: -24,
+        startEndThreshold_dB_isAuto: true,
+        characteristicFreq_percentEnd: 20,
+        minCallDuration_ms: 2,
+        fftSize: 1024,
+        hopPercent: 25,
+        enableBackwardEndFreqScan: true,
+        maxFrequencyDropThreshold_kHz: 10,
+        protectionWindowAfterPeak_ms: 10
+      };
+
+      const detector = new BatCallDetector(config);
+
+      // 檢測 call 參數
+      const calls = await detector.detectCalls(audioData, sampleRate, Flow, Fhigh);
+
+      if (calls.length > 0) {
+        const call = calls[0];  // 取第一個檢測到的 call
+        
+        // 更新 selection data
+        sel.data.highFreq = call.Fhigh;
+        sel.data.lowFreq = call.Flow;
+        sel.data.kneeFreq = call.kneeFreq_kHz;
+        sel.data.peakFreq = call.peakFreq_kHz;
+        sel.data.bandwidth = call.bandwidth_kHz;
+        sel.data.duration = call.duration_ms;
+      }
+    } catch (err) {
+      console.error('計算 Bat Call 參數失敗:', err);
+    }
+  }
+
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
@@ -832,7 +889,7 @@ export function initFrequencyHover({
           }
         }
 
-        // 即時計算峰值，確保與 Power Spectrum 同步
+        // 即時計算峰值和 Bat Call 參數，確保與 Power Spectrum 同步
         const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
         const timeExp = getTimeExpansionMode();
         const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
@@ -840,6 +897,11 @@ export function initFrequencyHover({
         if (judgeDurationMs < 100) {
           calculatePeakFrequency(sel).catch(err => {
             console.error('Resize 時計算峰值頻率失敗:', err);
+          });
+          
+          // 同時計算 Bat Call 參數（High Freq, Low Freq, Knee Freq, Peak Freq, Bandwidth, Duration）
+          calculateBatCallParameters(sel).catch(err => {
+            console.error('Resize 時計算 Bat Call 參數失敗:', err);
           });
         }
       };
@@ -866,7 +928,7 @@ export function initFrequencyHover({
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
 
-        // 當 resize 完成後，根據 Time Expansion 模式判斷是否重新計算峰值
+        // 當 resize 完成後，根據 Time Expansion 模式判斷是否重新計算峰值和 Bat Call 參數
         const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
         const timeExp = getTimeExpansionMode();
         const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
@@ -875,12 +937,23 @@ export function initFrequencyHover({
           calculatePeakFrequency(sel).catch(err => {
             console.error('Resize 後計算峰值頻率失敗:', err);
           });
+          
+          // 同時計算 Bat Call 參數
+          calculateBatCallParameters(sel).catch(err => {
+            console.error('Resize 後計算 Bat Call 參數失敗:', err);
+          });
         } else {
-          // 如果 resize 後超過 100ms，清除 peakFreq
+          // 如果 resize 後超過 100ms，清除 peakFreq 和 bat call 參數
           if (sel.data.peakFreq !== undefined) {
             delete sel.data.peakFreq;
             if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
               sel.tooltip.querySelector('.fpeak').textContent = '-';
+            }
+          }
+          if (sel.data.kneeFreq !== undefined) {
+            delete sel.data.kneeFreq;
+            if (sel.tooltip && sel.tooltip.querySelector('.kneefreq')) {
+              sel.tooltip.querySelector('.kneefreq').textContent = '-';
             }
           }
         }
@@ -904,7 +977,6 @@ export function initFrequencyHover({
     const dispFlow = Flow * freqMul;
     const dispBandwidth = Bandwidth * freqMul;
     const dispDurationMs = (Duration * 1000) / timeDiv;
-    const dispSlope = dispDurationMs > 0 ? (dispBandwidth / dispDurationMs) : 0;
 
     if (!tooltip) {
       if (sel.durationLabel) sel.durationLabel.textContent = `${dispDurationMs.toFixed(1)} ms`;
@@ -916,7 +988,12 @@ export function initFrequencyHover({
     tooltip.querySelector('.flow').textContent = dispFlow.toFixed(1);
     tooltip.querySelector('.bandwidth').textContent = dispBandwidth.toFixed(1);
     tooltip.querySelector('.duration').textContent = dispDurationMs.toFixed(1);
-    tooltip.querySelector('.slope').textContent = dispSlope.toFixed(1);
+    
+    // 更新 Knee Freq 如果有數據
+    if (data.kneeFreq !== undefined) {
+      const dispKneeFreq = data.kneeFreq * freqMul;
+      tooltip.querySelector('.kneefreq').textContent = dispKneeFreq.toFixed(1);
+    }
     
     // Update F.peak if available
     if (data.peakFreq !== undefined) {
