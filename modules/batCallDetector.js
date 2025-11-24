@@ -561,7 +561,7 @@ export class BatCallDetector {
     // 算法改進：找出第一個導致 Start Freq 異常變化的臨界點
     // 
     // 原理：
-    // - 正常情況：閾值從 -24 一路降低到 -50，Start Frequency 應該平緩變化 (1-2 kHz)
+    // - 正常情況：閾值從 -24 一路降低到 -60，Start Frequency 應該平緩變化 (1-2 kHz)
     // - 異常情況：突然出現大幅頻率跳變 (>3 kHz)，表示進入了回聲/反彈區域
     // - 最優閾值：異常發生前的那個值
     // 
@@ -595,7 +595,7 @@ export class BatCallDetector {
     }
     
     // 確保返回值在有效範圍內
-    return Math.max(Math.min(optimalThreshold, -24), -50);
+    return Math.max(Math.min(optimalThreshold, -24), -60);
   }
 
   /**
