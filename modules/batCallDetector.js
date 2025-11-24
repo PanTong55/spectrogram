@@ -217,10 +217,6 @@ export class BatCallDetector {
   /**
    * Detect all bat calls in audio selection
    * Returns: array of BatCall objects
-   * 
-   * CRITICAL FIX (2025): Use call-relative peak power for consistent parameters
-   * When selection size changes, background noise changes → global peak power changes
-   * Solution: Find call boundaries FIRST, then measure parameters WITHIN call only
    */
   async detectCalls(audioData, sampleRate, flowKHz, fhighKHz) {
     if (!audioData || audioData.length === 0) return [];
@@ -254,7 +250,6 @@ export class BatCallDetector {
       
       // Measure frequency parameters from spectrogram
       // This will calculate startFreq, endFreq, peakFreq, etc.
-      // IMPORTANT: Use CALL-RELATIVE peak power (not selection-relative)
       this.measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution);
       
       // COMMERCIAL STANDARD: Set Flow and Fhigh based on actual call frequency range
@@ -366,19 +361,9 @@ export class BatCallDetector {
   /**
    * Phase 1: Detect call segments using energy threshold
    * Returns: array of { startFrame, endFrame }
-   * 
-   * CRITICAL FIX (2025): Use -18dB threshold for initial detection (looser)
-   * This prevents background noise from shifting the global maximum
-   * The call-relative peak power will be recalculated in measureFrequencyParameters
-   * within the detected segment
    */
   detectCallSegments(powerMatrix, timeFrames, freqBins, flowKHz, fhighKHz) {
     const { callThreshold_dB } = this.config;
-    
-    // IMPORTANT: Use a slightly looser threshold (-18 dB instead of -24 dB) 
-    // for initial detection to avoid background noise affecting global peak
-    // The final -24 dB threshold will be applied per-call within measureFrequencyParameters
-    const detectionThreshold_dB = -18;  // Looser for initial boundary detection
     
     // Find global maximum power across entire spectrogram for threshold reference
     let globalMaxPower = -Infinity;
@@ -389,8 +374,8 @@ export class BatCallDetector {
       }
     }
     
-    // Threshold = global max + detection threshold (using -18 dB for looser detection)
-    const threshold_dB = globalMaxPower + detectionThreshold_dB;
+    // Threshold = global max + relative dB (typically -24 dB)
+    const threshold_dB = globalMaxPower + callThreshold_dB;
     
     // Detect active frames (frames with any bin above threshold)
     const activeFrames = new Array(powerMatrix.length);
@@ -700,36 +685,20 @@ export class BatCallDetector {
     
     // ============================================================
     // ============================================================
-    // CRITICAL FIX (2025): Use CALL-RELATIVE peak power
+    // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
     // 
-    // This ensures call parameters remain CONSISTENT regardless of selection size
-    // 
-    // Old approach (problematic):
-    //   - Global peak = max power in entire selection (affected by background noise)
-    //   - threshold = globalMax + (-24 dB)  ← Changes with selection size
-    //   - Result: Call parameters change with selection area
-    // 
-    // New approach (fixed):
-    //   - peakPower_dB = max power WITHIN the detected call segment (step 1)
-    //   - startThreshold_dB = peakPower_dB + (-24 dB)  ← Consistent for same call
-    //   - Result: Call parameters INVARIANT to selection size
-    // 
-    // Example:
-    //   - Large selection (with background noise):  peakPower = -15 dB
-    //   - Small selection (tight fit):              peakPower = -15 dB (same call!)
-    //   → startThreshold stays at -39 dB in both cases
-    //   → Call parameters identical
+    // 2025 ANTI-REBOUNCE UPGRADE:
+    // - Backward scanning for clean end frequency detection
+    // - Maximum frequency drop rule to lock end frame
+    // - 10ms protection window after peak energy
     // ============================================================
-    
     const { 
       enableBackwardEndFreqScan,
       maxFrequencyDropThreshold_kHz,
       protectionWindowAfterPeak_ms
     } = this.config;
     
-    // Use peakPower_dB found WITHIN the call segment (not global max)
-    // This is the key to making parameters independent of selection boundaries
-    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB below call peak
+    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
