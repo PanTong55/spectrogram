@@ -287,7 +287,63 @@ export class BatCallDetector {
       return call;
     }).filter(call => call !== null);  // 移除不符合條件的 call
     
-    return calls;
+    // ============================================================
+    // 額外驗證：過濾誤檢測的噪音段
+    // ============================================================
+    // Professional standard: Real bat calls have concentrated power in limited bandwidth
+    // Noise typically spreads across wide frequency ranges with multiple scattered peaks
+    // 
+    // Validation criteria:
+    // 1. Peak power should be significantly above average baseline (SNR check)
+    // 2. Bandwidth should be reasonable (not too wide like noise)
+    // 3. Power concentration should be high (not scattered like noise)
+    // 
+    // Implementation:
+    // - Calculate global noise baseline (RMS of all frequency bins)
+    // - For each call, check if peak power is at least 10 dB above baseline
+    // - If too low SNR, discard as likely noise
+    // ============================================================
+    
+    // Calculate global noise baseline in linear space, then convert to dB
+    let globalLinearPower = 0;
+    let powerCount = 0;
+    
+    for (let frameIdx = 0; frameIdx < powerMatrix.length; frameIdx++) {
+      const framePower = powerMatrix[frameIdx];
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        // Convert dB to linear
+        const linearPower = Math.pow(10, framePower[binIdx] / 10);
+        globalLinearPower += linearPower;
+        powerCount++;
+      }
+    }
+    
+    if (powerCount > 0) {
+      globalLinearPower /= powerCount;
+    }
+    
+    // Convert back to dB for comparison
+    const globalAveragePower_dB = 10 * Math.log10(Math.max(globalLinearPower, 1e-16));
+    
+    // Additional SNR-based filtering: Remove calls with low SNR
+    // Real bat calls should have peak power >= 10dB above baseline
+    const snrThreshold_dB = 10;
+    const filteredCalls = calls.filter(call => {
+      if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
+        return false; // No peak power data, discard
+      }
+      
+      const snr_dB = call.peakPower_dB - globalAveragePower_dB;
+      
+      // If SNR is too low, likely just noise
+      if (snr_dB < snrThreshold_dB) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    return filteredCalls;
   }
   
   /**

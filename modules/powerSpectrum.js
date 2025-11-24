@@ -228,12 +228,12 @@ export function showPowerSpectrumPopup({
         const call = calls[0];  // 取第一個偵測到的 call
         updateParametersDisplay(popup, call);
       } else {
-        // 如果沒有偵測到 call，但有 peak freq，仍然顯示它
-        updateParametersDisplay(popup, null, peakFreq);
+        // 如果沒有偵測到 call，所有參數顯示 '-'（包括 peak freq）
+        updateParametersDisplay(popup, null);
       }
     } catch (err) {
       console.error('Bat call detection error:', err);
-      updateParametersDisplay(popup, null, peakFreq);
+      updateParametersDisplay(popup, null);
     }
   };
 
