@@ -1218,24 +1218,8 @@ export class BatCallDetector {
       
       if (maxDerivIdx >= 0) {
         kneeIdx = maxDerivIdx;
-      } else {
-        // Ultimate fallback: -18 dB below peak (energy-based)
-        const fallbackThreshold = peakPower_dB - 18;
-        
-        for (let i = 0; i < spectrogram.length; i++) {
-          const framePower = spectrogram[i];
-          let frameMax = -Infinity;
-          
-          for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-            frameMax = Math.max(frameMax, framePower[binIdx]);
-          }
-          
-          if (frameMax > fallbackThreshold) {
-            kneeIdx = i;
-            break;
-          }
-        }
       }
+      // No ultimate fallback: if knee not detected, leave as -1
     }
     
     // STEP 6.8: Set knee frequency and knee time from detected knee point

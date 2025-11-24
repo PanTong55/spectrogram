@@ -351,77 +351,87 @@ export function showPowerSpectrumPopup({
    */
   const addNumberInputKeyboardSupport = (inputElement) => {
     inputElement.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        // 設置全局標誌，禁止文件切換
+        window.__isAdjustingNumberInput = true;
         
-        // 特殊處理 startThreshold input
-        // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
-        if (inputElement.id === 'startThreshold_dB') {
-          const currentValue = inputElement.value.trim().toLowerCase();
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
           
-          // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
-          if (currentValue === '' || 
-              currentValue === 'auto' ||
-              currentValue.startsWith('auto')) {
-            // 從 Auto 切換到 -24
-            inputElement.value = '-24';
-            inputElement.style.color = '#000';
-            inputElement.style.fontStyle = 'normal';
-          } else {
-            // 數值增加
-            const numValue = parseFloat(currentValue);
-            if (!isNaN(numValue)) {
-              const newValue = numValue + 1;
-              inputElement.value = newValue.toString();
+          // 特殊處理 startThreshold input
+          // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
+          if (inputElement.id === 'startThreshold_dB') {
+            const currentValue = inputElement.value.trim().toLowerCase();
+            
+            // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
+            if (currentValue === '' || 
+                currentValue === 'auto' ||
+                currentValue.startsWith('auto')) {
+              // 從 Auto 切換到 -24
+              inputElement.value = '-24';
+              inputElement.style.color = '#000';
+              inputElement.style.fontStyle = 'normal';
+            } else {
+              // 數值增加
+              const numValue = parseFloat(currentValue);
+              if (!isNaN(numValue)) {
+                const newValue = numValue + 1;
+                inputElement.value = newValue.toString();
+              }
             }
+          } else {
+            // 普通數值 input
+            const step = parseFloat(inputElement.step) || 1;
+            const currentValue = parseFloat(inputElement.value) || 0;
+            const max = inputElement.max ? parseFloat(inputElement.max) : Infinity;
+            const newValue = Math.min(currentValue + step, max);
+            inputElement.value = newValue;
           }
-        } else {
-          // 普通數值 input
-          const step = parseFloat(inputElement.step) || 1;
-          const currentValue = parseFloat(inputElement.value) || 0;
-          const max = inputElement.max ? parseFloat(inputElement.max) : Infinity;
-          const newValue = Math.min(currentValue + step, max);
-          inputElement.value = newValue;
-        }
-        
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        
-        // 特殊處理 startThreshold input
-        // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
-        if (inputElement.id === 'startThreshold_dB') {
-          const currentValue = inputElement.value.trim().toLowerCase();
           
-          // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
-          if (currentValue === '' || 
-              currentValue === 'auto' ||
-              currentValue.startsWith('auto')) {
-            // 從 Auto 切換到 -50
-            inputElement.value = '-50';
-            inputElement.style.color = '#000';
-            inputElement.style.fontStyle = 'normal';
-          } else {
-            // 數值減少
-            const numValue = parseFloat(currentValue);
-            if (!isNaN(numValue)) {
-              const newValue = numValue - 1;
-              inputElement.value = newValue.toString();
+          inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+          inputElement.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          
+          // 特殊處理 startThreshold input
+          // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
+          if (inputElement.id === 'startThreshold_dB') {
+            const currentValue = inputElement.value.trim().toLowerCase();
+            
+            // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
+            if (currentValue === '' || 
+                currentValue === 'auto' ||
+                currentValue.startsWith('auto')) {
+              // 從 Auto 切換到 -50
+              inputElement.value = '-50';
+              inputElement.style.color = '#000';
+              inputElement.style.fontStyle = 'normal';
+            } else {
+              // 數值減少
+              const numValue = parseFloat(currentValue);
+              if (!isNaN(numValue)) {
+                const newValue = numValue - 1;
+                inputElement.value = newValue.toString();
+              }
             }
+          } else {
+            // 普通數值 input
+            const step = parseFloat(inputElement.step) || 1;
+            const currentValue = parseFloat(inputElement.value) || 0;
+            const min = inputElement.min ? parseFloat(inputElement.min) : -Infinity;
+            const newValue = Math.max(currentValue - step, min);
+            inputElement.value = newValue;
           }
-        } else {
-          // 普通數值 input
-          const step = parseFloat(inputElement.step) || 1;
-          const currentValue = parseFloat(inputElement.value) || 0;
-          const min = inputElement.min ? parseFloat(inputElement.min) : -Infinity;
-          const newValue = Math.max(currentValue - step, min);
-          inputElement.value = newValue;
+          
+          inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+          inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        
-        inputElement.dispatchEvent(new Event('input', { bubbles: true }));
-        inputElement.dispatchEvent(new Event('change', { bubbles: true }));
       }
+    });
+    
+    // 當焦點離開時，清除標誌
+    inputElement.addEventListener('blur', () => {
+      window.__isAdjustingNumberInput = false;
     });
   };
 

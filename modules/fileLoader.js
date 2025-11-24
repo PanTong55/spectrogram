@@ -245,6 +245,10 @@ export function initFileLoader({
 
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey) return; // avoid conflict with zoom shortcuts
+    
+    // 如果正在調節 number input，禁止切換文件
+    if (window.__isAdjustingNumberInput === true) return;
+    
     if (e.key === 'ArrowUp') {
       e.preventDefault();
       prevBtn.click();
