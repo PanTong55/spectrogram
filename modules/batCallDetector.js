@@ -770,7 +770,7 @@ export class BatCallDetector {
         // Check if frame has signal above threshold
         if (frameMaxPower > endThreshold_dB) {
           frameHasSignal = true;
-          consecutiveWeakFrames = 0; // Reset weak frame counter when signal returns
+          consecutiveVeryWeakFrames = 0; // Reset weak frame counter when signal returns
           
           // TRICK 2: Maximum Frequency Drop Rule (for FM/Sweep detection)
           // If frequency drops too much, lock it and apply protection window
