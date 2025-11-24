@@ -797,12 +797,18 @@ export class BatCallDetector {
           }
           
           // CRITICAL: Detect rebounce (energy rises after falling)
-          // This indicates original CF/QCF call has ended, rebounce starting
+          // But with threshold to avoid QCF natural energy fluctuations
+          // QCF signals naturally have ±2-3dB fluctuations, so require >5dB rise to detect rebounce
+          const rebounceThreshold_dB = 5; // Minimum dB rise to be considered a rebounce (not QCF fluctuation)
           if (hasStartedDecaying && frameMaxPower > lastFrameMaxPower && frameIdx > peakFrameIdx + 1) {
-            // Energy rose after falling = rebounce detected!
-            // Use the frame where energy was lowest before rising
-            newEndFrameIdx = lastValidEndBeforeRebounce;
-            break;
+            const energyRise = frameMaxPower - lastFrameMaxPower;
+            if (energyRise > rebounceThreshold_dB) {
+              // Significant energy rise detected = true rebounce!
+              // Use the frame where energy was lowest before rising
+              newEndFrameIdx = lastValidEndBeforeRebounce;
+              break;
+            }
+            // else: Just minor fluctuation in QCF signal, continue scanning
           }
           
           // Track sustained energy above -18dB threshold
