@@ -1,7 +1,6 @@
 import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
 import { showPowerSpectrumPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './powerSpectrum.js';
-import { BatCallDetector } from './batCallDetector.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -491,16 +490,11 @@ export function initFrequencyHover({
       showSelectionContextMenu(e, selObj);
     });
 
-    // 如果 duration < 100ms，自動計算峰值頻率和 Bat Call 參數
+    // 如果 duration < 100ms，自動計算峰值頻率
     // 使用判斷時間（已考慮 Time Expansion）
     if (judgeDurationMs < 100) {
       calculatePeakFrequency(selObj).catch(err => {
         console.error('計算峰值頻率失敗:', err);
-      });
-      
-      // 計算 Bat Call 參數
-      calculateBatCallParameters(selObj).catch(err => {
-        console.error('計算 Bat Call 參數失敗:', err);
       });
     }
 
@@ -536,6 +530,8 @@ export function initFrequencyHover({
 
   function buildTooltip(sel, left, top, width) {
     const { Flow, Fhigh, startTime, endTime } = sel.data;
+    const Bandwidth = Fhigh - Flow;
+    const Duration = (endTime - startTime);
 
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip freq-tooltip';
@@ -545,33 +541,36 @@ export function initFrequencyHover({
     const timeExp = getTimeExpansionMode();
     const freqMul = timeExp ? 10 : 1;
     const timeDiv = timeExp ? 10 : 1; // divide ms by 10 when timeExp
-    
-    // 初始化為預設值（"-"），會在 updateTooltipValues 中用 BatCallDetector 的值更新
+    const dispFhigh = Fhigh * freqMul;
+    const dispFlow = Flow * freqMul;
+    const dispBandwidth = Bandwidth * freqMul;
+    const dispDurationMs = (Duration * 1000) / timeDiv;
+    const dispSlope = dispDurationMs > 0 ? (dispBandwidth / dispDurationMs) : 0;
     tooltip.innerHTML = `
       <table class="freq-tooltip-table">
         <tr>
-          <td class="label">High Freq:</td>
-          <td class="value"><span class="fhigh">-</span> kHz</td>
+          <td class="label">Freq.High:</td>
+          <td class="value"><span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
-          <td class="label">Low Freq:</td>
-          <td class="value"><span class="flow">-</span> kHz</td>
+          <td class="label">Freq.Low:</td>
+          <td class="value"><span class="flow">${dispFlow.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
-          <td class="label">Knee Freq:</td>
-          <td class="value"><span class="kneefreq">-</span> kHz</td>
-        </tr>
-        <tr>
-          <td class="label">Peak Freq:</td>
+          <td class="label">Freq.Peak:</td>
           <td class="value"><span class="fpeak">-</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Bandwidth:</td>
-          <td class="value"><span class="bandwidth">-</span> kHz</td>
+          <td class="value"><span class="bandwidth">${dispBandwidth.toFixed(1)}</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Duration:</td>
-          <td class="value"><span class="duration">-</span> ms</td>
+          <td class="value"><span class="duration">${dispDurationMs.toFixed(1)}</span> ms</td>
+        </tr>
+        <tr>  
+          <td class="label">Avg.Slope:</td>
+          <td class="value"><span class="slope">${dispSlope.toFixed(1)}</span> kHz/ms</td>
         </tr>
       </table>
       <div class="tooltip-close-btn">×</div>
@@ -716,70 +715,6 @@ export function initFrequencyHover({
     tooltip.style.top = `${top}px`;
   }
 
-  // 計算 BatCallDetector 參數（High Freq, Low Freq, Knee Freq, Peak Freq, Bandwidth, Duration）
-  async function calculateBatCallParameters(sel) {
-    try {
-      const ws = getWavesurfer();
-      if (!ws) return;
-
-      const decodedData = ws.getDecodedData();
-      if (!decodedData || !decodedData.getChannelData) return;
-
-      const { startTime, endTime, Flow, Fhigh } = sel.data;
-      const sampleRate = ws.sampleRate || window.__spectrogramSettings?.sampleRate || 256000;
-
-      // 提取該 selection 區域的音頻數據
-      const startSample = Math.floor(startTime * sampleRate);
-      const endSample = Math.floor(endTime * sampleRate);
-
-      if (endSample <= startSample) return;
-
-      const channelData = decodedData.getChannelData(0);
-      const audioData = new Float32Array(channelData.slice(startSample, endSample));
-
-      // 使用全局記憶中的 bat call 配置
-      const config = window.__batCallControlsMemory || {
-        callThreshold_dB: -24,
-        startEndThreshold_dB: -24,
-        startEndThreshold_dB_isAuto: true,
-        characteristicFreq_percentEnd: 20,
-        minCallDuration_ms: 2,
-        fftSize: 1024,
-        hopPercent: 25,
-        enableBackwardEndFreqScan: true,
-        maxFrequencyDropThreshold_kHz: 10,
-        protectionWindowAfterPeak_ms: 10
-      };
-
-      const detector = new BatCallDetector(config);
-
-      // 檢測 call 參數
-      const calls = await detector.detectCalls(audioData, sampleRate, Flow, Fhigh);
-
-      if (calls.length > 0) {
-        const call = calls[0];  // 取第一個檢測到的 call
-        
-        // 更新 selection data - 使用 BatCallDetector 返回的正確參數
-        // 注意單位轉換：
-        // - call.startFreq_kHz / call.endFreq_kHz 是 kHz
-        // - call.Flow 是 Hz，需要轉換為 kHz
-        // - call.Fhigh 是 kHz
-        // - call.peakFreq_kHz 是 kHz
-        // - call.kneeFreq_kHz 是 kHz
-        // - call.bandwidth_kHz 是 kHz
-        // - call.duration_ms 是 ms
-        sel.data.highFreq = call.startFreq_kHz;  // 最高頻率 (kHz)
-        sel.data.lowFreq = call.endFreq_kHz;     // 最低頻率 (kHz)
-        sel.data.kneeFreq = call.kneeFreq_kHz;   // 膝點頻率 (kHz)
-        sel.data.peakFreq = call.peakFreq_kHz;   // 峰值頻率 (kHz)
-        sel.data.bandwidth = call.bandwidth_kHz; // 帶寬 (kHz)
-        sel.data.duration = call.duration_ms;    // 持續時間 (ms)
-      }
-    } catch (err) {
-      console.error('計算 Bat Call 參數失敗:', err);
-    }
-  }
-
   function enableResize(sel) {
     const rect = sel.rect;
     let resizing = false;
@@ -897,7 +832,7 @@ export function initFrequencyHover({
           }
         }
 
-        // 即時計算峰值和 Bat Call 參數，確保與 Power Spectrum 同步
+        // 即時計算峰值，確保與 Power Spectrum 同步
         const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
         const timeExp = getTimeExpansionMode();
         const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
@@ -905,11 +840,6 @@ export function initFrequencyHover({
         if (judgeDurationMs < 100) {
           calculatePeakFrequency(sel).catch(err => {
             console.error('Resize 時計算峰值頻率失敗:', err);
-          });
-          
-          // 同時計算 Bat Call 參數（High Freq, Low Freq, Knee Freq, Peak Freq, Bandwidth, Duration）
-          calculateBatCallParameters(sel).catch(err => {
-            console.error('Resize 時計算 Bat Call 參數失敗:', err);
           });
         }
       };
@@ -936,7 +866,7 @@ export function initFrequencyHover({
         window.removeEventListener('mousemove', moveHandler);
         window.removeEventListener('mouseup', upHandler);
 
-        // 當 resize 完成後，根據 Time Expansion 模式判斷是否重新計算峰值和 Bat Call 參數
+        // 當 resize 完成後，根據 Time Expansion 模式判斷是否重新計算峰值
         const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
         const timeExp = getTimeExpansionMode();
         const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
@@ -945,23 +875,12 @@ export function initFrequencyHover({
           calculatePeakFrequency(sel).catch(err => {
             console.error('Resize 後計算峰值頻率失敗:', err);
           });
-          
-          // 同時計算 Bat Call 參數
-          calculateBatCallParameters(sel).catch(err => {
-            console.error('Resize 後計算 Bat Call 參數失敗:', err);
-          });
         } else {
-          // 如果 resize 後超過 100ms，清除 peakFreq 和 bat call 參數
+          // 如果 resize 後超過 100ms，清除 peakFreq
           if (sel.data.peakFreq !== undefined) {
             delete sel.data.peakFreq;
             if (sel.tooltip && sel.tooltip.querySelector('.fpeak')) {
               sel.tooltip.querySelector('.fpeak').textContent = '-';
-            }
-          }
-          if (sel.data.kneeFreq !== undefined) {
-            delete sel.data.kneeFreq;
-            if (sel.tooltip && sel.tooltip.querySelector('.kneefreq')) {
-              sel.tooltip.querySelector('.kneefreq').textContent = '-';
             }
           }
         }
@@ -974,77 +893,35 @@ export function initFrequencyHover({
   
   function updateTooltipValues(sel, left, top, width, height) {
     const { data, tooltip } = sel;
+    const Flow = data.Flow;
+    const Fhigh = data.Fhigh;
+    const Bandwidth = Fhigh - Flow;
+    const Duration = (data.endTime - data.startTime);
     const timeExp = getTimeExpansionMode();
     const freqMul = timeExp ? 10 : 1;
     const timeDiv = timeExp ? 10 : 1;
+    const dispFhigh = Fhigh * freqMul;
+    const dispFlow = Flow * freqMul;
+    const dispBandwidth = Bandwidth * freqMul;
+    const dispDurationMs = (Duration * 1000) / timeDiv;
+    const dispSlope = dispDurationMs > 0 ? (dispBandwidth / dispDurationMs) : 0;
 
     if (!tooltip) {
-      if (sel.durationLabel) {
-        const displayDurationMs = data.duration !== undefined 
-          ? (data.duration / timeDiv) 
-          : ((data.endTime - data.startTime) * 1000 / timeDiv);
-        sel.durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
-      }
+      if (sel.durationLabel) sel.durationLabel.textContent = `${dispDurationMs.toFixed(1)} ms`;
       return;
     }
+    if (sel.durationLabel) sel.durationLabel.textContent = `${dispDurationMs.toFixed(1)} ms`;
 
-    // 使用 BatCallDetector 計算的值
-    // 如果有 Bat Call 參數，使用它；否則顯示 "-"
+    tooltip.querySelector('.fhigh').textContent = dispFhigh.toFixed(1);
+    tooltip.querySelector('.flow').textContent = dispFlow.toFixed(1);
+    tooltip.querySelector('.bandwidth').textContent = dispBandwidth.toFixed(1);
+    tooltip.querySelector('.duration').textContent = dispDurationMs.toFixed(1);
+    tooltip.querySelector('.slope').textContent = dispSlope.toFixed(1);
     
-    // High Freq (Fhigh) - 來自 BatCallDetector
-    if (data.highFreq !== undefined) {
-      const dispHighFreq = data.highFreq * freqMul;
-      tooltip.querySelector('.fhigh').textContent = dispHighFreq.toFixed(1);
-    } else {
-      tooltip.querySelector('.fhigh').textContent = '-';
-    }
-
-    // Low Freq (Flow) - 來自 BatCallDetector，單位已是 kHz
-    if (data.lowFreq !== undefined) {
-      const dispLowFreq = data.lowFreq * freqMul;
-      tooltip.querySelector('.flow').textContent = dispLowFreq.toFixed(1);
-    } else {
-      tooltip.querySelector('.flow').textContent = '-';
-    }
-
-    // Knee Freq - 來自 BatCallDetector
-    if (data.kneeFreq !== undefined) {
-      const dispKneeFreq = data.kneeFreq * freqMul;
-      tooltip.querySelector('.kneefreq').textContent = dispKneeFreq.toFixed(1);
-    } else {
-      tooltip.querySelector('.kneefreq').textContent = '-';
-    }
-
-    // Peak Freq - 來自 BatCallDetector
+    // Update F.peak if available
     if (data.peakFreq !== undefined) {
       const dispPeakFreq = data.peakFreq * freqMul;
       tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
-    } else {
-      tooltip.querySelector('.fpeak').textContent = '-';
-    }
-
-    // Bandwidth - 來自 BatCallDetector
-    if (data.bandwidth !== undefined) {
-      const dispBandwidth = data.bandwidth * freqMul;
-      tooltip.querySelector('.bandwidth').textContent = dispBandwidth.toFixed(1);
-    } else {
-      tooltip.querySelector('.bandwidth').textContent = '-';
-    }
-
-    // Duration - 來自 BatCallDetector
-    if (data.duration !== undefined) {
-      const dispDurationMs = data.duration / timeDiv;
-      tooltip.querySelector('.duration').textContent = dispDurationMs.toFixed(1);
-    } else {
-      tooltip.querySelector('.duration').textContent = '-';
-    }
-
-    // 更新 durationLabel（不受 tooltip 影響）
-    if (sel.durationLabel) {
-      const displayDurationMs = data.duration !== undefined 
-        ? (data.duration / timeDiv) 
-        : ((data.endTime - data.startTime) * 1000 / timeDiv);
-      sel.durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
     }
   }
 
