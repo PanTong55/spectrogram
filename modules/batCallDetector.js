@@ -521,10 +521,10 @@ export class BatCallDetector {
   }
 
   /**
-   * Find optimal Start/End Threshold by testing range and detecting anomalies
+   * Find optimal Start Threshold by testing range and detecting anomalies
    * 
    * Algorithm:
-   * 1. Test threshold values from -24 dB down to -50 dB (step: 1 dB)
+   * 1. Test threshold values from -24 dB down to -70 dB (step: 1 dB)
    * 2. For each threshold, measure Start Frequency using SAME method as measureFrequencyParameters
    * 3. Track frequency differences between consecutive thresholds
    * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
@@ -614,12 +614,15 @@ export class BatCallDetector {
     }
     
     // ============================================================
-    // 算法改進：找出第一個導致 Start Freq 異常變化的臨界點
+    // 算法改進：找出最後一個異常前的 Start Freq 臨界點
     // 
     // 原理：
     // - 正常情況：閾值從 -24 一路降低到 -70，Start Frequency 應該平緩變化 (1-2 kHz)
-    // - 異常情況：突然出現大幅頻率跳變 (>3 kHz)，表示進入了回聲/反彈區域
-    // - 最優閾值：異常發生前的那個值
+    // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz)
+    // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
+    // - 解決：記錄第一個異常，但繼續測試。如果後續連續 3 個值都無異常，則忽略之前的異常
+    //        繼續測試直到最後一個異常出現，然後選擇那個異常前的閾值
+    // - 最優閾值：最後一個異常前的那個值
     // 
     // 重要：只有當 foundBin === true 時才進行比較
     // ============================================================
@@ -628,26 +631,55 @@ export class BatCallDetector {
     // 只收集成功找到 bin 的測量
     const validMeasurements = measurements.filter(m => m.foundBin);
     
+    if (validMeasurements.length === 0) {
+      return -24;
+    }
+    
+    // 追蹤異常檢測狀態
+    let lastAnomalyThreshold = null;  // 最後一個異常前的閾值
+    let consecutiveNormalCount = 0;    // 連續正常值計數
+    let recordedEarlyAnomaly = null;   // 早期記錄的異常前閾值（可能被忽略）
+    
     // 從第二個有效測量開始，比較與前一個測量的差異
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].startFreq_kHz;
       const currFreq_kHz = validMeasurements[i].startFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
-      // 如果頻率差異超過 2.5 kHz，說明進入可疑區域
-      // 異常通常表現為 >= 5-10 kHz 的跳躍
-      if (freqDifference > 2.5) {
-        // 選擇異常前的閾值（這是最後一個"正常"測量）
-        optimalThreshold = validMeasurements[i - 1].threshold;
-        break;
+      const isAnomaly = freqDifference > 2.5;
+      
+      if (isAnomaly) {
+        // 發現異常
+        // 如果之前有連續 3 個正常值，則忽略早期異常
+        if (consecutiveNormalCount >= 3 && recordedEarlyAnomaly !== null) {
+          recordedEarlyAnomaly = null;  // 忽略早期異常
+        }
+        
+        // 如果還沒有記錄早期異常，現在記錄
+        if (recordedEarlyAnomaly === null) {
+          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;
+        }
+        
+        // 更新最後一個異常前的閾值
+        lastAnomalyThreshold = validMeasurements[i - 1].threshold;
+        
+        // 重置連續正常值計數
+        consecutiveNormalCount = 0;
+      } else {
+        // 正常值：沒有大幅跳變
+        consecutiveNormalCount++;
       }
     }
     
-    // 如果沒有偵測到明顯異常，使用最後一個有效的測量
-    if (optimalThreshold === -24 && validMeasurements.length > 0) {
+    // ============================================================
+    // 決定最終使用的閾值
+    // ============================================================
+    if (lastAnomalyThreshold !== null) {
+      // 有異常被檢測到：使用最後一個異常前的閾值
+      optimalThreshold = lastAnomalyThreshold;
+    } else if (validMeasurements.length > 0) {
+      // 沒有異常：使用最後一個有效的測量
       optimalThreshold = validMeasurements[validMeasurements.length - 1].threshold;
-    } else if (validMeasurements.length === 0) {
-      optimalThreshold = -24;
     }
     
     // 確保返回值在有效範圍內
