@@ -722,7 +722,7 @@ export class BatCallDetector {
     // 
     // Standard method: Backward scan from end to find -27dB cutoff
     // + Maximum frequency drop detection (Trick 2)
-    // + Protection window limit (Trick 3)
+    // + Protection window limit (Trick 3) - but only if frequency drop is detected
     // ============================================================
     let newEndFrameIdx = spectrogram.length - 1;
     
@@ -737,18 +737,20 @@ export class BatCallDetector {
     
     // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
     // Handle both FM (Frequency Modulated) and CF (Constant Frequency) calls:
-    // - FM/Sweep: Stop when frequency drops significantly (TRICK 2)
-    // - CF/QCF: Stop when signal strength weakens for consecutive frames
-    // This is TRICK 1: Find from end backwards, stop at first frame below -27dB
+    // - FM/Sweep: Stop when frequency drops significantly (TRICK 2), then apply protection window
+    // - CF/QCF: Scan to end, stop when signal strength weakens for consecutive frames
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
       let freqDropDetected = false;
+      let freqDropFrameIdx = -1; // Remember where frequency drop was detected
       let maxFrequencySeenSoFar = 0;
       let consecutiveWeakFrames = 0; // Track consecutive frames with weak signal
       const weakSignalThreshold = 3; // Stop after 3 consecutive frames with weak signal
       
-      // Scan backward from end, but respect the 10ms protection window
-      const scanStartFrame = Math.min(maxFrameIdxAllowed, spectrogram.length - 1);
+      // Scan backward from END (not limited by protection window initially)
+      // For CF/QCF: let it scan to the real end of signal
+      // For FM: frequency drop will stop it early, then apply protection window
+      const scanStartFrame = spectrogram.length - 1;
       
       for (let frameIdx = scanStartFrame; frameIdx >= peakFrameIdx; frameIdx--) {
         const framePower = spectrogram[frameIdx];
@@ -769,10 +771,9 @@ export class BatCallDetector {
           frameHasSignal = true;
           consecutiveWeakFrames = 0; // Reset weak frame counter when signal returns
           
-          // TRICK 2: Maximum Frequency Drop Rule
-          // If frequency drops too much, lock it and don't accept further increases
-          // Special handling for CF/QCF calls: only apply if significant drop detected
-          if (frameIdx < spectrogram.length - 1) {
+          // TRICK 2: Maximum Frequency Drop Rule (for FM/Sweep detection)
+          // If frequency drops too much, lock it and apply protection window
+          if (frameIdx < spectrogram.length - 1 && !freqDropDetected) {
             const nextFramePower = spectrogram[frameIdx + 1];
             let nextFramePeakFreq = 0;
             let nextFrameMaxPower = -Infinity;
@@ -784,26 +785,35 @@ export class BatCallDetector {
             }
             
             const frequencyDrop = nextFramePeakFreq - framePeakFreq;
-            if (frequencyDrop > maxFrequencyDropThreshold_kHz && !freqDropDetected) {
-              // Large frequency drop detected - this is likely where call ends (FM/Sweep)
+            if (frequencyDrop > maxFrequencyDropThreshold_kHz) {
+              // Large frequency drop detected - this is likely where FM call ends
               freqDropDetected = true;
-              lastValidEndFrame = frameIdx + 1; // Lock at this point
-              break; // Stop scanning
+              freqDropFrameIdx = frameIdx + 1; // Lock at this point
+              // Now apply protection window limit for safety against echoes
+              if (frameIdx + 1 <= maxFrameIdxAllowed) {
+                lastValidEndFrame = frameIdx + 1;
+              }
+              break; // Stop scanning for FM calls
             }
           }
           
-          // Track maximum frequency for drop detection
-          maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
-          lastValidEndFrame = frameIdx;
+          // For CF/QCF: track the end frame but keep scanning to find natural ending
+          if (!freqDropDetected) {
+            lastValidEndFrame = frameIdx;
+            maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
+          }
         } else {
           // Frame has weak signal (below threshold)
-          consecutiveWeakFrames++;
-          
-          // For CF/QCF calls: accept occasional weak frames, but stop after multiple weak frames
-          // This handles cases where signal strength fluctuates near the -27dB boundary
-          if (consecutiveWeakFrames >= weakSignalThreshold && lastValidEndFrame > peakFrameIdx) {
-            // Found clean cutoff: multiple consecutive frames below threshold
-            break;
+          if (!freqDropDetected) {
+            // Only count consecutive weak frames for CF/QCF calls (no frequency drop yet)
+            consecutiveWeakFrames++;
+            
+            // For CF/QCF calls: accept occasional weak frames, but stop after multiple weak frames
+            // This handles cases where signal strength fluctuates near the -27dB boundary
+            if (consecutiveWeakFrames >= weakSignalThreshold && lastValidEndFrame > peakFrameIdx) {
+              // Found clean cutoff: multiple consecutive frames below threshold
+              break;
+            }
           }
         }
       }
@@ -827,8 +837,10 @@ export class BatCallDetector {
       }
     }
     
-    // 確保 end frame 不超過保護窗限制
-    newEndFrameIdx = Math.min(newEndFrameIdx, maxFrameIdxAllowed);
+    // 注意：For CF/QCF calls, newEndFrameIdx 可能超過 maxFrameIdxAllowed
+    // 這是正常的，因為 CF 信號可能延續超過 10ms 的保護窗
+    // Protection window 限制只應用於檢測到頻率下降（FM 類型）的情況
+    // 不應在此進行全局限制
     
     // 更新時間邊界
     if (newStartFrameIdx < timeFrames.length) {
