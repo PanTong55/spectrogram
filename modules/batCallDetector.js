@@ -699,7 +699,7 @@ export class BatCallDetector {
     } = this.config;
     
     const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold (可調整)
-    const endThreshold_dB = peakPower_dB - 30;  // End & Low Frequency threshold (固定 -27dB)
+    const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
@@ -744,8 +744,9 @@ export class BatCallDetector {
       let freqDropDetected = false;
       let freqDropFrameIdx = -1; // Remember where frequency drop was detected
       let maxFrequencySeenSoFar = 0;
-      let consecutiveWeakFrames = 0; // Track consecutive frames with weak signal
-      const weakSignalThreshold = 3; // Stop after 3 consecutive frames with weak signal
+      let consecutiveVeryWeakFrames = 0; // Track consecutive frames with VERY weak signal (below -40dB)
+      const veryWeakThreshold = peakPower_dB - 40; // Much stricter threshold for stopping CF/QCF
+      const consecutiveVeryWeakThreshold = 5; // Need 5+ consecutive very weak frames to stop CF/QCF
       
       // Scan backward from END (not limited by protection window initially)
       // For CF/QCF: let it scan to the real end of signal
@@ -803,15 +804,25 @@ export class BatCallDetector {
             maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
           }
         } else {
-          // Frame has weak signal (below threshold)
+          // Frame has weak signal (below -27dB threshold)
           if (!freqDropDetected) {
-            // Only count consecutive weak frames for CF/QCF calls (no frequency drop yet)
-            consecutiveWeakFrames++;
+            // For CF/QCF calls: only stop if signal becomes VERY weak (below -40dB)
+            // This prevents stopping due to signal fluctuations in the middle of CF calls
+            let frameMaxPower = -Infinity;
+            for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+              frameMaxPower = Math.max(frameMaxPower, framePower[binIdx]);
+            }
             
-            // For CF/QCF calls: accept occasional weak frames, but stop after multiple weak frames
-            // This handles cases where signal strength fluctuates near the -27dB boundary
-            if (consecutiveWeakFrames >= weakSignalThreshold && lastValidEndFrame > peakFrameIdx) {
-              // Found clean cutoff: multiple consecutive frames below threshold
+            if (frameMaxPower < veryWeakThreshold) {
+              consecutiveVeryWeakFrames++;
+            } else {
+              // Signal recovered above -40dB, reset counter
+              consecutiveVeryWeakFrames = 0;
+            }
+            
+            // Only stop after many consecutive VERY weak frames (signal nearly gone)
+            if (consecutiveVeryWeakFrames >= consecutiveVeryWeakThreshold && lastValidEndFrame > peakFrameIdx) {
+              // Found true end: multiple consecutive frames with signal nearly gone
               break;
             }
           }
