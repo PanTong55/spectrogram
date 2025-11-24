@@ -735,12 +735,12 @@ export class BatCallDetector {
       spectrogram.length - 1
     );
     
-    // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
+    // ANTI-REBOUNCE: Forward scan from peak to find natural end
     // Professional approach: Use energy trend analysis instead of absolute thresholds
-    // - FM/Sweep: Stop when frequency drops significantly (TRICK 2), then apply protection window
-    // - CF/QCF: Find where energy consistently drops below peak (natural end point)
+    // - FM/Sweep: Stop when frequency drops significantly (TRICK 2)
+    // - CF/QCF: Find where energy gradually decays below peak (natural end point)
     if (enableBackwardEndFreqScan) {
-      let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
+      let lastValidEndFrame = peakFrameIdx;
       let freqDropDetected = false;
       
       // Professional criterion (Avisoft/SonoBat style): Find last frame where energy > peakPower_dB - 18dB
@@ -748,8 +748,8 @@ export class BatCallDetector {
       const sustainedEnergyThreshold = peakPower_dB - 18; // 18dB drop from peak
       let lastFrameAboveSustainedThreshold = peakFrameIdx;
       
-      // Scan backward from END to find where call ends naturally
-      for (let frameIdx = spectrogram.length - 1; frameIdx >= peakFrameIdx; frameIdx--) {
+      // Scan FORWARD from peak to END to find natural decay point
+      for (let frameIdx = peakFrameIdx; frameIdx < spectrogram.length; frameIdx++) {
         const framePower = spectrogram[frameIdx];
         let frameMaxPower = -Infinity;
         let framePeakFreq = 0;
@@ -762,22 +762,22 @@ export class BatCallDetector {
         }
         
         // Check for FM frequency drop (primary indicator for FM calls)
-        if (frameIdx < spectrogram.length - 1 && !freqDropDetected && frameMaxPower > endThreshold_dB) {
-          const nextFramePower = spectrogram[frameIdx + 1];
-          let nextFramePeakFreq = 0;
-          let nextFrameMaxPower = -Infinity;
-          for (let binIdx = 0; binIdx < nextFramePower.length; binIdx++) {
-            if (nextFramePower[binIdx] > nextFrameMaxPower) {
-              nextFrameMaxPower = nextFramePower[binIdx];
-              nextFramePeakFreq = freqBins[binIdx] / 1000;
+        if (frameIdx > peakFrameIdx && !freqDropDetected && frameMaxPower > endThreshold_dB) {
+          const prevFramePower = spectrogram[frameIdx - 1];
+          let prevFramePeakFreq = 0;
+          let prevFrameMaxPower = -Infinity;
+          for (let binIdx = 0; binIdx < prevFramePower.length; binIdx++) {
+            if (prevFramePower[binIdx] > prevFrameMaxPower) {
+              prevFrameMaxPower = prevFramePower[binIdx];
+              prevFramePeakFreq = freqBins[binIdx] / 1000;
             }
           }
           
-          const frequencyDrop = nextFramePeakFreq - framePeakFreq;
+          const frequencyDrop = prevFramePeakFreq - framePeakFreq;
           if (frequencyDrop > maxFrequencyDropThreshold_kHz) {
-            // FM call: frequency drop detected
+            // FM call: frequency drop detected, stop here
             freqDropDetected = true;
-            lastValidEndFrame = frameIdx + 1;
+            lastValidEndFrame = frameIdx - 1;
             break;
           }
         }
@@ -786,9 +786,12 @@ export class BatCallDetector {
         if (!freqDropDetected) {
           if (frameMaxPower > sustainedEnergyThreshold) {
             lastFrameAboveSustainedThreshold = frameIdx;
-            lastValidEndFrame = frameIdx; // Only update if signal is still strong
+            lastValidEndFrame = frameIdx;
           }
-          // If signal drops below -18dB, stop tracking but keep last valid frame
+          // If signal drops below -18dB, stop tracking
+          else if (frameMaxPower <= sustainedEnergyThreshold && frameIdx > peakFrameIdx) {
+            break; // Stop scanning once energy permanently drops below threshold
+          }
         }
       }
       
