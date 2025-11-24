@@ -207,18 +207,20 @@ export function showPowerSpectrumPopup({
       );
       
       // 更新 UI 以反映實際使用的 startEndThreshold 值
-      // Auto mode 時：灰色顯示 "Auto (-40)" 格式
+      // Auto mode 時：清空 value，在 placeholder 中顯示 "Auto (-40)" 格式，灰色樣式
       // Manual mode 時：顯示用戶設定的值
       if (batCallStartEndThresholdInput) {
         if (detector.config.startEndThreshold_dB_isAuto === true) {
-          // Auto 模式：顯示 "Auto (計算值)" 格式，並設定灰色樣式
+          // Auto 模式：清空 value，在 placeholder 中顯示計算值，並設定灰色樣式
           const calculatedValue = detector.config.startEndThreshold_dB;
-          batCallStartEndThresholdInput.value = `Auto (${calculatedValue})`;
+          batCallStartEndThresholdInput.value = '';  // 清空 value
+          batCallStartEndThresholdInput.placeholder = `Auto (${calculatedValue})`;  // 更新 placeholder
           batCallStartEndThresholdInput.style.color = '#999';  // 灰色
           batCallStartEndThresholdInput.style.fontStyle = 'italic';
         } else {
           // Manual 模式：保持用戶輸入的值，黑色文字
           batCallStartEndThresholdInput.value = detector.config.startEndThreshold_dB.toString();
+          batCallStartEndThresholdInput.placeholder = 'Auto';  // 恢復預設 placeholder
           batCallStartEndThresholdInput.style.color = '#000';  // 黑色
           batCallStartEndThresholdInput.style.fontStyle = 'normal';
         }
@@ -282,27 +284,15 @@ export function showPowerSpectrumPopup({
     
     // 處理 Start/End Threshold 的 Auto/Manual 模式
     // 新 UI 格式：
-    // - Auto 模式：顯示 "Auto (-40)" 或空白 → 設定 isAuto = true
-    // - Manual 模式：顯示具體數值 "-40" → 設定 isAuto = false
+    // - Auto 模式：value 為空（placeholder 顯示 "Auto (-40)"）→ 設定 isAuto = true
+    // - Manual 模式：value 顯示具體數值 "-40" → 設定 isAuto = false
     const startEndValue = batCallStartEndThresholdInput.value.trim();
     
-    if (startEndValue === '' || 
-        startEndValue.toLowerCase().startsWith('auto') || 
-        startEndValue.toLowerCase() === 'auto') {
-      // Auto 模式（空白或以 "Auto" 開頭）
+    if (startEndValue === '') {
+      // Auto 模式：value 為空字符串
       batCallConfig.startEndThreshold_dB_isAuto = true;
       batCallConfig.startEndThreshold_dB = -24;  // 預設值，會被 findOptimalStartEndThreshold 覆蓋
       // Auto 模式不修改顯示，由 updateBatCallAnalysis 更新
-    } else if (startEndValue.toLowerCase().includes('auto')) {
-      // 可能是計算後的格式 "Auto (-40)"，提取數值
-      batCallConfig.startEndThreshold_dB_isAuto = true;
-      const match = startEndValue.match(/\(([^)]+)\)/);
-      if (match && !isNaN(parseFloat(match[1]))) {
-        // 如果用戶編輯了這個值，從括號內提取
-        batCallConfig.startEndThreshold_dB = parseFloat(match[1]);
-      } else {
-        batCallConfig.startEndThreshold_dB = -24;
-      }
     } else {
       // Manual 模式：嘗試解析為數字
       const numValue = parseFloat(startEndValue);
