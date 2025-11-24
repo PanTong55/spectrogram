@@ -786,18 +786,17 @@ export class BatCallDetector {
         if (!freqDropDetected) {
           if (frameMaxPower > sustainedEnergyThreshold) {
             lastFrameAboveSustainedThreshold = frameIdx;
+            lastValidEndFrame = frameIdx; // Only update if signal is still strong
           }
-          lastValidEndFrame = frameIdx;
+          // If signal drops below -18dB, stop tracking but keep last valid frame
         }
       }
       
       // Determine final end frame based on call type
-      if (!freqDropDetected && lastFrameAboveSustainedThreshold > peakFrameIdx) {
+      if (!freqDropDetected) {
         // CF/QCF call: use last frame with sustained energy (-18dB threshold)
+        // This is the natural end point where CF/QCF signal decays
         newEndFrameIdx = lastFrameAboveSustainedThreshold;
-      } else if (!freqDropDetected) {
-        // CF/QCF but very weak: use last valid frame
-        newEndFrameIdx = lastValidEndFrame;
       } else {
         // FM call: already set by frequency drop detection
         newEndFrameIdx = lastValidEndFrame;
