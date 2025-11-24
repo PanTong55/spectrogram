@@ -759,13 +759,21 @@ export function initFrequencyHover({
       if (calls.length > 0) {
         const call = calls[0];  // 取第一個檢測到的 call
         
-        // 更新 selection data
-        sel.data.highFreq = call.Fhigh;
-        sel.data.lowFreq = call.Flow;
-        sel.data.kneeFreq = call.kneeFreq_kHz;
-        sel.data.peakFreq = call.peakFreq_kHz;
-        sel.data.bandwidth = call.bandwidth_kHz;
-        sel.data.duration = call.duration_ms;
+        // 更新 selection data - 使用 BatCallDetector 返回的正確參數
+        // 注意單位轉換：
+        // - call.startFreq_kHz / call.endFreq_kHz 是 kHz
+        // - call.Flow 是 Hz，需要轉換為 kHz
+        // - call.Fhigh 是 kHz
+        // - call.peakFreq_kHz 是 kHz
+        // - call.kneeFreq_kHz 是 kHz
+        // - call.bandwidth_kHz 是 kHz
+        // - call.duration_ms 是 ms
+        sel.data.highFreq = call.startFreq_kHz;  // 最高頻率 (kHz)
+        sel.data.lowFreq = call.endFreq_kHz;     // 最低頻率 (kHz)
+        sel.data.kneeFreq = call.kneeFreq_kHz;   // 膝點頻率 (kHz)
+        sel.data.peakFreq = call.peakFreq_kHz;   // 峰值頻率 (kHz)
+        sel.data.bandwidth = call.bandwidth_kHz; // 帶寬 (kHz)
+        sel.data.duration = call.duration_ms;    // 持續時間 (ms)
       }
     } catch (err) {
       console.error('計算 Bat Call 參數失敗:', err);
