@@ -17,7 +17,7 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   startEndThreshold_dB: -24,
   startEndThreshold_dB_isAuto: true,  // Auto mode for Start/End Threshold
   characteristicFreq_percentEnd: 20,
-  minCallDuration_ms: 1,
+  minCallDuration_ms: 2,
   fftSize: '1024',
   hopPercent: 25,
   // 2025 Anti-Rebounce
@@ -305,7 +305,7 @@ export function showPowerSpectrumPopup({
     }
     
     batCallConfig.characteristicFreq_percentEnd = parseInt(batCallCharFreqPercentInput.value) || 20;
-    batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 1;
+    batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 2;
     batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 25;
     
     // 2025 Anti-Rebounce 參數
@@ -716,7 +716,7 @@ function createPopupWindow() {
   minDurationInput.type = 'number';
   minDurationInput.value = window.__batCallControlsMemory.minCallDuration_ms.toString();
   minDurationInput.min = '1';
-  minDurationInput.step = '1';
+  minDurationInput.step = '0.5';
   minDurationInput.title = 'Minimum call duration (ms)';
   minDurationControl.appendChild(minDurationInput);
   batCallControlPanel.appendChild(minDurationControl);
