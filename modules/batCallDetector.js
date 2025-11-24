@@ -736,11 +736,16 @@ export class BatCallDetector {
     );
     
     // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
+    // Handle both FM (Frequency Modulated) and CF (Constant Frequency) calls:
+    // - FM/Sweep: Stop when frequency drops significantly (TRICK 2)
+    // - CF/QCF: Stop when signal strength weakens for consecutive frames
     // This is TRICK 1: Find from end backwards, stop at first frame below -27dB
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
       let freqDropDetected = false;
       let maxFrequencySeenSoFar = 0;
+      let consecutiveWeakFrames = 0; // Track consecutive frames with weak signal
+      const weakSignalThreshold = 3; // Stop after 3 consecutive frames with weak signal
       
       // Scan backward from end, but respect the 10ms protection window
       const scanStartFrame = Math.min(maxFrameIdxAllowed, spectrogram.length - 1);
@@ -762,9 +767,11 @@ export class BatCallDetector {
         // Check if frame has signal above threshold
         if (frameMaxPower > endThreshold_dB) {
           frameHasSignal = true;
+          consecutiveWeakFrames = 0; // Reset weak frame counter when signal returns
           
           // TRICK 2: Maximum Frequency Drop Rule
           // If frequency drops too much, lock it and don't accept further increases
+          // Special handling for CF/QCF calls: only apply if significant drop detected
           if (frameIdx < spectrogram.length - 1) {
             const nextFramePower = spectrogram[frameIdx + 1];
             let nextFramePeakFreq = 0;
@@ -778,7 +785,7 @@ export class BatCallDetector {
             
             const frequencyDrop = nextFramePeakFreq - framePeakFreq;
             if (frequencyDrop > maxFrequencyDropThreshold_kHz && !freqDropDetected) {
-              // Large frequency drop detected - this is likely where call ends
+              // Large frequency drop detected - this is likely where call ends (FM/Sweep)
               freqDropDetected = true;
               lastValidEndFrame = frameIdx + 1; // Lock at this point
               break; // Stop scanning
@@ -788,9 +795,16 @@ export class BatCallDetector {
           // Track maximum frequency for drop detection
           maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
           lastValidEndFrame = frameIdx;
-        } else if (frameHasSignal === false && lastValidEndFrame > peakFrameIdx) {
-          // Found first frame below threshold (TRICK 1: backward cutoff)
-          break;
+        } else {
+          // Frame has weak signal (below threshold)
+          consecutiveWeakFrames++;
+          
+          // For CF/QCF calls: accept occasional weak frames, but stop after multiple weak frames
+          // This handles cases where signal strength fluctuates near the -27dB boundary
+          if (consecutiveWeakFrames >= weakSignalThreshold && lastValidEndFrame > peakFrameIdx) {
+            // Found clean cutoff: multiple consecutive frames below threshold
+            break;
+          }
         }
       }
       
