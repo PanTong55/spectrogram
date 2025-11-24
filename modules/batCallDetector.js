@@ -15,7 +15,7 @@ import { getApplyWindowFunction, getGoertzelEnergyFunction } from './powerSpectr
  * Bat Call Detection Configuration (Professional Standards)
  * 
  * 2025 Anti-Rebounce Upgrade:
- * - Backward scanning for -24dB contour cutoff
+ * - Backward scanning for -27dB contour cutoff
  * - Maximum frequency drop detection (10 kHz threshold)
  * - 10 ms protection window after peak energy
  */
@@ -65,7 +65,7 @@ export const DEFAULT_DETECTION_CONFIG = {
   // These parameters protect against reverberations in tunnels, forests, buildings
   
   // Trick 1: Backward scanning for end frequency detection
-  // When enabled, scan from end towards start to find -24dB cutoff (prevents rebounce tail)
+  // When enabled, scan from end towards start to find -27dB cutoff (prevents rebounce tail)
   enableBackwardEndFreqScan: true,
   
   // Trick 2: Maximum Frequency Drop Rule (kHz)
@@ -120,8 +120,8 @@ export class BatCall {
     this.duration_ms = null;        // Total duration (milliseconds)
     
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
-    this.startFreq_kHz = null;      // Start frequency (kHz) - from first frame above -24dB threshold
-    this.endFreq_kHz = null;        // End frequency (kHz) - from last frame above -24dB threshold
+    this.startFreq_kHz = null;      // Start frequency (kHz) - from first frame above -27dB threshold
+    this.endFreq_kHz = null;        // End frequency (kHz) - from last frame above -27dB threshold
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
     this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
@@ -258,12 +258,12 @@ export class BatCallDetector {
       // START.FREQ (startFreq_kHz): 
       //   = Frequency value at the 1st frame of call signal
       //   = Highest frequency in the entire call (for downward FM)
-      //   = Derived from first frame above -24dB threshold
+      //   = Derived from first frame above -24 to -60dB threshold (Auto)
       // 
       // END.FREQ (endFreq_kHz):
       //   = Frequency value at the last frame of call signal
       //   = Lowest frequency in the entire call (for downward FM)
-      //   = Derived from last frame above -24dB threshold
+      //   = Derived from last frame above -27dB threshold
       // 
       // HIGH.FREQ (Fhigh):
       //   = Highest frequency present during entire call
@@ -699,7 +699,7 @@ export class BatCallDetector {
     } = this.config;
     
     const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold (可調整)
-    const endThreshold_dB = peakPower_dB - 24;  // End & Low Frequency threshold (固定 -24dB)
+    const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
@@ -720,7 +720,7 @@ export class BatCallDetector {
     
     // TRICK 1 & 3: Find end frame with anti-rebounce protection
     // 
-    // Standard method: Backward scan from end to find -24dB cutoff
+    // Standard method: Backward scan from end to find -27dB cutoff
     // + Maximum frequency drop detection (Trick 2)
     // + Protection window limit (Trick 3)
     // ============================================================
@@ -736,7 +736,7 @@ export class BatCallDetector {
     );
     
     // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
-    // This is TRICK 1: Find from end backwards, stop at first frame below -24dB
+    // This is TRICK 1: Find from end backwards, stop at first frame below -27dB
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
       let freqDropDetected = false;
@@ -829,7 +829,7 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 2: Find start frequency from first frame
-    // Professional standard: threshold at -24dB below global peak
+    // Professional standard: threshold at -27dB below global peak
     // This is the highest frequency in the call (from first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
@@ -865,14 +865,14 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 3: Find end frequency from last frame
-    // Professional standard: Fixed threshold at -24dB below global peak
+    // Professional standard: Fixed threshold at -27dB below global peak
     // This is the lowest frequency in the call (from last frame)
     // Search from LOW to HIGH frequency (normal bin order)
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
     let endFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
-    // Search from low to high frequency using fixed -24dB threshold
+    // Search from low to high frequency using fixed -27dB threshold
     for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
       if (lastFramePower[binIdx] > endThreshold_dB) {
         endFreq_Hz = freqBins[binIdx];
@@ -1251,7 +1251,7 @@ export class BatCallDetector {
       }
     }
     
-    // Second pass: find frequency range based on -24dB threshold from peak
+    // Second pass: find frequency range based on -27dB threshold from peak
     // (Commercial standard from Avisoft, SonoBat)
     if (peakPower_dB > -Infinity) {
       const threshold_dB = peakPower_dB + startEndThreshold_dB; // Typically -24dB
