@@ -699,7 +699,7 @@ export class BatCallDetector {
     } = this.config;
     
     const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold (可調整)
-    const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
+    const endThreshold_dB = peakPower_dB - 30;  // End & Low Frequency threshold (固定 -27dB)
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
