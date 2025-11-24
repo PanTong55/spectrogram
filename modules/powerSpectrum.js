@@ -19,7 +19,7 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   characteristicFreq_percentEnd: 20,
   minCallDuration_ms: 2,
   fftSize: '1024',
-  hopPercent: 25,
+  hopPercent: 3.125,
   // 2025 Anti-Rebounce
   enableBackwardEndFreqScan: true,
   maxFrequencyDropThreshold_kHz: 10,
@@ -306,7 +306,7 @@ export function showPowerSpectrumPopup({
     
     batCallConfig.characteristicFreq_percentEnd = parseInt(batCallCharFreqPercentInput.value) || 20;
     batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 2;
-    batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 25;
+    batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 3.125;
     
     // 2025 Anti-Rebounce 參數
     // 注意：每次都重新查詢元素，確保獲取最新的 DOM 節點
@@ -745,7 +745,7 @@ function createPopupWindow() {
   hopPercentInput.value = window.__batCallControlsMemory.hopPercent.toString();
   hopPercentInput.min = '1';
   hopPercentInput.max = '99';
-  hopPercentInput.step = '1';
+  hopPercentInput.step = '0.125';
   hopPercentInput.title = 'Hop size percentage (overlap = 100 - hopPercent)';
   hopPercentControl.appendChild(hopPercentInput);
   batCallControlPanel.appendChild(hopPercentControl);

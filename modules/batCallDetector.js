@@ -48,7 +48,7 @@ export const DEFAULT_DETECTION_CONFIG = {
   fftSize: 1024,
   
   // Time resolution (STFT hop size as percentage of FFT size)
-  hopPercent: 25,  // 75% overlap = 25% hop
+  hopPercent: 3.125,  // 96.875% overlap = 3.125% hop
   
   // Advanced: Call type detection
   // 'auto': automatic detection (CF if bandwidth < 5kHz, FM otherwise)
