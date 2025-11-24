@@ -1184,28 +1184,28 @@ export class BatCallDetector {
     
     // STEP 6.8: Set knee frequency and knee time from detected knee point
     // 
-    // CORRECTION (User requirement):
-    // Knee Time = Knee frequency 的時間 - Start frequency 的時間
-    // i.e., the time offset from when Start Frequency is detected to when Knee occurs
-    //
-    // startFreqTime_s = time of first frame (STEP 2.5)
+    // Knee Time = time from call START to when knee occurs
+    // call.startTime_s = time when start frequency is detected (from STEP 1.5)
     // timeFrames[kneeIdx] = time when knee is detected
-    // kneeTime_ms = (timeFrames[kneeIdx] - startFreqTime_s) * 1000
+    // kneeTime_ms = (timeFrames[kneeIdx] - call.startTime_s) * 1000
+    //
+    // Important: Use call.startTime_s (not startFreqTime_s) as reference
+    // because startTime is the actual call boundary detection time
     if (kneeIdx >= 0 && kneeIdx < frameFrequencies.length) {
       // Use original (non-smoothed) frequency at knee point for accuracy
       call.kneeFreq_kHz = frameFrequencies[kneeIdx] / 1000;
       
-      // Knee time = time from start frequency to knee point
-      if (kneeIdx >= 0 && kneeIdx < timeFrames.length) {
-        call.kneeTime_ms = (timeFrames[kneeIdx] - startFreqTime_s) * 1000;
+      // Knee time = time from call start to knee point
+      if (kneeIdx >= 0 && kneeIdx < timeFrames.length && call.startTime_s !== null) {
+        call.kneeTime_ms = (timeFrames[kneeIdx] - call.startTime_s) * 1000;
       } else {
         call.kneeTime_ms = 0;
       }
     } else {
       // Ultimate fallback: use peak frequency
       call.kneeFreq_kHz = peakFreq_Hz / 1000;
-      if (peakFrameIdx >= 0 && peakFrameIdx < timeFrames.length) {
-        call.kneeTime_ms = (timeFrames[peakFrameIdx] - startFreqTime_s) * 1000;
+      if (peakFrameIdx >= 0 && peakFrameIdx < timeFrames.length && call.startTime_s !== null) {
+        call.kneeTime_ms = (timeFrames[peakFrameIdx] - call.startTime_s) * 1000;
       } else {
         call.kneeTime_ms = 0;
       }
