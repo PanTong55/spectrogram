@@ -2502,6 +2502,10 @@ input.tag-button.editing {
   height: 18px;
 }
 
+#hopPercent {
+  width: 45px; 
+}
+
 .bat-call-controls .dropdown-button {
   padding: 3px 8px;
   text-align:left;
