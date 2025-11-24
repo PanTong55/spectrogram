@@ -578,9 +578,9 @@ export class BatCallDetector {
       const currFreq_kHz = validMeasurements[i].startFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
-      // 如果頻率差異超過 3 kHz，說明進入可疑區域
+      // 如果頻率差異超過 2.5 kHz，說明進入可疑區域
       // 異常通常表現為 >= 5-10 kHz 的跳躍
-      if (freqDifference > 3) {
+      if (freqDifference > 2.5) {
         // 選擇異常前的閾值（這是最後一個"正常"測量）
         optimalThreshold = validMeasurements[i - 1].threshold;
         break;
