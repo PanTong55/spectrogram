@@ -1184,31 +1184,46 @@ export class BatCallDetector {
     
     // STEP 6.8: Set knee frequency and knee time from detected knee point
     // 
-    // Knee Time = time from call START to when knee occurs
-    // call.startTime_s = time when start frequency is detected (from STEP 1.5)
-    // timeFrames[kneeIdx] = time when knee is detected
+    // CRITICAL: Knee time MUST be between 0 and duration_ms
+    // Knee must occur AFTER call start and BEFORE call end
     // kneeTime_ms = (timeFrames[kneeIdx] - call.startTime_s) * 1000
-    //
-    // Important: Use call.startTime_s (not startFreqTime_s) as reference
-    // because startTime is the actual call boundary detection time
-    if (kneeIdx >= 0 && kneeIdx < frameFrequencies.length) {
-      // Use original (non-smoothed) frequency at knee point for accuracy
-      call.kneeFreq_kHz = frameFrequencies[kneeIdx] / 1000;
+    
+    let finalKneeIdx = -1;
+    
+    // Determine which knee point to use (prioritize validity)
+    if (kneeIdx >= 0 && kneeIdx >= newStartFrameIdx && kneeIdx <= newEndFrameIdx) {
+      // Curvature-detected knee is valid (within call boundaries)
+      finalKneeIdx = kneeIdx;
+    } else if (peakFrameIdx >= newStartFrameIdx && peakFrameIdx <= newEndFrameIdx) {
+      // Fall back to peak if detected knee is invalid
+      finalKneeIdx = peakFrameIdx;
+    }
+    
+    if (finalKneeIdx >= 0 && finalKneeIdx < frameFrequencies.length && finalKneeIdx < timeFrames.length) {
+      // Use original (non-smoothed) frequency at knee point
+      call.kneeFreq_kHz = frameFrequencies[finalKneeIdx] / 1000;
       
-      // Knee time = time from call start to knee point
-      if (kneeIdx >= 0 && kneeIdx < timeFrames.length && call.startTime_s !== null) {
-        call.kneeTime_ms = (timeFrames[kneeIdx] - call.startTime_s) * 1000;
+      // Calculate knee time from call start
+      if (call.startTime_s !== null) {
+        const rawKneeTime_ms = (timeFrames[finalKneeIdx] - call.startTime_s) * 1000;
+        
+        // SAFETY CHECK: Ensure knee time is valid
+        // Must be positive and less than duration
+        if (rawKneeTime_ms >= 0 && rawKneeTime_ms <= call.duration_ms) {
+          call.kneeTime_ms = rawKneeTime_ms;
+        } else {
+          // Invalid knee time, reset to null (no valid knee)
+          call.kneeTime_ms = null;
+          call.kneeFreq_kHz = null;
+        }
       } else {
-        call.kneeTime_ms = 0;
+        call.kneeTime_ms = null;
+        call.kneeFreq_kHz = null;
       }
     } else {
-      // Ultimate fallback: use peak frequency
-      call.kneeFreq_kHz = peakFreq_Hz / 1000;
-      if (peakFrameIdx >= 0 && peakFrameIdx < timeFrames.length && call.startTime_s !== null) {
-        call.kneeTime_ms = (timeFrames[peakFrameIdx] - call.startTime_s) * 1000;
-      } else {
-        call.kneeTime_ms = 0;
-      }
+      // No valid knee point found
+      call.kneeTime_ms = null;
+      call.kneeFreq_kHz = null;
     }
     
     // ============================================================
