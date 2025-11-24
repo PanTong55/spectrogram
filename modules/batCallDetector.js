@@ -1097,46 +1097,87 @@ export class BatCallDetector {
       secondDerivIndices.push(i + 2);  // This 2nd derivative is at frame i+2
     }
     
-    // STEP 6.5: Find knee point - minimum 2nd derivative (most negative)
-    // This represents the point where frequency deceleration is maximum
-    // i.e., CF segment (stable) → FM segment (rapid change)
-    let kneeIdx = -1;
-    let minSecondDeriv = 0; // Looking for negative values
+    // STEP 6.5: Find knee point - Use frequency acceleration (curvature) method
+    // Professional method: Find maximum |curvature| = |d²f/dt²| / (1 + (df/dt)²)^(3/2)
+    // This identifies the sharpest turning point in frequency trajectory
+    // For FM-QCF: Knee is at the point where FM transitions to QCF
     
-    for (let i = 0; i < secondDerivatives.length; i++) {
-      if (secondDerivatives[i] < minSecondDeriv) {
-        minSecondDeriv = secondDerivatives[i];
-        kneeIdx = secondDerivIndices[i];  // Use mapped frame index
+    let kneeIdx = -1;
+    let maxCurvature = 0;
+    
+    // Calculate curvature for each point using proper formula
+    for (let i = 1; i < firstDerivatives.length - 1; i++) {
+      const frameIdx = firstDerivIndices[i]; // Get actual frame index
+      
+      if (frameIdx >= secondDerivIndices.length) continue;
+      
+      const df_dt = firstDerivatives[i];
+      const d2f_dt2 = secondDerivatives[i];
+      
+      // Curvature = |d²f/dt²| / (1 + (df/dt)²)^(3/2)
+      // Higher curvature = sharper turn in frequency trajectory
+      const denominator = Math.pow(1 + df_dt * df_dt, 1.5);
+      const curvature = Math.abs(d2f_dt2) / (denominator + 1e-10); // Avoid division by zero
+      
+      // For FM-QCF transition: we look for maximum curvature, not minimum 2nd derivative
+      // This identifies the sharpest change in frequency pattern
+      if (curvature > maxCurvature) {
+        maxCurvature = curvature;
+        kneeIdx = frameIdx;
       }
     }
     
-    // STEP 6.6: Quality check - verify knee is significant
-    // Calculation of signal-to-noise ratio (SNR) of the 2nd derivative
-    const derivMean = secondDerivatives.reduce((a, b) => a + b, 0) / secondDerivatives.length;
+    // STEP 6.6: Quality check - verify knee detection is reliable
+    // Only use knee point if curvature is significant relative to signal noise
+    const derivMean = secondDerivatives.reduce((a, b) => a + b, 0) / Math.max(secondDerivatives.length, 1);
     const derivStdDev = Math.sqrt(
-      secondDerivatives.reduce((sum, val) => sum + Math.pow(val - derivMean, 2), 0) / secondDerivatives.length
+      secondDerivatives.reduce((sum, val) => sum + Math.pow(val - derivMean, 2), 0) / Math.max(secondDerivatives.length, 1)
     );
     
-    const isNoisySignal = Math.abs(minSecondDeriv) < derivStdDev * 0.5; // SNR threshold
+    // Curvature-based SNR: if max curvature is weak, use fallback
+    const isWeakCurvature = maxCurvature < derivStdDev * 0.3;
     
-    // STEP 6.7: If second derivative method fails, use -15 dB fallback
-    if (kneeIdx < 0 || isNoisySignal) {
-      // FALLBACK: Find first point from end that is -15 dB below peak
-      const fallbackThreshold = peakPower_dB - 15; // Professional standard: -15 dB
+    // STEP 6.7: If curvature method fails, use professional fallback
+    // Avisoft uses: Find point where frequency change rate has maximum transition
+    if (kneeIdx < 0 || isWeakCurvature) {
+      // FALLBACK: Find maximum of |1st derivative| 
+      // For FM-QCF: This is typically where FM segment ends (frequency change slows down)
+      let maxFirstDeriv = 0;
+      let maxDerivIdx = -1;
       
-      kneeIdx = -1;
-      // Search from end backwards (CF segment is usually at the end)
-      for (let i = spectrogram.length - 1; i >= 0; i--) {
-        const framePower = spectrogram[i];
-        let frameMax = -Infinity;
-        
-        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-          frameMax = Math.max(frameMax, framePower[binIdx]);
+      // Search only in the latter half of the call (where QCF typically occurs)
+      const searchStart = Math.floor(spectrogram.length * 0.3);
+      const searchEnd = Math.floor(spectrogram.length * 0.9);
+      
+      for (let i = 0; i < firstDerivatives.length; i++) {
+        const frameIdx = firstDerivIndices[i];
+        if (frameIdx >= searchStart && frameIdx <= searchEnd) {
+          const absDeriv = Math.abs(firstDerivatives[i]);
+          if (absDeriv > maxFirstDeriv) {
+            maxFirstDeriv = absDeriv;
+            maxDerivIdx = frameIdx;
+          }
         }
+      }
+      
+      if (maxDerivIdx >= 0) {
+        kneeIdx = maxDerivIdx;
+      } else {
+        // Ultimate fallback: -18 dB below peak (energy-based)
+        const fallbackThreshold = peakPower_dB - 18;
         
-        if (frameMax > fallbackThreshold) {
-          kneeIdx = i;  // Direct frame index from spectrogram
-          break;
+        for (let i = 0; i < spectrogram.length; i++) {
+          const framePower = spectrogram[i];
+          let frameMax = -Infinity;
+          
+          for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+            frameMax = Math.max(frameMax, framePower[binIdx]);
+          }
+          
+          if (frameMax > fallbackThreshold) {
+            kneeIdx = i;
+            break;
+          }
         }
       }
     }
