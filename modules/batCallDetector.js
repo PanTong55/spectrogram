@@ -618,11 +618,15 @@ export class BatCallDetector {
     // 
     // 原理：
     // - 正常情況：閾值從 -24 一路降低到 -70，Start Frequency 應該平緩變化 (1-2 kHz)
-    // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz)
+    // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz) 
+    // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 立即停止，不繼續測試
     // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
-    // - 解決：記錄第一個異常，但繼續測試。如果後續連續 3 個值都無異常，則忽略之前的異常
-    //        繼續測試直到最後一個異常出現，然後選擇那個異常前的閾值
-    // - 最優閾值：最後一個異常前的那個值
+    // - 解決：
+    //   1. 保險機制：如發現超大幅跳變 (>4 kHz)，立即停止，選擇異常前的閾值
+    //   2. 記錄第一個異常，但繼續測試
+    //   3. 如果後續連續 3 個值都無異常，則忽略之前的異常
+    //   4. 如果最後連續出現異常，則選擇最後一個有效測量（異常前的那個）
+    //   5. 如果異常後沒有連續 3 個正常值，認為後面都是雜訊，不再追蹤更遠的異常
     // 
     // 重要：只有當 foundBin === true 時才進行比較
     // ============================================================
@@ -636,9 +640,11 @@ export class BatCallDetector {
     }
     
     // 追蹤異常檢測狀態
-    let lastAnomalyThreshold = null;  // 最後一個異常前的閾值
-    let consecutiveNormalCount = 0;    // 連續正常值計數
-    let recordedEarlyAnomaly = null;   // 早期記錄的異常前閾值（可能被忽略）
+    let lastValidThreshold = validMeasurements[0].threshold;  // 最後一個有效測量（無異常的）
+    let consecutiveAnomalyCount = 0;  // 連續異常計數
+    let consecutiveNormalCount = 0;   // 連續正常值計數
+    let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
+    let foundValidSignal = true;      // 記錄第一個測量是否是有效的（無異常）
     
     // 從第二個有效測量開始，比較與前一個測量的差異
     for (let i = 1; i < validMeasurements.length; i++) {
@@ -646,39 +652,75 @@ export class BatCallDetector {
       const currFreq_kHz = validMeasurements[i].startFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
+      // ============================================================
+      // 保險機制 1：超大幅頻率跳變 (>4 kHz) - 立即停止
+      // ============================================================
+      if (freqDifference > 4.0) {
+        // 超大幅異常，立即停止測試
+        // 選擇這個超大幅異常前的閾值
+        optimalThreshold = validMeasurements[i - 1].threshold;
+        break;
+      }
+      
       const isAnomaly = freqDifference > 2.5;
       
       if (isAnomaly) {
-        // 發現異常
-        // 如果之前有連續 3 個正常值，則忽略早期異常
+        // 發現大幅異常 (>2.5 kHz)
+        consecutiveAnomalyCount++;
+        
+        // 如果之前有連續 3 個正常值，則忽略早期異常，重新開始
         if (consecutiveNormalCount >= 3 && recordedEarlyAnomaly !== null) {
           recordedEarlyAnomaly = null;  // 忽略早期異常
+          consecutiveAnomalyCount = 1;  // 這次是新的異常序列開始
         }
         
         // 如果還沒有記錄早期異常，現在記錄
-        if (recordedEarlyAnomaly === null) {
+        if (recordedEarlyAnomaly === null && foundValidSignal) {
           recordedEarlyAnomaly = validMeasurements[i - 1].threshold;
         }
         
-        // 更新最後一個異常前的閾值
-        lastAnomalyThreshold = validMeasurements[i - 1].threshold;
+        // 更新最後一個有效測量（無異常的測量）
+        // 但只在異常之前累積時才做
+        if (consecutiveAnomalyCount === 1) {
+          lastValidThreshold = validMeasurements[i - 1].threshold;
+        }
         
         // 重置連續正常值計數
         consecutiveNormalCount = 0;
+        foundValidSignal = false;
       } else {
         // 正常值：沒有大幅跳變
         consecutiveNormalCount++;
+        consecutiveAnomalyCount = 0;
+        
+        // 更新最後一個有效測量
+        lastValidThreshold = validMeasurements[i].threshold;
+        foundValidSignal = true;
       }
     }
     
     // ============================================================
     // 決定最終使用的閾值
     // ============================================================
-    if (lastAnomalyThreshold !== null) {
-      // 有異常被檢測到：使用最後一個異常前的閾值
-      optimalThreshold = lastAnomalyThreshold;
-    } else if (validMeasurements.length > 0) {
-      // 沒有異常：使用最後一個有效的測量
+    // 判斷：是否最後連續出現異常（沒有 3 個連續正常值來恢復）
+    const hasConsecutiveAnomaliesAtEnd = consecutiveAnomalyCount > 0 && consecutiveNormalCount < 3;
+    
+    if (hasConsecutiveAnomaliesAtEnd) {
+      // 最後連續出現異常，表示後面都是雜訊區域
+      // 應選擇最後一個有效測量（在異常序列前的那個）
+      optimalThreshold = lastValidThreshold;
+    } else if (recordedEarlyAnomaly !== null && consecutiveNormalCount < 3) {
+      // 還在追蹤早期異常，且沒有恢復到 3 個連續正常值
+      // 選擇早期異常前的閾值
+      optimalThreshold = recordedEarlyAnomaly;
+    } else if (foundValidSignal && !hasConsecutiveAnomaliesAtEnd) {
+      // 最後一個測量是正常的，直接使用最後一個有效測量
+      optimalThreshold = lastValidThreshold;
+    } else if (recordedEarlyAnomaly !== null) {
+      // 有連續 3 個正常值恢復，使用早期異常前的閾值
+      optimalThreshold = recordedEarlyAnomaly;
+    } else {
+      // 默認使用最後一個有效測量
       optimalThreshold = validMeasurements[validMeasurements.length - 1].threshold;
     }
     
