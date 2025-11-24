@@ -1335,6 +1335,7 @@ input.tag-button.editing {
 /* Power Spectrum Popup dropdown buttons */
 #powerSpectrumWindowType.dropdown-button {
   width: 120px;
+  font-size: 11px;
   text-align: left;
   display: inline-block;
   overflow: hidden;
@@ -1345,6 +1346,7 @@ input.tag-button.editing {
 #powerSpectrumFFTSize.dropdown-button {
   width: 70px;
   text-align: left;
+  font-size: 11px;
 }
 
 .dropdown-menu {
@@ -2318,6 +2320,9 @@ input.tag-button.editing {
 .power-spectrum-controls span {
   font-weight: normal;
   white-space: nowrap;
+  font-weight: 600;
+  color: #333;
+  font-size: 11px;  
 }
 
 .power-spectrum-controls select,
@@ -2326,14 +2331,13 @@ input.tag-button.editing {
   border: 1px solid #ccc;
   border-radius: 3px;
   font-size: 14px;
-  font-family: 'Noto Sans HK', sans-serif;
-  cursor: pointer;
+  cursor: text;
   background: white;
 }
 
 .power-spectrum-controls input[type="number"] {
   width: 60px;
-  height:20px;
+  font-size: 11px;
 }
 
 /* === Power Spectrum Popup === */
@@ -2428,15 +2432,15 @@ input.tag-button.editing {
 .param-label {
   text-align: right;
   font-weight: 600;
+  font-size: 12px;
   color: #333;
   width: 35%;
 }
 
 .param-value {
   text-align: right;
-  font-family: 'Courier New', monospace;
   color: #0066cc;
-  font-weight: 600;
+  font-size: 12px;
   width: 40%;
 }
 
@@ -2444,7 +2448,7 @@ input.tag-button.editing {
   text-align: left;
   color: #666;
   padding-left: 4px;
-  font-size: 11px;
+  font-size: 12px;
   width: 25%;
 }
 
@@ -2492,7 +2496,7 @@ input.tag-button.editing {
 }
 
 .bat-call-controls input[type="number"] {
-  width: 45px;
+  width: 30px;
   height: 18px;
 }
 
