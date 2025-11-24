@@ -736,100 +736,72 @@ export class BatCallDetector {
     );
     
     // ANTI-REBOUNCE: Backward scan from end to find clean cutoff
-    // Handle both FM (Frequency Modulated) and CF (Constant Frequency) calls:
+    // Professional approach: Use energy trend analysis instead of absolute thresholds
     // - FM/Sweep: Stop when frequency drops significantly (TRICK 2), then apply protection window
-    // - CF/QCF: Scan to end, stop when signal strength weakens for consecutive frames
+    // - CF/QCF: Find where energy consistently drops below peak (natural end point)
     if (enableBackwardEndFreqScan) {
       let lastValidEndFrame = peakFrameIdx; // Start from peak at minimum
       let freqDropDetected = false;
-      let freqDropFrameIdx = -1; // Remember where frequency drop was detected
-      let maxFrequencySeenSoFar = 0;
-      let consecutiveVeryWeakFrames = 0; // Track consecutive frames with VERY weak signal (below -40dB)
-      const veryWeakThreshold = peakPower_dB - 40; // Much stricter threshold for stopping CF/QCF
-      const consecutiveVeryWeakThreshold = 5; // Need 5+ consecutive very weak frames to stop CF/QCF
       
-      // Scan backward from END (not limited by protection window initially)
-      // For CF/QCF: let it scan to the real end of signal
-      // For FM: frequency drop will stop it early, then apply protection window
-      const scanStartFrame = spectrogram.length - 1;
+      // Professional criterion (Avisoft/SonoBat style): Find last frame where energy > peakPower_dB - 18dB
+      // This softer threshold (-18dB vs -27dB) better handles natural decay in CF/QCF calls
+      const sustainedEnergyThreshold = peakPower_dB - 18; // 18dB drop from peak
+      let lastFrameAboveSustainedThreshold = peakFrameIdx;
       
-      for (let frameIdx = scanStartFrame; frameIdx >= peakFrameIdx; frameIdx--) {
+      // Scan backward from END to find where call ends naturally
+      for (let frameIdx = spectrogram.length - 1; frameIdx >= peakFrameIdx; frameIdx--) {
         const framePower = spectrogram[frameIdx];
-        let frameHasSignal = false;
+        let frameMaxPower = -Infinity;
         let framePeakFreq = 0;
         
-        // Find peak frequency in this frame
-        let frameMaxPower = -Infinity;
         for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
           if (framePower[binIdx] > frameMaxPower) {
             frameMaxPower = framePower[binIdx];
-            framePeakFreq = freqBins[binIdx] / 1000; // Convert to kHz
+            framePeakFreq = freqBins[binIdx] / 1000;
           }
         }
         
-        // Check if frame has signal above threshold
-        if (frameMaxPower > endThreshold_dB) {
-          frameHasSignal = true;
-          consecutiveVeryWeakFrames = 0; // Reset weak frame counter when signal returns
-          
-          // TRICK 2: Maximum Frequency Drop Rule (for FM/Sweep detection)
-          // If frequency drops too much, lock it and apply protection window
-          if (frameIdx < spectrogram.length - 1 && !freqDropDetected) {
-            const nextFramePower = spectrogram[frameIdx + 1];
-            let nextFramePeakFreq = 0;
-            let nextFrameMaxPower = -Infinity;
-            for (let binIdx = 0; binIdx < nextFramePower.length; binIdx++) {
-              if (nextFramePower[binIdx] > nextFrameMaxPower) {
-                nextFrameMaxPower = nextFramePower[binIdx];
-                nextFramePeakFreq = freqBins[binIdx] / 1000;
-              }
-            }
-            
-            const frequencyDrop = nextFramePeakFreq - framePeakFreq;
-            if (frequencyDrop > maxFrequencyDropThreshold_kHz) {
-              // Large frequency drop detected - this is likely where FM call ends
-              freqDropDetected = true;
-              freqDropFrameIdx = frameIdx + 1; // Lock at this point
-              // Now apply protection window limit for safety against echoes
-              if (frameIdx + 1 <= maxFrameIdxAllowed) {
-                lastValidEndFrame = frameIdx + 1;
-              }
-              break; // Stop scanning for FM calls
+        // Check for FM frequency drop (primary indicator for FM calls)
+        if (frameIdx < spectrogram.length - 1 && !freqDropDetected && frameMaxPower > endThreshold_dB) {
+          const nextFramePower = spectrogram[frameIdx + 1];
+          let nextFramePeakFreq = 0;
+          let nextFrameMaxPower = -Infinity;
+          for (let binIdx = 0; binIdx < nextFramePower.length; binIdx++) {
+            if (nextFramePower[binIdx] > nextFrameMaxPower) {
+              nextFrameMaxPower = nextFramePower[binIdx];
+              nextFramePeakFreq = freqBins[binIdx] / 1000;
             }
           }
           
-          // For CF/QCF: track the end frame but keep scanning to find natural ending
-          if (!freqDropDetected) {
-            lastValidEndFrame = frameIdx;
-            maxFrequencySeenSoFar = Math.max(maxFrequencySeenSoFar, framePeakFreq);
+          const frequencyDrop = nextFramePeakFreq - framePeakFreq;
+          if (frequencyDrop > maxFrequencyDropThreshold_kHz) {
+            // FM call: frequency drop detected
+            freqDropDetected = true;
+            lastValidEndFrame = frameIdx + 1;
+            break;
           }
-        } else {
-          // Frame has weak signal (below -27dB threshold)
-          if (!freqDropDetected) {
-            // For CF/QCF calls: only stop if signal becomes VERY weak (below -40dB)
-            // This prevents stopping due to signal fluctuations in the middle of CF calls
-            let frameMaxPower = -Infinity;
-            for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-              frameMaxPower = Math.max(frameMaxPower, framePower[binIdx]);
-            }
-            
-            if (frameMaxPower < veryWeakThreshold) {
-              consecutiveVeryWeakFrames++;
-            } else {
-              // Signal recovered above -40dB, reset counter
-              consecutiveVeryWeakFrames = 0;
-            }
-            
-            // Only stop after many consecutive VERY weak frames (signal nearly gone)
-            if (consecutiveVeryWeakFrames >= consecutiveVeryWeakThreshold && lastValidEndFrame > peakFrameIdx) {
-              // Found true end: multiple consecutive frames with signal nearly gone
-              break;
-            }
+        }
+        
+        // Track sustained energy above -18dB threshold (for CF/QCF)
+        if (!freqDropDetected) {
+          if (frameMaxPower > sustainedEnergyThreshold) {
+            lastFrameAboveSustainedThreshold = frameIdx;
           }
+          lastValidEndFrame = frameIdx;
         }
       }
       
-      newEndFrameIdx = lastValidEndFrame;
+      // Determine final end frame based on call type
+      if (!freqDropDetected && lastFrameAboveSustainedThreshold > peakFrameIdx) {
+        // CF/QCF call: use last frame with sustained energy (-18dB threshold)
+        newEndFrameIdx = lastFrameAboveSustainedThreshold;
+      } else if (!freqDropDetected) {
+        // CF/QCF but very weak: use last valid frame
+        newEndFrameIdx = lastValidEndFrame;
+      } else {
+        // FM call: already set by frequency drop detection
+        newEndFrameIdx = lastValidEndFrame;
+      }
     } else {
       // Original forward scanning method (without anti-rebounce)
       for (let frameIdx = spectrogram.length - 1; frameIdx >= 0; frameIdx--) {
