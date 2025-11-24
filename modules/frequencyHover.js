@@ -491,11 +491,16 @@ export function initFrequencyHover({
       showSelectionContextMenu(e, selObj);
     });
 
-    // 如果 duration < 100ms，自動計算峰值頻率
+    // 如果 duration < 100ms，自動計算峰值頻率和 Bat Call 參數
     // 使用判斷時間（已考慮 Time Expansion）
     if (judgeDurationMs < 100) {
       calculatePeakFrequency(selObj).catch(err => {
         console.error('計算峰值頻率失敗:', err);
+      });
+      
+      // 計算 Bat Call 參數
+      calculateBatCallParameters(selObj).catch(err => {
+        console.error('計算 Bat Call 參數失敗:', err);
       });
     }
 
@@ -531,8 +536,6 @@ export function initFrequencyHover({
 
   function buildTooltip(sel, left, top, width) {
     const { Flow, Fhigh, startTime, endTime } = sel.data;
-    const Bandwidth = Fhigh - Flow;
-    const Duration = (endTime - startTime);
 
     const tooltip = document.createElement('div');
     tooltip.className = 'draggable-tooltip freq-tooltip';
@@ -542,20 +545,17 @@ export function initFrequencyHover({
     const timeExp = getTimeExpansionMode();
     const freqMul = timeExp ? 10 : 1;
     const timeDiv = timeExp ? 10 : 1; // divide ms by 10 when timeExp
-    const dispFhigh = Fhigh * freqMul;
-    const dispFlow = Flow * freqMul;
-    const dispBandwidth = Bandwidth * freqMul;
-    const dispDurationMs = (Duration * 1000) / timeDiv;
     
+    // 初始化為預設值（"-"），會在 updateTooltipValues 中用 BatCallDetector 的值更新
     tooltip.innerHTML = `
       <table class="freq-tooltip-table">
         <tr>
           <td class="label">High Freq:</td>
-          <td class="value"><span class="fhigh">${dispFhigh.toFixed(1)}</span> kHz</td>
+          <td class="value"><span class="fhigh">-</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Low Freq:</td>
-          <td class="value"><span class="flow">${dispFlow.toFixed(1)}</span> kHz</td>
+          <td class="value"><span class="flow">-</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Knee Freq:</td>
@@ -567,11 +567,11 @@ export function initFrequencyHover({
         </tr>
         <tr>
           <td class="label">Bandwidth:</td>
-          <td class="value"><span class="bandwidth">${dispBandwidth.toFixed(1)}</span> kHz</td>
+          <td class="value"><span class="bandwidth">-</span> kHz</td>
         </tr>
         <tr>
           <td class="label">Duration:</td>
-          <td class="value"><span class="duration">${dispDurationMs.toFixed(1)}</span> ms</td>
+          <td class="value"><span class="duration">-</span> ms</td>
         </tr>
       </table>
       <div class="tooltip-close-btn">×</div>
@@ -966,39 +966,77 @@ export function initFrequencyHover({
   
   function updateTooltipValues(sel, left, top, width, height) {
     const { data, tooltip } = sel;
-    const Flow = data.Flow;
-    const Fhigh = data.Fhigh;
-    const Bandwidth = Fhigh - Flow;
-    const Duration = (data.endTime - data.startTime);
     const timeExp = getTimeExpansionMode();
     const freqMul = timeExp ? 10 : 1;
     const timeDiv = timeExp ? 10 : 1;
-    const dispFhigh = Fhigh * freqMul;
-    const dispFlow = Flow * freqMul;
-    const dispBandwidth = Bandwidth * freqMul;
-    const dispDurationMs = (Duration * 1000) / timeDiv;
 
     if (!tooltip) {
-      if (sel.durationLabel) sel.durationLabel.textContent = `${dispDurationMs.toFixed(1)} ms`;
+      if (sel.durationLabel) {
+        const displayDurationMs = data.duration !== undefined 
+          ? (data.duration / timeDiv) 
+          : ((data.endTime - data.startTime) * 1000 / timeDiv);
+        sel.durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
+      }
       return;
     }
-    if (sel.durationLabel) sel.durationLabel.textContent = `${dispDurationMs.toFixed(1)} ms`;
 
-    tooltip.querySelector('.fhigh').textContent = dispFhigh.toFixed(1);
-    tooltip.querySelector('.flow').textContent = dispFlow.toFixed(1);
-    tooltip.querySelector('.bandwidth').textContent = dispBandwidth.toFixed(1);
-    tooltip.querySelector('.duration').textContent = dispDurationMs.toFixed(1);
+    // 使用 BatCallDetector 計算的值
+    // 如果有 Bat Call 參數，使用它；否則顯示 "-"
     
-    // 更新 Knee Freq 如果有數據
+    // High Freq (Fhigh) - 來自 BatCallDetector
+    if (data.highFreq !== undefined) {
+      const dispHighFreq = data.highFreq * freqMul;
+      tooltip.querySelector('.fhigh').textContent = dispHighFreq.toFixed(1);
+    } else {
+      tooltip.querySelector('.fhigh').textContent = '-';
+    }
+
+    // Low Freq (Flow) - 來自 BatCallDetector，單位已是 kHz
+    if (data.lowFreq !== undefined) {
+      const dispLowFreq = data.lowFreq * freqMul;
+      tooltip.querySelector('.flow').textContent = dispLowFreq.toFixed(1);
+    } else {
+      tooltip.querySelector('.flow').textContent = '-';
+    }
+
+    // Knee Freq - 來自 BatCallDetector
     if (data.kneeFreq !== undefined) {
       const dispKneeFreq = data.kneeFreq * freqMul;
       tooltip.querySelector('.kneefreq').textContent = dispKneeFreq.toFixed(1);
+    } else {
+      tooltip.querySelector('.kneefreq').textContent = '-';
     }
-    
-    // Update F.peak if available
+
+    // Peak Freq - 來自 BatCallDetector
     if (data.peakFreq !== undefined) {
       const dispPeakFreq = data.peakFreq * freqMul;
       tooltip.querySelector('.fpeak').textContent = dispPeakFreq.toFixed(1);
+    } else {
+      tooltip.querySelector('.fpeak').textContent = '-';
+    }
+
+    // Bandwidth - 來自 BatCallDetector
+    if (data.bandwidth !== undefined) {
+      const dispBandwidth = data.bandwidth * freqMul;
+      tooltip.querySelector('.bandwidth').textContent = dispBandwidth.toFixed(1);
+    } else {
+      tooltip.querySelector('.bandwidth').textContent = '-';
+    }
+
+    // Duration - 來自 BatCallDetector
+    if (data.duration !== undefined) {
+      const dispDurationMs = data.duration / timeDiv;
+      tooltip.querySelector('.duration').textContent = dispDurationMs.toFixed(1);
+    } else {
+      tooltip.querySelector('.duration').textContent = '-';
+    }
+
+    // 更新 durationLabel（不受 tooltip 影響）
+    if (sel.durationLabel) {
+      const displayDurationMs = data.duration !== undefined 
+        ? (data.duration / timeDiv) 
+        : ((data.endTime - data.startTime) * 1000 / timeDiv);
+      sel.durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
     }
   }
 
