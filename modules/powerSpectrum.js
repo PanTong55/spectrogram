@@ -666,9 +666,9 @@ function createPopupWindow() {
   startThresholdInput.id = 'startThreshold_dB';
   startThresholdInput.type = 'number';
   startThresholdInput.placeholder = 'Auto';
-  startThresholdInput.title = 'Auto or Manual Start frequency threshold (-60 to -24). End frequency uses fixed -24dB';
+  startThresholdInput.title = 'Auto or Manual Start frequency threshold (-24 to -70). End frequency uses fixed -24dB';
   startThresholdInput.style.width = '65px';
-  startThresholdInput.min = '-60';
+  startThresholdInput.min = '-70';
   startThresholdInput.max = '-24';
   startThresholdInput.step = '1';
   
