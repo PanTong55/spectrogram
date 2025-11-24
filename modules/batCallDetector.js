@@ -327,7 +327,7 @@ export class BatCallDetector {
     
     // Additional SNR-based filtering: Remove calls with low SNR
     // Real bat calls should have peak power >= 10dB above baseline
-    const snrThreshold_dB = 10;
+    const snrThreshold_dB = 30;
     const filteredCalls = calls.filter(call => {
       if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
         return false; // No peak power data, discard
