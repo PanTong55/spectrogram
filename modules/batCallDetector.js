@@ -619,14 +619,15 @@ export class BatCallDetector {
     // 原理：
     // - 正常情況：閾值從 -24 一路降低到 -70，Start Frequency 應該平緩變化 (1-2 kHz)
     // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz) 
-    // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 立即停止，不繼續測試
+    // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 檢查後 5 個值是否正常
     // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
     // - 解決：
-    //   1. 保險機制：如發現超大幅跳變 (>4 kHz)，立即停止，選擇異常前的閾值
-    //   2. 記錄第一個異常，但繼續測試
-    //   3. 如果後續連續 3 個值都無異常，則忽略之前的異常
-    //   4. 如果最後連續出現異常，則選擇最後一個有效測量（異常前的那個）
-    //   5. 如果異常後沒有連續 3 個正常值，認為後面都是雜訊，不再追蹤更遠的異常
+    //   1. 保險機制：如發現超大幅跳變 (>4 kHz)，檢查後緊接著的 5 個值
+    //      - 如果這 5 個都無異常 (≤2.5 kHz)，則忽略超大幅跳變，繼續測試
+    //      - 如果這 5 個中有異常，則停止，選擇超大幅跳變前的閾值
+    //   2. 記錄第一個大幅異常 (>2.5 kHz)，但繼續測試
+    //   3. 如果後續連續 3 個值都無異常，則忽略早期異常
+    //   4. 最終選擇未被忽略的第一個異常前的閾值
     // 
     // 重要：只有當 foundBin === true 時才進行比較
     // ============================================================
@@ -651,13 +652,44 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>5 kHz) - 立即停止
+      // 保險機制：超大幅頻率跳變 (>4 kHz) 特殊處理
       // ============================================================
-      if (freqDifference > 5.0) {
-        // 超大幅異常，立即停止測試
-        // 選擇這個超大幅異常前的閾值
-        optimalThreshold = validMeasurements[i - 1].threshold;
-        break;
+      if (freqDifference > 4.0) {
+        // 檢查後緊接著的 5 個值是否都無異常
+        const afterJumpStart = i + 1;
+        const afterJumpEnd = Math.min(i + 5, validMeasurements.length - 1);
+        let hasAllNormalAfterJump = true;
+        
+        // 檢查這 5 個值是否都無異常
+        for (let checkIdx = afterJumpStart; checkIdx <= afterJumpEnd; checkIdx++) {
+          if (checkIdx >= validMeasurements.length) {
+            hasAllNormalAfterJump = false;
+            break;
+          }
+          
+          // 檢查當前值與前一個值是否有異常
+          const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].startFreq_kHz;
+          const checkCurrFreq_kHz = validMeasurements[checkIdx].startFreq_kHz;
+          const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
+          
+          if (checkFreqDiff > 2.5) {
+            // 發現異常，表示超大幅跳變後面不是 5 個正常值
+            hasAllNormalAfterJump = false;
+            break;
+          }
+        }
+        
+        // 如果超大幅跳變後面的 5 個值都正常，則忽略超大幅跳變，繼續掃描
+        if (hasAllNormalAfterJump && (afterJumpEnd - afterJumpStart + 1) >= 5) {
+          // 忽略這個超大幅跳變，繼續下一個迭代
+          lastValidThreshold = validMeasurements[i].threshold;
+          continue;
+        } else {
+          // 後面 5 個值中有異常，或不足 5 個值，停止測試
+          // 選擇超大幅跳變前的閾值
+          optimalThreshold = validMeasurements[i - 1].threshold;
+          break;
+        }
       }
       
       const isAnomaly = freqDifference > 2.5;
@@ -716,12 +748,15 @@ export class BatCallDetector {
     // ============================================================
     // 決定最終使用的閾值
     // ============================================================
-    if (recordedEarlyAnomaly !== null) {
-      // 有未被忽略的早期異常：使用異常前的閾值
-      optimalThreshold = recordedEarlyAnomaly;
-    } else {
-      // 沒有異常或異常被忽略：使用最後一個有效測量
-      optimalThreshold = lastValidThreshold;
+    if (optimalThreshold === -24) {
+      // 如果還沒有通過保險機制停止，檢查是否有異常被記錄
+      if (recordedEarlyAnomaly !== null) {
+        // 有未被忽略的早期異常：使用異常前的閾值
+        optimalThreshold = recordedEarlyAnomaly;
+      } else {
+        // 沒有異常或異常被忽略：使用最後一個有效測量
+        optimalThreshold = lastValidThreshold;
+      }
     }
     
     // 確保返回值在有效範圍內
