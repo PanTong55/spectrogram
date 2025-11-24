@@ -698,7 +698,8 @@ export class BatCallDetector {
       protectionWindowAfterPeak_ms
     } = this.config;
     
-    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Typically -24dB
+    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold (可調整)
+    const endThreshold_dB = peakPower_dB - 24;  // End & Low Frequency threshold (固定 -24dB)
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
@@ -759,7 +760,7 @@ export class BatCallDetector {
         }
         
         // Check if frame has signal above threshold
-        if (frameMaxPower > startThreshold_dB) {
+        if (frameMaxPower > endThreshold_dB) {
           frameHasSignal = true;
           
           // TRICK 2: Maximum Frequency Drop Rule
@@ -800,7 +801,7 @@ export class BatCallDetector {
         const framePower = spectrogram[frameIdx];
         let frameHasSignal = false;
         for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-          if (framePower[binIdx] > startThreshold_dB) {
+          if (framePower[binIdx] > endThreshold_dB) {
             frameHasSignal = true;
             break;
           }
@@ -864,16 +865,16 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 3: Find end frequency from last frame
-    // Professional standard: threshold at -24dB below global peak
+    // Professional standard: Fixed threshold at -24dB below global peak
     // This is the lowest frequency in the call (from last frame)
     // Search from LOW to HIGH frequency (normal bin order)
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
     let endFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
-    // Search from low to high frequency
+    // Search from low to high frequency using fixed -24dB threshold
     for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
-      if (lastFramePower[binIdx] > startThreshold_dB) {
+      if (lastFramePower[binIdx] > endThreshold_dB) {
         endFreq_Hz = freqBins[binIdx];
         
         // Attempt linear interpolation for sub-bin precision
@@ -881,9 +882,9 @@ export class BatCallDetector {
           const thisPower = lastFramePower[binIdx];
           const prevPower = lastFramePower[binIdx - 1];
           
-          if (prevPower < startThreshold_dB && thisPower > startThreshold_dB) {
+          if (prevPower < endThreshold_dB && thisPower > endThreshold_dB) {
             // Interpolate between prev bin and this bin
-            const powerRatio = (thisPower - startThreshold_dB) / (thisPower - prevPower);
+            const powerRatio = (thisPower - endThreshold_dB) / (thisPower - prevPower);
             const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
             endFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
           }
