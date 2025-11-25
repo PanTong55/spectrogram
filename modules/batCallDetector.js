@@ -106,7 +106,7 @@ export class CallTypeClassifier {
    * FM bats: typically 20-150 kHz, high bandwidth (> 10 kHz)
    */
   static isFMBat(call) {
-    return call.bandwidth_kHz > 10 && call.highFreq_kHz > call.endFreq_kHz;  // Downward FM
+    return call.bandwidth_kHz > 10 && call.highFreq_kHz > call.lowFreq_kHz;  // Downward FM
   }
 }
 
@@ -122,11 +122,12 @@ export class BatCall {
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
     this.highFreq_kHz = null;       // High frequency (kHz) - highest frequency in call (calculated from first frame)
     this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (TBD: to be determined)
-    this.endFreq_kHz = null;        // End frequency (kHz) - lowest frequency in call (calculated from last frame)
+    this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (calculated from last frame)
+    this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (TBD: to be determined)
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
     this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
-    this.bandwidth_kHz = null;      // Bandwidth = highFreq - endFreq
+    this.bandwidth_kHz = null;      // Bandwidth = highFreq - lowFreq
     
     this.Flow = null;               // Low frequency boundary (Hz) - from detection range
     this.Fhigh = null;              // High frequency boundary (kHz) - from detection range
@@ -157,11 +158,11 @@ export class BatCall {
   }
   
   /**
-   * Calculate bandwidth as difference between high and end frequencies
+   * Calculate bandwidth as difference between high and low frequencies
    */
   calculateBandwidth() {
-    if (this.highFreq_kHz !== null && this.endFreq_kHz !== null) {
-      this.bandwidth_kHz = this.highFreq_kHz - this.endFreq_kHz;
+    if (this.highFreq_kHz !== null && this.lowFreq_kHz !== null) {
+      this.bandwidth_kHz = this.highFreq_kHz - this.lowFreq_kHz;
     }
   }
   
@@ -174,9 +175,9 @@ export class BatCall {
     
     const checks = {
       hasDuration: this.duration_ms > 0,
-      hasFreqs: this.peakFreq_kHz !== null && this.highFreq_kHz !== null && this.endFreq_kHz !== null,
+      hasFreqs: this.peakFreq_kHz !== null && this.highFreq_kHz !== null && this.lowFreq_kHz !== null,
       reasonableDuration: this.duration_ms >= DEFAULT_DETECTION_CONFIG.minCallDuration_ms,
-      frequencyOrder: this.endFreq_kHz <= this.peakFreq_kHz && this.peakFreq_kHz <= this.highFreq_kHz,
+      frequencyOrder: this.lowFreq_kHz <= this.peakFreq_kHz && this.peakFreq_kHz <= this.highFreq_kHz,
     };
     
     const allValid = Object.values(checks).every(v => v);
@@ -199,7 +200,7 @@ export class BatCall {
       'Duration [ms]': this.duration_ms?.toFixed(2) || '-',
       'Peak Freq [kHz]': this.peakFreq_kHz?.toFixed(2) || '-',
       'High Freq [kHz]': this.highFreq_kHz?.toFixed(2) || '-',
-      'End Freq [kHz]': this.endFreq_kHz?.toFixed(2) || '-',
+      'Low Freq [kHz]': this.lowFreq_kHz?.toFixed(2) || '-',
       'Knee Freq [kHz]': this.kneeFreq_kHz?.toFixed(2) || '-',
       'Characteristic Freq [kHz]': this.characteristicFreq_kHz?.toFixed(2) || '-',
       'Bandwidth [kHz]': this.bandwidth_kHz?.toFixed(2) || '-',
@@ -282,35 +283,44 @@ export class BatCallDetector {
       }
       
       // Measure frequency parameters from spectrogram
-      // This will calculate startFreq, endFreq, peakFreq, etc.
+      // This will calculate highFreq, lowFreq, peakFreq, startFreq, endFreq, etc.
       this.measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution);
       
       // COMMERCIAL STANDARD: Set Flow and Fhigh based on actual call frequency range
       // Frequency terminology (must be distinguished):
       // ============================================================
+      // CALCULATED FREQUENCIES (from spectrogram analysis):
+      // 
       // HIGH.FREQ (highFreq_kHz):
       //   = Highest frequency present during entire call
       //   = Maximum frequency value across all call frames
       //   = Derived from first frame above -24 to -70dB threshold (Auto)
       //   = Unit: kHz
       // 
-      // END.FREQ (endFreq_kHz):
+      // LOW.FREQ (lowFreq_kHz):
       //   = Lowest frequency present during entire call
       //   = Minimum frequency value across all call frames
       //   = Derived from last frame above -27dB threshold
       //   = Unit: kHz
+      // 
+      // TIME-DOMAIN FREQUENCIES (TBD - to be determined):
       // 
       // START.FREQ (startFreq_kHz):
       //   = Time-domain start frequency of the call
       //   = Currently NULL (TBD: to be determined)
       //   = Different from highFreq_kHz - separate calculation needed
       // 
-      // LOW.FREQ (Flow):
-      //   = Lowest frequency boundary (from endFreq_kHz)
+      // END.FREQ (endFreq_kHz):
+      //   = Time-domain end frequency of the call
+      //   = Currently NULL (TBD: to be determined)
+      //   = Different from lowFreq_kHz - separate calculation needed
+      // 
+      // Flow BOUNDARY (Hz):
+      //   = Lowest frequency boundary in Hz (from lowFreq_kHz)
       //   = Unit: Hz
       // ============================================================
-      // Avisoft, SonoBat, Kaleidoscope, BatSound use highFreq/endFreq approach
-      call.Flow = call.endFreq_kHz * 1000;   // Lowest freq in call (Hz)
+      // Avisoft, SonoBat, Kaleidoscope, BatSound use highFreq/lowFreq approach
+      call.Flow = call.lowFreq_kHz * 1000;   // Lowest freq in call (Hz)
       call.Fhigh = call.highFreq_kHz;        // Highest freq in call (kHz)
       
       // Classify call type (CF, FM, or CF-FM)
@@ -1090,18 +1100,18 @@ export class BatCallDetector {
     const startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
     
     // ============================================================
-    // STEP 3: Find end frequency from last frame
+    // STEP 3: Calculate LOW FREQUENCY from last frame
     // Professional standard: Fixed threshold at -27dB below global peak
     // This is the lowest frequency in the call (from last frame)
     // Search from LOW to HIGH frequency (normal bin order)
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
-    let endFreq_Hz = flowKHz * 1000;  // Default to lower bound
+    let lowFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
     // Search from low to high frequency using fixed -27dB threshold
     for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
       if (lastFramePower[binIdx] > endThreshold_dB) {
-        endFreq_Hz = freqBins[binIdx];
+        lowFreq_Hz = freqBins[binIdx];
         
         // Attempt linear interpolation for sub-bin precision
         if (binIdx > 0) {
@@ -1112,13 +1122,13 @@ export class BatCallDetector {
             // Interpolate between prev bin and this bin
             const powerRatio = (thisPower - endThreshold_dB) / (thisPower - prevPower);
             const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-            endFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+            lowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
           }
         }
         break;
       }
     }
-    call.endFreq_kHz = endFreq_Hz / 1000;
+    call.lowFreq_kHz = lowFreq_Hz / 1000;
     
     // ============================================================
     // STEP 4: Calculate characteristic frequency (CF-FM distinction)
@@ -1190,18 +1200,18 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 5: Validate frequency relationships (Avisoft standard)
-    // Ensure: endFreq ≤ charFreq ≤ peakFreq ≤ highFreq
+    // Ensure: lowFreq ≤ charFreq ≤ peakFreq ≤ highFreq
     // This maintains biological validity for FM and CF-FM calls
     // ============================================================
-    // Clamp characteristic frequency between end and peak
-    const endFreqKHz = endFreq_Hz / 1000;
+    // Clamp characteristic frequency between low and peak
+    const lowFreqKHz = lowFreq_Hz / 1000;
     const charFreqKHz = characteristicFreq_Hz / 1000;
     const peakFreqKHz = peakFreq_Hz / 1000;
     const highFreqKHz = highFreq_Hz / 1000;
     
-    if (charFreqKHz < endFreqKHz) {
-      // Char freq should not be below end freq
-      call.characteristicFreq_kHz = endFreqKHz;
+    if (charFreqKHz < lowFreqKHz) {
+      // Char freq should not be below low freq
+      call.characteristicFreq_kHz = lowFreqKHz;
     } else if (charFreqKHz > peakFreqKHz) {
       // Char freq should not exceed peak freq
       call.characteristicFreq_kHz = peakFreqKHz;
