@@ -610,7 +610,7 @@ function createPopupWindow() {
     </tr>
     <tr>
       <td class="param-label">High Freq:</td>
-      <td class="param-value-container high-freq-container">
+      <td class="param-value-container high-freq-container" style="text-align: right; display: flex; align-items: center; justify-content: flex-end;">
         <i class="fa-solid fa-triangle-exclamation high-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover high enough frequencies. Consider extending the frequency range."></i>
         <span class="param-value high-freq">-</span>
       </td>
@@ -1559,13 +1559,13 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
       if (highFreqWarningIcon) {
         highFreqWarningIcon.style.display = 'inline';
       }
-      highFreqEl.style.color = '#dc3545';  // Red color
+      highFreqEl.style.color = '#dc3545';  // Red color for warning
     } else {
-      // Hide warning icon and use default color
+      // Hide warning icon and use blue color for normal value
       if (highFreqWarningIcon) {
         highFreqWarningIcon.style.display = 'none';
       }
-      highFreqEl.style.color = 'inherit';  // Default color
+      highFreqEl.style.color = '#0066cc';  // Blue color for normal value
     }
     
     kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';
@@ -1602,7 +1602,7 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     if (highFreqWarningIcon) {
       highFreqWarningIcon.style.display = 'none';
     }
-    highFreqEl.style.color = 'inherit';
+    highFreqEl.style.color = '#0066cc';  // Blue color for normal state
     kneeFreqEl.textContent = '-';
     charFreqEl.textContent = '-';
     bandwidthEl.textContent = '-';
