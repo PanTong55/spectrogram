@@ -839,32 +839,102 @@ export class BatCallDetector {
     // (needed for iterative boundary adjustment)
     let firstFramePower = spectrogram[0];
     
+    // Calculate FFT parameters needed for regenerating freqBins
+    const { fftSize } = this.config;
+    // Try to get accurate freqResolution from the existing freqBins
+    let iterativeFreqResolution = freqResolution;
+    if (freqBins.length > 1) {
+      iterativeFreqResolution = freqBins[1] - freqBins[0];
+    }
+    
+    // Store original bin mapping for reference
+    const originalMinBin = Math.max(0, Math.floor(flowKHz * 1000 / iterativeFreqResolution));
+    const originalMaxBin = Math.min(
+      Math.floor(fftSize / 2),
+      Math.floor(originalFhighKHz * 1000 / iterativeFreqResolution)
+    );
+    
     // ============================================================
     // ITERATIVE BOUNDARY ADJUSTMENT (2025 FIX)
     // If calculated Start Frequency is too close to frequency boundary,
     // extend boundary and recalculate until Start Frequency is found away from boundary
+    // 
+    // When boundary changes (currentFhighKHz), regenerate freqBins array
+    // to ensure correct frequency mapping for the new boundary
     // ============================================================
     do {
       iterationCount++;
+      
+      // REGENERATE freqBins when boundary changes
+      // This is critical: freqBins must match currentFhighKHz
+      let iterativeFreqBins = freqBins;  // Default to original
+      let iterativeFirstFramePower = firstFramePower;  // Default to original
+      
+      if (currentFhighKHz !== originalFhighKHz) {
+        // Boundary has changed - regenerate freqBins for new upper boundary
+        // Using original flowKHz and new currentFhighKHz
+        const newMinBin = Math.max(0, Math.floor(flowKHz * 1000 / iterativeFreqResolution));
+        const newMaxBin = Math.min(
+          Math.floor(fftSize / 2),
+          Math.floor(currentFhighKHz * 1000 / iterativeFreqResolution)
+        );
+        
+        const newNumBins = newMaxBin - newMinBin + 1;
+        iterativeFreqBins = new Float32Array(newNumBins);
+        
+        // Generate new frequency bins array (in Hz)
+        for (let i = 0; i < newNumBins; i++) {
+          iterativeFreqBins[i] = (newMinBin + i) * iterativeFreqResolution;
+        }
+        
+        // IMPORTANT: Extract power values from FULL SPECTROGRAM matching new bins
+        // We need to extract the appropriate power values for the new frequency range
+        // The original spectrogram has bins from originalMinBin to originalMaxBin
+        const newFirstFramePower = new Float32Array(newNumBins);
+        
+        for (let i = 0; i < newNumBins; i++) {
+          const binIdx = newMinBin + i;
+          
+          // Check if this bin is within the original spectrogram range
+          if (binIdx >= originalMinBin && binIdx <= originalMaxBin) {
+            // Map this bin index to the corresponding position in firstFramePower
+            const origPowerIdx = binIdx - originalMinBin;
+            if (origPowerIdx >= 0 && origPowerIdx < firstFramePower.length) {
+              newFirstFramePower[i] = firstFramePower[origPowerIdx];
+            } else {
+              newFirstFramePower[i] = -Infinity;
+            }
+          } else if (binIdx > originalMaxBin) {
+            // Bin is beyond original boundary (higher frequency)
+            // Assume this is extended space - power is low
+            newFirstFramePower[i] = -Infinity;
+          } else {
+            // Bin is before original boundary (shouldn't happen with flowKHz fixed)
+            newFirstFramePower[i] = -Infinity;
+          }
+        }
+        
+        iterativeFirstFramePower = newFirstFramePower;
+      }
       
       // Recalculate start threshold with potentially adjusted boundary
       const iterationStartThreshold_dB = peakPower_dB + startEndThreshold_dB;
       let iterationStartFreq_Hz = currentFhighKHz * 1000;  // Default to upper bound
       
-      // Search from high to low frequency
-      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (firstFramePower[binIdx] > iterationStartThreshold_dB) {
-          iterationStartFreq_Hz = freqBins[binIdx];
+      // Search from high to low frequency using regenerated freqBins
+      for (let binIdx = iterativeFirstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (iterativeFirstFramePower[binIdx] > iterationStartThreshold_dB) {
+          iterationStartFreq_Hz = iterativeFreqBins[binIdx];
           
           // Attempt linear interpolation for sub-bin precision
-          if (binIdx < firstFramePower.length - 1) {
-            const thisPower = firstFramePower[binIdx];
-            const nextPower = firstFramePower[binIdx + 1];
+          if (binIdx < iterativeFirstFramePower.length - 1) {
+            const thisPower = iterativeFirstFramePower[binIdx];
+            const nextPower = iterativeFirstFramePower[binIdx + 1];
             
             if (nextPower < iterationStartThreshold_dB && thisPower > iterationStartThreshold_dB) {
               const powerRatio = (thisPower - iterationStartThreshold_dB) / (thisPower - nextPower);
-              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              iterationStartFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+              const freqDiff = iterativeFreqBins[binIdx + 1] - iterativeFreqBins[binIdx];
+              iterationStartFreq_Hz = iterativeFreqBins[binIdx] + powerRatio * freqDiff;
             }
           }
           break;
