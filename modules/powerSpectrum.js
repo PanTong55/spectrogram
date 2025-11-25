@@ -610,8 +610,8 @@ function createPopupWindow() {
     </tr>
     <tr>
       <td class="param-label">High Freq:</td>
-      <td class="param-value-container high-freq-container" style="text-align: right; display: flex; align-items: center; justify-content: flex-end;">
-        <i class="fa-solid fa-triangle-exclamation high-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover high enough frequencies. Consider extending the frequency range."></i>
+      <td class="param-value-container high-freq-container" style="text-align: right; align-items: center;">
+        <i class="fa-solid fa-triangle-exclamation high-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover high enough frequencies.&#10;Consider extending the frequency range."></i>
         <span class="param-value high-freq">-</span>
       </td>
       <td class="param-unit">kHz</td>
