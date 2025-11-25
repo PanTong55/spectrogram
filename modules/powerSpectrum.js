@@ -1541,21 +1541,10 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
     durationEl.textContent = batCall.duration_ms?.toFixed(2) || '-';
     kneeTimeEl.textContent = batCall.kneeTime_ms?.toFixed(2) || '-';
-    
-    // 2025 WARNING: If Start Frequency exceeds original selection boundary,
-    // display in red to alert user that signal extends beyond selection area
-    if (batCall.startFreqExceedsOriginalBoundary === true) {
-      startFreqEl.style.color = '#FF0000';  // Red warning color
-      startFreqEl.title = 'WARNING: Start Frequency exceeds original selection boundary';
-    } else {
-      startFreqEl.style.color = '';  // Default color
-      startFreqEl.title = '';
-    }
   } else {
     // 只顯示 peak freq，其他為空
     peakFreqEl.textContent = peakFreqFallback?.toFixed(2) || '-';
     startFreqEl.textContent = '-';
-    startFreqEl.style.color = '';  // Reset style
     endFreqEl.textContent = '-';
     lowFreqEl.textContent = '-';
     highFreqEl.textContent = '-';
