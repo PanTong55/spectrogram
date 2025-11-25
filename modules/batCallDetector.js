@@ -293,47 +293,58 @@ export class BatCallDetector {
     // Professional standard: Real bat calls have concentrated power in limited bandwidth
     // Noise typically spreads across wide frequency ranges with multiple scattered peaks
     // 
+    // CRITICAL FIX (2025): SNR-based filtering was flawed when selection area is small
+    // Problem: Small selections covering only call signal use that signal's energy 
+    //          to calculate globalAveragePower_dB, causing SNR threshold to fail
+    // Solution: Use percentile-based noise floor instead of mean
+    //          - Calculate power distribution across all time-frequency bins
+    //          - Use 25th percentile as noise baseline (robust to call signal)
+    //          - This represents actual background noise, not affected by call energy
+    // 
     // Validation criteria:
-    // 1. Peak power should be significantly above average baseline (SNR check)
+    // 1. Peak power should be significantly above noise baseline (SNR check)
     // 2. Bandwidth should be reasonable (not too wide like noise)
     // 3. Power concentration should be high (not scattered like noise)
-    // 
-    // Implementation:
-    // - Calculate global noise baseline (RMS of all frequency bins)
-    // - For each call, check if peak power is at least 10 dB above baseline
-    // - If too low SNR, discard as likely noise
     // ============================================================
     
-    // Calculate global noise baseline in linear space, then convert to dB
-    let globalLinearPower = 0;
-    let powerCount = 0;
+    // Collect all power values for percentile calculation
+    const allPowerValues = [];
     
     for (let frameIdx = 0; frameIdx < powerMatrix.length; frameIdx++) {
       const framePower = powerMatrix[frameIdx];
       for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        // Convert dB to linear
-        const linearPower = Math.pow(10, framePower[binIdx] / 10);
-        globalLinearPower += linearPower;
-        powerCount++;
+        allPowerValues.push(framePower[binIdx]);
       }
     }
     
-    if (powerCount > 0) {
-      globalLinearPower /= powerCount;
-    }
+    // Sort to calculate percentiles
+    allPowerValues.sort((a, b) => a - b);
     
-    // Convert back to dB for comparison
-    const globalAveragePower_dB = 10 * Math.log10(Math.max(globalLinearPower, 1e-16));
+    // Calculate noise baseline using 25th percentile (robust to call signals)
+    // This represents the typical background noise floor
+    // The lowest 25% of energy bins = pure noise/low signal
+    const percentile25Index = Math.floor(allPowerValues.length * 0.25);
+    const noiseFloor_dB = allPowerValues[Math.max(0, percentile25Index)];
+    
+    // For comparison: also use median (50th percentile) as secondary baseline
+    const medianIndex = Math.floor(allPowerValues.length * 0.5);
+    const medianPower_dB = allPowerValues[Math.max(0, medianIndex)];
+    
+    // Use the higher of noise floor or a minimum threshold to ensure reasonable baseline
+    // Minimum baseline: -80 dB (typical for quiet recording environments)
+    const minNoiseFloor_dB = -80;
+    const robustNoiseFloor_dB = Math.max(noiseFloor_dB, minNoiseFloor_dB);
     
     // Additional SNR-based filtering: Remove calls with low SNR
-    // Real bat calls should have peak power >= 10dB above baseline
-    const snrThreshold_dB = 20;
+    // Real bat calls should have peak power >> above noise baseline
+    const snrThreshold_dB = 20;  // At least 20 dB above noise floor
     const filteredCalls = calls.filter(call => {
       if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
         return false; // No peak power data, discard
       }
       
-      const snr_dB = call.peakPower_dB - globalAveragePower_dB;
+      // Calculate SNR using robust noise baseline
+      const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
       
       // If SNR is too low, likely just noise
       if (snr_dB < snrThreshold_dB) {
