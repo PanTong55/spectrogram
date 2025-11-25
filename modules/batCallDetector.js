@@ -541,34 +541,29 @@ export class BatCallDetector {
    * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
    * 5. Return that threshold as the optimal value
    * 
-   * CRITICAL: Must use the SAME calculation as measureFrequencyParameters:
-   * - Find GLOBAL peak power across entire spectrogram (not just first frame)
-   * - Calculate relative threshold: startThreshold_dB = globalPeakPower + testThreshold_dB
-   * - Measure Start Frequency from first frame using this relative threshold
+   * CRITICAL FIX (2025): Use stable call.peakPower_dB instead of floating globalPeakPower_dB
+   * - call.peakPower_dB: Fixed by call signal, independent of selection area size
+   * - globalPeakPower_dB: Varies with selection size, unreliable for threshold calculation
    * 
    * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
    * @param {Array} freqBins - Frequency bin centers (Hz)
    * @param {number} flowKHz - Lower frequency bound (kHz)
    * @param {number} fhighKHz - Upper frequency bound (kHz)
+   * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
    * @returns {number} Optimal threshold (dB) in range [-50, -24]
    */
-  findOptimalStartEndThreshold(spectrogram, freqBins, flowKHz, fhighKHz) {
+  findOptimalStartEndThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
     if (spectrogram.length === 0) return -24;
 
     const firstFramePower = spectrogram[0];
     const flowHz = flowKHz * 1000;
     const fhighHz = fhighKHz * 1000;
     
-    // CRITICAL: Find GLOBAL peak power across entire spectrogram
-    // This is exactly what measureFrequencyParameters does in STEP 1
-    let globalPeakPower_dB = -Infinity;
-    
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-      const framePower = spectrogram[frameIdx];
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        globalPeakPower_dB = Math.max(globalPeakPower_dB, framePower[binIdx]);
-      }
-    }
+    // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
+    // This prevents fluctuations caused by selection area size
+    // globalPeakPower_dB = Math.max across entire spectrogram = affected by selection size
+    // callPeakPower_dB = actual call signal peak = stable and reliable
+    const stablePeakPower_dB = callPeakPower_dB;
     
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
@@ -584,9 +579,9 @@ export class BatCallDetector {
       let startFreq_Hz = null;
       let foundBin = false;
       
-      // 使用全局峰值計算相對閾值（與 measureFrequencyParameters 完全相同）
+      // 使用穩定的 call peak power（不受 selection 大小影響）
       // Line 728: const startThreshold_dB = peakPower_dB + startEndThreshold_dB;
-      const startThreshold_dB = globalPeakPower_dB + testThreshold_dB;
+      const startThreshold_dB = stablePeakPower_dB + testThreshold_dB;
       
       // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
       // 這是找 Start Frequency（最高的頻率）的正確方法
@@ -759,20 +754,11 @@ export class BatCallDetector {
     if (spectrogram.length === 0) return;
     
     // ============================================================
-    // AUTO MODE: If startEndThreshold_dB_isAuto is enabled,
-    // automatically find optimal threshold before proceeding
-    // ============================================================
-    if (this.config.startEndThreshold_dB_isAuto === true) {
-      startEndThreshold_dB = this.findOptimalStartEndThreshold(
-        spectrogram,
-        freqBins,
-        flowKHz,
-        fhighKHz
-      );
-    }
-    
-    // ============================================================
-    // STEP 1: Find peak frequency (highest power across entire call)
+    // STEP 0: Find peak frequency FIRST (before auto-threshold calculation)
+    // 
+    // CRITICAL (2025 FIX): Must find actual call peak BEFORE auto-threshold mode
+    // so that findOptimalStartEndThreshold can use stable call.peakPower_dB
+    // instead of spectrogram's global max (which varies with selection size)
     // 
     // Professional Standard: Use FFT + Parabolic Interpolation
     // (aligned with Avisoft, SonoBat, Kaleidoscope, BatSound)
@@ -821,10 +807,26 @@ export class BatCallDetector {
       }
     }
     
+    // Store peak values for use in auto-threshold calculation
+    // IMPORTANT: These values are NOW STABLE and don't depend on selection area size
     call.peakFreq_kHz = peakFreq_Hz / 1000;
     call.peakPower_dB = peakPower_dB;
     
     // ============================================================
+    // AUTO MODE: If startEndThreshold_dB_isAuto is enabled,
+    // automatically find optimal threshold using STABLE call.peakPower_dB
+    // (NOT the floating globalPeakPower_dB from entire spectrogram)
+    // ============================================================
+    if (this.config.startEndThreshold_dB_isAuto === true) {
+      startEndThreshold_dB = this.findOptimalStartEndThreshold(
+        spectrogram,
+        freqBins,
+        flowKHz,
+        fhighKHz,
+        peakPower_dB  // Pass stable call peak value instead of computing global peak again
+      );
+    }
+    
     // ============================================================
     // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
     // 
