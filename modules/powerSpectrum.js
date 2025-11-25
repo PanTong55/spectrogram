@@ -610,7 +610,10 @@ function createPopupWindow() {
     </tr>
     <tr>
       <td class="param-label">High Freq:</td>
-      <td class="param-value high-freq">-</td>
+      <td class="param-value-container high-freq-container">
+        <i class="fa-solid fa-triangle-exclamation high-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover high enough frequencies. Consider extending the frequency range."></i>
+        <span class="param-value high-freq">-</span>
+      </td>
       <td class="param-unit">kHz</td>
       <td class="param-label">Low Freq:</td>
       <td class="param-value low-freq">-</td>
@@ -1531,6 +1534,7 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const endFreqEl = paramPanel.querySelector('.end-freq');
   const lowFreqEl = paramPanel.querySelector('.low-freq');
   const highFreqEl = paramPanel.querySelector('.high-freq');
+  const highFreqWarningIcon = paramPanel.querySelector('.high-freq-warning');
   const kneeFreqEl = paramPanel.querySelector('.knee-freq');
   const charFreqEl = paramPanel.querySelector('.char-freq');
   const bandwidthEl = paramPanel.querySelector('.bandwidth');
@@ -1547,7 +1551,23 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     endFreqEl.textContent = batCall.endFreq_kHz?.toFixed(2) || '-';
     // Display lowFreq_kHz (calculated lowest frequency from last frame)
     lowFreqEl.textContent = batCall.lowFreq_kHz?.toFixed(2) || '-';
+    
+    // Display High Freq with warning icon and color if detection warning is set
     highFreqEl.textContent = batCall.highFreq_kHz?.toFixed(2) || '-';
+    if (batCall.highFreqDetectionWarning === true) {
+      // Show warning icon and change text color to red
+      if (highFreqWarningIcon) {
+        highFreqWarningIcon.style.display = 'inline';
+      }
+      highFreqEl.style.color = '#dc3545';  // Red color
+    } else {
+      // Hide warning icon and use default color
+      if (highFreqWarningIcon) {
+        highFreqWarningIcon.style.display = 'none';
+      }
+      highFreqEl.style.color = 'inherit';  // Default color
+    }
+    
     kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';
     charFreqEl.textContent = batCall.characteristicFreq_kHz?.toFixed(2) || '-';
     bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
@@ -1578,6 +1598,11 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     endFreqEl.textContent = '-';
     lowFreqEl.textContent = '-';
     highFreqEl.textContent = '-';
+    // Reset warning icon and color
+    if (highFreqWarningIcon) {
+      highFreqWarningIcon.style.display = 'none';
+    }
+    highFreqEl.style.color = 'inherit';
     kneeFreqEl.textContent = '-';
     charFreqEl.textContent = '-';
     bandwidthEl.textContent = '-';

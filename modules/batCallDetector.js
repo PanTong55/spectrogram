@@ -140,6 +140,8 @@ export class BatCall {
     this.snr_dB = null;             // Signal to Noise Ratio (dB) = peakPower_dB - noiseFloor_dB
     this.quality = null;            // Quality rating based on SNR (Very Poor, Poor, Normal, Good, Excellent)
     
+    this.highFreqDetectionWarning = false;  // Warning flag: High Frequency detection reached -70dB limit
+    
     this.callType = 'FM';           // 'CF', 'FM', or 'CF-FM' (Constant/Frequency Modulated)
     
     // Internal: time-frequency spectrogram (for visualization/analysis)
@@ -581,18 +583,14 @@ export class BatCallDetector {
   }
 
   /**
-   * Find optimal Start Threshold by testing range and detecting anomalies
+   * Find optimal High Threshold by testing range and detecting anomalies
    * 
    * Algorithm:
    * 1. Test threshold values from -24 dB down to -70 dB (step: 1 dB)
-   * 2. For each threshold, measure Start Frequency using SAME method as measureFrequencyParameters
+   * 2. For each threshold, measure High Frequency using SAME method as measureFrequencyParameters
    * 3. Track frequency differences between consecutive thresholds
    * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
    * 5. Return that threshold as the optimal value
-   * 
-   * CRITICAL FIX (2025): Use stable call.peakPower_dB instead of floating globalPeakPower_dB
-   * - call.peakPower_dB: Fixed by call signal, independent of selection area size
-   * - globalPeakPower_dB: Varies with selection size, unreliable for threshold calculation
    * 
    * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
    * @param {Array} freqBins - Frequency bin centers (Hz)
@@ -778,7 +776,15 @@ export class BatCallDetector {
     }
     
     // 確保返回值在有效範圍內
-    return Math.max(Math.min(optimalThreshold, -24), -70);
+    const finalThreshold = Math.max(Math.min(optimalThreshold, -24), -70);
+    
+    // 檢測是否使用了 -70dB 的極限閾值（表示選擇區域未能涵蓋足夠高的頻率）
+    const hasWarning = finalThreshold <= -70;
+    
+    return {
+      threshold: finalThreshold,
+      warning: hasWarning
+    };
   }
 
   /**
@@ -865,7 +871,7 @@ export class BatCallDetector {
     // (NOT the floating globalPeakPower_dB from entire spectrogram)
     // ============================================================
     if (this.config.highFreqThreshold_dB_isAuto === true) {
-      const highFreqThreshold_dB = this.findOptimalHighFrequencyThreshold(
+      const result = this.findOptimalHighFrequencyThreshold(
         spectrogram,
         freqBins,
         flowKHz,
@@ -873,7 +879,9 @@ export class BatCallDetector {
         peakPower_dB  // Pass stable call peak value instead of computing global peak again
       );
       // Update the config with the calculated optimal threshold
-      this.config.highFreqThreshold_dB = highFreqThreshold_dB;
+      this.config.highFreqThreshold_dB = result.threshold;
+      // Set warning flag on the call object
+      call.highFreqDetectionWarning = result.warning;
     }
     
     // ============================================================
