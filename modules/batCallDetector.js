@@ -827,6 +827,68 @@ export class BatCallDetector {
       );
     }
     
+    // Store original fhighKHz for boundary detection
+    const originalFhighKHz = fhighKHz;
+    let currentFhighKHz = fhighKHz;
+    let detectedStartFreq_kHz = null;
+    let iterationCount = 0;
+    const maxIterations = 10;  // Prevent infinite loops
+    const boundaryClosenessThreshold_kHz = 1.0;  // <1kHz considered "too close"
+    
+    // ============================================================
+    // ITERATIVE BOUNDARY ADJUSTMENT (2025 FIX)
+    // If calculated Start Frequency is too close to frequency boundary,
+    // extend boundary and recalculate until Start Frequency is found away from boundary
+    // ============================================================
+    do {
+      iterationCount++;
+      
+      // Recalculate start threshold with potentially adjusted boundary
+      const iterationStartThreshold_dB = peakPower_dB + startEndThreshold_dB;
+      let iterationStartFreq_Hz = currentFhighKHz * 1000;  // Default to upper bound
+      
+      // Search from high to low frequency
+      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (firstFramePower[binIdx] > iterationStartThreshold_dB) {
+          iterationStartFreq_Hz = freqBins[binIdx];
+          
+          // Attempt linear interpolation for sub-bin precision
+          if (binIdx < firstFramePower.length - 1) {
+            const thisPower = firstFramePower[binIdx];
+            const nextPower = firstFramePower[binIdx + 1];
+            
+            if (nextPower < iterationStartThreshold_dB && thisPower > iterationStartThreshold_dB) {
+              const powerRatio = (thisPower - iterationStartThreshold_dB) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              iterationStartFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            }
+          }
+          break;
+        }
+      }
+      
+      detectedStartFreq_kHz = iterationStartFreq_Hz / 1000;
+      const distanceToBoundary_kHz = currentFhighKHz - detectedStartFreq_kHz;
+      
+      // Check if Start Frequency is too close to boundary
+      if (distanceToBoundary_kHz > boundaryClosenessThreshold_kHz) {
+        // Start Frequency is far enough from boundary - found it!
+        break;
+      }
+      
+      // Start Frequency is too close to boundary, extend boundary
+      if (iterationCount < maxIterations) {
+        currentFhighKHz += 1.0;  // Extend boundary by 1 kHz
+      } else {
+        // Max iterations reached, use current value
+        break;
+      }
+    } while (iterationCount < maxIterations);
+    
+    // Store whether Start Frequency exceeds original boundary
+    // This will be used for UI warning (red color)
+    call.startFreqExceedsOriginalBoundary = (detectedStartFreq_kHz > originalFhighKHz);
+    
     // ============================================================
     // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
     // 
@@ -1019,31 +1081,43 @@ export class BatCallDetector {
     // Professional standard: threshold at -27dB below global peak
     // This is the highest frequency in the call (from first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
+    // 
+    // 2025 FIX: Use iteratively-detected Start Frequency (accounts for boundary issues)
+    // instead of recalculating from scratch
     // ============================================================
     const firstFramePower = spectrogram[0];
     let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
-    // Search from high to low frequency (reverse order)
-    for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-      if (firstFramePower[binIdx] > startThreshold_dB) {
-        // Found first bin above threshold
-        startFreq_Hz = freqBins[binIdx];
-        
-        // Attempt linear interpolation for sub-bin precision
-        if (binIdx < firstFramePower.length - 1) {
-          const thisPower = firstFramePower[binIdx];
-          const nextPower = firstFramePower[binIdx + 1];
+    // Use the Start Frequency calculated via iterative boundary adjustment
+    if (detectedStartFreq_kHz !== null) {
+      startFreq_Hz = detectedStartFreq_kHz * 1000;
+    } else {
+      // Fallback if iteration didn't happen (shouldn't occur in normal flow)
+      const startThreshold_dB = peakPower_dB + startEndThreshold_dB;
+      
+      // Search from high to low frequency (reverse order)
+      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (firstFramePower[binIdx] > startThreshold_dB) {
+          // Found first bin above threshold
+          startFreq_Hz = freqBins[binIdx];
           
-          if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
-            // Interpolate between this bin and next
-            const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
-            const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-            startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+          // Attempt linear interpolation for sub-bin precision
+          if (binIdx < firstFramePower.length - 1) {
+            const thisPower = firstFramePower[binIdx];
+            const nextPower = firstFramePower[binIdx + 1];
+            
+            if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
+              // Interpolate between this bin and next
+              const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            }
           }
+          break;
         }
-        break;
       }
     }
+    
     call.startFreq_kHz = startFreq_Hz / 1000;
     
     // STEP 2.5: Record the time point of start frequency (first frame with signal)
