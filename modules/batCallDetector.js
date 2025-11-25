@@ -552,21 +552,18 @@ export class BatCallDetector {
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
    * @returns {number} Optimal threshold (dB) in range [-50, -24]
    */
-  findOptimalStartEndThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB, sampleRate) {
+  findOptimalStartEndThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
     if (spectrogram.length === 0) return -24;
 
     const firstFramePower = spectrogram[0];
+    const flowHz = flowKHz * 1000;
+    const fhighHz = fhighKHz * 1000;
     
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     // This prevents fluctuations caused by selection area size
+    // globalPeakPower_dB = Math.max across entire spectrogram = affected by selection size
+    // callPeakPower_dB = actual call signal peak = stable and reliable
     const stablePeakPower_dB = callPeakPower_dB;
-    
-    // CRITICAL FIX (2025): Use actual Nyquist frequency based on sample rate
-    // NOT freqBins[freqBins.length - 1] which changes with selection area fhighKHz
-    // freqBins array size depends on fhighKHz parameter in generateSpectrogram
-    // So using "last element" creates inconsistent reference points
-    // True Nyquist = sampleRate / 2 (stable, independent of selection area)
-    const nyquistFreq_Hz = sampleRate / 2;
     
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
@@ -579,7 +576,7 @@ export class BatCallDetector {
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
-      let startFreq_Hz = nyquistFreq_Hz;  // Default to highest frequency bin (not fhighKHz * 1000)
+      let startFreq_Hz = null;
       let foundBin = false;
       
       // 使用穩定的 call peak power（不受 selection 大小影響）
@@ -826,8 +823,7 @@ export class BatCallDetector {
         freqBins,
         flowKHz,
         fhighKHz,
-        peakPower_dB,  // Pass stable call peak value instead of computing global peak again
-        call.sampleRate  // Pass sample rate for stable Nyquist calculation
+        peakPower_dB  // Pass stable call peak value instead of computing global peak again
       );
     }
     
@@ -1025,11 +1021,7 @@ export class BatCallDetector {
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
     const firstFramePower = spectrogram[0];
-    // CRITICAL FIX (2025): Use actual Nyquist frequency based on sample rate
-    // NOT freqBins[freqBins.length - 1] which changes with selection area fhighKHz
-    // True Nyquist = sampleRate / 2 (stable, independent of selection area)
-    const nyquistFreq_Hz = call.sampleRate / 2;
-    let startFreq_Hz = nyquistFreq_Hz;  // Default to true Nyquist frequency (not selection-dependent)
+    let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
