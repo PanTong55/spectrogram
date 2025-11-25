@@ -2466,7 +2466,7 @@ input.tag-button.editing {
 
 .param-value.quality {
   font-weight: 600;
-  text-align: left;
+  text-align: center;
 }
 
 /* Quality rating colors */
@@ -2478,13 +2478,15 @@ input.tag-button.editing {
   color: #f0ad4e;  /* Orange */
 }
 
+.param-value.quality-normal {
+  color: #333;     /* Normal/Dark gray */
+}
+
 .param-value.quality-good {
   color: #5cb85c;  /* Green */
 }
 
-.param-value.quality-normal {
-  color: #333;     /* Normal/Dark gray */
-}
+
 
 .param-value.quality-excellent {
   color: #1b7f00;  /* Dark green */

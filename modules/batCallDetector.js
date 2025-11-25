@@ -136,7 +136,7 @@ export class BatCall {
     
     this.noiseFloor_dB = null;      // Noise floor (25th percentile of all power values)
     this.snr_dB = null;             // Signal to Noise Ratio (dB) = peakPower_dB - noiseFloor_dB
-    this.quality = null;            // Quality rating based on SNR (Very Poor, Marginal, Normal, Good, Excellent)
+    this.quality = null;            // Quality rating based on SNR (Very Poor, Poor, Normal, Good, Excellent)
     
     this.callType = 'FM';           // 'CF', 'FM', or 'CF-FM' (Constant/Frequency Modulated)
     
@@ -224,10 +224,10 @@ export class BatCallDetector {
    * Calculate quality rating based on SNR value
    * SNR ranges:
    * - < +10 dB: Very Poor (紅色)
-   * - 10-20 dB: Marginal (橙色)
-   * - 20-30 dB: Good (綠色)
-   * - 30-40 dB: Normal (正常色)
-   * - >= 40 dB: Excellent (深綠色)
+   * - 10-20 dB: Poor (橙色)
+   * - 20-40 dB: Normal (正常色)
+   * - 40-60 dB: Good (綠色)
+   * - >= 60 dB: Excellent (深綠色)
    * 
    * @param {number} snr_dB - Signal to Noise Ratio in dB
    * @returns {string} Quality rating
@@ -236,11 +236,11 @@ export class BatCallDetector {
     if (snr_dB < 10) {
       return 'Very Poor';
     } else if (snr_dB < 20) {
-      return 'Marginal';
-    } else if (snr_dB < 30) {
-      return 'Good';
+      return 'Poor';
     } else if (snr_dB < 40) {
       return 'Normal';
+    } else if (snr_dB < 60) {
+      return 'Good';
     } else {
       return 'Excellent';
     }
