@@ -134,6 +134,10 @@ export class BatCall {
     this.startPower_dB = null;      // Power at start frequency
     this.endPower_dB = null;        // Power at end frequency
     
+    this.noiseFloor_dB = null;      // Noise floor (25th percentile of all power values)
+    this.snr_dB = null;             // Signal to Noise Ratio (dB) = peakPower_dB - noiseFloor_dB
+    this.quality = null;            // Quality rating based on SNR (Very Poor, Marginal, Normal, Good, Excellent)
+    
     this.callType = 'FM';           // 'CF', 'FM', or 'CF-FM' (Constant/Frequency Modulated)
     
     // Internal: time-frequency spectrogram (for visualization/analysis)
@@ -200,6 +204,8 @@ export class BatCall {
       'Bandwidth [kHz]': this.bandwidth_kHz?.toFixed(2) || '-',
       'Peak Power [dB]': this.peakPower_dB?.toFixed(1) || '-',
       'Knee Time [ms]': this.kneeTime_ms?.toFixed(2) || '-',
+      'SNR [dB]': this.snr_dB !== null ? (this.snr_dB > 0 ? `+${this.snr_dB.toFixed(1)}` : this.snr_dB.toFixed(1)) : '-',
+      'Quality': this.quality || '-',
     };
   }
 }
@@ -212,6 +218,32 @@ export class BatCallDetector {
     this.config = { ...DEFAULT_DETECTION_CONFIG, ...config };
     this.applyWindow = getApplyWindowFunction();
     this.goertzelEnergy = getGoertzelEnergyFunction();
+  }
+  
+  /**
+   * Calculate quality rating based on SNR value
+   * SNR ranges:
+   * - < +10 dB: Very Poor (紅色)
+   * - 10-20 dB: Marginal (橙色)
+   * - 20-30 dB: Good (綠色)
+   * - 30-40 dB: Normal (正常色)
+   * - >= 40 dB: Excellent (深綠色)
+   * 
+   * @param {number} snr_dB - Signal to Noise Ratio in dB
+   * @returns {string} Quality rating
+   */
+  getQualityRating(snr_dB) {
+    if (snr_dB < 10) {
+      return 'Very Poor';
+    } else if (snr_dB < 20) {
+      return 'Marginal';
+    } else if (snr_dB < 30) {
+      return 'Good';
+    } else if (snr_dB < 40) {
+      return 'Normal';
+    } else {
+      return 'Excellent';
+    }
   }
   
   /**
@@ -343,8 +375,15 @@ export class BatCallDetector {
         return false; // No peak power data, discard
       }
       
-      // Calculate SNR using robust noise baseline
+      // Calculate SNR using robust noise baseline (25th percentile)
       const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
+      
+      // Store SNR and noiseFloor values in call object
+      call.noiseFloor_dB = robustNoiseFloor_dB;
+      call.snr_dB = snr_dB;
+      
+      // Calculate quality rating based on SNR
+      call.quality = this.getQualityRating(snr_dB);
       
       // If SNR is too low, likely just noise
       if (snr_dB < snrThreshold_dB) {

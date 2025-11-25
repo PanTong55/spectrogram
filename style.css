@@ -2410,7 +2410,7 @@ input.tag-button.editing {
   border-radius: 5px;
   border: 1px solid #ddd;
   margin: 0px 5px 5px 5px;
-  max-height: 120px;
+  max-height: 150px;
   overflow-y: auto;
   font-size: 12px;
   font-family: 'Noto Sans HK', 'Courier New', monospace;
@@ -2456,6 +2456,38 @@ input.tag-button.editing {
 
 .bat-call-parameters-table tr:last-child td {
   border-bottom: none;
+}
+
+/* === SNR and Quality Styling === */
+.param-value.snr {
+  color: #0066cc;
+  font-weight: 600;
+}
+
+.param-value.quality {
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Quality rating colors */
+.param-value.quality-very-poor {
+  color: #d9534f;  /* Red */
+}
+
+.param-value.quality-marginal {
+  color: #f0ad4e;  /* Orange */
+}
+
+.param-value.quality-good {
+  color: #5cb85c;  /* Green */
+}
+
+.param-value.quality-normal {
+  color: #333;     /* Normal/Dark gray */
+}
+
+.param-value.quality-excellent {
+  color: #1b7f00;  /* Dark green */
 }
 
 /* === Bat Call Controls Panel === */

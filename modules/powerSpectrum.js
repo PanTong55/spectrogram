@@ -640,6 +640,13 @@ function createPopupWindow() {
       <td class="param-value duration">-</td>
       <td class="param-unit">ms</td>
     </tr>
+    <tr>
+      <td class="param-label">SNR:</td>
+      <td class="param-value snr">-</td>
+      <td class="param-unit">dB</td>
+      <td class="param-label">Quality:</td>
+      <td class="param-value quality" colspan="2">-</td>
+    </tr>
   `;
   paramPanel.appendChild(paramTable);
   popup.appendChild(paramPanel);
@@ -1529,6 +1536,8 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const bandwidthEl = paramPanel.querySelector('.bandwidth');
   const durationEl = paramPanel.querySelector('.duration');
   const kneeTimeEl = paramPanel.querySelector('.knee-time');
+  const snrEl = paramPanel.querySelector('.snr');
+  const qualityEl = paramPanel.querySelector('.quality');
   
   if (batCall) {
     peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
@@ -1541,6 +1550,24 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
     durationEl.textContent = batCall.duration_ms?.toFixed(2) || '-';
     kneeTimeEl.textContent = batCall.kneeTime_ms?.toFixed(2) || '-';
+    
+    // Display SNR value with + prefix if positive
+    if (batCall.snr_dB !== null && batCall.snr_dB !== undefined) {
+      snrEl.textContent = batCall.snr_dB > 0 ? `+${batCall.snr_dB.toFixed(1)}` : batCall.snr_dB.toFixed(1);
+      snrEl.className = 'param-value snr';
+    } else {
+      snrEl.textContent = '-';
+      snrEl.className = 'param-value snr';
+    }
+    
+    // Display quality with appropriate color
+    if (batCall.quality !== null && batCall.quality !== undefined) {
+      qualityEl.textContent = batCall.quality;
+      qualityEl.className = 'param-value quality quality-' + batCall.quality.toLowerCase().replace(/\s+/g, '-');
+    } else {
+      qualityEl.textContent = '-';
+      qualityEl.className = 'param-value quality';
+    }
   } else {
     // 只顯示 peak freq，其他為空
     peakFreqEl.textContent = peakFreqFallback?.toFixed(2) || '-';
@@ -1553,6 +1580,10 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     bandwidthEl.textContent = '-';
     durationEl.textContent = '-';
     kneeTimeEl.textContent = '-';
+    snrEl.textContent = '-';
+    snrEl.className = 'param-value snr';
+    qualityEl.textContent = '-';
+    qualityEl.className = 'param-value quality';
   }
 }
 
