@@ -827,36 +827,33 @@ export class BatCallDetector {
       );
     }
     
+    // Store original fhighKHz for boundary detection
+    const originalFhighKHz = fhighKHz;
+    let currentFhighKHz = fhighKHz;
+    let detectedStartFreq_kHz = null;
+    let iterationCount = 0;
+    const maxIterations = 10;  // Prevent infinite loops
+    const boundaryClosenessThreshold_kHz = 1.0;  // <1kHz considered "too close"
+    
     // Get first frame power for Start Frequency calculation
     // (needed for iterative boundary adjustment)
     let firstFramePower = spectrogram[0];
     
-    // Calculate base thresholds early (needed for boundary iteration)
-    const baseStartThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold
-    const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
-    
     // ============================================================
     // ITERATIVE BOUNDARY ADJUSTMENT (2025 FIX)
-    // If calculated Start Frequency is too close to frequency boundary (<1kHz),
-    // tighten the threshold to find a lower frequency point
-    // This iterative approach finds frequency content further down the spectrum
+    // If calculated Start Frequency is too close to frequency boundary,
+    // extend boundary and recalculate until Start Frequency is found away from boundary
     // ============================================================
-    let detectedStartFreq_kHz = null;
-    let iterationCount = 0;
-    const maxIterations = 5;  // Reduced iterations needed
-    const boundaryClosenessThreshold_kHz = 1.0;  // <1kHz considered "too close"
-    let currentStartThreshold_dB = baseStartThreshold_dB;
-    
     do {
       iterationCount++;
       
-      let iterationStartFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+      // Recalculate start threshold with potentially adjusted boundary
+      const iterationStartThreshold_dB = peakPower_dB + startEndThreshold_dB;
+      let iterationStartFreq_Hz = currentFhighKHz * 1000;  // Default to upper bound
       
       // Search from high to low frequency
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (freqBins[binIdx] / 1000 > fhighKHz) continue;  // Skip bins above boundary
-        
-        if (firstFramePower[binIdx] > currentStartThreshold_dB) {
+        if (firstFramePower[binIdx] > iterationStartThreshold_dB) {
           iterationStartFreq_Hz = freqBins[binIdx];
           
           // Attempt linear interpolation for sub-bin precision
@@ -864,8 +861,8 @@ export class BatCallDetector {
             const thisPower = firstFramePower[binIdx];
             const nextPower = firstFramePower[binIdx + 1];
             
-            if (nextPower < currentStartThreshold_dB && thisPower > currentStartThreshold_dB) {
-              const powerRatio = (thisPower - currentStartThreshold_dB) / (thisPower - nextPower);
+            if (nextPower < iterationStartThreshold_dB && thisPower > iterationStartThreshold_dB) {
+              const powerRatio = (thisPower - iterationStartThreshold_dB) / (thisPower - nextPower);
               const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
               iterationStartFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
             }
@@ -875,7 +872,7 @@ export class BatCallDetector {
       }
       
       detectedStartFreq_kHz = iterationStartFreq_Hz / 1000;
-      const distanceToBoundary_kHz = fhighKHz - detectedStartFreq_kHz;
+      const distanceToBoundary_kHz = currentFhighKHz - detectedStartFreq_kHz;
       
       // Check if Start Frequency is too close to boundary
       if (distanceToBoundary_kHz > boundaryClosenessThreshold_kHz) {
@@ -883,9 +880,9 @@ export class BatCallDetector {
         break;
       }
       
-      // Start Frequency is too close to boundary, tighten threshold to find lower freq
+      // Start Frequency is too close to boundary, extend boundary
       if (iterationCount < maxIterations) {
-        currentStartThreshold_dB += 1.5;  // Increase threshold by 1.5dB (find signal further down)
+        currentFhighKHz += 1.0;  // Extend boundary by 1 kHz
       } else {
         // Max iterations reached, use current value
         break;
@@ -894,7 +891,7 @@ export class BatCallDetector {
     
     // Store whether Start Frequency exceeds original boundary
     // This will be used for UI warning (red color)
-    call.startFreqExceedsOriginalBoundary = (detectedStartFreq_kHz > fhighKHz);
+    call.startFreqExceedsOriginalBoundary = (detectedStartFreq_kHz > originalFhighKHz);
     
     // ============================================================
     // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
@@ -910,8 +907,8 @@ export class BatCallDetector {
       protectionWindowAfterPeak_ms
     } = this.config;
     
-    // startThreshold_dB and endThreshold_dB already defined above at line 843-844
-    // for use in iterative boundary adjustment loop
+    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold (可調整)
+    const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
