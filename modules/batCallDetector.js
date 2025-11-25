@@ -565,6 +565,10 @@ export class BatCallDetector {
     // callPeakPower_dB = actual call signal peak = stable and reliable
     const stablePeakPower_dB = callPeakPower_dB;
     
+    // 優化 (2025): Use actual frequency bin array boundaries instead of fhighKHz parameter
+    // Ensures consistent start frequency calculation across different selection areas
+    const nyquistFreq_Hz = freqBins[freqBins.length - 1];
+    
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
     for (let threshold = -24; threshold >= -70; threshold--) {
@@ -576,7 +580,7 @@ export class BatCallDetector {
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
-      let startFreq_Hz = null;
+      let startFreq_Hz = nyquistFreq_Hz;  // Default to highest frequency bin (not fhighKHz * 1000)
       let foundBin = false;
       
       // 使用穩定的 call peak power（不受 selection 大小影響）
@@ -1021,7 +1025,10 @@ export class BatCallDetector {
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
     const firstFramePower = spectrogram[0];
-    let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+    // 優化 (2025): Use actual frequency bin array boundaries instead of fhighKHz parameter
+    // Ensures consistent start frequency calculation across different selection areas
+    const nyquistFreq_Hz = freqBins[freqBins.length - 1];
+    let startFreq_Hz = nyquistFreq_Hz;  // Default to highest frequency bin (not fhighKHz * 1000)
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
