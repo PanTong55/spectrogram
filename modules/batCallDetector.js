@@ -565,9 +565,11 @@ export class BatCallDetector {
     // callPeakPower_dB = actual call signal peak = stable and reliable
     const stablePeakPower_dB = callPeakPower_dB;
     
-    // 優化 (2025): Use actual frequency bin array boundaries instead of fhighKHz parameter
-    // Ensures consistent start frequency calculation across different selection areas
-    const nyquistFreq_Hz = freqBins[freqBins.length - 1];
+    // 優化 (2025): Use fixed upper frequency boundary to ensure consistent bin array
+    // Instead of using freqBins[freqBins.length - 1] which varies with selection,
+    // use a fixed high frequency reference point (e.g., 128 kHz for ultrasonic bats)
+    // This ensures the same threshold test produces the same result regardless of selection area
+    const fixedHighFreq_Hz = Math.max(fhighHz, 128000);  // At least 128 kHz for ultrasonic
     
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
@@ -580,7 +582,7 @@ export class BatCallDetector {
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
-      let startFreq_Hz = nyquistFreq_Hz;  // Default to highest frequency bin (not fhighKHz * 1000)
+      let startFreq_Hz = fixedHighFreq_Hz;  // Default to fixed high frequency boundary
       let foundBin = false;
       
       // 使用穩定的 call peak power（不受 selection 大小影響）
@@ -1025,10 +1027,11 @@ export class BatCallDetector {
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
     const firstFramePower = spectrogram[0];
-    // 優化 (2025): Use actual frequency bin array boundaries instead of fhighKHz parameter
-    // Ensures consistent start frequency calculation across different selection areas
-    const nyquistFreq_Hz = freqBins[freqBins.length - 1];
-    let startFreq_Hz = nyquistFreq_Hz;  // Default to highest frequency bin (not fhighKHz * 1000)
+    // 優化 (2025): Use fixed upper frequency boundary instead of variable freqBins boundary
+    // freqBins changes based on selection area's fhighKHz, causing inconsistent results
+    // Use a fixed reference frequency (128 kHz) to ensure consistent Start Frequency measurement
+    const fixedHighFreq_Hz = Math.max(fhighKHz * 1000, 128000);  // At least 128 kHz for ultrasonic bats
+    let startFreq_Hz = fixedHighFreq_Hz;  // Default to fixed high frequency boundary
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
