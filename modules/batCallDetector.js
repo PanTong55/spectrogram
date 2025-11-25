@@ -1190,14 +1190,14 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 5: Validate frequency relationships (Avisoft standard)
-    // Ensure: endFreq ≤ charFreq ≤ peakFreq ≤ startFreq
+    // Ensure: endFreq ≤ charFreq ≤ peakFreq ≤ highFreq
     // This maintains biological validity for FM and CF-FM calls
     // ============================================================
     // Clamp characteristic frequency between end and peak
     const endFreqKHz = endFreq_Hz / 1000;
     const charFreqKHz = characteristicFreq_Hz / 1000;
     const peakFreqKHz = peakFreq_Hz / 1000;
-    const startFreqKHz = startFreq_Hz / 1000;
+    const highFreqKHz = highFreq_Hz / 1000;
     
     if (charFreqKHz < endFreqKHz) {
       // Char freq should not be below end freq
