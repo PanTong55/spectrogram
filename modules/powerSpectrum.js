@@ -644,7 +644,7 @@ function createPopupWindow() {
       <td class="param-label">SNR:</td>
       <td class="param-value snr">-</td>
       <td class="param-unit">dB</td>
-      <td class="param-label">Quality:</td>
+      <td class="param-label">Signal Quality:</td>
       <td class="param-value quality" colspan="2">-</td>
     </tr>
   `;
