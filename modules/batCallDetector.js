@@ -890,7 +890,7 @@ export class BatCallDetector {
       protectionWindowAfterPeak_ms
     } = this.config;
     
-    const startThreshold_dB = peakPower_dB + this.config.highFreqThreshold_dB;  // High Frequency threshold (可調整)
+    const highThreshold_dB = peakPower_dB + this.config.highFreqThreshold_dB;  // High Frequency threshold (可調整)
     const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
     
     // 找到第一個幀，其中有信號超過閾值
@@ -899,7 +899,7 @@ export class BatCallDetector {
       const framePower = spectrogram[frameIdx];
       let frameHasSignal = false;
       for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        if (framePower[binIdx] > startThreshold_dB) {
+        if (framePower[binIdx] > highThreshold_dB) {
           frameHasSignal = true;
           break;
         }
@@ -1074,7 +1074,7 @@ export class BatCallDetector {
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-      if (firstFramePower[binIdx] > startThreshold_dB) {
+      if (firstFramePower[binIdx] > highThreshold_dB) {
         // Found first bin above threshold
         highFreq_Hz = freqBins[binIdx];
         
@@ -1083,9 +1083,9 @@ export class BatCallDetector {
           const thisPower = firstFramePower[binIdx];
           const nextPower = firstFramePower[binIdx + 1];
           
-          if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
+          if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
             // Interpolate between this bin and next
-            const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
+            const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
             const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
             highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
           }
