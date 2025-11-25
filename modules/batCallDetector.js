@@ -360,6 +360,12 @@ export class BatCallDetector {
   /**
    * Generate high-resolution STFT spectrogram
    * Returns: { powerMatrix, timeFrames, freqBins, freqResolution }
+   * 
+   * CRITICAL FIX (2025): Fixed FFT bin resolution
+   * - Always compute freqBins using FULL FFT frequency range (0 to Nyquist)
+   * - Do NOT truncate bins based on flowKHz/fhighKHz
+   * - This ensures freqBins array remains CONSTANT regardless of selection bounds
+   * - Prevents Start Frequency measurement from shifting when selection area changes
    */
   generateSpectrogram(audioData, sampleRate, flowKHz, fhighKHz) {
     const { fftSize, hopPercent, windowType } = this.config;
@@ -371,11 +377,11 @@ export class BatCallDetector {
     }
     
     const freqResolution = sampleRate / fftSize;
-    const minBin = Math.max(0, Math.floor(flowKHz * 1000 / freqResolution));
-    const maxBin = Math.min(
-      Math.floor(fftSize / 2),
-      Math.floor(fhighKHz * 1000 / freqResolution)
-    );
+    
+    // CRITICAL FIX (2025): Use FULL FFT range, not restricted by flowKHz/fhighKHz
+    // This ensures consistent bin resolution across all selections
+    const minBin = 0;  // Always start from DC (0 Hz)
+    const maxBin = Math.floor(fftSize / 2);  // Always go to Nyquist frequency
     
     const numFrames = Math.floor((audioData.length - fftSize) / hopSize) + 1;
     const numBins = maxBin - minBin + 1;
@@ -384,9 +390,10 @@ export class BatCallDetector {
     const timeFrames = new Array(numFrames);
     const freqBins = new Float32Array(numBins);
     
-    // Prepare frequency bins array (in Hz)
+    // Prepare frequency bins array (in Hz) - FULL RANGE, CONSTANT
+    // This array will be identical regardless of flowKHz/fhighKHz
     for (let i = 0; i < numBins; i++) {
-      freqBins[i] = (minBin + i) * freqResolution;
+      freqBins[i] = i * freqResolution;  // Linear frequency from 0 Hz
     }
     
     // Apply Goertzel to each frame
@@ -556,8 +563,6 @@ export class BatCallDetector {
     if (spectrogram.length === 0) return -24;
 
     const firstFramePower = spectrogram[0];
-    const flowHz = flowKHz * 1000;
-    const fhighHz = fhighKHz * 1000;
     
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     // This prevents fluctuations caused by selection area size
@@ -573,6 +578,10 @@ export class BatCallDetector {
     
     // 為每個閾值測量 Start Frequency
     // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
+    // 
+    // IMPORTANT (2025 FIX): When selection area freq bounds change, freqBins array changes
+    // but we need to track ACTUAL FREQUENCY (Hz) not bin indices
+    // This prevents Start Frequency from jumping due to freqBins changes
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
@@ -580,22 +589,24 @@ export class BatCallDetector {
       let foundBin = false;
       
       // 使用穩定的 call peak power（不受 selection 大小影響）
-      // Line 728: const startThreshold_dB = peakPower_dB + startEndThreshold_dB;
       const startThreshold_dB = stablePeakPower_dB + testThreshold_dB;
       
-      // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
-      // 這是找 Start Frequency（最高的頻率）的正確方法
+      // 從高到低掃描頻率，找第一個超過閾值的 bin
+      // CRITICAL: Work with actual frequencies to avoid bin index shifting issues
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
         if (firstFramePower[binIdx] > startThreshold_dB) {
+          // Found first bin above threshold (from high freq side)
+          // Store ACTUAL FREQUENCY, not bin index
           startFreq_Hz = freqBins[binIdx];
           foundBin = true;
           
-          // 嘗試線性插值以獲得更高精度
+          // 嘗試線性插值以獲得更高精度（基於頻率）
           if (binIdx < firstFramePower.length - 1) {
             const thisPower = firstFramePower[binIdx];
             const nextPower = firstFramePower[binIdx + 1];
             
             if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
+              // Interpolate between two frequency points
               const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
               const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
               startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
@@ -603,11 +614,6 @@ export class BatCallDetector {
           }
           break;
         }
-      }
-      
-      // 如果沒有找到超過閾值的 bin，則無法測量此閾值
-      if (!foundBin) {
-        startFreq_Hz = null;
       }
       
       measurements.push({
@@ -622,19 +628,16 @@ export class BatCallDetector {
     // ============================================================
     // 算法改進：找出最後一個異常前的 Start Freq 臨界點
     // 
-    // 原理：
-    // - 正常情況：閾值從 -24 一路降低到 -70，Start Frequency 應該平緩變化 (1-2 kHz)
-    // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz) 
-    // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 立即停止，不繼續測試
-    // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
-    // - 解決：
-    //   1. 保險機制：如發現超大幅跳變 (>4 kHz)，立即停止，選擇異常前的閾值
-    //   2. 記錄第一個異常，但繼續測試
-    //   3. 如果後續連續 3 個值都無異常，則忽略之前的異常
-    //   4. 如果最後連續出現異常，則選擇最後一個有效測量（異常前的那個）
-    //   5. 如果異常後沒有連續 3 個正常值，認為後面都是雜訊，不再追蹤更遠的異常
+    // CRITICAL FIX (2025): Fixed FFT bin resolution
+    // - freqBins array is now CONSTANT (full FFT range from 0 to Nyquist)
+    // - flowKHz/fhighKHz no longer affect bin resolution
+    // - Start Frequency measurements are now STABLE across selection changes
+    // - Can revert to original anomaly detection thresholds
     // 
-    // 重要：只有當 foundBin === true 時才進行比較
+    // Algorithm:
+    // - Normal case: threshold -24 → -70, Start Frequency changes 1-2 kHz
+    // - Anomaly: sudden jump > 2.5 kHz (real FM content)
+    // - Emergency stop: jump > 5.0 kHz (definite signal change)
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
     
@@ -657,30 +660,27 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>5 kHz) - 立即停止
+      // Emergency stop: Super-large frequency jump (> 5.0 kHz)
       // ============================================================
       if (freqDifference > 5.0) {
-        // 超大幅異常，立即停止測試
-        // 選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
         break;
       }
       
+      // Anomaly detection: frequency change > 2.5 kHz
       const isAnomaly = freqDifference > 2.5;
       
       if (isAnomaly) {
-        // 發現大幅異常 (>2.5 kHz)
+        // 發現大幅異常 (>3.5 kHz)
         
-        // 如果還沒有記錄早期異常，現在記錄
         if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
-          firstAnomalyIndex = i;  // 記錄異常發生的索引
-          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;  // 異常前的閾值
+          firstAnomalyIndex = i;
+          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;
           lastValidThreshold = validMeasurements[i - 1].threshold;
         }
       } else {
         // 正常值：沒有大幅跳變
         
-        // 如果有記錄的早期異常，檢查異常後是否緊接著有 3 個正常值
         if (recordedEarlyAnomaly !== null && firstAnomalyIndex !== -1) {
           // 計算從異常發生後緊接著的 3 個索引
           const afterAnomalyStart = firstAnomalyIndex + 1;
@@ -700,17 +700,16 @@ export class BatCallDetector {
             const checkCurrFreq_kHz = validMeasurements[checkIdx].startFreq_kHz;
             const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
             
+            // Use original 2.5 kHz threshold (bin resolution now fixed)
             if (checkFreqDiff > 2.5) {
-              // 發現異常，說明異常後面不是連續 3 個正常值
               hasThreeNormalAfterAnomaly = false;
               break;
             }
           }
           
-          // 如果異常後有連續 3 個正常值，忽略早期異常
           if (hasThreeNormalAfterAnomaly && (afterAnomalyEnd - afterAnomalyStart + 1) >= 3) {
-            recordedEarlyAnomaly = null;  // 忽略早期異常
-            firstAnomalyIndex = -1;       // 重置
+            recordedEarlyAnomaly = null;
+            firstAnomalyIndex = -1;
           }
         }
         
@@ -1021,7 +1020,8 @@ export class BatCallDetector {
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
     const firstFramePower = spectrogram[0];
-    let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+    // Use Nyquist frequency (max freqBins) as default, not dependent on selection bounds
+    let startFreq_Hz = freqBins[freqBins.length - 1];  // Default to Nyquist frequency
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
@@ -1057,7 +1057,8 @@ export class BatCallDetector {
     // Search from LOW to HIGH frequency (normal bin order)
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
-    let endFreq_Hz = flowKHz * 1000;  // Default to lower bound
+    // Use DC frequency (0 Hz / freqBins[0]) as default, not dependent on selection bounds
+    let endFreq_Hz = freqBins[0];  // Default to DC frequency (0 Hz)
     
     // Search from low to high frequency using fixed -27dB threshold
     for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
