@@ -835,6 +835,10 @@ export class BatCallDetector {
     const maxIterations = 10;  // Prevent infinite loops
     const boundaryClosenessThreshold_kHz = 1.0;  // <1kHz considered "too close"
     
+    // Get first frame power for Start Frequency calculation
+    // (needed for iterative boundary adjustment)
+    let firstFramePower = spectrogram[0];
+    
     // ============================================================
     // ITERATIVE BOUNDARY ADJUSTMENT (2025 FIX)
     // If calculated Start Frequency is too close to frequency boundary,
@@ -1085,7 +1089,7 @@ export class BatCallDetector {
     // 2025 FIX: Use iteratively-detected Start Frequency (accounts for boundary issues)
     // instead of recalculating from scratch
     // ============================================================
-    const firstFramePower = spectrogram[0];
+    // firstFramePower already defined at line 840 (during iterative boundary adjustment)
     let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
     // Use the Start Frequency calculated via iterative boundary adjustment
