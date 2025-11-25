@@ -106,7 +106,7 @@ export class CallTypeClassifier {
    * FM bats: typically 20-150 kHz, high bandwidth (> 10 kHz)
    */
   static isFMBat(call) {
-    return call.bandwidth_kHz > 10 && call.startFreq_kHz > call.endFreq_kHz;  // Downward FM
+    return call.bandwidth_kHz > 10 && call.highFreq_kHz > call.endFreq_kHz;  // Downward FM
   }
 }
 
@@ -120,12 +120,13 @@ export class BatCall {
     this.duration_ms = null;        // Total duration (milliseconds)
     
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
-    this.startFreq_kHz = null;      // Start frequency (kHz) - from first frame above -27dB threshold
-    this.endFreq_kHz = null;        // End frequency (kHz) - from last frame above -27dB threshold
+    this.highFreq_kHz = null;       // High frequency (kHz) - highest frequency in call (calculated from first frame)
+    this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (TBD: to be determined)
+    this.endFreq_kHz = null;        // End frequency (kHz) - lowest frequency in call (calculated from last frame)
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
     this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
-    this.bandwidth_kHz = null;      // Bandwidth = startFreq - endFreq
+    this.bandwidth_kHz = null;      // Bandwidth = highFreq - endFreq
     
     this.Flow = null;               // Low frequency boundary (Hz) - from detection range
     this.Fhigh = null;              // High frequency boundary (kHz) - from detection range
@@ -156,11 +157,11 @@ export class BatCall {
   }
   
   /**
-   * Calculate bandwidth as difference between start and end frequencies
+   * Calculate bandwidth as difference between high and end frequencies
    */
   calculateBandwidth() {
-    if (this.startFreq_kHz !== null && this.endFreq_kHz !== null) {
-      this.bandwidth_kHz = this.startFreq_kHz - this.endFreq_kHz;
+    if (this.highFreq_kHz !== null && this.endFreq_kHz !== null) {
+      this.bandwidth_kHz = this.highFreq_kHz - this.endFreq_kHz;
     }
   }
   
@@ -173,9 +174,9 @@ export class BatCall {
     
     const checks = {
       hasDuration: this.duration_ms > 0,
-      hasFreqs: this.peakFreq_kHz !== null && this.startFreq_kHz !== null && this.endFreq_kHz !== null,
+      hasFreqs: this.peakFreq_kHz !== null && this.highFreq_kHz !== null && this.endFreq_kHz !== null,
       reasonableDuration: this.duration_ms >= DEFAULT_DETECTION_CONFIG.minCallDuration_ms,
-      frequencyOrder: this.endFreq_kHz <= this.peakFreq_kHz && this.peakFreq_kHz <= this.startFreq_kHz,
+      frequencyOrder: this.endFreq_kHz <= this.peakFreq_kHz && this.peakFreq_kHz <= this.highFreq_kHz,
     };
     
     const allValid = Object.values(checks).every(v => v);
@@ -197,7 +198,7 @@ export class BatCall {
       'End Time [s]': this.endTime_s?.toFixed(4) || '-',
       'Duration [ms]': this.duration_ms?.toFixed(2) || '-',
       'Peak Freq [kHz]': this.peakFreq_kHz?.toFixed(2) || '-',
-      'Start Freq [kHz]': this.startFreq_kHz?.toFixed(2) || '-',
+      'High Freq [kHz]': this.highFreq_kHz?.toFixed(2) || '-',
       'End Freq [kHz]': this.endFreq_kHz?.toFixed(2) || '-',
       'Knee Freq [kHz]': this.kneeFreq_kHz?.toFixed(2) || '-',
       'Characteristic Freq [kHz]': this.characteristicFreq_kHz?.toFixed(2) || '-',
@@ -287,31 +288,30 @@ export class BatCallDetector {
       // COMMERCIAL STANDARD: Set Flow and Fhigh based on actual call frequency range
       // Frequency terminology (must be distinguished):
       // ============================================================
-      // START.FREQ (startFreq_kHz): 
-      //   = Frequency value at the 1st frame of call signal
-      //   = Highest frequency in the entire call (for downward FM)
-      //   = Derived from first frame above -24 to -70dB threshold (Auto)
-      // 
-      // END.FREQ (endFreq_kHz):
-      //   = Frequency value at the last frame of call signal
-      //   = Lowest frequency in the entire call (for downward FM)
-      //   = Derived from last frame above -27dB threshold
-      // 
-      // HIGH.FREQ (Fhigh):
+      // HIGH.FREQ (highFreq_kHz):
       //   = Highest frequency present during entire call
       //   = Maximum frequency value across all call frames
-      //   = For downward FM: same as startFreq_kHz
+      //   = Derived from first frame above -24 to -70dB threshold (Auto)
       //   = Unit: kHz
       // 
-      // LOW.FREQ (Flow):
+      // END.FREQ (endFreq_kHz):
       //   = Lowest frequency present during entire call
       //   = Minimum frequency value across all call frames
-      //   = For downward FM: same as endFreq_kHz
+      //   = Derived from last frame above -27dB threshold
+      //   = Unit: kHz
+      // 
+      // START.FREQ (startFreq_kHz):
+      //   = Time-domain start frequency of the call
+      //   = Currently NULL (TBD: to be determined)
+      //   = Different from highFreq_kHz - separate calculation needed
+      // 
+      // LOW.FREQ (Flow):
+      //   = Lowest frequency boundary (from endFreq_kHz)
       //   = Unit: Hz
       // ============================================================
-      // Avisoft, SonoBat, Kaleidoscope, BatSound all use this approach
+      // Avisoft, SonoBat, Kaleidoscope, BatSound use highFreq/endFreq approach
       call.Flow = call.endFreq_kHz * 1000;   // Lowest freq in call (Hz)
-      call.Fhigh = call.startFreq_kHz;       // Highest freq in call (kHz)
+      call.Fhigh = call.highFreq_kHz;        // Highest freq in call (kHz)
       
       // Classify call type (CF, FM, or CF-FM)
       call.callType = CallTypeClassifier.classify(call);
@@ -1054,19 +1054,19 @@ export class BatCallDetector {
     call.calculateDuration();
     
     // ============================================================
-    // STEP 2: Find start frequency from first frame
-    // Professional standard: threshold at -27dB below global peak
-    // This is the highest frequency in the call (from first frame)
+    // STEP 2: Calculate HIGH FREQUENCY from first frame
+    // Professional standard: threshold at adjustable dB below peak
+    // This is the HIGHEST frequency in the call (from first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
     const firstFramePower = spectrogram[0];
-    let startFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+    let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
       if (firstFramePower[binIdx] > startThreshold_dB) {
         // Found first bin above threshold
-        startFreq_Hz = freqBins[binIdx];
+        highFreq_Hz = freqBins[binIdx];
         
         // Attempt linear interpolation for sub-bin precision
         if (binIdx < firstFramePower.length - 1) {
@@ -1077,13 +1077,13 @@ export class BatCallDetector {
             // Interpolate between this bin and next
             const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
             const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-            startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
           }
         }
         break;
       }
     }
-    call.startFreq_kHz = startFreq_Hz / 1000;
+    call.highFreq_kHz = highFreq_Hz / 1000;
     
     // STEP 2.5: Record the time point of start frequency (first frame with signal)
     // This is used as the reference point for knee time calculation
@@ -1395,17 +1395,17 @@ export class BatCallDetector {
     // ============================================================
     // AUTO-DETECT CF-FM TYPE AND DISABLE ANTI-REBOUNCE IF NEEDED
     // 
-    // If High-Freq (peakFreq) and Peak Freq differ by < 1 kHz, 
+    // If High-Freq and Peak Freq differ by < 1 kHz, 
     // it's likely a CF-FM call that exceeds the 10ms protection window.
     // Automatically disable anti-rebounce to avoid truncating long CF phases.
     // ============================================================
     
-    // High-Freq in this context is the peak frequency
+    // Compare peak frequency with high frequency (calculated from first frame)
     const peakFreq_kHz = peakFreq_Hz / 1000;
-    const startFreq_kHz = startFreq_Hz / 1000;
+    const highFreq_kHz = call.highFreq_kHz;  // Already calculated in STEP 2
     
-    // Calculate difference between peak and start frequency
-    const freqDifference = Math.abs(peakFreq_kHz - startFreq_kHz);
+    // Calculate difference between peak and high frequency
+    const freqDifference = Math.abs(peakFreq_kHz - highFreq_kHz);
     
     // ============================================================
     // IMPORTANT: Save actual used threshold value (after Auto mode calculation)

@@ -1541,10 +1541,11 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   
   if (batCall) {
     peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
-    startFreqEl.textContent = batCall.startFreq_kHz?.toFixed(2) || '-';
+    // Note: startFreq_kHz is currently null (TBD). Display highFreq_kHz for "Start Freq:" until startFreq_kHz is properly defined.
+    startFreqEl.textContent = batCall.highFreq_kHz?.toFixed(2) || '-';
     endFreqEl.textContent = batCall.endFreq_kHz?.toFixed(2) || '-';
     lowFreqEl.textContent = batCall.Flow ? (batCall.Flow / 1000).toFixed(2) : '-';
-    highFreqEl.textContent = batCall.Fhigh?.toFixed(2) || '-';
+    highFreqEl.textContent = batCall.highFreq_kHz?.toFixed(2) || '-';
     kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';
     charFreqEl.textContent = batCall.characteristicFreq_kHz?.toFixed(2) || '-';
     bandwidthEl.textContent = batCall.bandwidth_kHz?.toFixed(2) || '-';
