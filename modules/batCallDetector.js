@@ -26,7 +26,7 @@ export const DEFAULT_DETECTION_CONFIG = {
   
   // Start/End frequency threshold (dB below peak for finding edges)
   // Changed from -18 to -24 for more conservative edge detection
-  startEndThreshold_dB: -24,
+  highFreqThreshold_dB: -24,  // Threshold for calculating High Frequency (optimal value range: -24 to -70)
   
   // Characteristic frequency is defined as lowest or average frequency 
   // in the last 10-20% of the call duration
@@ -599,9 +599,9 @@ export class BatCallDetector {
    * @param {number} flowKHz - Lower frequency bound (kHz)
    * @param {number} fhighKHz - Upper frequency bound (kHz)
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
-   * @returns {number} Optimal threshold (dB) in range [-50, -24]
+   * @returns {number} Optimal threshold (dB) in range [-70, -24]
    */
-  findOptimalStartEndThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
+  findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
     if (spectrogram.length === 0) return -24;
 
     const firstFramePower = spectrogram[0];
@@ -620,23 +620,21 @@ export class BatCallDetector {
       thresholdRange.push(threshold);
     }
     
-    // 為每個閾值測量 Start Frequency
-    // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
-    const measurements = [];
-    
-    for (const testThreshold_dB of thresholdRange) {
-      let startFreq_Hz = null;
+      // 為每個閾值測量 High Frequency
+      // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
+      const measurements = [];    for (const testThreshold_dB of thresholdRange) {
+      let highFreq_Hz = null;
       let foundBin = false;
       
       // 使用穩定的 call peak power（不受 selection 大小影響）
-      // Line 728: const startThreshold_dB = peakPower_dB + startEndThreshold_dB;
-      const startThreshold_dB = stablePeakPower_dB + testThreshold_dB;
+      // Line 728: const highFreqThreshold_dB = peakPower_dB + highFreqThreshold_dB;
+      const highFreqThreshold_dB = stablePeakPower_dB + testThreshold_dB;
       
       // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
-      // 這是找 Start Frequency（最高的頻率）的正確方法
+      // 這是找 High Frequency（最高的頻率）的正確方法
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (firstFramePower[binIdx] > startThreshold_dB) {
-          startFreq_Hz = freqBins[binIdx];
+        if (firstFramePower[binIdx] > highFreqThreshold_dB) {
+          highFreq_Hz = freqBins[binIdx];
           foundBin = true;
           
           // 嘗試線性插值以獲得更高精度
@@ -644,10 +642,10 @@ export class BatCallDetector {
             const thisPower = firstFramePower[binIdx];
             const nextPower = firstFramePower[binIdx + 1];
             
-            if (nextPower < startThreshold_dB && thisPower > startThreshold_dB) {
-              const powerRatio = (thisPower - startThreshold_dB) / (thisPower - nextPower);
+            if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
+              const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
               const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              startFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+              highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
             }
           }
           break;
@@ -656,23 +654,23 @@ export class BatCallDetector {
       
       // 如果沒有找到超過閾值的 bin，則無法測量此閾值
       if (!foundBin) {
-        startFreq_Hz = null;
+        highFreq_Hz = null;
       }
       
       measurements.push({
         threshold: testThreshold_dB,
-        startThreshold_dB: startThreshold_dB,
-        startFreq_Hz: startFreq_Hz,
-        startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
+        highFreqThreshold_dB: highFreqThreshold_dB,
+        highFreq_Hz: highFreq_Hz,
+        highFreq_kHz: highFreq_Hz !== null ? highFreq_Hz / 1000 : null,
         foundBin: foundBin
       });
     }
     
     // ============================================================
-    // 算法改進：找出最後一個異常前的 Start Freq 臨界點
+    // 算法改進：找出最後一個異常前的 High Freq 臨界點
     // 
     // 原理：
-    // - 正常情況：閾值從 -24 一路降低到 -70，Start Frequency 應該平緩變化 (1-2 kHz)
+    // - 正常情況：閾值從 -24 一路降低到 -70，High Frequency 應該平緩變化 (1-2 kHz)
     // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz) 
     // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 立即停止，不繼續測試
     // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
@@ -701,8 +699,8 @@ export class BatCallDetector {
     
     // 從第二個有效測量開始，比較與前一個測量的差異
     for (let i = 1; i < validMeasurements.length; i++) {
-      const prevFreq_kHz = validMeasurements[i - 1].startFreq_kHz;
-      const currFreq_kHz = validMeasurements[i].startFreq_kHz;
+      const prevFreq_kHz = validMeasurements[i - 1].highFreq_kHz;
+      const currFreq_kHz = validMeasurements[i].highFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
@@ -745,8 +743,8 @@ export class BatCallDetector {
             }
             
             // 檢查當前值與前一個值是否有異常
-            const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].startFreq_kHz;
-            const checkCurrFreq_kHz = validMeasurements[checkIdx].startFreq_kHz;
+            const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].highFreq_kHz;
+            const checkCurrFreq_kHz = validMeasurements[checkIdx].highFreq_kHz;
             const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
             
             if (checkFreqDiff > 2.5) {
@@ -796,7 +794,7 @@ export class BatCallDetector {
    * Updates call.peakFreq, startFreq, endFreq, characteristicFreq, bandwidth, duration
    */
   measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution) {
-    let { startEndThreshold_dB, characteristicFreq_percentEnd } = this.config;
+    let { highFreqThreshold_dB, characteristicFreq_percentEnd } = this.config;
     const spectrogram = call.spectrogram;  // [timeFrame][freqBin]
     const timeFrames = call.timeFrames;    // Time points for each frame
     
@@ -806,7 +804,7 @@ export class BatCallDetector {
     // STEP 0: Find peak frequency FIRST (before auto-threshold calculation)
     // 
     // CRITICAL (2025 FIX): Must find actual call peak BEFORE auto-threshold mode
-    // so that findOptimalStartEndThreshold can use stable call.peakPower_dB
+    // so that findOptimalHighFrequencyThreshold can use stable call.peakPower_dB
     // instead of spectrogram's global max (which varies with selection size)
     // 
     // Professional Standard: Use FFT + Parabolic Interpolation
@@ -862,22 +860,24 @@ export class BatCallDetector {
     call.peakPower_dB = peakPower_dB;
     
     // ============================================================
-    // AUTO MODE: If startEndThreshold_dB_isAuto is enabled,
+    // AUTO MODE: If highFreqThreshold_dB_isAuto is enabled,
     // automatically find optimal threshold using STABLE call.peakPower_dB
     // (NOT the floating globalPeakPower_dB from entire spectrogram)
     // ============================================================
-    if (this.config.startEndThreshold_dB_isAuto === true) {
-      startEndThreshold_dB = this.findOptimalStartEndThreshold(
+    if (this.config.highFreqThreshold_dB_isAuto === true) {
+      const highFreqThreshold_dB = this.findOptimalHighFrequencyThreshold(
         spectrogram,
         freqBins,
         flowKHz,
         fhighKHz,
         peakPower_dB  // Pass stable call peak value instead of computing global peak again
       );
+      // Update the config with the calculated optimal threshold
+      this.config.highFreqThreshold_dB = highFreqThreshold_dB;
     }
     
     // ============================================================
-    // STEP 1.5: 重新計算時間邊界 (基於新的 startEndThreshold_dB)
+    // STEP 1.5: 重新計算時間邊界 (基於新的 highFreqThreshold_dB)
     // 
     // 2025 ANTI-REBOUNCE UPGRADE:
     // - Backward scanning for clean end frequency detection
@@ -890,7 +890,7 @@ export class BatCallDetector {
       protectionWindowAfterPeak_ms
     } = this.config;
     
-    const startThreshold_dB = peakPower_dB + startEndThreshold_dB;  // Start Frequency threshold (可調整)
+    const startThreshold_dB = peakPower_dB + this.config.highFreqThreshold_dB;  // High Frequency threshold (可調整)
     const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
     
     // 找到第一個幀，其中有信號超過閾值
@@ -1422,8 +1422,9 @@ export class BatCallDetector {
     // This allows UI to reflect the real value being used
     // Must be done BEFORE any further modifications to config
     // ============================================================
-    if (this.config.startEndThreshold_dB_isAuto === true) {
-      this.config.startEndThreshold_dB = startEndThreshold_dB;
+    if (this.config.highFreqThreshold_dB_isAuto === true) {
+      // Auto mode: threshold already updated in detectCalls
+      // No need to do anything here - config is already current
     }
     
     // ============================================================
@@ -1485,7 +1486,7 @@ export class BatCallDetector {
    * Fhigh = highest detectable frequency in selection (kHz)
    */
   measureDirectSelection(audioData, sampleRate, flowKHz, fhighKHz) {
-    const { fftSize, windowType, startEndThreshold_dB } = this.config;
+    const { fftSize, windowType, highFreqThreshold_dB } = this.config;
     
     // Apply window
     const windowed = this.applyWindow(audioData, windowType);
@@ -1530,7 +1531,7 @@ export class BatCallDetector {
     // Second pass: find frequency range based on -27dB threshold from peak
     // (Commercial standard from Avisoft, SonoBat)
     if (peakPower_dB > -Infinity) {
-      const threshold_dB = peakPower_dB + startEndThreshold_dB; // Typically -24dB
+      const threshold_dB = peakPower_dB + highFreqThreshold_dB; // Typically -24dB
       
       // Find lowest frequency above threshold
       for (let binIdx = minBin; binIdx <= maxBin; binIdx++) {
