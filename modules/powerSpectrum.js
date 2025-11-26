@@ -1458,6 +1458,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   xLabel.setAttribute('y', height + 7);
   xLabel.setAttribute('text-anchor', 'middle');
   xLabel.setAttribute('font-weight', 'bold');
+  xLabel.setAttribute('font-family', "'Noto Sans HK'", 'sans-serif');
   xLabel.textContent = 'Frequency (kHz)';
   labelsGroup.appendChild(xLabel);
 
@@ -1467,6 +1468,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   yLabel.setAttribute('y', topPadding + plotHeight / 2);
   yLabel.setAttribute('text-anchor', 'middle');
   yLabel.setAttribute('font-weight', 'bold');
+  yLabel.setAttribute('font-family', "'Noto Sans HK'", 'sans-serif');
   yLabel.setAttribute('transform', `rotate(-90 17 ${topPadding + plotHeight / 2})`);
   yLabel.textContent = 'Energy (dB)';
   labelsGroup.appendChild(yLabel);
@@ -1720,7 +1722,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       tooltipFreq.setAttribute('y', closestPoint.y - 25);
       tooltipFreq.setAttribute('text-anchor', 'middle');
       tooltipFreq.setAttribute('dominant-baseline', 'middle');
-      tooltipFreq.setAttribute('font-family', 'Arial');
+      tooltipFreq.setAttribute('font-family', "'Noto Sans HK'", 'sans-serif');
       tooltipFreq.setAttribute('font-size', '12');
       tooltipFreq.setAttribute('font-weight', 'bold');
       tooltipFreq.setAttribute('fill', '#000000');
@@ -1734,7 +1736,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       tooltipDb.setAttribute('y', closestPoint.y - 10);
       tooltipDb.setAttribute('text-anchor', 'middle');
       tooltipDb.setAttribute('dominant-baseline', 'middle');
-      tooltipDb.setAttribute('font-family', 'Arial');
+      tooltipDb.setAttribute('font-family', "'Noto Sans HK'", 'sans-serif');
       tooltipDb.setAttribute('font-size', '12');
       tooltipDb.setAttribute('font-weight', 'bold');
       tooltipDb.setAttribute('fill', '#0066cc');

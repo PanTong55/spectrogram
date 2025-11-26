@@ -2612,7 +2612,7 @@ input.tag-button.editing {
 /* 標籤文字樣式 */
 .spectrum-labels {
   fill: #000000;
-  font-family: Arial, sans-serif;
+  font-family: 'Noto Sans HK', sans-serif;
   font-size: 12px;
   pointer-events: none;
   user-select: none;
