@@ -2623,6 +2623,45 @@ input.tag-button.editing {
   background: #ffffff;
 }
 
+/* ============================================================
+   交互式提示框和輔助線樣式
+   ============================================================ */
+
+/* 交互點層 */
+.spectrum-interactive {
+  pointer-events: auto;
+}
+
+/* 透明的交互點 */
+.spectrum-interactive-point {
+  cursor: pointer;
+  transition: r 0.1s ease-out;
+}
+
+.spectrum-interactive-point:hover {
+  r: 8;
+  fill: rgba(0, 102, 204, 0.1);
+}
+
+/* 輔助線（虛線） */
+.spectrum-guide-line {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* 提示框背景 */
+.spectrum-tooltip-bg {
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Power Spectrum SVG 容器最大寬度 */
+.power-spectrum-svg-container svg {
+  display: block;
+  width: 438px;
+  height: 438px;
+}
+
 /* 曲線組 - 用於剪裁 */
 .spectrum-curve-group {
   /* 通過 clip-path 進行剪裁 */

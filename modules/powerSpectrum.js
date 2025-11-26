@@ -1574,6 +1574,58 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   curveGroup.appendChild(curve);
   chartGroup.appendChild(curveGroup);
 
+  // ============================================================
+  // 添加交互層 - 透明的點用於滑鼠懸停交互
+  // ============================================================
+  const interactiveGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  interactiveGroup.setAttribute('class', 'spectrum-interactive');
+  
+  // 儲存所有交互點的資訊用於查詢
+  const interactivePoints = [];
+  
+  // 為每個數據點創建透明的交互點
+  for (let p = 0; p < pointsToRender.length; p++) {
+    const point = pointsToRender[p];
+    const db = point.db;
+    const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
+    
+    const freqPercent = (point.freqHz - minBinFreq) / (maxBinFreq - minBinFreq);
+    const x = leftPadding + freqPercent * plotWidth;
+    const y = topPadding + plotHeight - normalizedDb * plotHeight;
+
+    // 創建透明圓點用於交互（半徑 6px）
+    const interactivePoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    interactivePoint.setAttribute('cx', x);
+    interactivePoint.setAttribute('cy', y);
+    interactivePoint.setAttribute('r', '6');
+    interactivePoint.setAttribute('fill', 'transparent');
+    interactivePoint.setAttribute('stroke', 'none');
+    interactivePoint.setAttribute('class', 'spectrum-interactive-point');
+    interactivePoint.setAttribute('cursor', 'pointer');
+    
+    // 儲存點的資訊
+    const pointData = {
+      freqHz: point.freqHz,
+      freqKHz: point.freqHz / 1000,
+      db: db,
+      x: x,
+      y: y,
+      element: interactivePoint
+    };
+    interactivePoints.push(pointData);
+    
+    interactiveGroup.appendChild(interactivePoint);
+  }
+  
+  chartGroup.appendChild(interactiveGroup);
+
+  // ============================================================
+  // 添加輔助線和提示框層
+  // ============================================================
+  const helperGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  helperGroup.setAttribute('class', 'spectrum-helper-lines');
+  chartGroup.appendChild(helperGroup);
+
   // 添加峰值標記點（如果可用）
   if (peakDbValue !== null && peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
     const peakFreqHz = peakFreq * 1000;
@@ -1612,6 +1664,86 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   }
 
   svg.appendChild(chartGroup);
+
+  // ============================================================
+  // 設置交互事件
+  // ============================================================
+  
+  // 為每個交互點添加事件監聽器
+  interactivePoints.forEach(pointData => {
+    pointData.element.addEventListener('mouseenter', () => {
+      // 清空舊的輔助線
+      while (helperGroup.firstChild) {
+        helperGroup.removeChild(helperGroup.firstChild);
+      }
+      
+      // 繪製垂直線（連接到 X 軸）
+      const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      vLine.setAttribute('x1', pointData.x);
+      vLine.setAttribute('y1', pointData.y);
+      vLine.setAttribute('x2', pointData.x);
+      vLine.setAttribute('y2', topPadding + plotHeight);
+      vLine.setAttribute('stroke', '#999999');
+      vLine.setAttribute('stroke-width', '1');
+      vLine.setAttribute('stroke-dasharray', '3,3');
+      vLine.setAttribute('class', 'spectrum-guide-line');
+      helperGroup.appendChild(vLine);
+      
+      // 繪製水平線（連接到 Y 軸）
+      const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      hLine.setAttribute('x1', leftPadding);
+      hLine.setAttribute('y1', pointData.y);
+      hLine.setAttribute('x2', pointData.x);
+      hLine.setAttribute('y2', pointData.y);
+      hLine.setAttribute('stroke', '#999999');
+      hLine.setAttribute('stroke-width', '1');
+      hLine.setAttribute('stroke-dasharray', '3,3');
+      hLine.setAttribute('class', 'spectrum-guide-line');
+      helperGroup.appendChild(hLine);
+      
+      // 創建提示框背景
+      const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      tooltipBg.setAttribute('x', pointData.x + 10);
+      tooltipBg.setAttribute('y', pointData.y - 35);
+      tooltipBg.setAttribute('width', '100');
+      tooltipBg.setAttribute('height', '50');
+      tooltipBg.setAttribute('rx', '4');
+      tooltipBg.setAttribute('fill', '#ffffff');
+      tooltipBg.setAttribute('stroke', '#666666');
+      tooltipBg.setAttribute('stroke-width', '1');
+      tooltipBg.setAttribute('class', 'spectrum-tooltip-bg');
+      helperGroup.appendChild(tooltipBg);
+      
+      // 創建提示框文字（頻率）
+      const tooltipFreq = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tooltipFreq.setAttribute('x', pointData.x + 60);
+      tooltipFreq.setAttribute('y', pointData.y - 20);
+      tooltipFreq.setAttribute('text-anchor', 'middle');
+      tooltipFreq.setAttribute('font-family', 'Arial');
+      tooltipFreq.setAttribute('font-size', '12');
+      tooltipFreq.setAttribute('fill', '#000000');
+      tooltipFreq.textContent = pointData.freqKHz.toFixed(2) + ' kHz';
+      helperGroup.appendChild(tooltipFreq);
+      
+      // 創建提示框文字（dB）
+      const tooltipDb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tooltipDb.setAttribute('x', pointData.x + 60);
+      tooltipDb.setAttribute('y', pointData.y - 5);
+      tooltipDb.setAttribute('text-anchor', 'middle');
+      tooltipDb.setAttribute('font-family', 'Arial');
+      tooltipDb.setAttribute('font-size', '12');
+      tooltipDb.setAttribute('fill', '#0066cc');
+      tooltipDb.textContent = pointData.db.toFixed(1) + ' dB';
+      helperGroup.appendChild(tooltipDb);
+    });
+    
+    pointData.element.addEventListener('mouseleave', () => {
+      // 移除所有輔助線和提示框
+      while (helperGroup.firstChild) {
+        helperGroup.removeChild(helperGroup.firstChild);
+      }
+    });
+  });
 }
 
 /**
