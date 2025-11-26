@@ -75,8 +75,8 @@ export function showPowerSpectrumPopup({
 
   // 建立 Popup Window
   const popup = createPopupWindow();
-  const canvas = popup.querySelector('canvas');
-  const ctx = canvas.getContext('2d');
+  const svgContainer = popup.querySelector('.power-spectrum-svg-container');
+  const svg = svgContainer.querySelector('svg');
   
   // 獲取控制元件
   const typeBtn = popup.querySelector('#powerSpectrumWindowType');
@@ -185,8 +185,8 @@ export function showPowerSpectrumPopup({
     }
 
     // 繪製 Power Spectrum
-    drawPowerSpectrum(
-      ctx,
+    drawPowerSpectrumSVG(
+      svg,
       spectrum,
       sampleRate,
       selection.Flow,
@@ -532,16 +532,24 @@ function createPopupWindow() {
 
   popup.appendChild(dragBar);
 
-  // 建立 Canvas 容器
-  const canvasContainer = document.createElement('div');
-  canvasContainer.className = 'power-spectrum-canvas-container';
-
-  const canvas = document.createElement('canvas');
-  canvas.width = 488;
-  canvas.height = 488;
-
-  canvasContainer.appendChild(canvas);
-  popup.appendChild(canvasContainer);
+  // 建立 SVG 容器（用 SVG 代替 Canvas 以支持動態更新）
+  const svgContainer = document.createElement('div');
+  svgContainer.className = 'power-spectrum-svg-container';
+  svgContainer.style.width = '488px';
+  svgContainer.style.height = '488px';
+  svgContainer.style.position = 'relative';
+  svgContainer.style.backgroundColor = '#ffffff';
+  svgContainer.style.border = '1px solid #ccc';
+  
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '488');
+  svg.setAttribute('height', '488');
+  svg.setAttribute('viewBox', '0 0 488 488');
+  svg.style.width = '100%';
+  svg.style.height = '100%';
+  
+  svgContainer.appendChild(svg);
+  popup.appendChild(svgContainer);
 
   // 建立控制面板
   const controlPanel = document.createElement('div');
@@ -1270,7 +1278,330 @@ function createGaussWindow(n) {
 }
 
 /**
- * 繪製 Power Spectrum 圖表
+ * 繪製 Power Spectrum 圖表 (SVG 版本 - 2025 優化)
+ * 使用 SVG 而非 Canvas，支持動態更新和 CSS 樣式
+ */
+function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftSize, peakFreq) {
+  if (!svg || !spectrum) return;
+
+  // 清空 SVG（移除舊的圖表元素，但保留定義）
+  const existingGroups = svg.querySelectorAll('g.spectrum-chart');
+  existingGroups.forEach(g => g.remove());
+
+  const width = 488;
+  const height = 488;
+  const topPadding = 40;
+  const padding = 50;
+  const leftPadding = 65;
+  const plotWidth = width - leftPadding - padding;
+  const plotHeight = height - topPadding - padding;
+
+  // 計算頻率解析度
+  const freqResolution = sampleRate / fftSize;
+  const minBinFreq = flowKHz * 1000;
+  const maxBinFreq = fhighKHz * 1000;
+  const minBin = Math.max(0, Math.floor(minBinFreq / freqResolution));
+  const maxBin = Math.min(spectrum.length - 1, Math.floor(maxBinFreq / freqResolution));
+
+  if (minBin >= maxBin) return;
+
+  // 找到 dB 值範圍用於歸一化
+  let minDb = Infinity, maxDb = -Infinity;
+  for (let i = minBin; i <= maxBin; i++) {
+    minDb = Math.min(minDb, spectrum[i]);
+    maxDb = Math.max(maxDb, spectrum[i]);
+  }
+  
+  const dbRange = maxDb - minDb;
+  if (dbRange < 60) {
+    minDb = maxDb - 60;
+  }
+  maxDb = maxDb + 5;
+  if (minDb >= maxDb) {
+    minDb = maxDb - 60;
+  }
+
+  // 建立主圖表組
+  const chartGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  chartGroup.setAttribute('class', 'spectrum-chart');
+
+  // ============================================================
+  // 繪製背景
+  // ============================================================
+  const background = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  background.setAttribute('width', width);
+  background.setAttribute('height', height);
+  background.setAttribute('fill', '#ffffff');
+  chartGroup.appendChild(background);
+
+  // ============================================================
+  // 繪製網格線
+  // ============================================================
+  const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  gridGroup.setAttribute('class', 'spectrum-grid');
+  gridGroup.setAttribute('stroke', '#e0e0e0');
+  gridGroup.setAttribute('stroke-width', '0.5');
+
+  const freqSteps = 5;
+  for (let i = 1; i < freqSteps; i++) {
+    const x = leftPadding + (plotWidth * i) / freqSteps;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x);
+    line.setAttribute('y1', topPadding);
+    line.setAttribute('x2', x);
+    line.setAttribute('y2', topPadding + plotHeight);
+    gridGroup.appendChild(line);
+  }
+
+  const dbSteps = 4;
+  for (let i = 1; i < dbSteps; i++) {
+    const y = topPadding + (plotHeight * i) / dbSteps;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', leftPadding);
+    line.setAttribute('y1', y);
+    line.setAttribute('x2', leftPadding + plotWidth);
+    line.setAttribute('y2', y);
+    gridGroup.appendChild(line);
+  }
+
+  chartGroup.appendChild(gridGroup);
+
+  // ============================================================
+  // 繪製坐標軸
+  // ============================================================
+  const axisGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  axisGroup.setAttribute('class', 'spectrum-axes');
+  axisGroup.setAttribute('stroke', '#000000');
+  axisGroup.setAttribute('stroke-width', '2');
+
+  // Y 軸
+  const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  yAxis.setAttribute('x1', leftPadding);
+  yAxis.setAttribute('y1', topPadding);
+  yAxis.setAttribute('x2', leftPadding);
+  yAxis.setAttribute('y2', topPadding + plotHeight);
+  axisGroup.appendChild(yAxis);
+
+  // X 軸
+  const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  xAxis.setAttribute('x1', leftPadding);
+  xAxis.setAttribute('y1', topPadding + plotHeight);
+  xAxis.setAttribute('x2', leftPadding + plotWidth);
+  xAxis.setAttribute('y2', topPadding + plotHeight);
+  axisGroup.appendChild(xAxis);
+
+  chartGroup.appendChild(axisGroup);
+
+  // ============================================================
+  // 繪製坐標軸刻度和標籤
+  // ============================================================
+  const labelsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  labelsGroup.setAttribute('class', 'spectrum-labels');
+  labelsGroup.setAttribute('fill', '#000000');
+  labelsGroup.setAttribute('font-family', 'Arial');
+  labelsGroup.setAttribute('font-size', '12');
+
+  // X 軸標籤（頻率）
+  for (let i = 0; i <= freqSteps; i++) {
+    const freq = flowKHz + (fhighKHz - flowKHz) * (i / freqSteps);
+    const x = leftPadding + (plotWidth * i) / freqSteps;
+    
+    // 刻度線
+    const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    tick.setAttribute('x1', x);
+    tick.setAttribute('y1', topPadding + plotHeight);
+    tick.setAttribute('x2', x);
+    tick.setAttribute('y2', topPadding + plotHeight + 5);
+    tick.setAttribute('stroke', '#000000');
+    tick.setAttribute('stroke-width', '1');
+    labelsGroup.appendChild(tick);
+
+    // 標籤文字
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', x);
+    text.setAttribute('y', topPadding + plotHeight + 20);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.textContent = freq.toFixed(1);
+    labelsGroup.appendChild(text);
+  }
+
+  // Y 軸標籤（能量 dB）
+  for (let i = 0; i <= dbSteps; i++) {
+    const db = maxDb - ((maxDb - minDb) * i) / dbSteps;
+    const y = topPadding + (plotHeight * i) / dbSteps;
+
+    // 刻度線
+    const tick = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    tick.setAttribute('x1', leftPadding - 5);
+    tick.setAttribute('y1', y);
+    tick.setAttribute('x2', leftPadding);
+    tick.setAttribute('y2', y);
+    tick.setAttribute('stroke', '#000000');
+    tick.setAttribute('stroke-width', '1');
+    labelsGroup.appendChild(tick);
+
+    // 標籤文字
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', leftPadding - 10);
+    text.setAttribute('y', y);
+    text.setAttribute('text-anchor', 'end');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.textContent = db.toFixed(0);
+    labelsGroup.appendChild(text);
+  }
+
+  // X 軸標籤
+  const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  xLabel.setAttribute('x', leftPadding + plotWidth / 2);
+  xLabel.setAttribute('y', height - 5);
+  xLabel.setAttribute('text-anchor', 'middle');
+  xLabel.setAttribute('font-weight', 'bold');
+  xLabel.textContent = 'Frequency (kHz)';
+  labelsGroup.appendChild(xLabel);
+
+  // Y 軸標籤（旋轉）
+  const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  yLabel.setAttribute('x', '12');
+  yLabel.setAttribute('y', topPadding + plotHeight / 2);
+  yLabel.setAttribute('text-anchor', 'middle');
+  yLabel.setAttribute('font-weight', 'bold');
+  yLabel.setAttribute('transform', `rotate(-90 12 ${topPadding + plotHeight / 2})`);
+  yLabel.textContent = 'Energy (dB)';
+  labelsGroup.appendChild(yLabel);
+
+  chartGroup.appendChild(labelsGroup);
+
+  // ============================================================
+  // 繪製 Power Spectrum 曲線
+  // ============================================================
+  
+  // 計算 peakFreq 對應的 dB 值
+  let peakDbValue = null;
+  if (peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
+    const peakFreqHz = peakFreq * 1000;
+    const peakBinExact = (peakFreqHz - minBinFreq) / freqResolution + minBin;
+    
+    const peakBinFloor = Math.floor(peakBinExact);
+    const peakBinCeil = Math.ceil(peakBinExact);
+    const binFraction = peakBinExact - peakBinFloor;
+    
+    if (peakBinFloor >= minBin && peakBinCeil <= maxBin) {
+      const dbFloor = spectrum[peakBinFloor];
+      const dbCeil = spectrum[peakBinCeil];
+      peakDbValue = dbFloor + (dbCeil - dbFloor) * binFraction;
+    }
+  }
+
+  // 收集所有點進行繪製
+  let pointsToRender = [];
+  for (let i = minBin; i <= maxBin; i++) {
+    const db = spectrum[i];
+    const freqHz = i * freqResolution;
+    pointsToRender.push({ bin: i, freqHz, db, isPeakPoint: false });
+  }
+
+  // 如果 peakFreq 不在 bin 邊界上，插入一個該位置的點
+  if (peakDbValue !== null && peakFreq !== null) {
+    const peakFreqHz = peakFreq * 1000;
+    let insertIndex = 0;
+    for (let i = 0; i < pointsToRender.length; i++) {
+      if (pointsToRender[i].freqHz < peakFreqHz) {
+        insertIndex = i + 1;
+      } else {
+        break;
+      }
+    }
+
+    const nearbyThreshold = freqResolution * 0.1;
+    let shouldInsert = true;
+    if (insertIndex > 0 && Math.abs(pointsToRender[insertIndex - 1].freqHz - peakFreqHz) < nearbyThreshold) {
+      shouldInsert = false;
+    }
+    if (insertIndex < pointsToRender.length && Math.abs(pointsToRender[insertIndex].freqHz - peakFreqHz) < nearbyThreshold) {
+      shouldInsert = false;
+    }
+    if (shouldInsert) {
+      pointsToRender.splice(insertIndex, 0, { bin: -1, freqHz: peakFreqHz, db: peakDbValue, isPeakPoint: true });
+    }
+  }
+
+  // 建立 SVG 路徑數據
+  let pathData = '';
+  for (let p = 0; p < pointsToRender.length; p++) {
+    const point = pointsToRender[p];
+    const db = point.db;
+    const normalizedDb = Math.max(0, Math.min(1, (db - minDb) / (maxDb - minDb)));
+    
+    const freqPercent = (point.freqHz - minBinFreq) / (maxBinFreq - minBinFreq);
+    const x = leftPadding + freqPercent * plotWidth;
+    const y = topPadding + plotHeight - normalizedDb * plotHeight;
+
+    if (p === 0) {
+      pathData += `M ${x} ${y}`;
+    } else {
+      pathData += ` L ${x} ${y}`;
+    }
+  }
+
+  // 繪製曲線
+  const curve = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  curve.setAttribute('d', pathData);
+  curve.setAttribute('fill', 'none');
+  curve.setAttribute('stroke', '#0066cc');
+  curve.setAttribute('stroke-width', '1.5');
+  curve.setAttribute('stroke-linecap', 'round');
+  curve.setAttribute('stroke-linejoin', 'round');
+  curve.setAttribute('class', 'spectrum-curve');
+
+  // 添加剪裁路徑防止超出邊界
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+  clipPath.setAttribute('id', 'spectrum-clip-path');
+  const clipRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  clipRect.setAttribute('x', leftPadding);
+  clipRect.setAttribute('y', topPadding);
+  clipRect.setAttribute('width', plotWidth);
+  clipRect.setAttribute('height', plotHeight);
+  clipPath.appendChild(clipRect);
+  defs.appendChild(clipPath);
+  svg.appendChild(defs);
+
+  curve.setAttribute('clip-path', 'url(#spectrum-clip-path)');
+
+  const curveGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  curveGroup.setAttribute('class', 'spectrum-curve-group');
+  curveGroup.appendChild(curve);
+  chartGroup.appendChild(curveGroup);
+
+  // 添加峰值標記點（如果可用）
+  if (peakDbValue !== null && peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
+    const peakFreqHz = peakFreq * 1000;
+    const peakPercent = (peakFreqHz - minBinFreq) / (maxBinFreq - minBinFreq);
+    const peakX = leftPadding + peakPercent * plotWidth;
+    const peakNormDb = Math.max(0, Math.min(1, (peakDbValue - minDb) / (maxDb - minDb)));
+    const peakY = topPadding + plotHeight - peakNormDb * plotHeight;
+
+    const peakPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    peakPoint.setAttribute('cx', peakX);
+    peakPoint.setAttribute('cy', peakY);
+    peakPoint.setAttribute('r', '4');
+    peakPoint.setAttribute('fill', '#ff6600');
+    peakPoint.setAttribute('stroke', '#ffffff');
+    peakPoint.setAttribute('stroke-width', '2');
+    peakPoint.setAttribute('class', 'spectrum-peak-marker');
+
+    const peakMarkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    peakMarkGroup.setAttribute('class', 'spectrum-peak-group');
+    peakMarkGroup.appendChild(peakPoint);
+    chartGroup.appendChild(peakMarkGroup);
+  }
+
+  svg.appendChild(chartGroup);
+}
+
+/**
+ * 繪製 Power Spectrum 圖表 (Canvas 版本 - 保留以備用)
  */
 function drawPowerSpectrum(ctx, spectrum, sampleRate, flowKHz, fhighKHz, fftSize, peakFreq) {
   if (!ctx || !spectrum) return;
