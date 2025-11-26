@@ -1016,9 +1016,13 @@ export class BatCallDetector {
       // Set warning flag on the call object
       call.highFreqDetectionWarning = result.warning;
       
-      // 臨時存儲 Start Frequency（留待 STEP 2 後面使用）
-      call._startFreq_kHz_fromAuto = safeStartFreq_kHz;
-      call._startFreq_Hz_fromAuto = safeStartFreq_Hz;
+      // ============================================================
+      // 重要修正 (2025)：
+      // Start Frequency 必須基於 -24dB 閾值計算，與 High Frequency 無關
+      // 規則 (a)/(b) 應用在 STEP 2.5 中，不在此處提前計算
+      // Auto Mode 中只使用優化的 High Frequency，Start Frequency 留到 STEP 2.5 計算
+      // 不再存儲臨時的 _startFreq_kHz_fromAuto 和 _startFreq_Hz_fromAuto
+      // ============================================================
     }
     
     // ============================================================
@@ -1243,63 +1247,52 @@ export class BatCallDetector {
     // ============================================================
     // STEP 2.5: Calculate START FREQUENCY (獨立於 High Frequency)
     // 
-    // 2025 新規則：Start Frequency 必須獨立計算
+    // 2025 新規則修正：Start Frequency 必須獨立計算
     // 方法：
-    // (a) 如果在 AUTO MODE 中已計算過，使用該值
-    // (b) 否則，按以下規則計算：
-    //     - 若 -24dB 閾值的頻率 < Peak Frequency：使用該值為 Start Frequency
-    //     - 否則：Start Frequency = High Frequency（與現行邏輯相同）
+    // 在 AUTO MODE 和 NON-AUTO MODE 中，都使用 -24dB 閾值計算 Start Frequency
+    // (a) 若 -24dB 閾值的頻率 < Peak Frequency：使用該值為 Start Frequency
+    // (b) 若 -24dB 閾值的頻率 >= Peak Frequency：Start Frequency = High Frequency
     // ============================================================
     let startFreq_Hz = null;
     let startFreq_kHz = null;
     
-    if (call._startFreq_Hz_fromAuto !== undefined) {
-      // 使用 AUTO MODE 計算的 Start Frequency
-      startFreq_Hz = call._startFreq_Hz_fromAuto;
-      startFreq_kHz = call._startFreq_kHz_fromAuto;
-      // 清理臨時存儲
-      delete call._startFreq_Hz_fromAuto;
-      delete call._startFreq_kHz_fromAuto;
-    } else {
-      // 非 AUTO MODE：計算 Start Frequency
-      // 使用 -24dB 閾值測試
-      const threshold_24dB = peakPower_dB - 24;
-      
-      // 從低到高掃描，找最低頻率
-      for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
-        if (firstFramePower[binIdx] > threshold_24dB) {
-          const testStartFreq_Hz = freqBins[binIdx];
-          const testStartFreq_kHz = testStartFreq_Hz / 1000;
+    // 使用 -24dB 閾值計算 Start Frequency（無論是否 Auto Mode）
+    const threshold_24dB = peakPower_dB - 24;
+    
+    // 從低到高掃描，找最低頻率
+    for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+      if (firstFramePower[binIdx] > threshold_24dB) {
+        const testStartFreq_Hz = freqBins[binIdx];
+        const testStartFreq_kHz = testStartFreq_Hz / 1000;
+        
+        // 檢查是否低於 Peak Frequency（規則 a）
+        if (testStartFreq_kHz < (peakFreq_Hz / 1000)) {
+          // 滿足規則 (a)：使用此值為 Start Frequency
+          startFreq_Hz = testStartFreq_Hz;
+          startFreq_kHz = testStartFreq_kHz;
           
-          // 檢查是否低於 Peak Frequency
-          if (testStartFreq_kHz < (peakFreq_Hz / 1000)) {
-            // 滿足規則 (a)：使用此值為 Start Frequency
-            startFreq_Hz = testStartFreq_Hz;
-            startFreq_kHz = testStartFreq_kHz;
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx > 0) {
+            const thisPower = firstFramePower[binIdx];
+            const prevPower = firstFramePower[binIdx - 1];
             
-            // 嘗試線性插值以獲得更高精度
-            if (binIdx > 0) {
-              const thisPower = firstFramePower[binIdx];
-              const prevPower = firstFramePower[binIdx - 1];
-              
-              if (prevPower < threshold_24dB && thisPower > threshold_24dB) {
-                const powerRatio = (thisPower - threshold_24dB) / (thisPower - prevPower);
-                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-                startFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
-                startFreq_kHz = startFreq_Hz / 1000;
-              }
+            if (prevPower < threshold_24dB && thisPower > threshold_24dB) {
+              const powerRatio = (thisPower - threshold_24dB) / (thisPower - prevPower);
+              const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+              startFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+              startFreq_kHz = startFreq_Hz / 1000;
             }
-            break;
           }
+          break;
         }
       }
-      
-      // 如果規則 (a) 不滿足（-24dB 頻率 >= Peak Frequency），使用規則 (b)
-      if (startFreq_Hz === null) {
-        // Start Frequency = High Frequency
-        startFreq_Hz = highFreq_Hz;
-        startFreq_kHz = highFreq_Hz / 1000;
-      }
+    }
+    
+    // 如果規則 (a) 不滿足（-24dB 頻率 >= Peak Frequency），使用規則 (b)
+    if (startFreq_Hz === null) {
+      // Start Frequency = High Frequency（規則 b）
+      startFreq_Hz = highFreq_Hz;
+      startFreq_kHz = highFreq_Hz / 1000;
     }
     
     // 存儲 Start Frequency
