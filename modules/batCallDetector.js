@@ -1346,6 +1346,30 @@ export class BatCallDetector {
     call.lowFreq_kHz = lowFreq_kHz;
     
     // ============================================================
+    // STEP 3.5: Set END FREQUENCY from Low Frequency
+    // 
+    // Logic: End Frequency = Low Frequency bin frequency
+    // End Time = Time of last frame (from Low Frequency detection)
+    // Duration = End Time - Start Frequency Time
+    // 
+    // 邏輯：End Frequency 預設使用 Low Frequency 的頻率和時間
+    // End Frequency 代表蝙蝠叫聲在時間上的結束點
+    // ============================================================
+    call.endFreq_kHz = lowFreq_kHz;  // End frequency = Low frequency
+    
+    // End time = time of last frame (where low frequency is detected)
+    const endTime_s = timeFrames[timeFrames.length - 1];
+    
+    // Duration = End Time - Start Frequency Time
+    call.endTime_s = endTime_s;
+    // Recalculate duration based on Start Frequency Time (not original call start)
+    if (startFreqTime_s !== null && endTime_s !== null) {
+      call.duration_ms = (endTime_s - startFreqTime_s) * 1000;
+    } else {
+      call.calculateDuration();
+    }
+    
+    // ============================================================
     // STEP 4: Calculate characteristic frequency (CF-FM distinction)
     // 
     // CRITICAL FIX: Characteristic frequency should be calculated from

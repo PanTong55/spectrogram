@@ -1547,7 +1547,7 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
     // Display startFreq_kHz calculated from -24dB threshold (Rule a/b applied)
     startFreqEl.textContent = batCall.startFreq_kHz?.toFixed(2) || '-';
-    // Note: endFreq_kHz is currently null (TBD). Time-domain end frequency to be calculated.
+    // Display endFreq_kHz (from Low Frequency, representing end time frequency)
     endFreqEl.textContent = batCall.endFreq_kHz?.toFixed(2) || '-';
     // Display lowFreq_kHz (calculated lowest frequency from last frame)
     lowFreqEl.textContent = batCall.lowFreq_kHz?.toFixed(2) || '-';
