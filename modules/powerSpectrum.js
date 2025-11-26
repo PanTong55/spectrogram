@@ -1288,11 +1288,11 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   const existingGroups = svg.querySelectorAll('g.spectrum-chart');
   existingGroups.forEach(g => g.remove());
 
-  const width = 488;
-  const height = 488;
-  const topPadding = 40;
-  const padding = 50;
-  const leftPadding = 65;
+  const width = 438;
+  const height = 438;
+  const topPadding = 30;
+  const padding = 55;
+  const leftPadding = 70;
   const plotWidth = width - leftPadding - padding;
   const plotHeight = height - topPadding - padding;
 
@@ -1419,7 +1419,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
     // 標籤文字
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     text.setAttribute('x', x);
-    text.setAttribute('y', topPadding + plotHeight + 20);
+    text.setAttribute('y', topPadding + plotHeight + 25);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('dominant-baseline', 'middle');
     text.textContent = freq.toFixed(1);
@@ -1454,7 +1454,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   // X 軸標籤
   const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   xLabel.setAttribute('x', leftPadding + plotWidth / 2);
-  xLabel.setAttribute('y', height - 5);
+  xLabel.setAttribute('y', height - 2);
   xLabel.setAttribute('text-anchor', 'middle');
   xLabel.setAttribute('font-weight', 'bold');
   xLabel.textContent = 'Frequency (kHz)';
@@ -1462,11 +1462,11 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
 
   // Y 軸標籤（旋轉）
   const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-  yLabel.setAttribute('x', '12');
+  yLabel.setAttribute('x', '17');
   yLabel.setAttribute('y', topPadding + plotHeight / 2);
   yLabel.setAttribute('text-anchor', 'middle');
   yLabel.setAttribute('font-weight', 'bold');
-  yLabel.setAttribute('transform', `rotate(-90 12 ${topPadding + plotHeight / 2})`);
+  yLabel.setAttribute('transform', `rotate(-90 17 ${topPadding + plotHeight / 2})`);
   yLabel.textContent = 'Energy (dB)';
   labelsGroup.appendChild(yLabel);
 
@@ -1594,6 +1594,20 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
     const peakMarkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     peakMarkGroup.setAttribute('class', 'spectrum-peak-group');
     peakMarkGroup.appendChild(peakPoint);
+    
+    // 添加峰值頻率文字標籤（在紅點上方）
+    const peakLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    peakLabel.setAttribute('x', peakX);
+    peakLabel.setAttribute('y', peakY - 12);
+    peakLabel.setAttribute('text-anchor', 'middle');
+    peakLabel.setAttribute('dominant-baseline', 'baseline');
+    peakLabel.setAttribute('fill', '#ff6600');
+    peakLabel.setAttribute('font-family', 'Arial');
+    peakLabel.setAttribute('font-size', '12');
+    peakLabel.setAttribute('font-weight', 'bold');
+    peakLabel.textContent = peakFreq.toFixed(2) + ' kHz';
+    peakMarkGroup.appendChild(peakLabel);
+    
     chartGroup.appendChild(peakMarkGroup);
   }
 
