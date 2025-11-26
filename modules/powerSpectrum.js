@@ -1292,8 +1292,8 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   const width = 438;
   const height = 438;
   const topPadding = 30;
-  const padding = 55;
-  const leftPadding = 70;
+  const padding = 45;
+  const leftPadding = 60;
   const plotWidth = width - leftPadding - padding;
   const plotHeight = height - topPadding - padding;
 
@@ -1602,7 +1602,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
     interactivePoint.setAttribute('fill', 'transparent');
     interactivePoint.setAttribute('stroke', 'none');
     interactivePoint.setAttribute('class', 'spectrum-interactive-point');
-    interactivePoint.setAttribute('cursor', 'none');
+    interactivePoint.style.cursor = 'none';
     
     // 儲存點的資訊
     const pointData = {
@@ -1627,42 +1627,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   helperGroup.setAttribute('class', 'spectrum-helper-lines');
   chartGroup.appendChild(helperGroup);
 
-  // 添加峰值標記點（如果可用）
-  if (peakDbValue !== null && peakFreq !== null && peakFreq >= flowKHz && peakFreq <= fhighKHz) {
-    const peakFreqHz = peakFreq * 1000;
-    const peakPercent = (peakFreqHz - minBinFreq) / (maxBinFreq - minBinFreq);
-    const peakX = leftPadding + peakPercent * plotWidth;
-    const peakNormDb = Math.max(0, Math.min(1, (peakDbValue - minDb) / (maxDb - minDb)));
-    const peakY = topPadding + plotHeight - peakNormDb * plotHeight;
 
-    const peakPoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    peakPoint.setAttribute('cx', peakX);
-    peakPoint.setAttribute('cy', peakY);
-    peakPoint.setAttribute('r', '4');
-    peakPoint.setAttribute('fill', '#ff6600');
-    peakPoint.setAttribute('stroke', '#ffffff');
-    peakPoint.setAttribute('stroke-width', '2');
-    peakPoint.setAttribute('class', 'spectrum-peak-marker');
-
-    const peakMarkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    peakMarkGroup.setAttribute('class', 'spectrum-peak-group');
-    peakMarkGroup.appendChild(peakPoint);
-    
-    // 添加峰值頻率文字標籤（在紅點上方）
-    const peakLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    peakLabel.setAttribute('x', peakX);
-    peakLabel.setAttribute('y', peakY - 12);
-    peakLabel.setAttribute('text-anchor', 'middle');
-    peakLabel.setAttribute('dominant-baseline', 'baseline');
-    peakLabel.setAttribute('fill', '#ff6600');
-    peakLabel.setAttribute('font-family', 'Arial');
-    peakLabel.setAttribute('font-size', '12');
-    peakLabel.setAttribute('font-weight', 'bold');
-    peakLabel.textContent = peakFreq.toFixed(2) + ' kHz';
-    peakMarkGroup.appendChild(peakLabel);
-    
-    chartGroup.appendChild(peakMarkGroup);
-  }
 
   svg.appendChild(chartGroup);
 
@@ -1702,24 +1667,12 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       hLine.setAttribute('class', 'spectrum-guide-line');
       helperGroup.appendChild(hLine);
       
-      // 創建提示框背景
-      const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      tooltipBg.setAttribute('x', pointData.x + 10);
-      tooltipBg.setAttribute('y', pointData.y - 35);
-      tooltipBg.setAttribute('width', '100');
-      tooltipBg.setAttribute('height', '50');
-      tooltipBg.setAttribute('rx', '4');
-      tooltipBg.setAttribute('fill', '#ffffff');
-      tooltipBg.setAttribute('stroke', '#666666');
-      tooltipBg.setAttribute('stroke-width', '1');
-      tooltipBg.setAttribute('class', 'spectrum-tooltip-bg');
-      helperGroup.appendChild(tooltipBg);
-      
-      // 創建提示框文字（頻率）
+      // 創建提示框文字（頻率）- 放在懸停點正上方
       const tooltipFreq = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tooltipFreq.setAttribute('x', pointData.x + 60);
-      tooltipFreq.setAttribute('y', pointData.y - 20);
+      tooltipFreq.setAttribute('x', pointData.x);
+      tooltipFreq.setAttribute('y', pointData.y - 5);
       tooltipFreq.setAttribute('text-anchor', 'middle');
+      tooltipFreq.setAttribute('dominant-baseline', 'baseline');
       tooltipFreq.setAttribute('font-family', 'Arial');
       tooltipFreq.setAttribute('font-size', '12');
       tooltipFreq.setAttribute('fill', '#000000');
@@ -1728,9 +1681,10 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       
       // 創建提示框文字（dB）
       const tooltipDb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tooltipDb.setAttribute('x', pointData.x + 60);
-      tooltipDb.setAttribute('y', pointData.y - 5);
+      tooltipDb.setAttribute('x', pointData.x);
+      tooltipDb.setAttribute('y', pointData.y + 10);
       tooltipDb.setAttribute('text-anchor', 'middle');
+      tooltipDb.setAttribute('dominant-baseline', 'hanging');
       tooltipDb.setAttribute('font-family', 'Arial');
       tooltipDb.setAttribute('font-size', '12');
       tooltipDb.setAttribute('fill', '#0066cc');
