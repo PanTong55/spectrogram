@@ -542,6 +542,14 @@ function createPopupWindow() {
   svgContainer.style.border = '1px solid #ccc';
   svgContainer.style.margin = '5px 5px 0px 5px';
   
+  // 添加 Setting 按鈕
+  const settingBtn = document.createElement('button');
+  settingBtn.className = 'power-spectrum-settings-btn';
+  settingBtn.id = 'powerSpectrumSettingsBtn';
+  settingBtn.innerHTML = '<i class="fa-solid fa-sliders"></i>';
+  settingBtn.title = 'Settings';
+  svgContainer.appendChild(settingBtn);
+  
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '438');
   svg.setAttribute('height', '438');
@@ -555,6 +563,7 @@ function createPopupWindow() {
   // 建立控制面板
   const controlPanel = document.createElement('div');
   controlPanel.className = 'power-spectrum-controls';
+  controlPanel.style.display = 'none';  // 預設隱藏
 
   // Window Type 控制
   const typeControl = document.createElement('label');
@@ -667,6 +676,7 @@ function createPopupWindow() {
   const batCallControlPanel = document.createElement('div');
   batCallControlPanel.className = 'bat-call-controls';
   batCallControlPanel.id = 'batCallControlsPanel';
+  batCallControlPanel.style.display = 'none';  // 預設隱藏
 
   // callThreshold_dB 控制
   const callThresholdControl = document.createElement('label');
@@ -845,6 +855,28 @@ function createPopupWindow() {
 
   // 拖動功能
   makeDraggable(popup, dragBar);
+
+  // ============================================================
+  // 設置按鈕的點擊事件監聽器
+  // ============================================================
+  const settingsBtn = document.getElementById('powerSpectrumSettingsBtn');
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      const isHidden = controlPanel.style.display === 'none';
+      
+      if (isHidden) {
+        // 展開
+        controlPanel.style.display = 'block';
+        batCallControlPanel.style.display = 'block';
+        settingsBtn.classList.add('active');
+      } else {
+        // 隱藏
+        controlPanel.style.display = 'none';
+        batCallControlPanel.style.display = 'none';
+        settingsBtn.classList.remove('active');
+      }
+    });
+  }
 
   // 返回 popup 和 bat-call-controls 的輸入框對象
   // 便於外層函數訪問這些輸入框

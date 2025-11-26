@@ -2309,6 +2309,24 @@ input.tag-button.editing {
   align-items: center;
   justify-content: center;
   font-size: 13px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+}
+
+.power-spectrum-controls:not([style*="display: none"]) {
+  max-height: 100px;
+  opacity: 1;
+  padding: 5px;
+  margin: 5px;
+}
+
+.power-spectrum-controls[style*="display: block"] {
+  max-height: 100px;
+  opacity: 1;
+  padding: 5px;
+  margin: 5px;
 }
 
 .power-spectrum-controls label {
@@ -2505,6 +2523,24 @@ input.tag-button.editing {
   justify-content: center;
   flex-wrap: wrap;
   font-size: 12px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+}
+
+.bat-call-controls:not([style*="display: none"]) {
+  max-height: 150px;
+  opacity: 1;
+  padding: 5px;
+  margin: 0px 5px 5px 5px;
+}
+
+.bat-call-controls[style*="display: block"] {
+  max-height: 150px;
+  opacity: 1;
+  padding: 5px;
+  margin: 0px 5px 5px 5px;
 }
 
 .bat-call-controls label {
@@ -2554,13 +2590,16 @@ input.tag-button.editing {
 
 /* SVG 容器樣式 */
 .power-spectrum-svg-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: relative;
+  width: 438px;
+  height: 438px;
   background-color: #ffffff;
   border: 1px solid #cccccc;
   border-radius: 4px;
   margin-bottom: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* SVG 本身 */
@@ -2568,8 +2607,35 @@ input.tag-button.editing {
   display: block;
   width: 100%;
   height: 100%;
-  max-width: 488px;
-  max-height: 488px;
+  max-width: 438px;
+  max-height: 438px;
+}
+
+/* 設置按鈕 */
+.power-spectrum-settings-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background-color: transparent;
+  color: #666666;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.power-spectrum-settings-btn:hover {
+  color: #000000;
+}
+
+.power-spectrum-settings-btn.active {
+  color: #0066cc;
 }
 
 /* 頻譜曲線樣式 */
