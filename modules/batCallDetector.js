@@ -202,6 +202,7 @@ export class BatCall {
       'Duration [ms]': this.duration_ms?.toFixed(2) || '-',
       'Peak Freq [kHz]': this.peakFreq_kHz?.toFixed(2) || '-',
       'High Freq [kHz]': this.highFreq_kHz?.toFixed(2) || '-',
+      'Start Freq [kHz]': this.startFreq_kHz?.toFixed(2) || '-',
       'Low Freq [kHz]': this.lowFreq_kHz?.toFixed(2) || '-',
       'Knee Freq [kHz]': this.kneeFreq_kHz?.toFixed(2) || '-',
       'Characteristic Freq [kHz]': this.characteristicFreq_kHz?.toFixed(2) || '-',
@@ -585,31 +586,37 @@ export class BatCallDetector {
   /**
    * Find optimal High Threshold by testing range and detecting anomalies
    * 
-   * Algorithm:
-   * 1. Test threshold values from -24 dB down to -70 dB (step: 1 dB)
-   * 2. For each threshold, measure High Frequency using SAME method as measureFrequencyParameters
-   * 3. Track frequency differences between consecutive thresholds
-   * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
-   * 5. Return that threshold as the optimal value
+   * 2025 ENHANCED ALGORITHM (Independent Start & High Frequency):
+   * 1. Test each threshold on spectrogram's first frame (-24 → -70 dB)
+   * 2. For each threshold, calculate:
+   *    - HIGH FREQUENCY: scan from high to low, find first bin above threshold
+   *    - START FREQUENCY: scan from low to high, find first bin above threshold
+   * 3. Apply safety filter: discard High Frequency if < Peak Frequency
+   * 4. Continue until finding first valid High Frequency >= Peak Frequency
+   * 5. Detect anomalies (frequency jumps > 2.5 kHz) and select appropriate threshold
+   * 6. Return: both High Frequency (with optimal threshold) AND Start Frequency
    * 
-   * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
+   * @param {Array} spectrogram - 2D array [timeFrame][freqBin] of power values (dB)
    * @param {Array} freqBins - Frequency bin centers (Hz)
    * @param {number} flowKHz - Lower frequency bound (kHz)
    * @param {number} fhighKHz - Upper frequency bound (kHz)
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
-   * @returns {number} Optimal threshold (dB) in range [-70, -24]
+   * @returns {Object} {threshold, highFreq_Hz, highFreq_kHz, startFreq_Hz, startFreq_kHz, warning}
    */
   findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
-    if (spectrogram.length === 0) return -24;
+    if (spectrogram.length === 0) return {
+      threshold: -24,
+      highFreq_Hz: null,
+      highFreq_kHz: null,
+      startFreq_Hz: null,
+      startFreq_kHz: null,
+      warning: false
+    };
 
     const firstFramePower = spectrogram[0];
-    const flowHz = flowKHz * 1000;
-    const fhighHz = fhighKHz * 1000;
     
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     // This prevents fluctuations caused by selection area size
-    // globalPeakPower_dB = Math.max across entire spectrogram = affected by selection size
-    // callPeakPower_dB = actual call signal peak = stable and reliable
     const stablePeakPower_dB = callPeakPower_dB;
     
     // 測試閾值範圍：-24 到 -70 dB
@@ -618,18 +625,21 @@ export class BatCallDetector {
       thresholdRange.push(threshold);
     }
     
-      // 為每個閾值測量 High Frequency
-      // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
-      const measurements = [];    for (const testThreshold_dB of thresholdRange) {
+    // 為每個閾值測量 High Frequency 和 Start Frequency
+    // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
+    const measurements = [];
+    
+    for (const testThreshold_dB of thresholdRange) {
       let highFreq_Hz = null;
+      let startFreq_Hz = null;
       let foundBin = false;
       
       // 使用穩定的 call peak power（不受 selection 大小影響）
-      // Line 728: const highFreqThreshold_dB = peakPower_dB + highFreqThreshold_dB;
       const highFreqThreshold_dB = stablePeakPower_dB + testThreshold_dB;
       
-      // 從高到低掃描頻率 bin，找第一個超過閾值的 bin
-      // 這是找 High Frequency（最高的頻率）的正確方法
+      // ============================================================
+      // 計算 HIGH FREQUENCY（從高到低掃描，找最高頻率）
+      // ============================================================
       for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
         if (firstFramePower[binIdx] > highFreqThreshold_dB) {
           highFreq_Hz = freqBins[binIdx];
@@ -650,9 +660,35 @@ export class BatCallDetector {
         }
       }
       
+      // ============================================================
+      // 計算 START FREQUENCY（從低到高掃描，找最低頻率）
+      // 與 High Frequency 獨立計算，使用相同的閾值
+      // ============================================================
+      if (foundBin) {
+        for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+          if (firstFramePower[binIdx] > highFreqThreshold_dB) {
+            startFreq_Hz = freqBins[binIdx];
+            
+            // 嘗試線性插值以獲得更高精度
+            if (binIdx > 0) {
+              const thisPower = firstFramePower[binIdx];
+              const prevPower = firstFramePower[binIdx - 1];
+              
+              if (prevPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
+                const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - prevPower);
+                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                startFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+              }
+            }
+            break;
+          }
+        }
+      }
+      
       // 如果沒有找到超過閾值的 bin，則無法測量此閾值
       if (!foundBin) {
         highFreq_Hz = null;
+        startFreq_Hz = null;
       }
       
       measurements.push({
@@ -660,38 +696,46 @@ export class BatCallDetector {
         highFreqThreshold_dB: highFreqThreshold_dB,
         highFreq_Hz: highFreq_Hz,
         highFreq_kHz: highFreq_Hz !== null ? highFreq_Hz / 1000 : null,
+        startFreq_Hz: startFreq_Hz,
+        startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
         foundBin: foundBin
       });
     }
     
     // ============================================================
-    // 算法改進：找出最後一個異常前的 High Freq 臨界點
-    // 
-    // 原理：
-    // - 正常情況：閾值從 -24 一路降低到 -70，High Frequency 應該平緩變化 (1-2 kHz)
-    // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz) 
-    // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 立即停止，不繼續測試
-    // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
-    // - 解決：
-    //   1. 保險機制：如發現超大幅跳變 (>4 kHz)，立即停止，選擇異常前的閾值
-    //   2. 記錄第一個異常，但繼續測試
-    //   3. 如果後續連續 3 個值都無異常，則忽略之前的異常
-    //   4. 如果最後連續出現異常，則選擇最後一個有效測量（異常前的那個）
-    //   5. 如果異常後沒有連續 3 個正常值，認為後面都是雜訊，不再追蹤更遠的異常
-    // 
-    // 重要：只有當 foundBin === true 時才進行比較
-    // ============================================================
-    let optimalThreshold = -24;  // 默認使用最保守的設定
-    
     // 只收集成功找到 bin 的測量
     const validMeasurements = measurements.filter(m => m.foundBin);
     
     if (validMeasurements.length === 0) {
-      return -24;
+      return {
+        threshold: -24,
+        highFreq_Hz: null,
+        highFreq_kHz: null,
+        startFreq_Hz: null,
+        startFreq_kHz: null,
+        warning: false
+      };
     }
+    
+    // ============================================================
+    // 新規則 2025：High Frequency 需應用防呆機制
+    // 找出第一個 >= Peak Frequency 且 foundBin=true 的 High Frequency
+    // ============================================================
+    
+    // 先從 validMeasurements 中提取 Peak Frequency（來自 measureFrequencyParameters）
+    // 注意：此時在 findOptimalHighFrequencyThreshold 中還未計算 peakFreq
+    // 因此我們需要推遲 Peak Frequency 的安全檢查到 measureFrequencyParameters 中進行
+    // 此函數先返回數據，由 measureFrequencyParameters 處理防呆邏輯
+    
+    // ============================================================
+    // 決定最終使用的閾值 + Start Frequency
+    // ============================================================
+    let optimalThreshold = -24;  // 默認使用最保守的設定
+    let optimalMeasurement = validMeasurements[0];  // 預設為第一個有效測量
     
     // 追蹤異常檢測狀態
     let lastValidThreshold = validMeasurements[0].threshold;  // 最後一個有效測量（無異常的）
+    let lastValidMeasurement = validMeasurements[0];
     let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
     let firstAnomalyIndex = -1;       // 第一個異常發生的索引位置
     
@@ -708,6 +752,7 @@ export class BatCallDetector {
         // 超大幅異常，立即停止測試
         // 選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
+        optimalMeasurement = validMeasurements[i - 1];
         break;
       }
       
@@ -721,6 +766,7 @@ export class BatCallDetector {
           firstAnomalyIndex = i;  // 記錄異常發生的索引
           recordedEarlyAnomaly = validMeasurements[i - 1].threshold;  // 異常前的閾值
           lastValidThreshold = validMeasurements[i - 1].threshold;
+          lastValidMeasurement = validMeasurements[i - 1];
         }
       } else {
         // 正常值：沒有大幅跳變
@@ -761,18 +807,21 @@ export class BatCallDetector {
         
         // 更新最後一個有效測量
         lastValidThreshold = validMeasurements[i].threshold;
+        lastValidMeasurement = validMeasurements[i];
       }
     }
     
     // ============================================================
-    // 決定最終使用的閾值
+    // 最終決定：選擇最優閾值
     // ============================================================
     if (recordedEarlyAnomaly !== null) {
       // 有未被忽略的早期異常：使用異常前的閾值
       optimalThreshold = recordedEarlyAnomaly;
+      optimalMeasurement = lastValidMeasurement;
     } else {
       // 沒有異常或異常被忽略：使用最後一個有效測量
       optimalThreshold = lastValidThreshold;
+      optimalMeasurement = lastValidMeasurement;
     }
     
     // 確保返回值在有效範圍內
@@ -781,8 +830,13 @@ export class BatCallDetector {
     // 檢測是否使用了 -70dB 的極限閾值（表示選擇區域未能涵蓋足夠高的頻率）
     const hasWarning = finalThreshold <= -70;
     
+    // 返回優化的 High Frequency 和 Start Frequency
     return {
       threshold: finalThreshold,
+      highFreq_Hz: optimalMeasurement.highFreq_Hz,
+      highFreq_kHz: optimalMeasurement.highFreq_kHz,
+      startFreq_Hz: optimalMeasurement.startFreq_Hz,
+      startFreq_kHz: optimalMeasurement.startFreq_kHz,
       warning: hasWarning
     };
   }
@@ -878,10 +932,93 @@ export class BatCallDetector {
         fhighKHz,
         peakPower_dB  // Pass stable call peak value instead of computing global peak again
       );
+      
+      // ============================================================
+      // 新規則 2025：High Frequency 防呆機制
+      // 找出第一個 >= Peak Frequency 的有效 High Frequency
+      // ============================================================
+      // 如果返回的 High Frequency < Peak Frequency，視為異常
+      // 需要向上遍歷 thresholdRange 找到第一個 >= Peak Frequency 的值
+      let safeHighFreq_kHz = result.highFreq_kHz;
+      let safeHighFreq_Hz = result.highFreq_Hz;
+      let safeStartFreq_kHz = result.startFreq_kHz;
+      let safeStartFreq_Hz = result.startFreq_Hz;
+      let usedThreshold = result.threshold;
+      
+      // 如果最優閾值的 High Frequency 低於 Peak Frequency，執行防呆檢查
+      if (result.highFreq_kHz !== null && result.highFreq_kHz < (peakFreq_Hz / 1000)) {
+        // 需要找到第一個 >= Peak Frequency 的 High Frequency
+        // 重新測試閾值範圍，從 -24 到 -70
+        const peakFreq_kHz = peakFreq_Hz / 1000;
+        let foundValidHighFreq = false;
+        
+        for (let testThreshold_dB = -24; testThreshold_dB >= -70; testThreshold_dB--) {
+          const highFreqThreshold_dB = peakPower_dB + testThreshold_dB;
+          const firstFramePower = spectrogram[0];
+          
+          // 計算此閾值的 High Frequency
+          let testHighFreq_Hz = null;
+          let testStartFreq_Hz = null;
+          
+          // High Frequency 計算（從高到低）
+          for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+            if (firstFramePower[binIdx] > highFreqThreshold_dB) {
+              testHighFreq_Hz = freqBins[binIdx];
+              
+              // 線性插值
+              if (binIdx < firstFramePower.length - 1) {
+                const thisPower = firstFramePower[binIdx];
+                const nextPower = firstFramePower[binIdx + 1];
+                if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
+                  const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
+                  const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+                  testHighFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+                }
+              }
+              break;
+            }
+          }
+          
+          // 如果找到有效的 High Frequency，檢查是否 >= Peak Frequency
+          if (testHighFreq_Hz !== null && (testHighFreq_Hz / 1000) >= peakFreq_kHz) {
+            // 計算此閾值的 Start Frequency（從低到高）
+            for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+              if (firstFramePower[binIdx] > highFreqThreshold_dB) {
+                testStartFreq_Hz = freqBins[binIdx];
+                
+                // 線性插值
+                if (binIdx > 0) {
+                  const thisPower = firstFramePower[binIdx];
+                  const prevPower = firstFramePower[binIdx - 1];
+                  if (prevPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
+                    const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - prevPower);
+                    const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                    testStartFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+                  }
+                }
+                break;
+              }
+            }
+            
+            safeHighFreq_Hz = testHighFreq_Hz;
+            safeHighFreq_kHz = testHighFreq_Hz / 1000;
+            safeStartFreq_Hz = testStartFreq_Hz;
+            safeStartFreq_kHz = testStartFreq_Hz !== null ? testStartFreq_Hz / 1000 : null;
+            usedThreshold = testThreshold_dB;
+            foundValidHighFreq = true;
+            break;
+          }
+        }
+      }
+      
       // Update the config with the calculated optimal threshold
-      this.config.highFreqThreshold_dB = result.threshold;
+      this.config.highFreqThreshold_dB = usedThreshold;
       // Set warning flag on the call object
       call.highFreqDetectionWarning = result.warning;
+      
+      // 臨時存儲 Start Frequency（留待 STEP 2 後面使用）
+      call._startFreq_kHz_fromAuto = safeStartFreq_kHz;
+      call._startFreq_Hz_fromAuto = safeStartFreq_Hz;
     }
     
     // ============================================================
@@ -1102,6 +1239,71 @@ export class BatCallDetector {
       }
     }
     call.highFreq_kHz = highFreq_Hz / 1000;
+    
+    // ============================================================
+    // STEP 2.5: Calculate START FREQUENCY (獨立於 High Frequency)
+    // 
+    // 2025 新規則：Start Frequency 必須獨立計算
+    // 方法：
+    // (a) 如果在 AUTO MODE 中已計算過，使用該值
+    // (b) 否則，按以下規則計算：
+    //     - 若 -24dB 閾值的頻率 < Peak Frequency：使用該值為 Start Frequency
+    //     - 否則：Start Frequency = High Frequency（與現行邏輯相同）
+    // ============================================================
+    let startFreq_Hz = null;
+    let startFreq_kHz = null;
+    
+    if (call._startFreq_Hz_fromAuto !== undefined) {
+      // 使用 AUTO MODE 計算的 Start Frequency
+      startFreq_Hz = call._startFreq_Hz_fromAuto;
+      startFreq_kHz = call._startFreq_kHz_fromAuto;
+      // 清理臨時存儲
+      delete call._startFreq_Hz_fromAuto;
+      delete call._startFreq_kHz_fromAuto;
+    } else {
+      // 非 AUTO MODE：計算 Start Frequency
+      // 使用 -24dB 閾值測試
+      const threshold_24dB = peakPower_dB - 24;
+      
+      // 從低到高掃描，找最低頻率
+      for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+        if (firstFramePower[binIdx] > threshold_24dB) {
+          const testStartFreq_Hz = freqBins[binIdx];
+          const testStartFreq_kHz = testStartFreq_Hz / 1000;
+          
+          // 檢查是否低於 Peak Frequency
+          if (testStartFreq_kHz < (peakFreq_Hz / 1000)) {
+            // 滿足規則 (a)：使用此值為 Start Frequency
+            startFreq_Hz = testStartFreq_Hz;
+            startFreq_kHz = testStartFreq_kHz;
+            
+            // 嘗試線性插值以獲得更高精度
+            if (binIdx > 0) {
+              const thisPower = firstFramePower[binIdx];
+              const prevPower = firstFramePower[binIdx - 1];
+              
+              if (prevPower < threshold_24dB && thisPower > threshold_24dB) {
+                const powerRatio = (thisPower - threshold_24dB) / (thisPower - prevPower);
+                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                startFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+                startFreq_kHz = startFreq_Hz / 1000;
+              }
+            }
+            break;
+          }
+        }
+      }
+      
+      // 如果規則 (a) 不滿足（-24dB 頻率 >= Peak Frequency），使用規則 (b)
+      if (startFreq_Hz === null) {
+        // Start Frequency = High Frequency
+        startFreq_Hz = highFreq_Hz;
+        startFreq_kHz = highFreq_Hz / 1000;
+      }
+    }
+    
+    // 存儲 Start Frequency
+    call.startFreq_kHz = startFreq_kHz;
     
     // STEP 2.5: Record the time point of start frequency (first frame with signal)
     // This is used as the reference point for knee time calculation
