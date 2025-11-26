@@ -123,7 +123,8 @@ export class BatCall {
     this.highFreq_kHz = null;       // High frequency (kHz) - highest frequency in call (calculated from first frame)
     this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (TBD: to be determined)
     this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (calculated from last frame)
-    this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (TBD: to be determined)
+    this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (from last frame, lowest frequency)
+    this.endFreqTime_s = null;      // End frequency time (s) - time point of end frequency (from last frame)
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
     this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
@@ -203,6 +204,7 @@ export class BatCall {
       'Peak Freq [kHz]': this.peakFreq_kHz?.toFixed(2) || '-',
       'High Freq [kHz]': this.highFreq_kHz?.toFixed(2) || '-',
       'Start Freq [kHz]': this.startFreq_kHz?.toFixed(2) || '-',
+      'End Freq [kHz]': this.endFreq_kHz?.toFixed(2) || '-',
       'Low Freq [kHz]': this.lowFreq_kHz?.toFixed(2) || '-',
       'Knee Freq [kHz]': this.kneeFreq_kHz?.toFixed(2) || '-',
       'Characteristic Freq [kHz]': this.characteristicFreq_kHz?.toFixed(2) || '-',
@@ -1309,6 +1311,7 @@ export class BatCallDetector {
     // Search from LOW to HIGH frequency (normal bin order)
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
+    const lastFrameTime_s = timeFrames[timeFrames.length - 1];  // Time of last frame
     let lowFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
     // Search from low to high frequency using fixed -27dB threshold
@@ -1331,6 +1334,19 @@ export class BatCallDetector {
         break;
       }
     }
+    
+    // ============================================================
+    // END FREQUENCY CALCULATION: Use low frequency bin result
+    // End Frequency = frequency from last frame using -27dB threshold
+    // (before comparison with Start Frequency)
+    // End Frequency Time = time of last frame
+    // 預設將 low frequency bin 的 frequency 及 Time 值用作 End Frequency
+    // ============================================================
+    let endFreq_kHz = lowFreq_Hz / 1000;
+    call.endFreq_kHz = endFreq_kHz;
+    call.endFreqTime_s = lastFrameTime_s;
+    
+    // Now calculate lowFreq_kHz with potential Start Frequency optimization
     let lowFreq_kHz = lowFreq_Hz / 1000;
     
     // ============================================================
