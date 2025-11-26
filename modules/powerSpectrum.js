@@ -1602,7 +1602,6 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
     interactivePoint.setAttribute('fill', 'transparent');
     interactivePoint.setAttribute('stroke', 'none');
     interactivePoint.setAttribute('class', 'spectrum-interactive-point');
-    interactivePoint.style.cursor = 'none';
     
     // 儲存點的資訊
     const pointData = {
@@ -1715,19 +1714,6 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       interactiveCircle.setAttribute('class', 'spectrum-highlight-point');
       helperGroup.appendChild(interactiveCircle);
       
-      // 創建提示框背景（白色框）
-      const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      tooltipBg.setAttribute('x', closestPoint.x - 40);
-      tooltipBg.setAttribute('y', closestPoint.y - 40);
-      tooltipBg.setAttribute('width', '80');
-      tooltipBg.setAttribute('height', '32');
-      tooltipBg.setAttribute('rx', '3');
-      tooltipBg.setAttribute('fill', '#ffffff');
-      tooltipBg.setAttribute('stroke', '#cccccc');
-      tooltipBg.setAttribute('stroke-width', '1');
-      tooltipBg.setAttribute('class', 'spectrum-tooltip-box');
-      helperGroup.appendChild(tooltipBg);
-      
       // 創建提示框文字（頻率）- 放在懸停點正上方 15px
       const tooltipFreq = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       tooltipFreq.setAttribute('x', closestPoint.x);
@@ -1738,6 +1724,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       tooltipFreq.setAttribute('font-size', '12');
       tooltipFreq.setAttribute('font-weight', 'bold');
       tooltipFreq.setAttribute('fill', '#000000');
+      tooltipFreq.setAttribute('class', 'spectrum-tooltip-text-freq');
       tooltipFreq.textContent = closestPoint.freqKHz.toFixed(2) + ' kHz';
       helperGroup.appendChild(tooltipFreq);
       
@@ -1751,6 +1738,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       tooltipDb.setAttribute('font-size', '12');
       tooltipDb.setAttribute('font-weight', 'bold');
       tooltipDb.setAttribute('fill', '#0066cc');
+      tooltipDb.setAttribute('class', 'spectrum-tooltip-text-db');
       tooltipDb.textContent = closestPoint.db.toFixed(1) + ' dB';
       helperGroup.appendChild(tooltipDb);
     } else {
@@ -1768,8 +1756,6 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
     }
   });
   
-  // 設置 SVG 容器的光標為 none
-  svg.style.cursor = 'none';
 }
 
 /**

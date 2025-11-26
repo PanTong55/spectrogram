@@ -2649,10 +2649,23 @@ input.tag-button.editing {
   opacity: 0.7;
 }
 
-/* 提示框背景 */
-.spectrum-tooltip-bg {
+/* 提示框文字樣式 */
+.spectrum-tooltip-text-freq {
   pointer-events: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  paint-order: stroke fill;
+  stroke: #ffffff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.spectrum-tooltip-text-db {
+  pointer-events: none;
+  paint-order: stroke fill;
+  stroke: #ffffff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Power Spectrum SVG 容器最大寬度 */
