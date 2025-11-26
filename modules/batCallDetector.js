@@ -1346,6 +1346,68 @@ export class BatCallDetector {
     call.lowFreq_kHz = lowFreq_kHz;
     
     // ============================================================
+    // STEP 3.5: Calculate END FREQUENCY from first frame (right to left scan)
+    // Professional standard: Fixed threshold at -24dB below peak (same as Start Frequency)
+    // This is the LOWEST frequency detected from high to low scan (last energy point)
+    // Search from HIGH to LOW frequency (reverse bin order)
+    // End Frequency >= Low Frequency safety check
+    // ============================================================
+    const firstFramePower_endFreq = spectrogram[0];  // Use first frame for end frequency
+    let endFreq_Hz = flowKHz * 1000;  // Default to lower bound
+    let endFreq_TimeIdx = 0;  // Track which frame this was found in
+    
+    // Use same -24dB threshold as Start Frequency for consistency
+    const threshold_endFreq_24dB = peakPower_dB - 24;
+    
+    // Scan from high to low frequency (reverse bin order) in first frame
+    for (let binIdx = firstFramePower_endFreq.length - 1; binIdx >= 0; binIdx--) {
+      if (firstFramePower_endFreq[binIdx] > threshold_endFreq_24dB) {
+        // Found first bin above threshold (scanning from high to low)
+        endFreq_Hz = freqBins[binIdx];
+        
+        // Attempt linear interpolation for sub-bin precision
+        if (binIdx < firstFramePower_endFreq.length - 1) {
+          const thisPower = firstFramePower_endFreq[binIdx];
+          const nextPower = firstFramePower_endFreq[binIdx + 1];
+          
+          if (nextPower < threshold_endFreq_24dB && thisPower > threshold_endFreq_24dB) {
+            // Interpolate between this bin and next (lower frequency bin)
+            const powerRatio = (thisPower - threshold_endFreq_24dB) / (thisPower - nextPower);
+            const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+            endFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+          }
+        }
+        endFreq_TimeIdx = 0;  // First frame
+        break;
+      }
+    }
+    
+    let endFreq_kHz = endFreq_Hz / 1000;
+    
+    // ============================================================
+    // END FREQUENCY SAFETY CHECK: Must be >= Low Frequency
+    // If End Frequency < Low Frequency, use Low Frequency instead
+    // ============================================================
+    if (endFreq_kHz < lowFreq_kHz) {
+      endFreq_kHz = lowFreq_kHz;
+    }
+    
+    call.endFreq_kHz = endFreq_kHz;
+    
+    // Record End Frequency time point (from the frame where it was found)
+    const endFreqTime_s = timeFrames[endFreq_TimeIdx];
+    
+    // ============================================================
+    // UPDATE DURATION CALCULATION: Based on Start Frequency Time and End Frequency Time
+    // Duration = End Frequency Time - Start Frequency Time (in milliseconds)
+    // ============================================================
+    if (startFreqTime_s !== null && endFreqTime_s !== null) {
+      call.duration_ms = (endFreqTime_s - startFreqTime_s) * 1000;
+      // Also update end time if different from previous calculation
+      call.endTime_s = endFreqTime_s;
+    }
+    
+    // ============================================================
     // STEP 4: Calculate characteristic frequency (CF-FM distinction)
     // 
     // CRITICAL FIX: Characteristic frequency should be calculated from
