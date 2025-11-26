@@ -689,20 +689,22 @@ export class BatCallDetector {
     
     // ============================================================
     // 算法改進 (2025 版本)：
-    // 1. 定義 Start Frequency：
-    //    - 若發現測出的 frequency < Peak frequency，標記第一個測出的 frequency 為 Start frequency
-    //    - 若所有測出的 frequency > Peak frequency，標記最後測出的 High frequency 為 Start frequency
     // 
-    // 2. 優化頻率跳變檢測機制：
-    //    - 當 frequency < Peak frequency 時，無需檢測 2.5 kHz 跳變
-    //    - 持續檢測直至 frequency 與 Peak frequency 差距 < 1 kHz
-    //    - 只有在接近 Peak frequency（差距 < 1 kHz）時，才啟動 2.5 kHz 跳變檢測
-    //    - 從該點開始找真正的 High frequency
+    // 1. Start Frequency（獨立定義）：
+    //    - 若第一個測量（-24dB）的 frequency < Peak frequency
+    //      則使用該頻率作為 Start Frequency
+    //    - 否則 Start Frequency = null
+    //
+    // 2. High Frequency（必然 >= Peak frequency）：
+    //    - 只有當 frequency >= Peak frequency 時才視為有效的 High frequency
+    //    - 在此之前，無需檢測 > 2.5 kHz 的頻率跳變
+    //    - 一旦 frequency >= Peak frequency，啟動跳變檢測機制
+    //    - 使用跳變檢測找真正的 High frequency
     //
     // 3. 保險機制：超大幅跳變 (>5 kHz) 立即停止
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
-    let startFreq_kHz = null;    // 記錄 Start Frequency
+    let startFreq_kHz = null;    // 記錄 Start Frequency（獨立）
     
     // 只收集成功找到 bin 的測量
     const validMeasurements = measurements.filter(m => m.foundBin);
@@ -711,40 +713,28 @@ export class BatCallDetector {
       return { threshold: -24, warning: false, startFreq_kHz: null };
     }
     
+    // ============================================================
+    // STEP 1: 定義 Start Frequency
+    // 檢查第一個測量（-24dB 時）的 frequency 是否 < Peak frequency
+    // ============================================================
+    const firstMeasurement = validMeasurements[0];
+    const firstFreq_kHz = firstMeasurement.highFreq_kHz;
+    
+    if (peakFreq_kHz !== null && firstFreq_kHz !== null && firstFreq_kHz < peakFreq_kHz) {
+      // 若第一個測出的 frequency < Peak frequency，使用它作為 Start Frequency
+      startFreq_kHz = firstFreq_kHz;
+    }
+    
     // 追蹤狀態
     let lastValidThreshold = validMeasurements[0].threshold;
     let recordedEarlyAnomaly = null;
     let firstAnomalyIndex = -1;
     
-    // 判斷第一個測量是否低於 Peak frequency
-    let firstMeasurement = validMeasurements[0];
-    const firstFreq_kHz = firstMeasurement.highFreq_kHz;
-    let firstFreqBelowPeak = false;
-    
-    if (peakFreq_kHz !== null && firstFreq_kHz !== null) {
-      firstFreqBelowPeak = firstFreq_kHz < peakFreq_kHz;
-      
-      // 定義 Start Frequency
-      if (firstFreqBelowPeak) {
-        // 若第一個測出的 frequency < Peak frequency，使用第一個測出的頻率
-        startFreq_kHz = firstFreq_kHz;
-      }
-    }
-    
-    // 追蹤所有測量是否都 > Peak frequency
-    let allFrequenciesAbovePeak = peakFreq_kHz !== null;  // 初始假設都在 Peak frequency 上方
-    if (allFrequenciesAbovePeak) {
-      for (const measurement of validMeasurements) {
-        if (measurement.highFreq_kHz !== null && measurement.highFreq_kHz <= peakFreq_kHz) {
-          allFrequenciesAbovePeak = false;
-          break;
-        }
-      }
-    }
-    
+    // ============================================================
+    // STEP 2: 尋找 High Frequency（必然 >= Peak frequency）
     // 從第二個有效測量開始，比較與前一個測量的差異
+    // ============================================================
     let enableFreqJumpDetection = false;  // 標記是否已啟動 2.5 kHz 跳變檢測
-    let lastHighFreq_kHz = null;          // 記錄最後測出的 High frequency
     
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].highFreq_kHz;
@@ -762,24 +752,19 @@ export class BatCallDetector {
       }
       
       // ============================================================
-      // 新的優化邏輯（2025）：決定何時啟動 2.5 kHz 跳變檢測
+      // 優化邏輯（2025）：只在 frequency >= Peak frequency 時啟動跳變檢測
       // ============================================================
+      // 檢查當前 frequency 是否 >= Peak frequency
       if (!enableFreqJumpDetection && peakFreq_kHz !== null && currFreq_kHz !== null) {
-        const freqToPeakDiff = Math.abs(currFreq_kHz - peakFreq_kHz);
-        
-        // 若當前 frequency 與 Peak frequency 差距 < 1 kHz，啟動跳變檢測
-        if (freqToPeakDiff < 1.0) {
+        // 一旦 frequency >= Peak frequency，啟動跳變檢測
+        if (currFreq_kHz >= peakFreq_kHz) {
           enableFreqJumpDetection = true;
         }
       }
       
-      // 持續記錄最後的 High frequency（用於 allFrequenciesAbovePeak 的情況）
-      if (currFreq_kHz !== null) {
-        lastHighFreq_kHz = currFreq_kHz;
-      }
-      
       // ============================================================
       // 頻率跳變檢測：只在 enableFreqJumpDetection = true 時進行
+      // 這確保 High Frequency 必然 >= Peak frequency
       // ============================================================
       let isAnomaly = false;
       if (enableFreqJumpDetection) {
@@ -852,14 +837,6 @@ export class BatCallDetector {
     } else {
       // 沒有異常或異常被忽略：使用最後一個有效測量
       optimalThreshold = lastValidThreshold;
-    }
-    
-    // ============================================================
-    // 處理 "所有 frequency 都 > Peak frequency" 的情況
-    // 若此條件為真，使用最後測出的 High frequency 作為 Start Frequency
-    // ============================================================
-    if (allFrequenciesAbovePeak && startFreq_kHz === null && lastHighFreq_kHz !== null) {
-      startFreq_kHz = lastHighFreq_kHz;
     }
     
     // 確保返回值在有效範圍內
