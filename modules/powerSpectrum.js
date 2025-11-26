@@ -860,8 +860,6 @@ function createPopupWindow() {
   // 設置按鈕的點擊事件監聽器
   // ============================================================
   const settingsBtn = document.getElementById('powerSpectrumSettingsBtn');
-  const paramPanelElement = document.getElementById('batCallParametersPanel');
-  
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
       const isHidden = controlPanel.style.display === 'none';
