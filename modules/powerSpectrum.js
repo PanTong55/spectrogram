@@ -545,7 +545,7 @@ function createPopupWindow() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '438');
   svg.setAttribute('height', '438');
-  svg.setAttribute('viewBox', '0 0 415 450');
+  svg.setAttribute('viewBox', '0 10 430 450');
   svg.style.width = '100%';
   svg.style.height = '100%';
   
@@ -1455,7 +1455,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   // X 軸標籤
   const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   xLabel.setAttribute('x', leftPadding + plotWidth / 2);
-  xLabel.setAttribute('y', height - 2);
+  xLabel.setAttribute('y', height + 7);
   xLabel.setAttribute('text-anchor', 'middle');
   xLabel.setAttribute('font-weight', 'bold');
   xLabel.textContent = 'Frequency (kHz)';
@@ -1464,7 +1464,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   // Y 軸標籤（旋轉）
   const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   yLabel.setAttribute('x', '17');
-  yLabel.setAttribute('y', topPadding + 10 + plotHeight / 2);
+  yLabel.setAttribute('y', topPadding + plotHeight / 2);
   yLabel.setAttribute('text-anchor', 'middle');
   yLabel.setAttribute('font-weight', 'bold');
   yLabel.setAttribute('transform', `rotate(-90 17 ${topPadding + plotHeight / 2})`);
