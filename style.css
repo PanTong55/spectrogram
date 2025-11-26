@@ -2357,7 +2357,7 @@ input.tag-button.editing {
 .power-spectrum-popup {
   position: fixed;
   width: 450px;
-  height: 782px;
+  height: 630px;
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
@@ -2508,7 +2508,7 @@ input.tag-button.editing {
 .bat-call-controls {
   padding: 5px;
   margin: 0px 5px 5px 5px;
-  background: #f5f5f5;
+  background: #fafafa;
   display: flex;
   border-radius: 5px;
   border: 1px solid #ddd;
