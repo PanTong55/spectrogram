@@ -860,6 +860,8 @@ function createPopupWindow() {
   // 設置按鈕的點擊事件監聽器
   // ============================================================
   const settingsBtn = document.getElementById('powerSpectrumSettingsBtn');
+  const paramPanelElement = document.getElementById('batCallParametersPanel');
+  
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
       const isHidden = controlPanel.style.display === 'none';
@@ -868,11 +870,21 @@ function createPopupWindow() {
         // 展開 - 移除 display 以恢復 CSS 中的 flex
         controlPanel.style.removeProperty('display');
         batCallControlPanel.style.removeProperty('display');
+        if (paramPanelElement) paramPanelElement.style.removeProperty('display');
+        
+        // 恢復 popup 原始高度 (Settings 打開)
+        popup.classList.remove('settings-closed');
+        
         settingsBtn.classList.add('active');
       } else {
         // 隱藏
         controlPanel.style.display = 'none';
         batCallControlPanel.style.display = 'none';
+        if (paramPanelElement) paramPanelElement.style.display = 'none';
+        
+        // 設置 popup 為縮小高度 (Settings 關閉)
+        popup.classList.add('settings-closed');
+        
         settingsBtn.classList.remove('active');
       }
     });
