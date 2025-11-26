@@ -1627,17 +1627,54 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   helperGroup.setAttribute('class', 'spectrum-helper-lines');
   chartGroup.appendChild(helperGroup);
 
-
+  // 添加 SVG 背景層用於捕捉滑鼠事件
+  const interactiveBackground = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  interactiveBackground.setAttribute('x', leftPadding);
+  interactiveBackground.setAttribute('y', topPadding);
+  interactiveBackground.setAttribute('width', plotWidth);
+  interactiveBackground.setAttribute('height', plotHeight);
+  interactiveBackground.setAttribute('fill', 'transparent');
+  interactiveBackground.setAttribute('stroke', 'none');
+  interactiveBackground.setAttribute('class', 'spectrum-interactive-bg');
+  chartGroup.appendChild(interactiveBackground);
 
   svg.appendChild(chartGroup);
 
   // ============================================================
-  // 設置交互事件
+  // 設置基於 X 座標的自動檢測交互
   // ============================================================
   
-  // 為每個交互點添加事件監聽器
-  interactivePoints.forEach(pointData => {
-    pointData.element.addEventListener('mouseenter', () => {
+  // 添加整個 SVG 容器的滑鼠移動監聽
+  svg.addEventListener('mousemove', (event) => {
+    // 獲取滑鼠在 SVG 中的位置
+    const rect = svg.getBoundingClientRect();
+    const svgX = event.clientX - rect.left;
+    const svgY = event.clientY - rect.top;
+    
+    // 檢查滑鼠是否在圖表區域內
+    if (svgX < leftPadding || svgX > leftPadding + plotWidth || 
+        svgY < topPadding || svgY > topPadding + plotHeight) {
+      // 滑鼠不在圖表區域，清空
+      while (helperGroup.firstChild) {
+        helperGroup.removeChild(helperGroup.firstChild);
+      }
+      return;
+    }
+    
+    // 根據 X 座標找到最接近的交互點
+    let closestPoint = null;
+    let minDistance = Infinity;
+    
+    for (const point of interactivePoints) {
+      const distance = Math.abs(point.x - svgX);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
+      }
+    }
+    
+    // 如果找到了接近的點，繪製輔助線和提示框
+    if (closestPoint && minDistance < 15) {  // 檢測範圍 15px
       // 清空舊的輔助線
       while (helperGroup.firstChild) {
         helperGroup.removeChild(helperGroup.firstChild);
@@ -1645,9 +1682,9 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       
       // 繪製垂直線（連接到 X 軸）
       const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      vLine.setAttribute('x1', pointData.x);
-      vLine.setAttribute('y1', pointData.y);
-      vLine.setAttribute('x2', pointData.x);
+      vLine.setAttribute('x1', closestPoint.x);
+      vLine.setAttribute('y1', closestPoint.y);
+      vLine.setAttribute('x2', closestPoint.x);
       vLine.setAttribute('y2', topPadding + plotHeight);
       vLine.setAttribute('stroke', '#999999');
       vLine.setAttribute('stroke-width', '1');
@@ -1658,47 +1695,81 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
       // 繪製水平線（連接到 Y 軸）
       const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       hLine.setAttribute('x1', leftPadding);
-      hLine.setAttribute('y1', pointData.y);
-      hLine.setAttribute('x2', pointData.x);
-      hLine.setAttribute('y2', pointData.y);
+      hLine.setAttribute('y1', closestPoint.y);
+      hLine.setAttribute('x2', closestPoint.x);
+      hLine.setAttribute('y2', closestPoint.y);
       hLine.setAttribute('stroke', '#999999');
       hLine.setAttribute('stroke-width', '1');
       hLine.setAttribute('stroke-dasharray', '3,3');
       hLine.setAttribute('class', 'spectrum-guide-line');
       helperGroup.appendChild(hLine);
       
-      // 創建提示框文字（頻率）- 放在懸停點正上方
+      // 繪製交互點圓形（透明圓點）
+      const interactiveCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      interactiveCircle.setAttribute('cx', closestPoint.x);
+      interactiveCircle.setAttribute('cy', closestPoint.y);
+      interactiveCircle.setAttribute('r', '4');
+      interactiveCircle.setAttribute('fill', 'rgba(0, 102, 204, 0.3)');
+      interactiveCircle.setAttribute('stroke', '#0066cc');
+      interactiveCircle.setAttribute('stroke-width', '1');
+      interactiveCircle.setAttribute('class', 'spectrum-highlight-point');
+      helperGroup.appendChild(interactiveCircle);
+      
+      // 創建提示框背景（白色框）
+      const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      tooltipBg.setAttribute('x', closestPoint.x - 40);
+      tooltipBg.setAttribute('y', closestPoint.y - 40);
+      tooltipBg.setAttribute('width', '80');
+      tooltipBg.setAttribute('height', '32');
+      tooltipBg.setAttribute('rx', '3');
+      tooltipBg.setAttribute('fill', '#ffffff');
+      tooltipBg.setAttribute('stroke', '#cccccc');
+      tooltipBg.setAttribute('stroke-width', '1');
+      tooltipBg.setAttribute('class', 'spectrum-tooltip-box');
+      helperGroup.appendChild(tooltipBg);
+      
+      // 創建提示框文字（頻率）- 放在懸停點正上方 15px
       const tooltipFreq = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tooltipFreq.setAttribute('x', pointData.x);
-      tooltipFreq.setAttribute('y', pointData.y - 5);
+      tooltipFreq.setAttribute('x', closestPoint.x);
+      tooltipFreq.setAttribute('y', closestPoint.y - 25);
       tooltipFreq.setAttribute('text-anchor', 'middle');
-      tooltipFreq.setAttribute('dominant-baseline', 'baseline');
+      tooltipFreq.setAttribute('dominant-baseline', 'middle');
       tooltipFreq.setAttribute('font-family', 'Arial');
       tooltipFreq.setAttribute('font-size', '12');
+      tooltipFreq.setAttribute('font-weight', 'bold');
       tooltipFreq.setAttribute('fill', '#000000');
-      tooltipFreq.textContent = pointData.freqKHz.toFixed(2) + ' kHz';
+      tooltipFreq.textContent = closestPoint.freqKHz.toFixed(2) + ' kHz';
       helperGroup.appendChild(tooltipFreq);
       
       // 創建提示框文字（dB）
       const tooltipDb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      tooltipDb.setAttribute('x', pointData.x);
-      tooltipDb.setAttribute('y', pointData.y + 10);
+      tooltipDb.setAttribute('x', closestPoint.x);
+      tooltipDb.setAttribute('y', closestPoint.y - 10);
       tooltipDb.setAttribute('text-anchor', 'middle');
-      tooltipDb.setAttribute('dominant-baseline', 'hanging');
+      tooltipDb.setAttribute('dominant-baseline', 'middle');
       tooltipDb.setAttribute('font-family', 'Arial');
       tooltipDb.setAttribute('font-size', '12');
+      tooltipDb.setAttribute('font-weight', 'bold');
       tooltipDb.setAttribute('fill', '#0066cc');
-      tooltipDb.textContent = pointData.db.toFixed(1) + ' dB';
+      tooltipDb.textContent = closestPoint.db.toFixed(1) + ' dB';
       helperGroup.appendChild(tooltipDb);
-    });
-    
-    pointData.element.addEventListener('mouseleave', () => {
-      // 移除所有輔助線和提示框
+    } else {
+      // 沒有接近的點，清空顯示
       while (helperGroup.firstChild) {
         helperGroup.removeChild(helperGroup.firstChild);
       }
-    });
+    }
   });
+  
+  // 滑鼠離開 SVG 時清空
+  svg.addEventListener('mouseleave', () => {
+    while (helperGroup.firstChild) {
+      helperGroup.removeChild(helperGroup.firstChild);
+    }
+  });
+  
+  // 設置 SVG 容器的光標為 none
+  svg.style.cursor = 'none';
 }
 
 /**
