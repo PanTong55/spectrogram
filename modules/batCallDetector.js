@@ -589,18 +589,19 @@ export class BatCallDetector {
    * 1. Test threshold values from -24 dB down to -70 dB (step: 1 dB)
    * 2. For each threshold, measure High Frequency using SAME method as measureFrequencyParameters
    * 3. Track frequency differences between consecutive thresholds
-   * 4. Find the threshold BEFORE the first major frequency jump (anomaly)
-   * 5. Return that threshold as the optimal value
+   * 4. Dynamically enable frequency jump detection only when approaching peak frequency
+   * 5. Define Start Frequency based on relationship to Peak Frequency
+   * 6. Return optimal threshold and Start Frequency
    * 
    * @param {Array} spectrogram - 2D array [timeFrame][freqBin]
    * @param {Array} freqBins - Frequency bin centers (Hz)
    * @param {number} flowKHz - Lower frequency bound (kHz)
    * @param {number} fhighKHz - Upper frequency bound (kHz)
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
-   * @returns {number} Optimal threshold (dB) in range [-70, -24]
+   * @returns {{threshold: number, warning: boolean, startFreq_kHz: number}} Optimal threshold and Start Frequency
    */
   findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
-    if (spectrogram.length === 0) return -24;
+    if (spectrogram.length === 0) return { threshold: -24, warning: false, startFreq_kHz: null };
 
     const firstFramePower = spectrogram[0];
     const flowHz = flowKHz * 1000;
@@ -611,6 +612,26 @@ export class BatCallDetector {
     // globalPeakPower_dB = Math.max across entire spectrogram = affected by selection size
     // callPeakPower_dB = actual call signal peak = stable and reliable
     const stablePeakPower_dB = callPeakPower_dB;
+    
+    // ============================================================
+    // NEW FEATURE (2025): Calculate Peak Frequency for Start Frequency definition
+    // Peak Frequency is the frequency bin with maximum power in entire spectrogram
+    // ============================================================
+    let peakFreq_Hz = null;
+    let peakFreqPower_dB = -Infinity;
+    
+    // Find peak frequency across all frames
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        if (framePower[binIdx] > peakFreqPower_dB) {
+          peakFreqPower_dB = framePower[binIdx];
+          peakFreq_Hz = freqBins[binIdx];
+        }
+      }
+    }
+    
+    const peakFreq_kHz = peakFreq_Hz !== null ? peakFreq_Hz / 1000 : null;
     
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
@@ -665,37 +686,52 @@ export class BatCallDetector {
     }
     
     // ============================================================
-    // 算法改進：找出最後一個異常前的 High Freq 臨界點
+    // 算法改進 (2025 版本)：
+    // 1. 定義 Start Frequency：
+    //    - 若發現測出的 frequency < Peak frequency，標記第一個測出的 frequency 為 Start frequency
+    //    - 若測出的 frequency > Peak frequency，標記該最高頻為 Start frequency
     // 
-    // 原理：
-    // - 正常情況：閾值從 -24 一路降低到 -70，High Frequency 應該平緩變化 (1-2 kHz)
-    // - 異常情況：突然出現大幅頻率跳變 (>2.5 kHz) 
-    // - 超大幅異常：突然出現超大幅跳變 (>4 kHz) → 立即停止，不繼續測試
-    // - 問題：FM call 中段能量較弱，有機會有斷層，導致中段出現跳變
-    // - 解決：
-    //   1. 保險機制：如發現超大幅跳變 (>4 kHz)，立即停止，選擇異常前的閾值
-    //   2. 記錄第一個異常，但繼續測試
-    //   3. 如果後續連續 3 個值都無異常，則忽略之前的異常
-    //   4. 如果最後連續出現異常，則選擇最後一個有效測量（異常前的那個）
-    //   5. 如果異常後沒有連續 3 個正常值，認為後面都是雜訊，不再追蹤更遠的異常
-    // 
-    // 重要：只有當 foundBin === true 時才進行比較
+    // 2. 優化頻率跳變檢測機制：
+    //    - 當 frequency < Peak frequency 時，無需檢測 2.5 kHz 跳變
+    //    - 持續檢測直至 frequency 與 Peak frequency 差距 < 1 kHz
+    //    - 只有在接近 Peak frequency（差距 < 1 kHz）時，才啟動 2.5 kHz 跳變檢測
+    //    - 從該點開始找真正的 High frequency
+    //
+    // 3. 保險機制：超大幅跳變 (>5 kHz) 立即停止
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
+    let startFreq_kHz = null;    // 記錄 Start Frequency
     
     // 只收集成功找到 bin 的測量
     const validMeasurements = measurements.filter(m => m.foundBin);
     
     if (validMeasurements.length === 0) {
-      return -24;
+      return { threshold: -24, warning: false, startFreq_kHz: null };
     }
     
-    // 追蹤異常檢測狀態
-    let lastValidThreshold = validMeasurements[0].threshold;  // 最後一個有效測量（無異常的）
-    let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
-    let firstAnomalyIndex = -1;       // 第一個異常發生的索引位置
+    // 追蹤狀態
+    let lastValidThreshold = validMeasurements[0].threshold;
+    let recordedEarlyAnomaly = null;
+    let firstAnomalyIndex = -1;
+    
+    // 判斷第一個測量是否低於 Peak frequency
+    let firstMeasurement = validMeasurements[0];
+    const firstFreq_kHz = firstMeasurement.highFreq_kHz;
+    let firstFreqBelowPeak = false;
+    
+    if (peakFreq_kHz !== null && firstFreq_kHz !== null) {
+      firstFreqBelowPeak = firstFreq_kHz < peakFreq_kHz;
+      
+      // 定義 Start Frequency
+      if (firstFreqBelowPeak) {
+        // 若第一個測出的 frequency < Peak frequency，使用第一個測出的頻率
+        startFreq_kHz = firstFreq_kHz;
+      }
+    }
     
     // 從第二個有效測量開始，比較與前一個測量的差異
+    let enableFreqJumpDetection = false;  // 標記是否已啟動 2.5 kHz 跳變檢測
+    
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].highFreq_kHz;
       const currFreq_kHz = validMeasurements[i].highFreq_kHz;
@@ -711,7 +747,30 @@ export class BatCallDetector {
         break;
       }
       
-      const isAnomaly = freqDifference > 2.5;
+      // ============================================================
+      // 新的優化邏輯（2025）：決定何時啟動 2.5 kHz 跳變檢測
+      // ============================================================
+      if (!enableFreqJumpDetection && peakFreq_kHz !== null && currFreq_kHz !== null) {
+        const freqToPeakDiff = Math.abs(currFreq_kHz - peakFreq_kHz);
+        
+        // 若當前 frequency 與 Peak frequency 差距 < 1 kHz，啟動跳變檢測
+        if (freqToPeakDiff < 1.0) {
+          enableFreqJumpDetection = true;
+        }
+        
+        // 若第一次測出的 frequency > Peak frequency，定義該頻率為 Start frequency
+        if (startFreq_kHz === null && currFreq_kHz > peakFreq_kHz) {
+          startFreq_kHz = currFreq_kHz;
+        }
+      }
+      
+      // ============================================================
+      // 頻率跳變檢測：只在 enableFreqJumpDetection = true 時進行
+      // ============================================================
+      let isAnomaly = false;
+      if (enableFreqJumpDetection) {
+        isAnomaly = freqDifference > 2.5;
+      }
       
       if (isAnomaly) {
         // 發現大幅異常 (>2.5 kHz)
@@ -745,7 +804,13 @@ export class BatCallDetector {
             const checkCurrFreq_kHz = validMeasurements[checkIdx].highFreq_kHz;
             const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
             
-            if (checkFreqDiff > 2.5) {
+            // 只在啟動跳變檢測的情況下判斷異常
+            let checkIsAnomaly = false;
+            if (enableFreqJumpDetection) {
+              checkIsAnomaly = checkFreqDiff > 2.5;
+            }
+            
+            if (checkIsAnomaly) {
               // 發現異常，說明異常後面不是連續 3 個正常值
               hasThreeNormalAfterAnomaly = false;
               break;
@@ -783,9 +848,9 @@ export class BatCallDetector {
     
     return {
       threshold: finalThreshold,
-      warning: hasWarning
+      warning: hasWarning,
+      startFreq_kHz: startFreq_kHz
     };
-  }
 
   /**
    * Phase 2: Measure precise
@@ -882,6 +947,10 @@ export class BatCallDetector {
       this.config.highFreqThreshold_dB = result.threshold;
       // Set warning flag on the call object
       call.highFreqDetectionWarning = result.warning;
+      // Store the calculated Start Frequency on the call object
+      if (result.startFreq_kHz !== null) {
+        call.startFreq_kHz_autoCalculated = result.startFreq_kHz;
+      }
     }
     
     // ============================================================
