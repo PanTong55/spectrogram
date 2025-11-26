@@ -865,9 +865,9 @@ function createPopupWindow() {
       const isHidden = controlPanel.style.display === 'none';
       
       if (isHidden) {
-        // 展開
-        controlPanel.style.display = 'block';
-        batCallControlPanel.style.display = 'block';
+        // 展開 - 移除 display 以恢復 CSS 中的 flex
+        controlPanel.style.removeProperty('display');
+        batCallControlPanel.style.removeProperty('display');
         settingsBtn.classList.add('active');
       } else {
         // 隱藏
