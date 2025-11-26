@@ -535,16 +535,17 @@ function createPopupWindow() {
   // 建立 SVG 容器（用 SVG 代替 Canvas 以支持動態更新）
   const svgContainer = document.createElement('div');
   svgContainer.className = 'power-spectrum-svg-container';
-  svgContainer.style.width = '488px';
-  svgContainer.style.height = '488px';
+  svgContainer.style.width = '438px';
+  svgContainer.style.height = '438px';
   svgContainer.style.position = 'relative';
   svgContainer.style.backgroundColor = '#ffffff';
   svgContainer.style.border = '1px solid #ccc';
+  svgContainer.style.margin = '5px 5px 0px 5px';
   
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '488');
-  svg.setAttribute('height', '488');
-  svg.setAttribute('viewBox', '0 0 488 488');
+  svg.setAttribute('width', '438');
+  svg.setAttribute('height', '438');
+  svg.setAttribute('viewBox', '0 0 415 450');
   svg.style.width = '100%';
   svg.style.height = '100%';
   
@@ -1463,7 +1464,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
   // Y 軸標籤（旋轉）
   const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   yLabel.setAttribute('x', '17');
-  yLabel.setAttribute('y', topPadding + plotHeight / 2);
+  yLabel.setAttribute('y', topPadding + 10 + plotHeight / 2);
   yLabel.setAttribute('text-anchor', 'middle');
   yLabel.setAttribute('font-weight', 'bold');
   yLabel.setAttribute('transform', `rotate(-90 17 ${topPadding + plotHeight / 2})`);
@@ -1601,7 +1602,7 @@ function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKHz, fftS
     interactivePoint.setAttribute('fill', 'transparent');
     interactivePoint.setAttribute('stroke', 'none');
     interactivePoint.setAttribute('class', 'spectrum-interactive-point');
-    interactivePoint.setAttribute('cursor', 'pointer');
+    interactivePoint.setAttribute('cursor', 'none');
     
     // 儲存點的資訊
     const pointData = {
