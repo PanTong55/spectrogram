@@ -121,9 +121,10 @@ export class BatCall {
     
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
     this.highFreq_kHz = null;       // High frequency (kHz) - highest frequency in call (calculated from first frame)
-    this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (TBD: to be determined)
-    this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (calculated from last frame)
-    this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (from last frame, lowest frequency)
+    this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (from first frame, -24dB threshold)
+    this.startFreqTime_s = null;    // Start frequency time (s) - time point of start frequency (from first frame)
+    this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (may be optimized with Start Frequency)
+    this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (from last frame, -27dB threshold)
     this.endFreqTime_s = null;      // End frequency time (s) - time point of end frequency (from last frame)
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
@@ -152,10 +153,17 @@ export class BatCall {
   }
   
   /**
-   * Calculate duration in milliseconds from time boundaries
+   * Calculate duration in milliseconds
+   * Preferred method: Use Start Frequency Time and End Frequency Time
+   * Fallback method: Use call start and end time
    */
   calculateDuration() {
-    if (this.startTime_s !== null && this.endTime_s !== null) {
+    // Preferred: Calculate from Start Frequency time to End Frequency time
+    if (this.startFreqTime_s !== null && this.endFreqTime_s !== null) {
+      this.duration_ms = (this.endFreqTime_s - this.startFreqTime_s) * 1000;
+    }
+    // Fallback: Use overall call time boundaries if frequency times not available
+    else if (this.startTime_s !== null && this.endTime_s !== null) {
       this.duration_ms = (this.endTime_s - this.startTime_s) * 1000;
     }
   }
@@ -1297,12 +1305,11 @@ export class BatCallDetector {
       startFreq_kHz = highFreq_Hz / 1000;
     }
     
-    // 存儲 Start Frequency
+    // 存儲 Start Frequency 及其時間點
     call.startFreq_kHz = startFreq_kHz;
+    call.startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
     
-    // STEP 2.5: Record the time point of start frequency (first frame with signal)
-    // This is used as the reference point for knee time calculation
-    const startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
+    // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
     // ============================================================
     // STEP 3: Calculate LOW FREQUENCY from last frame
