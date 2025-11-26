@@ -639,9 +639,11 @@ export class BatCallDetector {
       thresholdRange.push(threshold);
     }
     
-      // 為每個閾值測量 High Frequency
-      // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
-      const measurements = [];    for (const testThreshold_dB of thresholdRange) {
+    // 為每個閾值測量 High Frequency
+    // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
+    const measurements = [];
+    
+    for (const testThreshold_dB of thresholdRange) {
       let highFreq_Hz = null;
       let foundBin = false;
       
@@ -689,7 +691,7 @@ export class BatCallDetector {
     // 算法改進 (2025 版本)：
     // 1. 定義 Start Frequency：
     //    - 若發現測出的 frequency < Peak frequency，標記第一個測出的 frequency 為 Start frequency
-    //    - 若測出的 frequency > Peak frequency，標記該最高頻為 Start frequency
+    //    - 若所有測出的 frequency > Peak frequency，標記最後測出的 High frequency 為 Start frequency
     // 
     // 2. 優化頻率跳變檢測機制：
     //    - 當 frequency < Peak frequency 時，無需檢測 2.5 kHz 跳變
@@ -729,8 +731,20 @@ export class BatCallDetector {
       }
     }
     
+    // 追蹤所有測量是否都 > Peak frequency
+    let allFrequenciesAbovePeak = peakFreq_kHz !== null;  // 初始假設都在 Peak frequency 上方
+    if (allFrequenciesAbovePeak) {
+      for (const measurement of validMeasurements) {
+        if (measurement.highFreq_kHz !== null && measurement.highFreq_kHz <= peakFreq_kHz) {
+          allFrequenciesAbovePeak = false;
+          break;
+        }
+      }
+    }
+    
     // 從第二個有效測量開始，比較與前一個測量的差異
     let enableFreqJumpDetection = false;  // 標記是否已啟動 2.5 kHz 跳變檢測
+    let lastHighFreq_kHz = null;          // 記錄最後測出的 High frequency
     
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].highFreq_kHz;
@@ -757,11 +771,11 @@ export class BatCallDetector {
         if (freqToPeakDiff < 1.0) {
           enableFreqJumpDetection = true;
         }
-        
-        // 若第一次測出的 frequency > Peak frequency，定義該頻率為 Start frequency
-        if (startFreq_kHz === null && currFreq_kHz > peakFreq_kHz) {
-          startFreq_kHz = currFreq_kHz;
-        }
+      }
+      
+      // 持續記錄最後的 High frequency（用於 allFrequenciesAbovePeak 的情況）
+      if (currFreq_kHz !== null) {
+        lastHighFreq_kHz = currFreq_kHz;
       }
       
       // ============================================================
@@ -840,6 +854,14 @@ export class BatCallDetector {
       optimalThreshold = lastValidThreshold;
     }
     
+    // ============================================================
+    // 處理 "所有 frequency 都 > Peak frequency" 的情況
+    // 若此條件為真，使用最後測出的 High frequency 作為 Start Frequency
+    // ============================================================
+    if (allFrequenciesAbovePeak && startFreq_kHz === null && lastHighFreq_kHz !== null) {
+      startFreq_kHz = lastHighFreq_kHz;
+    }
+    
     // 確保返回值在有效範圍內
     const finalThreshold = Math.max(Math.min(optimalThreshold, -24), -70);
     
@@ -851,6 +873,7 @@ export class BatCallDetector {
       warning: hasWarning,
       startFreq_kHz: startFreq_kHz
     };
+  }
 
   /**
    * Phase 2: Measure precise
@@ -865,7 +888,6 @@ export class BatCallDetector {
    * Updates call.peakFreq, startFreq, endFreq, characteristicFreq, bandwidth, duration
    */
   measureFrequencyParameters(call, flowKHz, fhighKHz, freqBins, freqResolution) {
-    let { highFreqThreshold_dB, characteristicFreq_percentEnd } = this.config;
     const spectrogram = call.spectrogram;  // [timeFrame][freqBin]
     const timeFrames = call.timeFrames;    // Time points for each frame
     
