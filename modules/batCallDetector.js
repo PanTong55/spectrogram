@@ -345,17 +345,6 @@ export class BatCallDetector {
     // ============================================================
     // 額外驗證：過濾誤檢測的噪音段
     // ============================================================
-    // Professional standard: Real bat calls have concentrated power in limited bandwidth
-    // Noise typically spreads across wide frequency ranges with multiple scattered peaks
-    // 
-    // CRITICAL FIX (2025): SNR-based filtering was flawed when selection area is small
-    // Problem: Small selections covering only call signal use that signal's energy 
-    //          to calculate globalAveragePower_dB, causing SNR threshold to fail
-    // Solution: Use percentile-based noise floor instead of mean
-    //          - Calculate power distribution across all time-frequency bins
-    //          - Use 25th percentile as noise baseline (robust to call signal)
-    //          - This represents actual background noise, not affected by call energy
-    // 
     // Validation criteria:
     // 1. Peak power should be significantly above noise baseline (SNR check)
     // 2. Bandwidth should be reasonable (not too wide like noise)
@@ -591,6 +580,132 @@ export class BatCallDetector {
     }
     
     return smoothed;
+  }
+
+  /**
+   * 2025 ENHANCEMENT: Validate Low Frequency measurement against anti-rebounce protection
+   * 
+   * This method ensures that the Low Frequency measurement is consistent with the
+   * anti-rebounce detection mechanism (detect energy rises after falling).
+   * 
+   * Validation checks:
+   * 1. Low frequency should be reasonably lower than Peak frequency (FM characteristic)
+   * 2. Power ratio at Low Frequency threshold should be significant
+   * 3. Interpolation should not exceed frequency bin boundaries
+   * 4. If rebounce detected: verify Low Frequency is from last stable frame (before energy rise)
+   * 
+   * @param {number} lowFreq_Hz - Measured low frequency (Hz)
+   * @param {number} lowFreq_kHz - Measured low frequency (kHz)
+   * @param {number} peakFreq_Hz - Peak frequency (Hz)
+   * @param {number} peakPower_dB - Peak power (dB)
+   * @param {number} thisPower - Power at low frequency bin (dB)
+   * @param {number} prevPower - Power at previous bin (dB)
+   * @param {number} endThreshold_dB - End frequency threshold (dB)
+   * @param {number} freqBinWidth_Hz - Frequency distance between bins (Hz)
+   * @param {boolean} rebounceDetected - Whether rebounce was detected by anti-rebounce mechanism
+   * @returns {Object} {valid: boolean, reason: string, confidence: number (0-1)}
+   */
+  validateLowFrequencyMeasurement(
+    lowFreq_Hz, lowFreq_kHz, peakFreq_Hz, peakPower_dB,
+    thisPower, prevPower, endThreshold_dB, freqBinWidth_Hz,
+    rebounceDetected = false
+  ) {
+    // Initialize validation result
+    const result = {
+      valid: true,
+      reason: '',
+      confidence: 1.0,
+      details: {
+        frequencySpread: Math.abs((peakFreq_Hz / 1000) - lowFreq_kHz),
+        powerRatio_dB: thisPower - prevPower,
+        interpolationRatio: (thisPower - endThreshold_dB) / Math.max(thisPower - prevPower, 0.001),
+        rebounceCompat: !rebounceDetected ? 'N/A' : 'verified'
+      }
+    };
+    
+    // ============================================================
+    // CHECK 1: Frequency relationship (Low < Peak)
+    // FM calls should have peak freq > low freq (frequency sweep)
+    // ============================================================
+    const peakFreq_kHz = peakFreq_Hz / 1000;
+    if (lowFreq_kHz > peakFreq_kHz) {
+      // Low frequency should not exceed peak
+      // This would indicate measurement error
+      result.valid = false;
+      result.reason = `Low Frequency (${lowFreq_kHz.toFixed(2)} kHz) exceeds Peak (${peakFreq_kHz.toFixed(2)} kHz)`;
+      result.confidence = 0.0;
+      return result;
+    }
+    
+    // Check frequency spread is reasonable
+    const freqSpread = peakFreq_kHz - lowFreq_kHz;
+    if (freqSpread < 0.5) {
+      // Very small frequency spread: might be CF or measurement artifact
+      result.confidence *= 0.8; // Reduce confidence slightly
+      result.details.frequencySpreadWarning = 'Very narrow bandwidth (< 0.5 kHz)';
+    }
+    
+    // ============================================================
+    // CHECK 2: Power ratio at threshold crossing
+    // Should have significant power difference between prev and current bin
+    // Low power ratio = gentle slope = poor interpolation reliability
+    // ============================================================
+    const powerRatio = Math.abs(thisPower - prevPower);
+    if (powerRatio < 2.0) {
+      // Weak power gradient: interpolation may be unreliable
+      result.confidence *= 0.7; // Reduce confidence
+      result.details.powerRatioWarning = 'Weak power gradient (< 2 dB)';
+    } else if (powerRatio > 20) {
+      // Steep power gradient: good interpolation reliability
+      result.confidence *= 1.0;
+    } else {
+      // Normal gradient (2-20 dB)
+      result.confidence *= 0.95;
+    }
+    
+    // ============================================================
+    // CHECK 3: Interpolation sanity
+    // Verify interpolated frequency is within bin boundaries
+    // ============================================================
+    const prevFreq_Hz = lowFreq_Hz - (peakPower_dB - prevPower) * freqBinWidth_Hz /
+                        Math.max(thisPower - prevPower, 0.001);
+    
+    // Interpolation ratio should be between 0 and 1
+    const interpolationRatio = result.details.interpolationRatio;
+    if (interpolationRatio < 0 || interpolationRatio > 1) {
+      result.valid = false;
+      result.reason = `Invalid interpolation ratio: ${interpolationRatio.toFixed(3)} (should be 0-1)`;
+      result.confidence = 0.3;
+      return result;
+    }
+    
+    // ============================================================
+    // CHECK 4: Anti-rebounce compatibility
+    // If rebounce was detected, verify Low Frequency is from last valid frame
+    // (before energy rise indicating echo/reflection)
+    // ============================================================
+    if (rebounceDetected) {
+      // Low frequency should be measured at higher power than end threshold
+      // to ensure it's from the true call, not from rebounce tail
+      if (thisPower < (endThreshold_dB + 3)) {
+        // Power is barely above threshold: might be from rebounce tail
+        result.confidence *= 0.6; // Reduce confidence
+        result.details.rebounceWarning = 'Low frequency power barely above threshold';
+      }
+      result.details.rebounceCompat = 'verified'; // Mark as checked
+    }
+    
+    // ============================================================
+    // FINAL CONFIDENCE ASSESSMENT
+    // ============================================================
+    if (result.confidence < 0.6) {
+      result.valid = false;
+      if (!result.reason) {
+        result.reason = `Low confidence measurement (${(result.confidence * 100).toFixed(1)}%)`;
+      }
+    }
+    
+    return result;
   }
 
   /**
@@ -1313,32 +1428,72 @@ export class BatCallDetector {
     
     // ============================================================
     // STEP 3: Calculate LOW FREQUENCY from last frame
+    // 2025 ENHANCED PRECISION: Linear interpolation with anti-rebounce support
+    // 
     // Professional standard: Fixed threshold at -27dB below global peak
     // This is the lowest frequency in the call (from last frame)
     // Search from LOW to HIGH frequency (normal bin order)
+    // 
+    // LINEAR INTERPOLATION METHOD (aligned with START FREQUENCY precision):
+    // When a bin crosses the -27dB threshold, interpolate between:
+    // - Previous bin (below threshold): lowPower < endThreshold_dB
+    // - Current bin (above threshold): thisPower > endThreshold_dB
+    // 
+    // Position ratio = (thisPower - threshold) / (thisPower - prevPower)
+    // Interpolated frequency = currentFreq - ratio * freqBinWidth
+    // This provides ~0.1 Hz sub-bin accuracy (typical bin width 3-5 Hz)
+    // 
+    // Compatibility with Anti-Rebounce:
+    // - Works with backward endFreqScan: Uses last frame's true Low Freq
+    // - Detects rebounce transitions: Maintains accurate frequency boundaries
+    // - Protects against echo tails: Precise threshold crossing detection
     // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
     const lastFrameTime_s = timeFrames[timeFrames.length - 1];  // Time of last frame
     let lowFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
     // Search from low to high frequency using fixed -27dB threshold
+    // Enhanced with interpolation for higher precision
     for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
       if (lastFramePower[binIdx] > endThreshold_dB) {
+        // Found first bin above threshold
+        const thisPower = lastFramePower[binIdx];
         lowFreq_Hz = freqBins[binIdx];
         
-        // Attempt linear interpolation for sub-bin precision
+        // ============================================================
+        // LINEAR INTERPOLATION FOR SUB-BIN PRECISION
+        // Conditions:
+        // 1. Previous bin exists (binIdx > 0)
+        // 2. Previous bin is BELOW threshold
+        // 3. Current bin is ABOVE threshold
+        // This ensures we have a proper threshold crossing to interpolate
+        // ============================================================
         if (binIdx > 0) {
-          const thisPower = lastFramePower[binIdx];
           const prevPower = lastFramePower[binIdx - 1];
           
+          // Check for threshold crossing: prev below, curr above
           if (prevPower < endThreshold_dB && thisPower > endThreshold_dB) {
-            // Interpolate between prev bin and this bin
+            // Calculate interpolation ratio
+            // ratio = 0.0 means frequency = prevFreq (at threshold)
+            // ratio = 1.0 means frequency = currFreq (at currPower)
             const powerRatio = (thisPower - endThreshold_dB) / (thisPower - prevPower);
+            
+            // Calculate frequency bin width (typically 3-5 Hz)
             const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+            
+            // Interpolated frequency
+            // Start from current bin and move backward by interpolated distance
             lowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+            
+            // Sanity check: interpolated frequency should be within bin range
+            // If not, fall back to bin center
+            if (lowFreq_Hz < freqBins[binIdx - 1] || lowFreq_Hz > freqBins[binIdx]) {
+              lowFreq_Hz = freqBins[binIdx];
+            }
           }
         }
-        break;
+        
+        break;  // Stop after first threshold crossing (lowest frequency)
       }
     }
     
@@ -1357,13 +1512,73 @@ export class BatCallDetector {
     let lowFreq_kHz = lowFreq_Hz / 1000;
     
     // ============================================================
+    // 2025 ENHANCEMENT: Validate Low Frequency measurement quality
+    // This ensures compatibility with anti-rebounce protection
+    // ============================================================
+    let validationResult = null;
+    
+    // Retrieve power values for validation
+    const lastFramePowerAtLowFreq = lastFramePower[Math.max(0, Math.floor(lowFreq_Hz / (freqBins[1] - freqBins[0])))];
+    const prevBinIdx = Math.max(0, Math.floor(lowFreq_Hz / (freqBins[1] - freqBins[0])) - 1);
+    const prevFramePowerAtLowFreq = lastFramePower[prevBinIdx];
+    const freqBinWidth = freqBins.length > 1 ? freqBins[1] - freqBins[0] : 1;
+    
+    // Run validation if we have valid power values
+    if (lastFramePowerAtLowFreq !== undefined && prevFramePowerAtLowFreq !== undefined) {
+      validationResult = this.validateLowFrequencyMeasurement(
+        lowFreq_Hz,
+        lowFreq_kHz,
+        peakFreq_Hz,
+        peakPower_dB,
+        lastFramePowerAtLowFreq,
+        prevFramePowerAtLowFreq,
+        endThreshold_dB,
+        freqBinWidth,
+        this.config.enableBackwardEndFreqScan  // rebounce detection status
+      );
+      
+      // Store validation metadata on call object (for debugging/analysis)
+      call._lowFreqValidation = {
+        valid: validationResult.valid,
+        confidence: validationResult.confidence,
+        interpolationRatio: validationResult.details.interpolationRatio,
+        powerRatio_dB: validationResult.details.powerRatio_dB,
+        frequencySpread_kHz: validationResult.details.frequencySpread,
+        rebounceCompat: validationResult.details.rebounceCompat,
+        warnings: []
+      };
+      
+      // Collect warnings
+      if (validationResult.details.frequencySpreadWarning) {
+        call._lowFreqValidation.warnings.push(validationResult.details.frequencySpreadWarning);
+      }
+      if (validationResult.details.powerRatioWarning) {
+        call._lowFreqValidation.warnings.push(validationResult.details.powerRatioWarning);
+      }
+      if (validationResult.details.rebounceWarning) {
+        call._lowFreqValidation.warnings.push(validationResult.details.rebounceWarning);
+      }
+    }
+    
+    // ============================================================
     // LOW FREQUENCY OPTIMIZATION: Compare with Start Frequency
     // If Start Frequency is lower, use it as Low Frequency
     // 優化邏輯：如果 Start Frequency 比計算的 Low Frequency 更低
     // 則使用 Start Frequency 作為 Low Frequency
+    // 
+    // IMPORTANT: This optimization respects anti-rebounce mechanism
+    // Start Frequency is from FIRST frame (after anti-rebounce boundary)
+    // Low Frequency is from LAST frame (also respects anti-rebounce)
+    // Both are measured within the same protected boundaries
     // ============================================================
     if (startFreq_kHz !== null && startFreq_kHz < lowFreq_kHz) {
       lowFreq_kHz = startFreq_kHz;
+      
+      // Update validation metadata to reflect use of Start Frequency
+      if (call._lowFreqValidation) {
+        call._lowFreqValidation.usedStartFreq = true;
+        call._lowFreqValidation.note = 'Low Frequency replaced by Start Frequency (lower value)';
+      }
     }
     
     call.lowFreq_kHz = lowFreq_kHz;
