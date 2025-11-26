@@ -1331,7 +1331,19 @@ export class BatCallDetector {
         break;
       }
     }
-    call.lowFreq_kHz = lowFreq_Hz / 1000;
+    let lowFreq_kHz = lowFreq_Hz / 1000;
+    
+    // ============================================================
+    // LOW FREQUENCY OPTIMIZATION: Compare with Start Frequency
+    // If Start Frequency is lower, use it as Low Frequency
+    // 優化邏輯：如果 Start Frequency 比計算的 Low Frequency 更低
+    // 則使用 Start Frequency 作為 Low Frequency
+    // ============================================================
+    if (startFreq_kHz !== null && startFreq_kHz < lowFreq_kHz) {
+      lowFreq_kHz = startFreq_kHz;
+    }
+    
+    call.lowFreq_kHz = lowFreq_kHz;
     
     // ============================================================
     // STEP 4: Calculate characteristic frequency (CF-FM distinction)
