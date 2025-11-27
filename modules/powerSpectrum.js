@@ -16,6 +16,8 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   callThreshold_dB: -24,
   highFreqThreshold_dB: -24,  // Threshold for calculating High Frequency (optimal value range: -24 to -70)
   highFreqThreshold_dB_isAuto: true,  // Auto mode for High Frequency threshold detection
+  lowFreqThreshold_dB: -27,   // Threshold for calculating Low Frequency (optimal value range: -24 to -70)
+  lowFreqThreshold_dB_isAuto: true,   // Auto mode for Low Frequency threshold detection
   characteristicFreq_percentEnd: 20,
   minCallDuration_ms: 2,
   fftSize: '1024',
@@ -59,6 +61,8 @@ export function showPowerSpectrumPopup({
     callThreshold_dB: memory.callThreshold_dB,
     highFreqThreshold_dB: memory.highFreqThreshold_dB,
     highFreqThreshold_dB_isAuto: memory.highFreqThreshold_dB_isAuto !== false,  // Auto mode (default true)
+    lowFreqThreshold_dB: memory.lowFreqThreshold_dB,
+    lowFreqThreshold_dB_isAuto: memory.lowFreqThreshold_dB_isAuto !== false,    // Auto mode (default true)
     characteristicFreq_percentEnd: memory.characteristicFreq_percentEnd,
     minCallDuration_ms: memory.minCallDuration_ms,
     fftSize: parseInt(memory.fftSize) || 1024,
@@ -224,6 +228,24 @@ export function showPowerSpectrumPopup({
         }
       }
       
+      // 更新 UI 以反映實際使用的 lowFreqThreshold 值（用於 Low Frequency 計算）
+      // Auto mode 時：清空 value，在 placeholder 中顯示 "Auto (-27)" 格式，灰色樣式
+      // Manual mode 時：顯示用戶設定的值
+      if (batCallLowThresholdInput) {
+        if (detector.config.lowFreqThreshold_dB_isAuto === true) {
+          // Auto 模式：清空 value，在 placeholder 中顯示計算值，並設定灰色樣式
+          const calculatedValue = detector.config.lowFreqThreshold_dB;
+          batCallLowThresholdInput.value = '';  // 清空 value
+          batCallLowThresholdInput.placeholder = `Auto (${calculatedValue})`;  // 更新 placeholder
+          batCallLowThresholdInput.style.color = '#999';  // 灰色
+        } else {
+          // Manual 模式：保持用戶輸入的值，黑色文字
+          batCallLowThresholdInput.value = detector.config.lowFreqThreshold_dB.toString();
+          batCallLowThresholdInput.placeholder = 'Auto';  // 恢復預設 placeholder
+          batCallLowThresholdInput.style.color = '#000';  // 黑色
+        }
+      }
+      
       if (calls.length > 0) {
         const call = calls[0];  // 取第一個偵測到的 call
         updateParametersDisplay(popup, call);
@@ -248,6 +270,7 @@ export function showPowerSpectrumPopup({
   // ========================================================
   const batCallThresholdInput = popup.querySelector('#callThreshold_dB');
   const batCallHighThresholdInput = popup.querySelector('#highThreshold_dB');
+  const batCallLowThresholdInput = popup.querySelector('#lowThreshold_dB');
   const batCallCharFreqPercentInput = popup.querySelector('#characteristicFreq_percentEnd');
   const batCallMinDurationInput = popup.querySelector('#minCallDuration_ms');
   const batCallHopPercentInput = popup.querySelector('#hopPercent');
@@ -308,6 +331,30 @@ export function showPowerSpectrumPopup({
     batCallConfig.minCallDuration_ms = parseInt(batCallMinDurationInput.value) || 2;
     batCallConfig.hopPercent = parseInt(batCallHopPercentInput.value) || 3.125;
     
+    // 處理 Low Frequency Threshold 的 Auto/Manual 模式
+    // 新 UI 格式：
+    // - Auto 模式：value 為空（placeholder 顯示 "Auto (-27)"）→ 設定 isAuto = true
+    // - Manual 模式：value 顯示具體數值 "-27" → 設定 isAuto = false
+    const lowFreqThresholdValue = batCallLowThresholdInput.value.trim();
+    
+    if (lowFreqThresholdValue === '') {
+      // Auto 模式：value 為空字符串
+      batCallConfig.lowFreqThreshold_dB_isAuto = true;
+      batCallConfig.lowFreqThreshold_dB = -27;  // 預設值，會被 findOptimalLowFrequencyThreshold 覆蓋
+      // Auto 模式不修改顯示，由 updateBatCallAnalysis 更新
+    } else {
+      // Manual 模式：嘗試解析為數字
+      const numValue = parseFloat(lowFreqThresholdValue);
+      if (!isNaN(numValue)) {
+        batCallConfig.lowFreqThreshold_dB_isAuto = false;
+        batCallConfig.lowFreqThreshold_dB = numValue;
+      } else {
+        // 無效輸入，回退到 Auto
+        batCallConfig.lowFreqThreshold_dB_isAuto = true;
+        batCallConfig.lowFreqThreshold_dB = -27;
+      }
+    }
+    
     // 2025 Anti-Rebounce 參數
     // 注意：每次都重新查詢元素，確保獲取最新的 DOM 節點
     let antiRebounceCheckbox = antiRebounceCheckboxForListeners || popup.querySelector('#enableBackwardEndFreqScan');
@@ -329,6 +376,8 @@ export function showPowerSpectrumPopup({
       callThreshold_dB: batCallConfig.callThreshold_dB,
       highFreqThreshold_dB: batCallConfig.highFreqThreshold_dB,
       highFreqThreshold_dB_isAuto: batCallConfig.highFreqThreshold_dB_isAuto,
+      lowFreqThreshold_dB: batCallConfig.lowFreqThreshold_dB,
+      lowFreqThreshold_dB_isAuto: batCallConfig.lowFreqThreshold_dB_isAuto,
       characteristicFreq_percentEnd: batCallConfig.characteristicFreq_percentEnd,
       minCallDuration_ms: batCallConfig.minCallDuration_ms,
       fftSize: batCallConfig.fftSize.toString(),
@@ -449,6 +498,13 @@ export function showPowerSpectrumPopup({
     batCallHighThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
   addNumberInputKeyboardSupport(batCallHighThresholdInput);
+
+  batCallLowThresholdInput.addEventListener('change', updateBatCallConfig);
+  batCallLowThresholdInput.addEventListener('input', () => {
+    clearTimeout(batCallLowThresholdInput._updateTimeout);
+    batCallLowThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
+  });
+  addNumberInputKeyboardSupport(batCallLowThresholdInput);
 
   batCallCharFreqPercentInput.addEventListener('change', updateBatCallConfig);
   batCallCharFreqPercentInput.addEventListener('input', () => {
@@ -634,7 +690,10 @@ function createPopupWindow() {
       </td>
       <td class="param-unit">kHz</td>
       <td class="param-label">Low Freq:</td>
-      <td class="param-value low-freq">-</td>
+      <td class="param-value-container low-freq-container" style="text-align: right; align-items: center;">
+        <i class="fa-solid fa-triangle-exclamation low-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover low enough frequencies.&#10;Consider extending the frequency range."></i>
+        <span class="param-value low-freq">-</span>
+      </td>
       <td class="param-unit">kHz</td>
     </tr>    
     <tr>
@@ -725,6 +784,39 @@ function createPopupWindow() {
   
   highThresholdControl.appendChild(highThresholdInput);
   batCallControlPanel.appendChild(highThresholdControl);
+
+  // lowFreqThreshold_dB 控制 (Auto 和 Manual 模式)
+  // 用於 Low Frequency 邊界計算，對稱於 High Frequency 控制
+  const lowThresholdControl = document.createElement('label');
+  const lowThresholdLabel = document.createElement('span');
+  lowThresholdLabel.textContent = 'Low Freq Thresh:';
+  lowThresholdControl.appendChild(lowThresholdLabel);
+  
+  // Input field (可顯示 Auto 或具體數值)
+  const lowThresholdInput = document.createElement('input');
+  lowThresholdInput.id = 'lowThreshold_dB';
+  lowThresholdInput.type = 'number';
+  lowThresholdInput.placeholder = 'Auto';
+  lowThresholdInput.title = 'Auto or Manual Low Frequency threshold (-24 to -70)';
+  lowThresholdInput.style.width = '65px';
+  lowThresholdInput.min = '-70';
+  lowThresholdInput.max = '-24';
+  lowThresholdInput.step = '1';
+  
+  // 根據模式初始化顯示
+  const isLowAutoMode = window.__batCallControlsMemory.lowFreqThreshold_dB_isAuto !== false;
+  if (isLowAutoMode) {
+    // Auto 模式：顯示 "Auto" 格式，灰色樣式
+    lowThresholdInput.value = '';  // 初始時為空白，等待第一次計算
+    lowThresholdInput.style.color = '#999';
+  } else {
+    // Manual 模式：顯示具體值，黑色樣式
+    lowThresholdInput.value = window.__batCallControlsMemory.lowFreqThreshold_dB.toString();
+    lowThresholdInput.style.color = '#000';
+  }
+  
+  lowThresholdControl.appendChild(lowThresholdInput);
+  batCallControlPanel.appendChild(lowThresholdControl);
 
   // characteristicFreq_percentEnd 控制
   const charFreqPercentControl = document.createElement('label');
@@ -2058,6 +2150,7 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const startFreqEl = paramPanel.querySelector('.start-freq');
   const endFreqEl = paramPanel.querySelector('.end-freq');
   const lowFreqEl = paramPanel.querySelector('.low-freq');
+  const lowFreqWarningIcon = paramPanel.querySelector('.low-freq-warning');
   const highFreqEl = paramPanel.querySelector('.high-freq');
   const highFreqWarningIcon = paramPanel.querySelector('.high-freq-warning');
   const kneeFreqEl = paramPanel.querySelector('.knee-freq');
@@ -2091,6 +2184,23 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
         highFreqWarningIcon.style.display = 'none';
       }
       highFreqEl.style.color = '#0066cc';  // Blue color for normal value
+    }
+    
+    // Display Low Freq with warning icon and color if detection warning is set
+    // 低頻警告獨立於高頻警告，有自己的狀態和顯示邏輯
+    lowFreqEl.textContent = batCall.lowFreq_kHz?.toFixed(2) || '-';
+    if (batCall.lowFreqDetectionWarning === true) {
+      // Show warning icon and change text color to red
+      if (lowFreqWarningIcon) {
+        lowFreqWarningIcon.style.display = 'inline';
+      }
+      lowFreqEl.style.color = '#dc3545';  // Red color for warning
+    } else {
+      // Hide warning icon and use blue color for normal value
+      if (lowFreqWarningIcon) {
+        lowFreqWarningIcon.style.display = 'none';
+      }
+      lowFreqEl.style.color = '#0066cc';  // Blue color for normal value
     }
     
     kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';

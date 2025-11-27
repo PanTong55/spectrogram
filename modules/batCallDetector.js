@@ -43,8 +43,8 @@ export const DEFAULT_DETECTION_CONFIG = {
   // When enabled, automatically tests thresholds from -24dB to -70dB
   // to find optimal value that provides stable measurements
   // Works symmetrically with high frequency optimization
-  // Default: false (manual threshold mode)
-  lowFreqThreshold_dB_isAuto: false,
+  // Default: true (automatic threshold mode - enabled by default)
+  lowFreqThreshold_dB_isAuto: true,
   
   // Characteristic frequency is defined as lowest or average frequency 
   // in the last 10-20% of the call duration
@@ -161,6 +161,7 @@ export class BatCall {
     this.quality = null;            // Quality rating based on SNR (Very Poor, Poor, Normal, Good, Excellent)
     
     this.highFreqDetectionWarning = false;  // Warning flag: High Frequency detection reached -70dB limit
+    this.lowFreqDetectionWarning = false;   // Warning flag: Low Frequency detection reached -70dB limit (2025)
     
     this.callType = 'FM';           // 'CF', 'FM', or 'CF-FM' (Constant/Frequency Modulated)
     
