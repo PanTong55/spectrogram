@@ -832,7 +832,7 @@ function createPopupWindow() {
   // 用於 High Frequency 邊界計算，獨立於 End/Low Frequency 的固定 -27dB 閾值
   const highThresholdControl = document.createElement('label');
   const highThresholdLabel = document.createElement('span');
-  highThresholdLabel.textContent = 'High Freq Thresh:';
+  highThresholdLabel.textContent = 'High Thresh:';
   highThresholdControl.appendChild(highThresholdLabel);
   
   // Input field (可顯示 Auto 或具體數值)
@@ -865,7 +865,7 @@ function createPopupWindow() {
   // 用於 Low Frequency 邊界計算，對稱於 High Frequency 控制
   const lowThresholdControl = document.createElement('label');
   const lowThresholdLabel = document.createElement('span');
-  lowThresholdLabel.textContent = 'Low Freq Thresh:';
+  lowThresholdLabel.textContent = 'Low Thresh:';
   lowThresholdControl.appendChild(lowThresholdLabel);
   
   // Input field (可顯示 Auto 或具體數值)
@@ -877,7 +877,7 @@ function createPopupWindow() {
   lowThresholdInput.style.width = '65px';
   lowThresholdInput.min = '-70';
   lowThresholdInput.max = '-24';
-  lowThresholdInput.step = '1';
+  lowThresholdInput.step = '0.5';
   
   // 根據模式初始化顯示
   const isLowAutoMode = window.__batCallControlsMemory.lowFreqThreshold_dB_isAuto !== false;
@@ -930,7 +930,7 @@ function createPopupWindow() {
   // fftSize 控制 (Dropdown)
   const fftSizeControl = document.createElement('label');
   const fftSizeLabel = document.createElement('span');
-  fftSizeLabel.textContent = 'FFT Size:';
+  fftSizeLabel.textContent = 'FFT:';
   fftSizeControl.appendChild(fftSizeLabel);
   
   const fftSizeBtn = document.createElement('button');
