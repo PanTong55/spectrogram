@@ -495,14 +495,14 @@ export function initFrequencyHover({
     lowFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
     lowFreqWarningIcon.style.cssText = `
       position: absolute;
-      bottom: -17px;
+      bottom: 5px;
       left: 50%;
       transform: translateX(-50%);
       color: #000000;
       font-size: 16px;
       display: none;
-      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-                   -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff;
+      text-shadow: -1px -1px 0 #000000ff, 1px -1px 0 #000000ff, -1px 1px 0 #000000ff, 1px 1px 0 #000000ff,
+                   -1px 0 0 #000000ff, 1px 0 0 #000000ff, 0 -2px 0 #000000ff, 0 1px 0 #000000ff;
       z-index: 100;
       cursor: help;
     `;
@@ -550,14 +550,24 @@ export function initFrequencyHover({
     if (sel.powerSpectrumPopup) {
       const popupElement = sel.powerSpectrumPopup.popup;
       // 解除事件監聽器（如果有）以避免遺留引用
-      if (popupElement && sel._popupPeakListener) {
-        try {
-          popupElement.removeEventListener('peakUpdated', sel._popupPeakListener);
-        } catch (e) {}
-        delete sel._popupPeakListener;
-      }
-      if (popupElement && document.body.contains(popupElement)) {
-        popupElement.remove();
+      if (popupElement) {
+        // 清理 peakUpdated 事件監聽器
+        if (sel._popupPeakListener) {
+          try {
+            popupElement.removeEventListener('peakUpdated', sel._popupPeakListener);
+          } catch (e) {}
+          delete sel._popupPeakListener;
+        }
+        // 清理 batCallDetectionCompleted 事件監聽器
+        if (sel._batCallDetectionListener) {
+          try {
+            popupElement.removeEventListener('batCallDetectionCompleted', sel._batCallDetectionListener);
+          } catch (e) {}
+          delete sel._batCallDetectionListener;
+        }
+        if (document.body.contains(popupElement)) {
+          popupElement.remove();
+        }
       }
       // 清除對象引用
       sel.powerSpectrumPopup = null;
@@ -884,16 +894,8 @@ export function initFrequencyHover({
         
         // Resize 完成後，立即進行最終的 Power Spectrum 更新
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-          sel.powerSpectrumPopup.update({
-            startTime: sel.data.startTime,
-            endTime: sel.data.endTime,
-            Flow: sel.data.Flow,
-            Fhigh: sel.data.Fhigh
-          });
-          
-          // 2025: 在 Power Spectrum 更新完成後，根據偵測結果更新 selection rect 的 warning 圖標
-          // 延遲一小段時間以確保異步操作完成
-          setTimeout(() => {
+          // 定義警告圖標更新函數
+          const updateResizeWarningIcons = () => {
             const call = sel.powerSpectrumPopup.__latestDetectedCall;
             if (call) {
               // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
@@ -913,7 +915,26 @@ export function initFrequencyHover({
                 sel.lowFreqWarningIcon.style.display = 'none';
               }
             }
-          }, 50);
+          };
+          
+          // 執行異步更新，並在完成後更新警告圖標
+          const updatePromise = sel.powerSpectrumPopup.update({
+            startTime: sel.data.startTime,
+            endTime: sel.data.endTime,
+            Flow: sel.data.Flow,
+            Fhigh: sel.data.Fhigh
+          });
+          
+          // 2025: 等待 Power Spectrum 更新完成後再更新 warning 圖標
+          if (updatePromise && typeof updatePromise.then === 'function') {
+            updatePromise.then(updateResizeWarningIcons).catch(() => {
+              // 若更新失敗，仍嘗試更新警告圖標
+              updateResizeWarningIcons();
+            });
+          } else {
+            // 若 update 不返回 Promise，使用 setTimeout 降級
+            setTimeout(updateResizeWarningIcons, 50);
+          }
         }
         
         // 重置更新計時器
@@ -1158,11 +1179,14 @@ export function initFrequencyHover({
           }
         };
         
-        // 立即執行一次，以同步初始狀態
-        setTimeout(updateWarningIcons, 50);
-        
         // 監聽後續的 bat call 偵測完成事件
         popupElement.addEventListener('batCallDetectionCompleted', updateWarningIcons);
+        // 保存引用以便後續清理
+        selection._batCallDetectionListener = updateWarningIcons;
+        
+        // 立即執行一次，以同步當前狀態（包括初始狀態）
+        // 使用 setTimeout 確保同步邏輯完成後再執行
+        setTimeout(updateWarningIcons, 0);
       }
 
       // 監聽 popup 關閉，重新顯示 tooltip
