@@ -1436,7 +1436,20 @@ export class BatCallDetector {
     } = this.config;
     
     const highThreshold_dB = peakPower_dB + this.config.highFreqThreshold_dB;  // High Frequency threshold (可調整)
-    const endThreshold_dB = peakPower_dB - 27;  // End & Low Frequency threshold (固定 -27dB)
+    
+    // ============================================================
+    // End & Low Frequency Threshold
+    // Manual Mode: 使用用戶輸入的 lowFreqThreshold_dB 值
+    // Auto Mode: 使用固定的 -27dB（會在後續 findOptimalLowFrequencyThreshold 中被覆蓋）
+    // ============================================================
+    let endThreshold_dB;
+    if (this.config.lowFreqThreshold_dB_isAuto === false) {
+      // Manual Mode: 使用用戶手動輸入的值
+      endThreshold_dB = peakPower_dB + this.config.lowFreqThreshold_dB;
+    } else {
+      // Auto Mode: 初始使用預設值 -27dB（會在 findOptimalLowFrequencyThreshold 中被重新計算）
+      endThreshold_dB = peakPower_dB - 27;
+    }
     
     // 找到第一個幀，其中有信號超過閾值
     let newStartFrameIdx = 0;
