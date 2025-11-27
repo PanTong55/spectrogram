@@ -1004,8 +1004,8 @@ export class BatCallDetector {
    * Testing sequence: -24, -25, -26, ..., -69, -70 dB
    * 
    * Anomaly detection:
-   * - Major jump (> 3.5 kHz): Stop immediately, use previous threshold
-   * - Large jump (1.5-3.5 kHz): First anomaly detection point
+   * - Major jump (> 3 kHz): Stop immediately, use previous threshold
+   * - Large jump (1.5-3 kHz): First anomaly detection point
    * - Check if anomaly is followed by 3+ consecutive normal values
    * - If yes: ignore anomaly and continue
    * - If no: use threshold just before anomaly
@@ -1146,9 +1146,9 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>3.5 kHz) - 立即停止
+      // 保險機制 1：超大幅頻率跳變 (>3 kHz) - 立即停止
       // ============================================================
-      if (freqDifference > 3.5) {
+      if (freqDifference > 3.0) {
         // 超大幅異常，立即停止測試
         // 選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
