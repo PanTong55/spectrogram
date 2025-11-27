@@ -1416,8 +1416,11 @@ export class BatCallDetector {
       // 2025: 在 auto mode 下保存實際使用的 high frequency threshold
       // Auto mode: 保存經過防呆檢查後的最終 threshold 值
       call.highFreqThreshold_dB_used = usedThreshold;
-      // Set warning flag on the call object
-      call.highFreqDetectionWarning = result.warning;
+      // 
+      // 2025 CRITICAL FIX: Warning 應該基於實際使用的 threshold 值而不是原始結果
+      // 防呆檢查可能改變了 threshold（如從 -24 改為 -70）
+      // Warning 判斷：如果實際使用的 threshold 達到 -70dB 極限，則設置 warning
+      call.highFreqDetectionWarning = (usedThreshold <= -70);
       
       // ============================================================
       // 重要修正 (2025)：
@@ -1893,8 +1896,11 @@ export class BatCallDetector {
       // 2025: 在 auto mode 下保存實際使用的 low frequency threshold
       // Auto mode: 保存經過防呆檢查後的最終 threshold 值
       call.lowFreqThreshold_dB_used = usedThreshold;
-      // Set warning flag on the call object
-      call.lowFreqDetectionWarning = result.warning;
+      // 
+      // 2025 CRITICAL FIX: Warning 應該基於實際使用的 threshold 值而不是原始結果
+      // 防呆檢查可能改變了 threshold（如從 -33 改為 -70）
+      // Warning 判斷：如果實際使用的 threshold 達到 -70dB 極限，則設置 warning
+      call.lowFreqDetectionWarning = (usedThreshold <= -70);
       
       // Use the optimized low frequency values
       lowFreq_Hz = safeLowFreq_Hz;
