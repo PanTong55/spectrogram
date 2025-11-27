@@ -669,12 +669,18 @@ function createPopupWindow() {
   svgContainer.style.margin = '5px 5px 0px 5px';
   
   // 添加 Setting 按鈕
+  // 2025: Generate unique ID for each popup's settings button to allow independent control
   const settingBtn = document.createElement('button');
   settingBtn.className = 'power-spectrum-settings-btn';
-  settingBtn.id = 'powerSpectrumSettingsBtn';
+  const uniqueSettingsId = `powerSpectrumSettingsBtn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  settingBtn.id = uniqueSettingsId;
   settingBtn.innerHTML = '<i class="fa-solid fa-sliders"></i>';
   settingBtn.title = 'Settings';
   svgContainer.appendChild(settingBtn);
+  
+  // 2025: Store reference to settings button in popup for later access
+  popup.settingsButton = settingBtn;
+  popup.settingsButtonId = uniqueSettingsId;
   
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '438');
@@ -1021,9 +1027,10 @@ function createPopupWindow() {
   // ============================================================
   // 設置按鈕的點擊事件監聽器
   // ============================================================
-  const settingsBtn = document.getElementById('powerSpectrumSettingsBtn');
-  if (settingsBtn) {
-    settingsBtn.addEventListener('click', () => {
+  // 2025: Use popup's own settings button reference instead of global ID lookup
+  // This allows each popup to independently control its own controls panel
+  if (settingBtn) {
+    settingBtn.addEventListener('click', () => {
       const isHidden = controlPanel.style.display === 'none';
       
       if (isHidden) {
@@ -1031,13 +1038,13 @@ function createPopupWindow() {
         controlPanel.style.removeProperty('display');
         batCallControlPanel.style.removeProperty('display');
         popup.style.height = '782px';
-        settingsBtn.classList.add('active');
+        settingBtn.classList.add('active');
       } else {
         // 隱藏
         controlPanel.style.display = 'none';
         batCallControlPanel.style.display = 'none';
         popup.style.height = '630px';
-        settingsBtn.classList.remove('active');
+        settingBtn.classList.remove('active');
       }
     });
   }
