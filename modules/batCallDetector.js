@@ -2185,11 +2185,11 @@ export class BatCallDetector {
     
     // STEP 6.7: If curvature method fails, use professional fallback
     // Avisoft uses: Find point where frequency change rate has maximum transition
-    let maxDerivIdx = -1; // Declare here for use in slope validation
     if (kneeIdx < 0 || isWeakCurvature) {
       // FALLBACK: Find maximum of |1st derivative| 
       // For FM-QCF: This is typically where FM segment ends (frequency change slows down)
       let maxFirstDeriv = 0;
+      let maxDerivIdx = -1;
       
       // Search only in the latter half of the call (where QCF typically occurs)
       const searchStart = Math.floor(spectrogram.length * 0.3);
@@ -2206,104 +2206,10 @@ export class BatCallDetector {
         }
       }
       
-      if (maxDerivIdx >= 0 && !isWeakCurvature) {
-        // Only use fallback if curvature detection truly failed
+      if (maxDerivIdx >= 0) {
         kneeIdx = maxDerivIdx;
       }
-    }
-    
-    // STEP 6.7.5: Slope Validation Mechanism (Protection Against Shoulder Detections)
-    // 
-    // 2025 IMPROVEMENT: Validate the detected knee point using slope analysis
-    // This prevents false positives (e.g., "shoulder" misidentifications)
-    // 
-    // REQUIREMENT: The knee must represent a Hockey Stick pattern (\ → _):
-    // - Steep Descent phase (incoming): Steep negative slope
-    // - Flattening phase (outgoing): Transition to flatter slope
-    // 
-    // REJECTION: Explicitly reject "Flat → Steep" transitions (shoulders)
-    
-    const STEEP_THRESHOLD = -0.2; // kHz/ms - threshold for steep descent
-    
-    const validateKneeSlopes = (candidateKneeIdx) => {
-      // Require at least 2 points before and after knee to calculate slopes
-      if (candidateKneeIdx <= newStartFrameIdx + 1 || 
-          candidateKneeIdx >= newEndFrameIdx - 1) {
-        return null; // Not enough data for validation
-      }
-      
-      // Get start, knee, and end frequencies for slope calculation
-      const startFreq_Hz = frameFrequencies[newStartFrameIdx];
-      const kneeFreq_Hz = frameFrequencies[candidateKneeIdx];
-      const endFreq_Hz = frameFrequencies[newEndFrameIdx];
-      
-      // Get corresponding times
-      const startTime_s = timeFrames[newStartFrameIdx];
-      const kneeTime_s = timeFrames[candidateKneeIdx];
-      const endTime_s = timeFrames[newEndFrameIdx];
-      
-      // Calculate incoming slope (from Start to Knee) in kHz/ms
-      const incomingTimeDelta_ms = (kneeTime_s - startTime_s) * 1000;
-      const incomingFreqDelta_kHz = (kneeFreq_Hz - startFreq_Hz) / 1000;
-      const slopeIn = incomingFreqDelta_kHz / (incomingTimeDelta_ms + 1e-10);
-      
-      // Calculate outgoing slope (from Knee to End) in kHz/ms
-      const outgoingTimeDelta_ms = (endTime_s - kneeTime_s) * 1000;
-      const outgoingFreqDelta_kHz = (endFreq_Hz - kneeFreq_Hz) / 1000;
-      const slopeOut = outgoingFreqDelta_kHz / (outgoingTimeDelta_ms + 1e-10);
-      
-      // RULE 1: Steep Descent First
-      // Incoming slope must be negative and steep (< STEEP_THRESHOLD)
-      if (slopeIn >= STEEP_THRESHOLD) {
-        // Not steep enough descending - reject
-        return null;
-      }
-      
-      // RULE 2: Flattening Out (Hockey Stick shape)
-      // Outgoing slope must be greater (flatter/less negative) than incoming
-      // Exception: Allow small positive slopes (flattening out to near-constant)
-      if (slopeOut <= slopeIn) {
-        // Not flattening - still descending steeply or getting worse - reject
-        return null;
-      }
-      
-      // REJECTION SCENARIO: Flat → Steep transition (Shoulder)
-      // Reject if: incoming is shallow AND outgoing is steep
-      const SHALLOW_THRESHOLD = -0.05; // kHz/ms - threshold for shallow slopes
-      if (slopeIn >= SHALLOW_THRESHOLD && slopeOut < STEEP_THRESHOLD) {
-        // Flat to Steep transition detected - this is a shoulder, not a knee
-        return null;
-      }
-      
-      // If all validations pass, return the knee index
-      return candidateKneeIdx;
-    };
-    
-    // Apply slope validation to the detected knee point
-    let validatedKneeIdx = -1;
-    if (kneeIdx >= 0) {
-      validatedKneeIdx = validateKneeSlopes(kneeIdx);
-    }
-    
-    // If slope validation failed, try the fallback (already found if available)
-    // But also validate the fallback
-    if (validatedKneeIdx < 0 && kneeIdx >= 0 && isWeakCurvature) {
-      // Curvature was weak, fallback was used - its already been set
-      // Try to validate it just in case
-      let testIdx = kneeIdx;
-      // If we have a maxDerivIdx from earlier fallback, test that
-      if (maxDerivIdx >= 0) {
-        testIdx = maxDerivIdx;
-        validatedKneeIdx = validateKneeSlopes(testIdx);
-      }
-    }
-    
-    // Update kneeIdx with validated result
-    if (validatedKneeIdx >= 0) {
-      kneeIdx = validatedKneeIdx;
-    } else {
-      // Validation failed - no valid knee detected
-      kneeIdx = -1;
+      // No ultimate fallback: if knee not detected, leave as -1
     }
     
     // STEP 6.8: Set knee frequency and knee time from detected knee point
@@ -2316,7 +2222,7 @@ export class BatCallDetector {
     
     // Determine which knee point to use (prioritize validity)
     if (kneeIdx >= 0 && kneeIdx >= newStartFrameIdx && kneeIdx <= newEndFrameIdx) {
-      // Slope-validated knee is valid (within call boundaries)
+      // Curvature-detected knee is valid (within call boundaries)
       finalKneeIdx = kneeIdx;
     } else if (peakFrameIdx >= newStartFrameIdx && peakFrameIdx <= newEndFrameIdx) {
       // Fall back to peak if detected knee is invalid
