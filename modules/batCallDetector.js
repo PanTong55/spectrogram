@@ -1865,6 +1865,10 @@ export class BatCallDetector {
       lowFreq_Hz = safeLowFreq_Hz;
       lowFreq_kHz = safeLowFreq_kHz;
       endFreq_kHz = safeEndFreq_kHz;
+      
+      // 重要：更新 call.endFreq_kHz 為 auto mode 計算的值
+      // Auto mode: End Frequency = Auto-calculated Low Frequency
+      call.endFreq_kHz = endFreq_kHz;
     }
     
     // ============================================================
