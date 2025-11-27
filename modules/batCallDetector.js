@@ -2148,6 +2148,60 @@ export class BatCallDetector {
     // This identifies the sharpest turning point in frequency trajectory
     // For FM-QCF: Knee is at the point where FM transitions to QCF
     
+    // 2025: Helper function to validate knee point using slope protection mechanism
+    // Verifies that the knee represents a transition from steep negative slope to flattening
+    const isValidKneeBySlope = (candidateFrameIdx) => {
+      // Find the index in firstDerivIndices that corresponds to this frame
+      const derivIdx = firstDerivIndices.indexOf(candidateFrameIdx);
+      
+      if (derivIdx < 0 || derivIdx >= firstDerivatives.length) {
+        // Frame index not found in derivatives array
+        return false;
+      }
+      
+      // Get slopes before and after the candidate knee point
+      const incomingSlope = derivIdx > 0 ? firstDerivatives[derivIdx - 1] : null;
+      const outgoingSlope = derivIdx < firstDerivatives.length - 1 ? firstDerivatives[derivIdx] : null;
+      
+      // Both slopes must exist
+      if (incomingSlope === null || outgoingSlope === null) {
+        return false;
+      }
+      
+      const STEEP_NEGATIVE_THRESHOLD = -50; // Hz/s - minimum slope to be considered "steep negative"
+      const SLOPE_RATIO_THRESHOLD = 0.7;     // Outgoing must be flatter (smaller absolute value)
+      
+      // 2025: Slope protection mechanism validation
+      // 1. Incoming slope (before knee) MUST be a significant negative value (steep frequency decrease)
+      if (incomingSlope >= STEEP_NEGATIVE_THRESHOLD) {
+        // Incoming slope is not steep enough (not sufficiently negative)
+        // This indicates the call is not in a clear FM phase before the knee
+        return false;
+      }
+      
+      // 2. Outgoing slope (after knee) MUST be flatter (smaller absolute value) than incoming
+      // This validates the transition from steep FM to flat/quasi-constant frequency
+      const incomingAbsSlope = Math.abs(incomingSlope);
+      const outgoingAbsSlope = Math.abs(outgoingSlope);
+      
+      if (outgoingAbsSlope >= incomingAbsSlope * SLOPE_RATIO_THRESHOLD) {
+        // Outgoing slope is NOT significantly flatter than incoming
+        // This is an invalid knee (possibly a "plateau" to "steep" transition instead of "steep" to "plateau")
+        return false;
+      }
+      
+      // 3. Additional check: Incoming and Outgoing should have opposite trends or outgoing should be near-flat
+      // If both are negative but outgoing is becoming more negative, it's not a valid knee
+      if (outgoingSlope < incomingSlope) {
+        // Outgoing slope is MORE negative than incoming (frequency dropping faster)
+        // This is the opposite of what we expect at a knee point
+        return false;
+      }
+      
+      // All checks passed - this is a valid knee point
+      return true;
+    };
+    
     let kneeIdx = -1;
     let maxCurvature = 0;
     
@@ -2167,7 +2221,8 @@ export class BatCallDetector {
       
       // For FM-QCF transition: we look for maximum curvature, not minimum 2nd derivative
       // This identifies the sharpest change in frequency pattern
-      if (curvature > maxCurvature) {
+      // 2025: Apply slope protection mechanism to validate knee point
+      if (curvature > maxCurvature && isValidKneeBySlope(frameIdx)) {
         maxCurvature = curvature;
         kneeIdx = frameIdx;
       }
@@ -2199,7 +2254,9 @@ export class BatCallDetector {
         const frameIdx = firstDerivIndices[i];
         if (frameIdx >= searchStart && frameIdx <= searchEnd) {
           const absDeriv = Math.abs(firstDerivatives[i]);
-          if (absDeriv > maxFirstDeriv) {
+          // 2025: Apply slope protection mechanism to fallback method as well
+          // Only consider candidates that pass slope validation
+          if (absDeriv > maxFirstDeriv && isValidKneeBySlope(frameIdx)) {
             maxFirstDeriv = absDeriv;
             maxDerivIdx = frameIdx;
           }
