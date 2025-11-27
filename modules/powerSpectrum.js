@@ -327,6 +327,10 @@ export function showPowerSpectrumPopup({
 
   // 通用函數：更新所有 Bat Call 配置
   const updateBatCallConfig = async () => {
+    // 2025: 保存舊的 mode 狀態用於檢測改變
+    const oldHighFreqAutoMode = lastHighFreqAutoMode;
+    const oldLowFreqAutoMode = lastLowFreqAutoMode;
+    
     batCallConfig.callThreshold_dB = parseFloat(batCallThresholdInput.value) || -24;
     
     // 處理 High Frequency Threshold 的 Auto/Manual 模式
@@ -344,7 +348,7 @@ export function showPowerSpectrumPopup({
       // 2025: 如果從 manual 切換到 auto，需要清除舊的 call 數據
       // 因為舊的 call 對象可能保存了 manual mode 計算的 threshold 值
       if (oldHighFreqAutoMode === false) {
-        // 從 manual 切換到 auto：清空 input value 並清除舊的 call 數據強制重新檢測
+        // 從 manual 切換到 auto：清空 input value 並強制重新檢測
         // 這樣新的 call 對象會有正確的 auto mode threshold 值
         batCallHighThresholdInput.value = '';
       }
@@ -380,7 +384,7 @@ export function showPowerSpectrumPopup({
       // 2025: 如果從 manual 切換到 auto，需要清除舊的 call 數據
       // 因為舊的 call 對象可能保存了 manual mode 計算的 threshold 值
       if (oldLowFreqAutoMode === false) {
-        // 從 manual 切換到 auto：清空 input value 並清除舊的 call 數據強制重新檢測
+        // 從 manual 切換到 auto：清空 input value 並強制重新檢測
         // 這樣新的 call 對象會有正確的 auto mode threshold 值
         batCallLowThresholdInput.value = '';
       }
