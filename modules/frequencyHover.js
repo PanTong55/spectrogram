@@ -886,7 +886,7 @@ export function initFrequencyHover({
         }
       };
   
-      const upHandler = () => {
+const upHandler = () => {
         resizing = false;
         isResizing = false;
         lockedHorizontal = null;
@@ -896,7 +896,9 @@ export function initFrequencyHover({
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
           // 定義警告圖標更新函數
           const updateResizeWarningIcons = () => {
-            const call = sel.powerSpectrumPopup.__latestDetectedCall;
+
+            const call = sel.powerSpectrumPopup.popup ? sel.powerSpectrumPopup.popup.__latestDetectedCall : null;
+            
             if (call) {
               // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
               if (sel.highFreqWarningIcon) {
@@ -1126,7 +1128,7 @@ export function initFrequencyHover({
     }, 0);
   }
 
-  // 處理顯示 Power Spectrum
+// 處理顯示 Power Spectrum
   function handleShowPowerSpectrum(selection) {
     const ws = getWavesurfer();
     if (!ws) return;
@@ -1157,8 +1159,13 @@ export function initFrequencyHover({
       // 2025: 監聽 bat call 偵測完成事件，更新 selection rect 的 warning 圖標
       const popupElement = popupObj.popup;
       if (popupElement) {
-        const updateWarningIcons = () => {
-          const call = popupObj.__latestDetectedCall;
+
+        const updateWarningIcons = (e) => {
+
+          const call = (e && e.detail && e.detail.call) 
+                       ? e.detail.call 
+                       : popupObj.popup.__latestDetectedCall;
+
           if (call) {
             // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
             if (selection.highFreqWarningIcon) {
@@ -1184,9 +1191,8 @@ export function initFrequencyHover({
         // 保存引用以便後續清理
         selection._batCallDetectionListener = updateWarningIcons;
         
-        // 立即執行一次，以同步當前狀態（包括初始狀態）
-        // 使用 setTimeout 確保同步邏輯完成後再執行
-        setTimeout(updateWarningIcons, 0);
+        // 立即執行一次，以同步當前狀態（使用 setTimeout 確保 DOM 屬性已更新）
+        setTimeout(() => updateWarningIcons(), 0);
       }
 
       // 監聽 popup 關閉，重新顯示 tooltip
