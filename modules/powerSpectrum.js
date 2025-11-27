@@ -186,11 +186,13 @@ export function showPowerSpectrumPopup({
       }));
       
       // 2025: 發射事件告知 selection rect 更新 warning 圖標（基於最新的 bat call 偵測結果）
+      console.log('[Dispatch Event] batCallDetectionCompleted with call:', popup.__latestDetectedCall);
       popup.dispatchEvent(new CustomEvent('batCallDetectionCompleted', {
         detail: { call: popup.__latestDetectedCall }
       }));
     } catch (e) {
       // 若 popup 尚不可用或調度失敗，忽略錯誤
+      console.error('[Dispatch Event Error]', e);
     }
 
     // 繪製 Power Spectrum
@@ -276,10 +278,12 @@ export function showPowerSpectrumPopup({
       if (calls.length > 0) {
         const call = calls[0];  // 取第一個偵測到的 call
         // 2025: 存儲最新檢測到的 call 對象到 popup 上，供 selection rect warning 圖標使用
+        console.log('[updateBatCallAnalysis] Call detected:', call, 'highFreqDetectionWarning:', call.highFreqDetectionWarning, 'lowFreqDetectionWarning:', call.lowFreqDetectionWarning);
         popup.__latestDetectedCall = call;
         updateParametersDisplay(popup, call);
       } else {
         // 如果沒有偵測到 call，所有參數顯示 '-'（包括 peak freq）
+        console.log('[updateBatCallAnalysis] No calls detected');
         popup.__latestDetectedCall = null;
         updateParametersDisplay(popup, null);
       }
@@ -290,8 +294,10 @@ export function showPowerSpectrumPopup({
     }
   };
 
-  // 初始繪製
-  redrawSpectrum();
+  // 初始繪製（異步，不阻塞函數返回）
+  redrawSpectrum().catch(err => {
+    console.error('Initial redrawSpectrum failed:', err);
+  });
 
   // 添加事件監聽器（overlap input）
   overlapInput.addEventListener('change', redrawSpectrum);
