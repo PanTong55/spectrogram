@@ -478,11 +478,11 @@ export function initFrequencyHover({
       top: -17px;
       left: 50%;
       transform: translateX(-50%);
-      color: #000000;
+      color: #ffd700;
       font-size: 16px;
       display: none;
-      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
-                   -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff;
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+                   -1px 0 0 #000, 1px 0 0 #000, 0 -2px 0 #000, 0 1px 0 #000;
       z-index: 100;
       cursor: help;
     `;
@@ -498,11 +498,11 @@ export function initFrequencyHover({
       bottom: 5px;
       left: 50%;
       transform: translateX(-50%);
-      color: #000000;
+      color: #ffd700;
       font-size: 16px;
       display: none;
-      text-shadow: -1px -1px 0 #000000ff, 1px -1px 0 #000000ff, -1px 1px 0 #000000ff, 1px 1px 0 #000000ff,
-                   -1px 0 0 #000000ff, 1px 0 0 #000000ff, 0 -2px 0 #000000ff, 0 1px 0 #000000ff;
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
+                   -1px 0 0 #000, 1px 0 0 #000, 0 -2px 0 #000, 0 1px 0 #000;
       z-index: 100;
       cursor: help;
     `;
