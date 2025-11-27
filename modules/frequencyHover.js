@@ -1134,33 +1134,39 @@ export function initFrequencyHover({
       selection.powerSpectrumPopup = popupObj;
 
       // 2025: 監聽 bat call 偵測完成事件，更新 selection rect 的 warning 圖標
-      const popupElement = popupObj.popup || popupObj;
-      const updateWarningIcons = () => {
-        const call = popupObj.__latestDetectedCall;
-        if (call) {
-          // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
-          if (selection.highFreqWarningIcon) {
-            selection.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
+      const popupElement = popupObj.popup;
+      if (popupElement) {
+        const updateWarningIcons = () => {
+          const call = popupObj.__latestDetectedCall;
+          if (call) {
+            // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
+            if (selection.highFreqWarningIcon) {
+              selection.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
+            }
+            // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
+            if (selection.lowFreqWarningIcon) {
+              selection.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
+            }
+          } else {
+            // 如果沒有偵測到 call，隱藏所有 warning 圖標
+            if (selection.highFreqWarningIcon) {
+              selection.highFreqWarningIcon.style.display = 'none';
+            }
+            if (selection.lowFreqWarningIcon) {
+              selection.lowFreqWarningIcon.style.display = 'none';
+            }
           }
-          // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
-          if (selection.lowFreqWarningIcon) {
-            selection.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
-          }
-        } else {
-          // 如果沒有偵測到 call，隱藏所有 warning 圖標
-          if (selection.highFreqWarningIcon) {
-            selection.highFreqWarningIcon.style.display = 'none';
-          }
-          if (selection.lowFreqWarningIcon) {
-            selection.lowFreqWarningIcon.style.display = 'none';
-          }
-        }
-      };
-      
-      popupElement.addEventListener('batCallDetectionCompleted', updateWarningIcons);
+        };
+        
+        // 立即執行一次，以同步初始狀態
+        setTimeout(updateWarningIcons, 50);
+        
+        // 監聽後續的 bat call 偵測完成事件
+        popupElement.addEventListener('batCallDetectionCompleted', updateWarningIcons);
+      }
 
       // 監聽 popup 關閉，重新顯示 tooltip
-      const closeBtn = popupElement.querySelector('.popup-close-btn');
+      const closeBtn = popupElement && popupElement.querySelector('.popup-close-btn');
       if (closeBtn) {
         closeBtn.addEventListener('click', () => {
           if (selection.tooltip) {
