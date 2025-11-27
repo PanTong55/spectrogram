@@ -184,6 +184,11 @@ export function showPowerSpectrumPopup({
       popup.dispatchEvent(new CustomEvent('peakUpdated', {
         detail: { peakFreq }
       }));
+      
+      // 2025: 發射事件告知 selection rect 更新 warning 圖標（基於最新的 bat call 偵測結果）
+      popup.dispatchEvent(new CustomEvent('batCallDetectionCompleted', {
+        detail: { call: popup.__latestDetectedCall }
+      }));
     } catch (e) {
       // 若 popup 尚不可用或調度失敗，忽略錯誤
     }
@@ -270,13 +275,17 @@ export function showPowerSpectrumPopup({
       
       if (calls.length > 0) {
         const call = calls[0];  // 取第一個偵測到的 call
+        // 2025: 存儲最新檢測到的 call 對象到 popup 上，供 selection rect warning 圖標使用
+        popup.__latestDetectedCall = call;
         updateParametersDisplay(popup, call);
       } else {
         // 如果沒有偵測到 call，所有參數顯示 '-'（包括 peak freq）
+        popup.__latestDetectedCall = null;
         updateParametersDisplay(popup, null);
       }
     } catch (err) {
       console.error('Bat call detection error:', err);
+      popup.__latestDetectedCall = null;
       updateParametersDisplay(popup, null);
     }
   };

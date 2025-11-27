@@ -447,7 +447,10 @@ export function initFrequencyHover({
       closeBtn: null, 
       btnGroup: null, 
       durationLabel: null,
-      powerSpectrumPopup: null  // 跟踪打開的 Power Spectrum popup
+      powerSpectrumPopup: null,  // 跟踪打開的 Power Spectrum popup
+      // 2025: Warning 圖標容器
+      highFreqWarningIcon: null,  // High frequency warning icon
+      lowFreqWarningIcon: null    // Low frequency warning icon
     };
 
     // 根據 Time Expansion 模式計算用於判斷的持續時間
@@ -465,6 +468,47 @@ export function initFrequencyHover({
   durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
     rectObj.appendChild(durationLabel);
     selObj.durationLabel = durationLabel;
+
+    // 2025: 創建 Warning 圖標容器
+    // High Frequency Warning Icon - 顯示在 selection area 上邊界上方 5px
+    const highFreqWarningIcon = document.createElement('i');
+    highFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
+    highFreqWarningIcon.style.cssText = `
+      position: absolute;
+      top: -17px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #000000;
+      font-size: 16px;
+      display: none;
+      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+                   -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff;
+      z-index: 100;
+      cursor: help;
+    `;
+    highFreqWarningIcon.title = 'High frequency detection reached limit (-70dB).\nConsider extending the frequency range.';
+    rectObj.appendChild(highFreqWarningIcon);
+    selObj.highFreqWarningIcon = highFreqWarningIcon;
+
+    // Low Frequency Warning Icon - 顯示在 selection area 下邊界下方 5px
+    const lowFreqWarningIcon = document.createElement('i');
+    lowFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
+    lowFreqWarningIcon.style.cssText = `
+      position: absolute;
+      bottom: -17px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #000000;
+      font-size: 16px;
+      display: none;
+      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+                   -2px 0 0 #fff, 2px 0 0 #fff, 0 -2px 0 #fff, 0 2px 0 #fff;
+      z-index: 100;
+      cursor: help;
+    `;
+    lowFreqWarningIcon.title = 'Low frequency detection reached limit (-70dB).\nConsider extending the frequency range.';
+    rectObj.appendChild(lowFreqWarningIcon);
+    selObj.lowFreqWarningIcon = lowFreqWarningIcon;
 
     selections.push(selObj);
 
@@ -816,21 +860,9 @@ export function initFrequencyHover({
   
         updateSelections();
 
-        // 如果 Power Spectrum popup 打開，使用節流進行更新（每 30ms 更新一次）
-        if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-          const currentTime = Date.now();
-          
-          // 只有在距離上次更新超過 30ms 時才進行更新
-          if (currentTime - lastPowerSpectrumUpdateTime >= 30) {
-            sel.powerSpectrumPopup.update({
-              startTime: sel.data.startTime,
-              endTime: sel.data.endTime,
-              Flow: sel.data.Flow,
-              Fhigh: sel.data.Fhigh
-            });
-            lastPowerSpectrumUpdateTime = currentTime;
-          }
-        }
+        // 2025: 不在 resize 期間即時更新 Power Spectrum
+        // 改為在 mouseup 時才進行完整更新，確保計算值精確
+        // 這樣可以避免頻繁計算，提高性能
 
         // 即時計算峰值，確保與 Power Spectrum 同步
         const durationMs = (sel.data.endTime - sel.data.startTime) * 1000;
@@ -858,6 +890,30 @@ export function initFrequencyHover({
             Flow: sel.data.Flow,
             Fhigh: sel.data.Fhigh
           });
+          
+          // 2025: 在 Power Spectrum 更新完成後，根據偵測結果更新 selection rect 的 warning 圖標
+          // 延遲一小段時間以確保異步操作完成
+          setTimeout(() => {
+            const call = sel.powerSpectrumPopup.__latestDetectedCall;
+            if (call) {
+              // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
+              if (sel.highFreqWarningIcon) {
+                sel.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
+              }
+              // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
+              if (sel.lowFreqWarningIcon) {
+                sel.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
+              }
+            } else {
+              // 如果沒有偵測到 call，隱藏所有 warning 圖標
+              if (sel.highFreqWarningIcon) {
+                sel.highFreqWarningIcon.style.display = 'none';
+              }
+              if (sel.lowFreqWarningIcon) {
+                sel.lowFreqWarningIcon.style.display = 'none';
+              }
+            }
+          }, 50);
         }
         
         // 重置更新計時器
@@ -1077,8 +1133,33 @@ export function initFrequencyHover({
     if (popupObj) {
       selection.powerSpectrumPopup = popupObj;
 
-      // 監聽 popup 關閉，重新顯示 tooltip
+      // 2025: 監聽 bat call 偵測完成事件，更新 selection rect 的 warning 圖標
       const popupElement = popupObj.popup || popupObj;
+      const updateWarningIcons = () => {
+        const call = popupObj.__latestDetectedCall;
+        if (call) {
+          // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
+          if (selection.highFreqWarningIcon) {
+            selection.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
+          }
+          // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
+          if (selection.lowFreqWarningIcon) {
+            selection.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
+          }
+        } else {
+          // 如果沒有偵測到 call，隱藏所有 warning 圖標
+          if (selection.highFreqWarningIcon) {
+            selection.highFreqWarningIcon.style.display = 'none';
+          }
+          if (selection.lowFreqWarningIcon) {
+            selection.lowFreqWarningIcon.style.display = 'none';
+          }
+        }
+      };
+      
+      popupElement.addEventListener('batCallDetectionCompleted', updateWarningIcons);
+
+      // 監聽 popup 關閉，重新顯示 tooltip
       const closeBtn = popupElement.querySelector('.popup-close-btn');
       if (closeBtn) {
         closeBtn.addEventListener('click', () => {
