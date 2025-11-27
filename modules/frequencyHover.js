@@ -1159,23 +1159,17 @@ export function initFrequencyHover({
       if (popupElement) {
         const updateWarningIcons = () => {
           const call = popupObj.__latestDetectedCall;
-          console.log('[Warning Icons Update] Call detected:', !!call, call);
           if (call) {
             // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
-            const highFreqWarning = call.highFreqDetectionWarning === true;
-            console.log('[Warning Icons] highFreqDetectionWarning:', highFreqWarning);
             if (selection.highFreqWarningIcon) {
-              selection.highFreqWarningIcon.style.display = highFreqWarning ? 'block' : 'none';
+              selection.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
             }
             // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
-            const lowFreqWarning = call.lowFreqDetectionWarning === true;
-            console.log('[Warning Icons] lowFreqDetectionWarning:', lowFreqWarning);
             if (selection.lowFreqWarningIcon) {
-              selection.lowFreqWarningIcon.style.display = lowFreqWarning ? 'block' : 'none';
+              selection.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
             }
           } else {
             // 如果沒有偵測到 call，隱藏所有 warning 圖標
-            console.log('[Warning Icons] No call detected, hiding all icons');
             if (selection.highFreqWarningIcon) {
               selection.highFreqWarningIcon.style.display = 'none';
             }
@@ -1190,18 +1184,9 @@ export function initFrequencyHover({
         // 保存引用以便後續清理
         selection._batCallDetectionListener = updateWarningIcons;
         
-        // 等待初始的 redrawSpectrum 完成後再更新警告圖標
-        // 設置一個輪詢機制來檢查 __latestDetectedCall 是否已設置
-        let pollCount = 0;
-        const maxPollAttempts = 100; // 最多輪詢 100 次 (5 秒內)
-        const pollInterval = setInterval(() => {
-          pollCount++;
-          if (popupObj.__latestDetectedCall !== undefined || pollCount >= maxPollAttempts) {
-            clearInterval(pollInterval);
-            // 執行一次更新
-            updateWarningIcons();
-          }
-        }, 50); // 每 50ms 檢查一次
+        // 立即執行一次，以同步當前狀態（包括初始狀態）
+        // 使用 setTimeout 確保同步邏輯完成後再執行
+        setTimeout(updateWarningIcons, 0);
       }
 
       // 監聽 popup 關閉，重新顯示 tooltip
