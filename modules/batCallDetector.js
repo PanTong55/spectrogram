@@ -28,6 +28,24 @@ export const DEFAULT_DETECTION_CONFIG = {
   // Changed from -18 to -24 for more conservative edge detection
   highFreqThreshold_dB: -24,  // Threshold for calculating High Frequency (optimal value range: -24 to -70)
   
+  // 2025 ENHANCEMENT: Automatic high frequency threshold optimization
+  // When enabled, automatically tests thresholds from -24dB to -70dB
+  // to find optimal value that provides stable measurements
+  // Default: false (manual threshold mode)
+  highFreqThreshold_dB_isAuto: false,
+  
+  // Low frequency threshold (dB below peak for finding edges)
+  // Fixed at -27dB for anti-rebounce compatibility
+  // This is used for finding the lowest frequency in the call (last frame)
+  lowFreqThreshold_dB: -27,
+  
+  // 2025 ENHANCEMENT: Automatic low frequency threshold optimization
+  // When enabled, automatically tests thresholds from -24dB to -70dB
+  // to find optimal value that provides stable measurements
+  // Works symmetrically with high frequency optimization
+  // Default: false (manual threshold mode)
+  lowFreqThreshold_dB_isAuto: false,
+  
   // Characteristic frequency is defined as lowest or average frequency 
   // in the last 10-20% of the call duration
   characteristicFreq_percentEnd: 20,  // Last 20% duration
@@ -967,6 +985,258 @@ export class BatCallDetector {
   }
 
   /**
+   * 2025 ENHANCEMENT: Find Optimal Low Frequency Threshold
+   * 
+   * Automatically determines the best low frequency threshold from -24dB to -70dB
+   * by testing each threshold and detecting anomalies (frequency jumps > 2.5 kHz).
+   * 
+   * This method provides:
+   * - Consistent low frequency detection across different spectrogram conditions
+   * - Anti-rebounce compatibility (works with backward end frame scanning)
+   * - Automatic fallback to -24dB if no optimal point found
+   * - Anomaly detection logic identical to high frequency optimization
+   * 
+   * Testing sequence: -24, -25, -26, ..., -69, -70 dB
+   * 
+   * Anomaly detection:
+   * - Major jump (> 5 kHz): Stop immediately, use previous threshold
+   * - Large jump (2.5-5 kHz): First anomaly detection point
+   * - Check if anomaly is followed by 3+ consecutive normal values
+   * - If yes: ignore anomaly and continue
+   * - If no: use threshold just before anomaly
+   * 
+   * Anti-rebounce compatibility:
+   * - Uses last frame power spectrum (like low frequency measurement)
+   * - Works with backward endFreqScan detection
+   * - Maintains frequency boundary integrity
+   * 
+   * @param {Array} spectrogram - STFT spectrogram (time x frequency bins)
+   * @param {Array} freqBins - Frequency bin values (Hz)
+   * @param {number} flowKHz - Low frequency boundary (kHz)
+   * @param {number} fhighKHz - High frequency boundary (kHz)
+   * @param {number} callPeakPower_dB - Call peak power in dB (stable value)
+   * @returns {Object} {threshold, lowFreq_Hz, lowFreq_kHz, endFreq_Hz, endFreq_kHz, warning}
+   */
+  findOptimalLowFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
+    if (spectrogram.length === 0) return {
+      threshold: -24,
+      lowFreq_Hz: null,
+      lowFreq_kHz: null,
+      endFreq_Hz: null,
+      endFreq_kHz: null,
+      warning: false
+    };
+
+    const lastFramePower = spectrogram[spectrogram.length - 1];
+    
+    // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
+    const stablePeakPower_dB = callPeakPower_dB;
+    
+    // 測試閾值範圍：-24 到 -70 dB
+    const thresholdRange = [];
+    for (let threshold = -24; threshold >= -70; threshold--) {
+      thresholdRange.push(threshold);
+    }
+    
+    // 為每個閾值測量 Low Frequency 和 End Frequency
+    // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
+    const measurements = [];
+    
+    for (const testThreshold_dB of thresholdRange) {
+      let lowFreq_Hz = null;
+      let endFreq_Hz = null;
+      let foundBin = false;
+      
+      // 使用穩定的 call peak power（不受 selection 大小影響）
+      const lowFreqThreshold_dB = stablePeakPower_dB + testThreshold_dB;
+      
+      // ============================================================
+      // 計算 LOW FREQUENCY（從低到高掃描，找最低頻率）
+      // 使用最後一幀的功率譜（代表信號末尾）
+      // ============================================================
+      for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
+        if (lastFramePower[binIdx] > lowFreqThreshold_dB) {
+          lowFreq_Hz = freqBins[binIdx];
+          foundBin = true;
+          
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx > 0) {
+            const thisPower = lastFramePower[binIdx];
+            const prevPower = lastFramePower[binIdx - 1];
+            
+            if (prevPower < lowFreqThreshold_dB && thisPower > lowFreqThreshold_dB) {
+              const powerRatio = (thisPower - lowFreqThreshold_dB) / (thisPower - prevPower);
+              const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+              lowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+            }
+          }
+          break;
+        }
+      }
+      
+      // ============================================================
+      // 計算 END FREQUENCY（從低到高掃描，找最低頻率）
+      // 與 Low Frequency 相同（都是最後一幀的最低頻率）
+      // 這與 High Frequency / Start Frequency 的關係相同
+      // ============================================================
+      if (foundBin) {
+        endFreq_Hz = lowFreq_Hz;  // End frequency = low frequency from last frame
+      }
+      
+      // 如果沒有找到超過閾值的 bin，則無法測量此閾值
+      if (!foundBin) {
+        lowFreq_Hz = null;
+        endFreq_Hz = null;
+      }
+      
+      measurements.push({
+        threshold: testThreshold_dB,
+        lowFreqThreshold_dB: lowFreqThreshold_dB,
+        lowFreq_Hz: lowFreq_Hz,
+        lowFreq_kHz: lowFreq_Hz !== null ? lowFreq_Hz / 1000 : null,
+        endFreq_Hz: endFreq_Hz,
+        endFreq_kHz: endFreq_Hz !== null ? endFreq_Hz / 1000 : null,
+        foundBin: foundBin
+      });
+    }
+    
+    // ============================================================
+    // 只收集成功找到 bin 的測量
+    const validMeasurements = measurements.filter(m => m.foundBin);
+    
+    if (validMeasurements.length === 0) {
+      return {
+        threshold: -24,
+        lowFreq_Hz: null,
+        lowFreq_kHz: null,
+        endFreq_Hz: null,
+        endFreq_kHz: null,
+        warning: false
+      };
+    }
+    
+    // ============================================================
+    // 新規則 2025：Low Frequency 需應用防呆機制
+    // 找出第一個 <= Peak Frequency 且 foundBin=true 的 Low Frequency
+    // 低頻應該低於峰值頻率，這是 FM 掃頻信號的特性
+    // ============================================================
+    
+    // ============================================================
+    // 決定最終使用的閾值 + End Frequency
+    // 使用與 High Frequency 優化相同的異常檢測邏輯
+    // ============================================================
+    let optimalThreshold = -24;  // 默認使用最保守的設定
+    let optimalMeasurement = validMeasurements[0];  // 預設為第一個有效測量
+    
+    // 追蹤異常檢測狀態
+    let lastValidThreshold = validMeasurements[0].threshold;  // 最後一個有效測量（無異常的）
+    let lastValidMeasurement = validMeasurements[0];
+    let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
+    let firstAnomalyIndex = -1;       // 第一個異常發生的索引位置
+    
+    // 從第二個有效測量開始，比較與前一個測量的差異
+    for (let i = 1; i < validMeasurements.length; i++) {
+      const prevFreq_kHz = validMeasurements[i - 1].lowFreq_kHz;
+      const currFreq_kHz = validMeasurements[i].lowFreq_kHz;
+      const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
+      
+      // ============================================================
+      // 保險機制 1：超大幅頻率跳變 (>5 kHz) - 立即停止
+      // ============================================================
+      if (freqDifference > 5.0) {
+        // 超大幅異常，立即停止測試
+        // 選擇這個超大幅異常前的閾值
+        optimalThreshold = validMeasurements[i - 1].threshold;
+        optimalMeasurement = validMeasurements[i - 1];
+        break;
+      }
+      
+      const isAnomaly = freqDifference > 2.5;
+      
+      if (isAnomaly) {
+        // 發現大幅異常 (>2.5 kHz)
+        
+        // 如果還沒有記錄早期異常，現在記錄
+        if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
+          firstAnomalyIndex = i;  // 記錄異常發生的索引
+          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;  // 異常前的閾值
+          lastValidThreshold = validMeasurements[i - 1].threshold;
+          lastValidMeasurement = validMeasurements[i - 1];
+        }
+      } else {
+        // 正常值：沒有大幅跳變
+        
+        // 如果有記錄的早期異常，檢查異常後是否緊接著有 3 個正常值
+        if (recordedEarlyAnomaly !== null && firstAnomalyIndex !== -1) {
+          // 計算從異常發生後緊接著的 3 個索引
+          const afterAnomalyStart = firstAnomalyIndex + 1;
+          const afterAnomalyEnd = Math.min(firstAnomalyIndex + 3, validMeasurements.length - 1);
+          
+          // 檢查異常後的 3 個值是否都無異常
+          let hasThreeNormalAfterAnomaly = true;
+          
+          for (let checkIdx = afterAnomalyStart; checkIdx <= afterAnomalyEnd; checkIdx++) {
+            if (checkIdx >= validMeasurements.length) {
+              hasThreeNormalAfterAnomaly = false;
+              break;
+            }
+            
+            // 檢查當前值與前一個值是否有異常
+            const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].lowFreq_kHz;
+            const checkCurrFreq_kHz = validMeasurements[checkIdx].lowFreq_kHz;
+            const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
+            
+            if (checkFreqDiff > 2.5) {
+              // 發現異常，說明異常後面不是連續 3 個正常值
+              hasThreeNormalAfterAnomaly = false;
+              break;
+            }
+          }
+          
+          // 如果異常後有連續 3 個正常值，忽略早期異常
+          if (hasThreeNormalAfterAnomaly && (afterAnomalyEnd - afterAnomalyStart + 1) >= 3) {
+            recordedEarlyAnomaly = null;  // 忽略早期異常
+            firstAnomalyIndex = -1;       // 重置
+          }
+        }
+        
+        // 更新最後一個有效測量
+        lastValidThreshold = validMeasurements[i].threshold;
+        lastValidMeasurement = validMeasurements[i];
+      }
+    }
+    
+    // ============================================================
+    // 最終決定：選擇最優閾值
+    // ============================================================
+    if (recordedEarlyAnomaly !== null) {
+      // 有未被忽略的早期異常：使用異常前的閾值
+      optimalThreshold = recordedEarlyAnomaly;
+      optimalMeasurement = lastValidMeasurement;
+    } else {
+      // 沒有異常或異常被忽略：使用最後一個有效測量
+      optimalThreshold = lastValidThreshold;
+      optimalMeasurement = lastValidMeasurement;
+    }
+    
+    // 確保返回值在有效範圍內
+    const finalThreshold = Math.max(Math.min(optimalThreshold, -24), -70);
+    
+    // 檢測是否使用了 -70dB 的極限閾值（表示選擇區域未能涵蓋足夠低的頻率）
+    const hasWarning = finalThreshold <= -70;
+    
+    // 返回優化的 Low Frequency 和 End Frequency
+    return {
+      threshold: finalThreshold,
+      lowFreq_Hz: optimalMeasurement.lowFreq_Hz,
+      lowFreq_kHz: optimalMeasurement.lowFreq_kHz,
+      endFreq_Hz: optimalMeasurement.endFreq_Hz,
+      endFreq_kHz: optimalMeasurement.endFreq_kHz,
+      warning: hasWarning
+    };
+  }
+
+  /**
    * Phase 2: Measure precise
    * Based on Avisoft SASLab Pro, SonoBat, Kaleidoscope Pro, and BatSound standards
    * 
@@ -1510,6 +1780,91 @@ export class BatCallDetector {
     
     // Now calculate lowFreq_kHz with potential Start Frequency optimization
     let lowFreq_kHz = lowFreq_Hz / 1000;
+    
+    // ============================================================
+    // AUTO MODE: If lowFreqThreshold_dB_isAuto is enabled,
+    // automatically find optimal threshold using STABLE call.peakPower_dB
+    // (similar to high frequency optimization)
+    // ============================================================
+    if (this.config.lowFreqThreshold_dB_isAuto === true) {
+      const result = this.findOptimalLowFrequencyThreshold(
+        spectrogram,
+        freqBins,
+        flowKHz,
+        fhighKHz,
+        peakPower_dB  // Pass stable call peak value instead of using endThreshold_dB
+      );
+      
+      // ============================================================
+      // 新規則 2025：Low Frequency 防呆機制
+      // 找出第一個 <= Peak Frequency 的有效 Low Frequency
+      // 低頻應該低於或等於峰值頻率，這是 FM 掃頻信號的特性
+      // ============================================================
+      let safeLowFreq_kHz = result.lowFreq_kHz;
+      let safeLowFreq_Hz = result.lowFreq_Hz;
+      let safeEndFreq_kHz = result.endFreq_kHz;
+      let safeEndFreq_Hz = result.endFreq_Hz;
+      let usedThreshold = result.threshold;
+      
+      // 如果最優閾值的 Low Frequency 高於 Peak Frequency，執行防呆檢查
+      if (result.lowFreq_kHz !== null && result.lowFreq_kHz > (peakFreq_Hz / 1000)) {
+        // 需要找到第一個 <= Peak Frequency 的 Low Frequency
+        // 重新測試閾值範圍，從 -24 到 -70
+        const peakFreq_kHz = peakFreq_Hz / 1000;
+        let foundValidLowFreq = false;
+        
+        for (let testThreshold_dB = -24; testThreshold_dB >= -70; testThreshold_dB--) {
+          const lowFreqThreshold_dB = peakPower_dB + testThreshold_dB;
+          const lastFramePowerForTest = spectrogram[spectrogram.length - 1];
+          
+          // 計算此閾值的 Low Frequency
+          let testLowFreq_Hz = null;
+          let testEndFreq_Hz = null;
+          
+          // Low Frequency 計算（從低到高）
+          for (let binIdx = 0; binIdx < lastFramePowerForTest.length; binIdx++) {
+            if (lastFramePowerForTest[binIdx] > lowFreqThreshold_dB) {
+              testLowFreq_Hz = freqBins[binIdx];
+              
+              // 線性插值
+              if (binIdx > 0) {
+                const thisPower = lastFramePowerForTest[binIdx];
+                const prevPower = lastFramePowerForTest[binIdx - 1];
+                if (prevPower < lowFreqThreshold_dB && thisPower > lowFreqThreshold_dB) {
+                  const powerRatio = (thisPower - lowFreqThreshold_dB) / (thisPower - prevPower);
+                  const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                  testLowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+                }
+              }
+              break;
+            }
+          }
+          
+          // 如果找到有效的 Low Frequency，檢查是否 <= Peak Frequency
+          if (testLowFreq_Hz !== null && (testLowFreq_Hz / 1000) <= peakFreq_kHz) {
+            testEndFreq_Hz = testLowFreq_Hz;  // End frequency = low frequency
+            
+            safeLowFreq_Hz = testLowFreq_Hz;
+            safeLowFreq_kHz = testLowFreq_Hz / 1000;
+            safeEndFreq_Hz = testEndFreq_Hz;
+            safeEndFreq_kHz = testEndFreq_Hz !== null ? testEndFreq_Hz / 1000 : null;
+            usedThreshold = testThreshold_dB;
+            foundValidLowFreq = true;
+            break;
+          }
+        }
+      }
+      
+      // Update the config with the calculated optimal threshold
+      this.config.lowFreqThreshold_dB = usedThreshold;
+      // Set warning flag on the call object
+      call.lowFreqDetectionWarning = result.warning;
+      
+      // Use the optimized low frequency values
+      lowFreq_Hz = safeLowFreq_Hz;
+      lowFreq_kHz = safeLowFreq_kHz;
+      endFreq_kHz = safeEndFreq_kHz;
+    }
     
     // ============================================================
     // 2025 ENHANCEMENT: Validate Low Frequency measurement quality
