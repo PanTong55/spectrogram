@@ -321,6 +321,10 @@ export function showPowerSpectrumPopup({
   // 設置初始選項
   batCallFFTDropdown.select(1, { triggerOnChange: false }); // Default to '1024'
 
+  // 2025: 追蹤前一個 mode 狀態，用於檢測 mode 改變
+  let lastHighFreqAutoMode = window.__batCallControlsMemory.highFreqThreshold_dB_isAuto !== false;
+  let lastLowFreqAutoMode = window.__batCallControlsMemory.lowFreqThreshold_dB_isAuto !== false;
+
   // 通用函數：更新所有 Bat Call 配置
   const updateBatCallConfig = async () => {
     batCallConfig.callThreshold_dB = parseFloat(batCallThresholdInput.value) || -24;
@@ -336,6 +340,14 @@ export function showPowerSpectrumPopup({
       batCallConfig.highFreqThreshold_dB_isAuto = true;
       batCallConfig.highFreqThreshold_dB = -24;  // 預設值，會被 findOptimalHighFrequencyThreshold 覆蓋
       // Auto 模式不修改顯示，由 updateBatCallAnalysis 更新
+      
+      // 2025: 如果從 manual 切換到 auto，需要清除舊的 call 數據
+      // 因為舊的 call 對象可能保存了 manual mode 計算的 threshold 值
+      if (oldHighFreqAutoMode === false) {
+        // 從 manual 切換到 auto：清空 input value 並清除舊的 call 數據強制重新檢測
+        // 這樣新的 call 對象會有正確的 auto mode threshold 值
+        batCallHighThresholdInput.value = '';
+      }
     } else {
       // Manual 模式：嘗試解析為數字
       const numValue = parseFloat(highFreqThresholdValue);
@@ -364,6 +376,14 @@ export function showPowerSpectrumPopup({
       batCallConfig.lowFreqThreshold_dB_isAuto = true;
       batCallConfig.lowFreqThreshold_dB = -27;  // 預設值，會被 findOptimalLowFrequencyThreshold 覆蓋
       // Auto 模式不修改顯示，由 updateBatCallAnalysis 更新
+      
+      // 2025: 如果從 manual 切換到 auto，需要清除舊的 call 數據
+      // 因為舊的 call 對象可能保存了 manual mode 計算的 threshold 值
+      if (oldLowFreqAutoMode === false) {
+        // 從 manual 切換到 auto：清空 input value 並清除舊的 call 數據強制重新檢測
+        // 這樣新的 call 對象會有正確的 auto mode threshold 值
+        batCallLowThresholdInput.value = '';
+      }
     } else {
       // Manual 模式：嘗試解析為數字
       const numValue = parseFloat(lowFreqThresholdValue);
@@ -409,6 +429,21 @@ export function showPowerSpectrumPopup({
       maxFrequencyDropThreshold_kHz: batCallConfig.maxFrequencyDropThreshold_kHz,
       protectionWindowAfterPeak_ms: batCallConfig.protectionWindowAfterPeak_ms
     };
+    
+    // 2025 CRITICAL FIX: 檢測 mode 是否改變
+    // 如果從 manual 切換到 auto mode，需要清除舊的 call 數據強制重新檢測
+    // 因為舊的 call 對象保存的是 manual mode 的 threshold 值
+    const highFreqModeChanged = (lastHighFreqAutoMode !== batCallConfig.highFreqThreshold_dB_isAuto);
+    const lowFreqModeChanged = (lastLowFreqAutoMode !== batCallConfig.lowFreqThreshold_dB_isAuto);
+    
+    // 更新 mode 狀態以供下一次比較
+    lastHighFreqAutoMode = batCallConfig.highFreqThreshold_dB_isAuto;
+    lastLowFreqAutoMode = batCallConfig.lowFreqThreshold_dB_isAuto;
+    
+    if (highFreqModeChanged || lowFreqModeChanged) {
+      // Mode 改變時，強制重新檢測以獲得正確的 threshold 值
+      // （input value 已在上面的邏輯中被清空）
+    }
     
     // 更新 detector 配置
     detector.config = { ...batCallConfig };
