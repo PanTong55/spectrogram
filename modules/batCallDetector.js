@@ -163,6 +163,10 @@ export class BatCall {
     this.highFreqDetectionWarning = false;  // Warning flag: High Frequency detection reached -70dB limit
     this.lowFreqDetectionWarning = false;   // Warning flag: Low Frequency detection reached -70dB limit (2025)
     
+    // 2025: 儲存該 call 實際使用的 threshold 值（用於 UI 顯示）
+    this.highFreqThreshold_dB_used = null;  // High Frequency threshold actually used for this call
+    this.lowFreqThreshold_dB_used = null;   // Low Frequency threshold actually used for this call
+    
     this.callType = 'FM';           // 'CF', 'FM', or 'CF-FM' (Constant/Frequency Modulated)
     
     // Internal: time-frequency spectrogram (for visualization/analysis)
@@ -1409,6 +1413,9 @@ export class BatCallDetector {
       
       // Update the config with the calculated optimal threshold
       this.config.highFreqThreshold_dB = usedThreshold;
+      // 2025: 在 auto mode 下保存實際使用的 high frequency threshold
+      // Auto mode: 保存經過防呆檢查後的最終 threshold 值
+      call.highFreqThreshold_dB_used = usedThreshold;
       // Set warning flag on the call object
       call.highFreqDetectionWarning = result.warning;
       
@@ -1653,6 +1660,12 @@ export class BatCallDetector {
     }
     call.highFreq_kHz = highFreq_Hz / 1000;
     
+    // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
+    // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
+    // 計算相對於 peakPower_dB 的偏移值
+    const highFreqThreshold_dB_used_manual = highThreshold_dB - peakPower_dB;
+    call.highFreqThreshold_dB_used = highFreqThreshold_dB_used_manual;
+    
     // ============================================================
     // STEP 2.5: Calculate START FREQUENCY (獨立於 High Frequency)
     // 
@@ -1792,6 +1805,12 @@ export class BatCallDetector {
     call.endFreq_kHz = endFreq_kHz;
     call.endFreqTime_s = lastFrameTime_s;
     
+    // 2025: 在 manual mode 下保存實際使用的 low frequency threshold
+    // Manual mode: endThreshold_dB = peakPower_dB + lowFreqThreshold_dB
+    // 計算相對於 peakPower_dB 的偏移值
+    const lowFreqThreshold_dB_used_manual = endThreshold_dB - peakPower_dB;
+    call.lowFreqThreshold_dB_used = lowFreqThreshold_dB_used_manual;
+    
     // Now calculate lowFreq_kHz with potential Start Frequency optimization
     let lowFreq_kHz = lowFreq_Hz / 1000;
     
@@ -1871,6 +1890,9 @@ export class BatCallDetector {
       
       // Update the config with the calculated optimal threshold
       this.config.lowFreqThreshold_dB = usedThreshold;
+      // 2025: 在 auto mode 下保存實際使用的 low frequency threshold
+      // Auto mode: 保存經過防呆檢查後的最終 threshold 值
+      call.lowFreqThreshold_dB_used = usedThreshold;
       // Set warning flag on the call object
       call.lowFreqDetectionWarning = result.warning;
       

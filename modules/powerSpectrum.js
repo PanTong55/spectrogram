@@ -216,9 +216,20 @@ export function showPowerSpectrumPopup({
       if (batCallHighThresholdInput) {
         if (detector.config.highFreqThreshold_dB_isAuto === true) {
           // Auto 模式：清空 value，在 placeholder 中顯示計算值，並設定灰色樣式
-          const calculatedValue = detector.config.highFreqThreshold_dB;
+          // 2025: 使用實際檢測到的 call 使用的 threshold 值（而不是 config 中的值）
+          // 這樣可以正確反映該 call 實際使用的 threshold，特別是在防呆檢查後可能達到 -70dB 時
+          let displayValue = detector.config.highFreqThreshold_dB;  // 預設為 config 值
+          
+          if (calls.length > 0) {
+            const firstCall = calls[0];
+            if (firstCall.highFreqThreshold_dB_used !== null && firstCall.highFreqThreshold_dB_used !== undefined) {
+              // 使用實際檢測到的 call 使用的 threshold 值
+              displayValue = firstCall.highFreqThreshold_dB_used;
+            }
+          }
+          
           batCallHighThresholdInput.value = '';  // 清空 value
-          batCallHighThresholdInput.placeholder = `Auto (${calculatedValue})`;  // 更新 placeholder
+          batCallHighThresholdInput.placeholder = `Auto (${displayValue})`;  // 更新 placeholder
           batCallHighThresholdInput.style.color = '#999';  // 灰色
         } else {
           // Manual 模式：保持用戶輸入的值，黑色文字
@@ -234,9 +245,20 @@ export function showPowerSpectrumPopup({
       if (batCallLowThresholdInput) {
         if (detector.config.lowFreqThreshold_dB_isAuto === true) {
           // Auto 模式：清空 value，在 placeholder 中顯示計算值，並設定灰色樣式
-          const calculatedValue = detector.config.lowFreqThreshold_dB;
+          // 2025: 使用實際檢測到的 call 使用的 threshold 值（而不是 config 中的值）
+          // 這樣可以正確反映該 call 實際使用的 threshold，特別是在防呆檢查後可能達到 -70dB 時
+          let displayValue = detector.config.lowFreqThreshold_dB;  // 預設為 config 值
+          
+          if (calls.length > 0) {
+            const firstCall = calls[0];
+            if (firstCall.lowFreqThreshold_dB_used !== null && firstCall.lowFreqThreshold_dB_used !== undefined) {
+              // 使用實際檢測到的 call 使用的 threshold 值
+              displayValue = firstCall.lowFreqThreshold_dB_used;
+            }
+          }
+          
           batCallLowThresholdInput.value = '';  // 清空 value
-          batCallLowThresholdInput.placeholder = `Auto (${calculatedValue})`;  // 更新 placeholder
+          batCallLowThresholdInput.placeholder = `Auto (${displayValue})`;  // 更新 placeholder
           batCallLowThresholdInput.style.color = '#999';  // 灰色
         } else {
           // Manual 模式：保持用戶輸入的值，黑色文字
