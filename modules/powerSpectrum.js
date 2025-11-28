@@ -609,11 +609,17 @@ export function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKH
   svg.appendChild(chartGroup);
 
   // ============================================================
-  // 設置基於 X 座標的自動檢測交互
+  // 設置基於 X 座標的自動檢測交互 (支持鎖定功能)
   // ============================================================
+  
+  // 狀態管理：鎖定點的資訊
+  let lockedPoint = null;
+  let isLocked = false;
   
   // 添加整個 SVG 容器的滑鼠移動監聽
   svg.addEventListener('mousemove', (event) => {
+    // 如果已鎖定，跳過自動檢測交互
+    if (isLocked) return;
     // 獲取滑鼠在 SVG 中的位置
     const rect = svg.getBoundingClientRect();
     const svgX = event.clientX - rect.left;
@@ -677,8 +683,14 @@ export function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKH
       interactiveCircle.setAttribute('cx', closestPoint.x);
       interactiveCircle.setAttribute('cy', closestPoint.y);
       interactiveCircle.setAttribute('r', '4');
-      interactiveCircle.setAttribute('fill', 'rgba(0, 102, 204, 0.3)');
-      interactiveCircle.setAttribute('stroke', '#0066cc');
+      // 根據鎖定狀態設置顏色
+      if (isLocked) {
+        interactiveCircle.setAttribute('fill', 'rgba(255, 0, 0, 0.3)');
+        interactiveCircle.setAttribute('stroke', '#ff0000');
+      } else {
+        interactiveCircle.setAttribute('fill', 'rgba(0, 102, 204, 0.3)');
+        interactiveCircle.setAttribute('stroke', '#0066cc');
+      }
       interactiveCircle.setAttribute('stroke-width', '1');
       interactiveCircle.setAttribute('class', 'spectrum-highlight-point');
       helperGroup.appendChild(interactiveCircle);
@@ -720,8 +732,129 @@ export function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKH
   
   // 滑鼠離開 SVG 時清空
   svg.addEventListener('mouseleave', () => {
-    while (helperGroup.firstChild) {
-      helperGroup.removeChild(helperGroup.firstChild);
+    // 如果未鎖定，則清空顯示；如果已鎖定，保持顯示
+    if (!isLocked) {
+      while (helperGroup.firstChild) {
+        helperGroup.removeChild(helperGroup.firstChild);
+      }
+    }
+  });
+
+  // ============================================================
+  // 添加左鍵點擊事件監聽 - 用於鎖定/解除鎖定
+  // ============================================================
+  svg.addEventListener('click', (event) => {
+    const rect = svg.getBoundingClientRect();
+    const svgX = event.clientX - rect.left;
+    const svgY = event.clientY - rect.top;
+    
+    // 檢查滑鼠是否在圖表區域內
+    if (svgX < leftPadding || svgX > leftPadding + plotWidth || 
+        svgY < topPadding || svgY > topPadding + plotHeight) {
+      // 滑鼠不在圖表區域，如果已鎖定則解除鎖定
+      if (isLocked) {
+        isLocked = false;
+        lockedPoint = null;
+        while (helperGroup.firstChild) {
+          helperGroup.removeChild(helperGroup.firstChild);
+        }
+      }
+      return;
+    }
+    
+    if (!isLocked) {
+      // 當前未鎖定，尋找最接近的點進行鎖定
+      let closestPoint = null;
+      let minDistance = Infinity;
+      
+      for (const point of interactivePoints) {
+        const distance = Math.abs(point.x - svgX);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = point;
+        }
+      }
+      
+      // 如果找到了接近的點，進行鎖定
+      if (closestPoint && minDistance < 15) {
+        isLocked = true;
+        lockedPoint = closestPoint;
+        
+        // 清空舊的輔助線
+        while (helperGroup.firstChild) {
+          helperGroup.removeChild(helperGroup.firstChild);
+        }
+        
+        // 繪製垂直線（連接到 X 軸）
+        const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        vLine.setAttribute('x1', closestPoint.x);
+        vLine.setAttribute('y1', closestPoint.y);
+        vLine.setAttribute('x2', closestPoint.x);
+        vLine.setAttribute('y2', topPadding + plotHeight);
+        vLine.setAttribute('stroke', '#999999');
+        vLine.setAttribute('stroke-width', '1');
+        vLine.setAttribute('stroke-dasharray', '3,3');
+        vLine.setAttribute('class', 'spectrum-guide-line');
+        helperGroup.appendChild(vLine);
+        
+        // 繪製水平線（連接到 Y 軸）
+        const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        hLine.setAttribute('x1', leftPadding);
+        hLine.setAttribute('y1', closestPoint.y);
+        hLine.setAttribute('x2', closestPoint.x);
+        hLine.setAttribute('y2', closestPoint.y);
+        hLine.setAttribute('stroke', '#999999');
+        hLine.setAttribute('stroke-width', '1');
+        hLine.setAttribute('stroke-dasharray', '3,3');
+        hLine.setAttribute('class', 'spectrum-guide-line');
+        helperGroup.appendChild(hLine);
+        
+        // 繪製交互點圓形（透明圓點） - 紅色
+        const interactiveCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        interactiveCircle.setAttribute('cx', closestPoint.x);
+        interactiveCircle.setAttribute('cy', closestPoint.y);
+        interactiveCircle.setAttribute('r', '4');
+        interactiveCircle.setAttribute('fill', 'rgba(255, 0, 0, 0.3)');
+        interactiveCircle.setAttribute('stroke', '#ff0000');
+        interactiveCircle.setAttribute('stroke-width', '1');
+        interactiveCircle.setAttribute('class', 'spectrum-highlight-point');
+        helperGroup.appendChild(interactiveCircle);
+        
+        // 創建提示框文字（頻率）- 放在懸停點正上方 15px
+        const tooltipFreq = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tooltipFreq.setAttribute('x', closestPoint.x);
+        tooltipFreq.setAttribute('y', closestPoint.y - 25);
+        tooltipFreq.setAttribute('text-anchor', 'middle');
+        tooltipFreq.setAttribute('dominant-baseline', 'middle');
+        tooltipFreq.setAttribute('font-family', "'Noto Sans HK'", 'sans-serif');
+        tooltipFreq.setAttribute('font-size', '12');
+        tooltipFreq.setAttribute('font-weight', 'bold');
+        tooltipFreq.setAttribute('fill', '#000000');
+        tooltipFreq.setAttribute('class', 'spectrum-tooltip-text-freq');
+        tooltipFreq.textContent = closestPoint.freqKHz.toFixed(2) + ' kHz';
+        helperGroup.appendChild(tooltipFreq);
+        
+        // 創建提示框文字（dB）
+        const tooltipDb = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tooltipDb.setAttribute('x', closestPoint.x);
+        tooltipDb.setAttribute('y', closestPoint.y - 10);
+        tooltipDb.setAttribute('text-anchor', 'middle');
+        tooltipDb.setAttribute('dominant-baseline', 'middle');
+        tooltipDb.setAttribute('font-family', "'Noto Sans HK'", 'sans-serif');
+        tooltipDb.setAttribute('font-size', '12');
+        tooltipDb.setAttribute('font-weight', 'bold');
+        tooltipDb.setAttribute('fill', '#0066cc');
+        tooltipDb.setAttribute('class', 'spectrum-tooltip-text-db');
+        tooltipDb.textContent = closestPoint.db.toFixed(1) + ' dB';
+        helperGroup.appendChild(tooltipDb);
+      }
+    } else {
+      // 當前已鎖定，解除鎖定
+      isLocked = false;
+      lockedPoint = null;
+      while (helperGroup.firstChild) {
+        helperGroup.removeChild(helperGroup.firstChild);
+      }
     }
   });
 }
