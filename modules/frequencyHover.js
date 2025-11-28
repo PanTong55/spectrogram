@@ -475,7 +475,7 @@ export function initFrequencyHover({
     highFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
     highFreqWarningIcon.style.cssText = `
       position: absolute;
-      top: -17px;
+      top: -20px;
       left: 50%;
       transform: translateX(-50%);
       color: #ffd700;
@@ -486,7 +486,7 @@ export function initFrequencyHover({
       z-index: 100;
       cursor: help;
     `;
-    highFreqWarningIcon.title = 'High frequency detection reached limit (-70dB).\nConsider extending the frequency range.';
+    highFreqWarningIcon.title = 'The accuracy of High-frequency detection is limited.\nConsider adjusting the upper edge.';
     rectObj.appendChild(highFreqWarningIcon);
     selObj.highFreqWarningIcon = highFreqWarningIcon;
 
@@ -506,7 +506,7 @@ export function initFrequencyHover({
       z-index: 100;
       cursor: help;
     `;
-    lowFreqWarningIcon.title = 'Low frequency detection reached limit (-70dB).\nConsider extending the frequency range.';
+    lowFreqWarningIcon.title = 'The accuracy of Low-frequency detection is limited.\nConsider adjusting the lower edge.';
     rectObj.appendChild(lowFreqWarningIcon);
     selObj.lowFreqWarningIcon = lowFreqWarningIcon;
 
