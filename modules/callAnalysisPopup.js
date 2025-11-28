@@ -554,18 +554,6 @@ export function showCallAnalysisPopup({
   };
 
   /**
-   * 設置 Highpass Filter Order Number Input 的事件監聽器
-   */
-  if (highpassFilterOrderForListeners) {
-    highpassFilterOrderForListeners.addEventListener('change', updateBatCallConfig);
-    highpassFilterOrderForListeners.addEventListener('input', () => {
-      clearTimeout(highpassFilterOrderForListeners._updateTimeout);
-      highpassFilterOrderForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
-    });
-    addNumberInputKeyboardSupport(highpassFilterOrderForListeners);
-  }
-
-  /**
    * 為 type="number" 的 input 添加上下鍵支持
    */
   const addNumberInputKeyboardSupport = (inputElement) => {
@@ -653,6 +641,18 @@ export function showCallAnalysisPopup({
       window.__isAdjustingNumberInput = false;
     });
   };
+
+  /**
+   * 設置 Highpass Filter Order Number Input 的事件監聽器
+   */
+  if (highpassFilterOrderForListeners) {
+    highpassFilterOrderForListeners.addEventListener('change', updateBatCallConfig);
+    highpassFilterOrderForListeners.addEventListener('input', () => {
+      clearTimeout(highpassFilterOrderForListeners._updateTimeout);
+      highpassFilterOrderForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
+    });
+    addNumberInputKeyboardSupport(highpassFilterOrderForListeners);
+  }
 
   // 為所有輸入框添加事件監聽器
   batCallThresholdInput.addEventListener('change', updateBatCallConfig);
