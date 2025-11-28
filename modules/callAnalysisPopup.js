@@ -376,9 +376,6 @@ export function showCallAnalysisPopup({
   const highpassFilterCheckboxForListeners = popup.querySelector('#enableHighpassFilter');
   const highpassFilterFreqInputForListeners = popup.querySelector('#highpassFilterFreq_kHz');
   const highpassFilterOrderForListeners = popup.querySelector('#highpassFilterOrder');
-  
-  // 聲明 highpassFilterOrderDropdown 變數，將在 HTML 生成部分初始化
-  let highpassFilterOrderDropdown;
 
   // 初始化 FFT Size Dropdown
   const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
@@ -508,11 +505,9 @@ export function showCallAnalysisPopup({
     if (highpassFilterFreqInput) {
       batCallConfig.highpassFilterFreq_kHz = parseFloat(highpassFilterFreqInput.value) || 40;
     }
-    // 注意：highpassFilterOrder 是一個 dropdown button，需要通過 selectedIndex 和 filterOrderOptions 讀取值
+    // 注意：highpassFilterOrder 供为 number input，有一個 .value 屬性
     if (highpassFilterOrder) {
-      const filterOrderOptions = ['2', '4', '6', '8'];
-      const selectedOrder = filterOrderOptions[highpassFilterOrderDropdown?.selectedIndex] || '2';
-      batCallConfig.highpassFilterOrder = parseInt(selectedOrder) || 2;
+      batCallConfig.highpassFilterOrder = parseInt(highpassFilterOrder.value) || 2;
     }
     
     // 保存到全局記憶中
@@ -559,23 +554,16 @@ export function showCallAnalysisPopup({
   };
 
   /**
-   * 初始化 Highpass Filter Order Dropdown（必須在 updateBatCallConfig 定義之後）
+   * 設置 Highpass Filter Order Number Input 的事件監聽器
    */
-  const highpassFilterOrderButton = popup.querySelector('#highpassFilterOrder');
-  const filterOrderOptions = [
-    { label: '2', value: '2' },
-    { label: '4', value: '4' },
-    { label: '6', value: '6' },
-    { label: '8', value: '8' }
-  ];
-  
-  highpassFilterOrderDropdown = initDropdown(highpassFilterOrderButton, filterOrderOptions, {
-    onChange: updateBatCallConfig
-  });
-  
-  // 設置初始選項 (Default to 2)
-  const defaultOrderIndex = filterOrderOptions.findIndex(opt => opt.value === window.__batCallControlsMemory.highpassFilterOrder?.toString() || '2');
-  highpassFilterOrderDropdown.select(defaultOrderIndex >= 0 ? defaultOrderIndex : 0, { triggerOnChange: false });
+  if (highpassFilterOrderForListeners) {
+    highpassFilterOrderForListeners.addEventListener('change', updateBatCallConfig);
+    highpassFilterOrderForListeners.addEventListener('input', () => {
+      clearTimeout(highpassFilterOrderForListeners._updateTimeout);
+      highpassFilterOrderForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
+    });
+    addNumberInputKeyboardSupport(highpassFilterOrderForListeners);
+  }
 
   /**
    * 為 type="number" 的 input 添加上下鍵支持
@@ -1180,18 +1168,21 @@ function createPopupWindow() {
   highpassFreqControl.appendChild(highpassFreqUnit);
   batCallControlPanel.appendChild(highpassFreqControl);
 
-  // highpassFilterOrder (Dropdown button) - 將在 showCallAnalysisPopup 中初始化
+  // highpassFilterOrder (Number input) - 將在 showCallAnalysisPopup 中添加事件監聽器
   const highpassFilterOrderControl = document.createElement('label');
   const highpassFilterOrderLabel = document.createElement('span');
   highpassFilterOrderLabel.textContent = 'Filter order:';
   highpassFilterOrderControl.appendChild(highpassFilterOrderLabel);
   
-  const highpassFilterOrderButton = document.createElement('button');
-  highpassFilterOrderButton.id = 'highpassFilterOrder';
-  highpassFilterOrderButton.className = 'dropdown-button';
-  highpassFilterOrderButton.type = 'button';
-  highpassFilterOrderButton.title = 'Highpass filter order (higher = stronger filtering)';
-  highpassFilterOrderControl.appendChild(highpassFilterOrderButton);
+  const highpassFilterOrderInput = document.createElement('input');
+  highpassFilterOrderInput.id = 'highpassFilterOrder';
+  highpassFilterOrderInput.type = 'number';
+  highpassFilterOrderInput.value = window.__batCallControlsMemory.highpassFilterOrder?.toString() || '2';
+  highpassFilterOrderInput.min = '2';
+  highpassFilterOrderInput.max = '8';
+  highpassFilterOrderInput.step = '1';
+  highpassFilterOrderInput.title = 'Highpass filter order (2-8, higher = stronger filtering)';
+  highpassFilterOrderControl.appendChild(highpassFilterOrderInput);
   
   batCallControlPanel.appendChild(highpassFilterOrderControl);
 
