@@ -81,8 +81,23 @@ export function drawFrequencyGrid({
   ctx.lineWidth = 0.4;
 
   const range = maxFrequency;
-  const majorStep = timeExpansion ? 1 : 10;
-  const minorStep = timeExpansion ? 0.5 : 5;
+  
+  // 根據 frequency range 調整精細度
+  // 當 frequency range <= 20kHz 時，精度最高 (1 kHz)
+  let majorStep, minorStep;
+  if (range <= 20) {
+    // frequency range <= 20kHz: 1kHz 精細度 (最高精度)
+    majorStep = timeExpansion ? 0.1 : 1;
+    minorStep = timeExpansion ? 0.05 : 0.5;
+  } else if (range <= 50) {
+    // frequency range <= 50kHz: 5kHz 精細度
+    majorStep = timeExpansion ? 0.5 : 5;
+    minorStep = timeExpansion ? 0.25 : 2.5;
+  } else {
+    // frequency range > 50kHz: 10kHz 精細度
+    majorStep = timeExpansion ? 1 : 10;
+    minorStep = timeExpansion ? 0.5 : 5;
+  }
 
   // 優化：批量繪製所有網格線
   ctx.beginPath();
