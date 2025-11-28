@@ -517,6 +517,9 @@ export function showCallAnalysisPopup({
       const orderValue = parseInt(highpassFilterOrder.value);
       // 驗證值在有效範圍內（2-8）
       batCallConfig.highpassFilterOrder = (!isNaN(orderValue) && orderValue >= 2 && orderValue <= 8) ? orderValue : 2;
+      console.log('[DEBUG] updateBatCallConfig: highpassFilterOrder updated to', batCallConfig.highpassFilterOrder, 'from input value:', highpassFilterOrder.value);
+    } else {
+      console.log('[DEBUG] updateBatCallConfig: highpassFilterOrder element NOT found!');
     }
     
     // 保存到全局記憶中
@@ -661,12 +664,15 @@ export function showCallAnalysisPopup({
    * 設置 Highpass Filter Order Number Input 的事件監聽器
    */
   if (highpassFilterOrderForListeners) {
+    console.log('[DEBUG] highpassFilterOrderForListeners found, adding listeners');
     highpassFilterOrderForListeners.addEventListener('change', updateBatCallConfig);
     highpassFilterOrderForListeners.addEventListener('input', () => {
       clearTimeout(highpassFilterOrderForListeners._updateTimeout);
       highpassFilterOrderForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
     });
     addNumberInputKeyboardSupport(highpassFilterOrderForListeners);
+  } else {
+    console.log('[DEBUG] ERROR: highpassFilterOrderForListeners NOT found!');
   }
 
   // 為所有輸入框添加事件監聽器
