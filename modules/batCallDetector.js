@@ -1,53 +1,33 @@
 /**
  * Professional-grade Bat Call Detection and Parameter Measurement Module
- * Aligned with Avisoft, SonoBat, Kaleidoscope, and BatSound standards
- * 
- * Reference: 
- * - Avisoft-SASLab Pro: https://www.avisoft.com/
- * - SonoBat: https://www.sonobat.com/
- * - Kaleidoscope Pro: https://www.wildlifeacoustics.com/
- * - BatSound: https://www.batvoice.org/
  */
 
 import { getApplyWindowFunction, getGoertzelEnergyFunction } from './powerSpectrum.js';
-
-/**
- * Bat Call Detection Configuration (Professional Standards)
- * 
- * 2025 Anti-Rebounce Upgrade:
- * - Backward scanning for -27dB contour cutoff
- * - Maximum frequency drop detection (10 kHz threshold)
- * - 10 ms protection window after peak energy
- */
 export const DEFAULT_DETECTION_CONFIG = {
   // Energy threshold (dB below maximum within frequency range)
   // Typical: -18 dB (Avisoft), -24 dB (SonoBat, more conservative)
   callThreshold_dB: -24,
   
-  // Start/End frequency threshold (dB below peak for finding edges)
-  // Changed from -18 to -24 for more conservative edge detection
+  // High frequency threshold (dB below peak for finding edges)
   highFreqThreshold_dB: -24,  // Threshold for calculating High Frequency (optimal value range: -24 to -70)
   
-  // 2025 ENHANCEMENT: Automatic high frequency threshold optimization
-  // When enabled, automatically tests thresholds from -24dB to -70dB
-  // to find optimal value that provides stable measurements
+  // Automatic high frequency threshold optimization
+  // When enabled, automatically tests thresholds from -24dB to -70dB to find optimal value that provides stable measurements
   // Default: false (manual threshold mode)
-  highFreqThreshold_dB_isAuto: false,
+  highFreqThreshold_dB_isAuto: true,
   
-  // Low frequency threshold (dB below peak for finding edges)
+  // Low frequency threshold (dB below peak for finding edges) 
   // Fixed at -27dB for anti-rebounce compatibility
   // This is used for finding the lowest frequency in the call (last frame)
   lowFreqThreshold_dB: -27,
   
-  // 2025 ENHANCEMENT: Automatic low frequency threshold optimization
-  // When enabled, automatically tests thresholds from -24dB to -70dB
-  // to find optimal value that provides stable measurements
+  // Automatic low frequency threshold optimization
+  // When enabled, automatically tests thresholds from -24dB to -70dB to find optimal value that provides stable measurements
   // Works symmetrically with high frequency optimization
   // Default: true (automatic threshold mode - enabled by default)
   lowFreqThreshold_dB_isAuto: true,
   
-  // Characteristic frequency is defined as lowest or average frequency 
-  // in the last 10-20% of the call duration
+  // Characteristic frequency is defined as lowest or average frequency in the last 10-20% of the call duration
   characteristicFreq_percentEnd: 20,  // Last 20% duration
   
   // Minimum call duration to be considered valid (ms)
