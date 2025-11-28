@@ -2,7 +2,7 @@
  * Professional-grade Bat Call Detection and Parameter Measurement Module
  */
 
-import { getApplyWindowFunction, getGoertzelEnergyFunction } from './powerSpectrum.js';
+import { getApplyWindowFunction, getGoertzelEnergyFunction } from './callAnalysisPopup.js';
 export const DEFAULT_DETECTION_CONFIG = {
   // Energy threshold (dB below maximum within frequency range)
   // Typical: -18 dB (Avisoft), -24 dB (SonoBat, more conservative)

@@ -1,4 +1,6 @@
-// modules/powerSpectrum.js
+// modules/callAnalysisPopup.js
+// 蝙蝠叫聲分析彈窗
+// 提供 Power Spectrum 計算、展示和蝙蝠叫聲參數分析功能
 
 import { initDropdown } from './dropdown.js';
 import { BatCallDetector } from './batCallDetector.js';
@@ -28,9 +30,10 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
 };
 
 /**
- * 計算並顯示選定區域的 Power Spectrum
+ * 顯示蝙蝠叫聲分析彈窗
+ * 包含 Power Spectrum 顯示和蝙蝠叫聲參數分析
  */
-export function showPowerSpectrumPopup({
+export function showCallAnalysisPopup({
   selection,
   wavesurfer,
   currentSettings = {}

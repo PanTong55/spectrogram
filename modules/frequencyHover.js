@@ -1,6 +1,6 @@
 import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
-import { showPowerSpectrumPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './powerSpectrum.js';
+import { showCallAnalysisPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './callAnalysisPopup.js';
 
 export function initFrequencyHover({
   viewerId,
@@ -1146,7 +1146,7 @@ const upHandler = () => {
       overlap: window.__spectrogramSettings?.overlap || 'auto'
     };
 
-    const popupObj = showPowerSpectrumPopup({
+    const popupObj = showCallAnalysisPopup({
       selection: selection.data,
       wavesurfer: ws,
       currentSettings
