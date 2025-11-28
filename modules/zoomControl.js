@@ -19,7 +19,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
 
     if (isSelectionExpandMode()) {
       if (dur > 0) {
-        if (dur < 1000) return 8000;
+        if (dur < 1000) return 10000;
         if (dur < 3000) return 3000;
       }
     }
