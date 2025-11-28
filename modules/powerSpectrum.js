@@ -154,6 +154,20 @@ export function showPowerSpectrumPopup({
       overlapValue = parseInt(overlapInput.value, 10);
     }
 
+    // 計算實際使用的 overlap 百分比並更新 placeholder
+    let actualOverlapPercent;
+    if (overlapValue === 'auto' || overlapValue === '') {
+      // Auto mode: 預設 50% overlap
+      actualOverlapPercent = 50;
+    } else {
+      actualOverlapPercent = parseInt(overlapValue, 10);
+    }
+    
+    // 當 input box 為空（Auto mode）時，更新 placeholder 顯示實際的 overlap %
+    if (overlapInput.value.trim() === '') {
+      overlapInput.placeholder = `Auto (${actualOverlapPercent}%)`;
+    }
+
     // 計算 Power Spectrum（使用 Power Spectrum 配置）
     const spectrum = calculatePowerSpectrumWithOverlap(
       audioData,
