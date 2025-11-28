@@ -559,6 +559,25 @@ export function showCallAnalysisPopup({
   };
 
   /**
+   * 初始化 Highpass Filter Order Dropdown（必須在 updateBatCallConfig 定義之後）
+   */
+  const highpassFilterOrderButton = popup.querySelector('#highpassFilterOrder');
+  const filterOrderOptions = [
+    { label: '2', value: '2' },
+    { label: '4', value: '4' },
+    { label: '6', value: '6' },
+    { label: '8', value: '8' }
+  ];
+  
+  highpassFilterOrderDropdown = initDropdown(highpassFilterOrderButton, filterOrderOptions, {
+    onChange: updateBatCallConfig
+  });
+  
+  // 設置初始選項 (Default to 2)
+  const defaultOrderIndex = filterOrderOptions.findIndex(opt => opt.value === window.__batCallControlsMemory.highpassFilterOrder?.toString() || '2');
+  highpassFilterOrderDropdown.select(defaultOrderIndex >= 0 ? defaultOrderIndex : 0, { triggerOnChange: false });
+
+  /**
    * 為 type="number" 的 input 添加上下鍵支持
    */
   const addNumberInputKeyboardSupport = (inputElement) => {
@@ -1161,7 +1180,7 @@ function createPopupWindow() {
   highpassFreqControl.appendChild(highpassFreqUnit);
   batCallControlPanel.appendChild(highpassFreqControl);
 
-  // highpassFilterOrder (Dropdown button)
+  // highpassFilterOrder (Dropdown button) - 將在 showCallAnalysisPopup 中初始化
   const highpassFilterOrderControl = document.createElement('label');
   const highpassFilterOrderLabel = document.createElement('span');
   highpassFilterOrderLabel.textContent = 'Filter order:';
@@ -1173,22 +1192,6 @@ function createPopupWindow() {
   highpassFilterOrderButton.type = 'button';
   highpassFilterOrderButton.title = 'Highpass filter order (higher = stronger filtering)';
   highpassFilterOrderControl.appendChild(highpassFilterOrderButton);
-  
-  // 初始化 Filter Order Dropdown
-  const filterOrderOptions = [
-    { label: '2', value: '2' },
-    { label: '4', value: '4' },
-    { label: '6', value: '6' },
-    { label: '8', value: '8' }
-  ];
-  
-  highpassFilterOrderDropdown = initDropdown(highpassFilterOrderButton, filterOrderOptions, {
-    onChange: updateBatCallConfig
-  });
-  
-  // 設置初始選項 (Default to 2)
-  const defaultOrderIndex = filterOrderOptions.findIndex(opt => opt.value === window.__batCallControlsMemory.highpassFilterOrder?.toString() || '2');
-  highpassFilterOrderDropdown.select(defaultOrderIndex >= 0 ? defaultOrderIndex : 0, { triggerOnChange: false });
   
   batCallControlPanel.appendChild(highpassFilterOrderControl);
 
