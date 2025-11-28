@@ -138,6 +138,18 @@ export function showCallAnalysisPopup({
     popup.remove();
     return null;
   }
+  
+  // 驗證提取的音頻數據有效性
+  const selectionDurationMs = (selection.endTime - selection.startTime) * 1000;
+  const extractedDurationMs = (audioData.length / sampleRate) * 1000;
+  if (extractedDurationMs < selectionDurationMs - 1) {  // 允許 1ms 的浮點誤差
+    console.warn(
+      `⚠️ Audio data mismatch: Selection duration ${selectionDurationMs.toFixed(1)}ms ` +
+      `but extracted only ${extractedDurationMs.toFixed(1)}ms. ` +
+      `The selection may exceed the available audio. ` +
+      `Try selecting a shorter range or expanding the frequency range.`
+    );
+  }
 
   // 用於存儲最後計算的峰值頻率
   let lastPeakFreq = null;

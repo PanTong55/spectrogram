@@ -37,9 +37,25 @@ export async function cropWavBlob(file, startTime, endTime) {
   const blockAlign = numChannels * bitsPerSample / 8;
 
   const startSample = Math.floor(startTime * sampleRate);
-  const endSample = Math.floor(endTime * sampleRate);
+  let endSample = Math.floor(endTime * sampleRate);
+  
+  // 計算實際可用的最大樣本數 (基於 dataSize)
+  const maxAvailableSamples = Math.floor(dataSize / blockAlign);
+  
+  // 驗證 endSample 不超過可用的樣本數
+  // 如果超過，進行修正並輸出警告
+  if (endSample > maxAvailableSamples) {
+    console.warn(
+      `⚠️ cropAudio: Requested end time (${endTime}s = ${endSample} samples) ` +
+      `exceeds available data (${dataSize} bytes = ${maxAvailableSamples} samples). ` +
+      `Actual duration: ${maxAvailableSamples / sampleRate}s. Truncating to available data.`
+    );
+    // 將 endSample 限制為可用的最大值
+    endSample = maxAvailableSamples;
+  }
+  
   const startByte = dataOffset + startSample * blockAlign;
-  const endByte = Math.min(dataOffset + dataSize, dataOffset + endSample * blockAlign);
+  const endByte = dataOffset + endSample * blockAlign;
 
   if (endByte <= startByte) return null;
 
