@@ -1334,7 +1334,7 @@ input.tag-button.editing {
 
 /* Power Spectrum Popup dropdown buttons */
 #powerSpectrumWindowType.dropdown-button {
-  width: 120px;
+  width: 110px;
   font-size: 11px;
   text-align: left;
   display: inline-block;
@@ -2349,7 +2349,7 @@ input.tag-button.editing {
 }
 
 .power-spectrum-controls input[type="number"] {
-  width: 60px;
+  width: 71px;
   font-size: 11px;
 }
 
