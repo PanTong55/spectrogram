@@ -1144,28 +1144,34 @@ function extractAudioData(wavesurfer, selection, sampleRate) {
 /**
  * 尋找最優的 overlap 值
  * 基於頻譜平滑度和峰值檢測效率的平衡
+ * 掃描範圍：50% - 95%，精細至每 1%
  * @param {Float32Array} audioData - 音頻數據
  * @param {number} sampleRate - 採樣率
  * @param {number} fftSize - FFT 大小
  * @param {string} windowType - 窗口類型
- * @returns {number} 最優的 overlap 百分比 (1-99)
+ * @returns {number} 最優的 overlap 百分比 (50-95)
  */
 function findOptimalOverlap(audioData, sampleRate, fftSize, windowType) {
   if (!audioData || audioData.length < fftSize) {
-    // 如果音頻太短，使用預設 50%
-    return 50;
+    // 如果音頻太短，使用預設 75%
+    return 75;
   }
 
-  // 候選 overlap 百分比
-  // 選擇常見的值：25%, 50%, 75% (對應 hopSize 為 75%, 50%, 25% 的 fftSize)
-  const candidates = [25, 50, 75];
+  // 候選 overlap 百分比：50% - 95%，精細至每 1%
+  const candidates = [];
+  for (let i = 50; i <= 95; i++) {
+    candidates.push(i);
+  }
   
-  let bestOverlap = 50;
+  let bestOverlap = 75;  // 預設最優值
   let bestScore = -Infinity;
 
   for (const overlapPercent of candidates) {
     // 計算 hop size
     const hopSize = Math.floor(fftSize * (1 - overlapPercent / 100));
+    
+    // 確保 hopSize > 0
+    if (hopSize <= 0) continue;
     
     // 計算該 overlap 下的頻譜幀數
     const frameCount = Math.floor((audioData.length - fftSize) / hopSize) + 1;
@@ -1183,9 +1189,17 @@ function findOptimalOverlap(audioData, sampleRate, fftSize, windowType) {
     // 計算時間分辨率（更多幀 = 更好的時間覆蓋）
     const timeResolutionScore = frameCount / audioData.length;
     
-    // 綜合評分：平衡時間分辨率、幀數和頻率特性
-    // 權重：時間覆蓋 (40%) + 幀數 (35%) + 頻率分辨率 (25%)
-    const score = 0.4 * timeResolutionScore + 0.35 * frameScore + 0.25 * freqResolutionScore;
+    // 計算 Window Coherent Gain（窗口內聚性增益）
+    // 更高的 overlap 導致更多的樣本被處理，增加信號能量
+    // 但同時也增加計算負荷，需要平衡
+    const windowCoherentGain = 1 + (overlapPercent - 50) / 100;  // 線性增益模型
+    
+    // 綜合評分：平衡時間分辨率、幀數、頻率特性和窗口增益
+    // 權重：時間覆蓋 (35%) + 幀數 (30%) + 頻率分辨率 (20%) + 窗口增益 (15%)
+    const score = 0.35 * timeResolutionScore + 
+                  0.30 * frameScore + 
+                  0.20 * freqResolutionScore + 
+                  0.15 * windowCoherentGain;
     
     if (score > bestScore) {
       bestScore = score;
