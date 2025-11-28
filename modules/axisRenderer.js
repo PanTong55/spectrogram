@@ -12,7 +12,10 @@ export function drawTimeAxis({
   const totalWidth = duration * pxPerSec;
 
   let step = 1000;
-  if (pxPerSec >= 800) step = 100;
+  if (pxPerSec >= 5000) step = 10;        // zoom level > 5000: 10ms 精細度
+  else if (pxPerSec >= 2000) step = 20;   // zoom level > 2000: 20ms 精細度
+  else if (pxPerSec >= 1000) step = 50;   // zoom level > 1000: 50ms 精細度
+  else if (pxPerSec >= 800) step = 100;
   else if (pxPerSec >= 500) step = 200;
   else if (pxPerSec >= 300) step = 500;
 
