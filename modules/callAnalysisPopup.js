@@ -34,8 +34,7 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   maxFrequencyDropThreshold_kHz: 10,
   protectionWindowAfterPeak_ms: 10,
   enableHighpassFilter: true,            // Highpass filter enable/disable
-  highpassFilterFreq_kHz: 40,            // Highpass filter frequency (kHz)
-  highpassFilterOrder: 2                 // Highpass filter order (2, 4, 6, 8)
+  highpassFilterFreq_kHz: 40             // Highpass filter frequency (kHz)
 };
 
 /**
@@ -91,8 +90,7 @@ export function showCallAnalysisPopup({
     protectionWindowAfterPeak_ms: memory.protectionWindowAfterPeak_ms || 10,
     // Highpass Filter Parameters
     enableHighpassFilter: memory.enableHighpassFilter !== false,
-    highpassFilterFreq_kHz: memory.highpassFilterFreq_kHz || 40,
-    highpassFilterOrder: parseInt(memory.highpassFilterOrder) || 2
+    highpassFilterFreq_kHz: memory.highpassFilterFreq_kHz || 40
   };
 
   // 建立 Popup Window
@@ -209,15 +207,8 @@ export function showCallAnalysisPopup({
     }
 
     // 計算 Power Spectrum（使用 Power Spectrum 配置）
-    // 2025: 如果啟用了 Highpass Filter，也應用到 Power Spectrum 的計算
-    let audioDataForSpectrum = audioData;
-    if (batCallConfig.enableHighpassFilter) {
-      const highpassFreq_Hz = batCallConfig.highpassFilterFreq_kHz * 1000;
-      audioDataForSpectrum = applyButterworthHighpassFilter(audioDataForSpectrum, highpassFreq_Hz, sampleRate, batCallConfig.highpassFilterOrder);
-    }
-    
     const spectrum = calculatePowerSpectrumWithOverlap(
-      audioDataForSpectrum,
+      audioData,
       sampleRate,
       powerSpectrumConfig.fftSize,
       powerSpectrumConfig.windowType,
@@ -273,7 +264,7 @@ export function showCallAnalysisPopup({
       // 如果啟用 Highpass Filter，在進行 call measurement 之前應用濾波
       if (batCallConfig.enableHighpassFilter) {
         const highpassFreq_Hz = batCallConfig.highpassFilterFreq_kHz * 1000;
-        audioDataForDetection = applyButterworthHighpassFilter(audioDataForDetection, highpassFreq_Hz, sampleRate, batCallConfig.highpassFilterOrder);
+        audioDataForDetection = applyButterworthHighpassFilter(audioDataForDetection, highpassFreq_Hz, sampleRate, 2);
       }
 
       const calls = await detector.detectCalls(
@@ -382,7 +373,6 @@ export function showCallAnalysisPopup({
   // 2025 Highpass Filter Controls
   const highpassFilterCheckboxForListeners = popup.querySelector('#enableHighpassFilter');
   const highpassFilterFreqInputForListeners = popup.querySelector('#highpassFilterFreq_kHz');
-  const highpassFilterOrderForListeners = popup.querySelector('#highpassFilterOrder');
 
   // 初始化 FFT Size Dropdown
   const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
@@ -494,7 +484,6 @@ export function showCallAnalysisPopup({
     // 2025 Highpass Filter Controls
     let highpassFilterCheckbox = highpassFilterCheckboxForListeners || popup.querySelector('#enableHighpassFilter');
     let highpassFilterFreqInput = highpassFilterFreqInputForListeners || popup.querySelector('#highpassFilterFreq_kHz');
-    let highpassFilterOrder = highpassFilterOrderForListeners || popup.querySelector('#highpassFilterOrder');
     
     if (antiRebounceCheckbox) {
       batCallConfig.enableBackwardEndFreqScan = antiRebounceCheckbox.checked;
@@ -511,15 +500,6 @@ export function showCallAnalysisPopup({
     }
     if (highpassFilterFreqInput) {
       batCallConfig.highpassFilterFreq_kHz = parseFloat(highpassFilterFreqInput.value) || 40;
-    }
-    // 注意：highpassFilterOrder 供为 number input，有一個 .value 屬性
-    if (highpassFilterOrder) {
-      const orderValue = parseInt(highpassFilterOrder.value);
-      // 驗證值在有效範圍內（2-8）
-      batCallConfig.highpassFilterOrder = (!isNaN(orderValue) && orderValue >= 2 && orderValue <= 8) ? orderValue : 2;
-      console.log('[DEBUG] updateBatCallConfig: highpassFilterOrder updated to', batCallConfig.highpassFilterOrder, 'from input value:', highpassFilterOrder.value);
-    } else {
-      console.log('[DEBUG] updateBatCallConfig: highpassFilterOrder element NOT found!');
     }
     
     // 保存到全局記憶中
@@ -539,8 +519,7 @@ export function showCallAnalysisPopup({
       protectionWindowAfterPeak_ms: batCallConfig.protectionWindowAfterPeak_ms,
       // 2025 Highpass Filter
       enableHighpassFilter: batCallConfig.enableHighpassFilter,
-      highpassFilterFreq_kHz: batCallConfig.highpassFilterFreq_kHz,
-      highpassFilterOrder: batCallConfig.highpassFilterOrder
+      highpassFilterFreq_kHz: batCallConfig.highpassFilterFreq_kHz
     };
     
     // 2025 CRITICAL FIX: 檢測 mode 是否改變
@@ -563,12 +542,6 @@ export function showCallAnalysisPopup({
     
     // 只進行 Bat Call 分析，不重新計算 Power Spectrum
     await updateBatCallAnalysis(lastPeakFreq);
-    
-    // 2025: 如果改變了 Highpass Filter 設置，也需要重新繪製 Power Spectrum
-    // 因為 Power Spectrum 顯示的頻譜也應該應用 highpass filter 濾波
-    if (batCallConfig.enableHighpassFilter) {
-      await redrawSpectrum();
-    }
   };
 
   /**
@@ -659,21 +632,6 @@ export function showCallAnalysisPopup({
       window.__isAdjustingNumberInput = false;
     });
   };
-
-  /**
-   * 設置 Highpass Filter Order Number Input 的事件監聽器
-   */
-  if (highpassFilterOrderForListeners) {
-    console.log('[DEBUG] highpassFilterOrderForListeners found, adding listeners');
-    highpassFilterOrderForListeners.addEventListener('change', updateBatCallConfig);
-    highpassFilterOrderForListeners.addEventListener('input', () => {
-      clearTimeout(highpassFilterOrderForListeners._updateTimeout);
-      highpassFilterOrderForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
-    });
-    addNumberInputKeyboardSupport(highpassFilterOrderForListeners);
-  } else {
-    console.log('[DEBUG] ERROR: highpassFilterOrderForListeners NOT found!');
-  }
 
   // 為所有輸入框添加事件監聽器
   batCallThresholdInput.addEventListener('change', updateBatCallConfig);
@@ -1188,24 +1146,6 @@ function createPopupWindow() {
   highpassFreqUnit.textContent = 'kHz';
   highpassFreqControl.appendChild(highpassFreqUnit);
   batCallControlPanel.appendChild(highpassFreqControl);
-
-  // highpassFilterOrder (Number input) - 將在 showCallAnalysisPopup 中添加事件監聽器
-  const highpassFilterOrderControl = document.createElement('label');
-  const highpassFilterOrderLabel = document.createElement('span');
-  highpassFilterOrderLabel.textContent = 'Filter order:';
-  highpassFilterOrderControl.appendChild(highpassFilterOrderLabel);
-  
-  const highpassFilterOrderInput = document.createElement('input');
-  highpassFilterOrderInput.id = 'highpassFilterOrder';
-  highpassFilterOrderInput.type = 'number';
-  highpassFilterOrderInput.value = window.__batCallControlsMemory.highpassFilterOrder?.toString() || '2';
-  highpassFilterOrderInput.min = '2';
-  highpassFilterOrderInput.max = '8';
-  highpassFilterOrderInput.step = '1';
-  highpassFilterOrderInput.title = 'Highpass filter order (2-8, higher = stronger filtering)';
-  highpassFilterOrderControl.appendChild(highpassFilterOrderInput);
-  
-  batCallControlPanel.appendChild(highpassFilterOrderControl);
 
   popup.appendChild(batCallControlPanel);
 
