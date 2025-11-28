@@ -52,6 +52,9 @@ export function showPowerSpectrumPopup({
     hopPercent: 25
   };
 
+  // 用於追蹤 Auto mode 下計算出的最優 overlap 值
+  let computedOptimalOverlap = 50;  // 預設值
+
   // Bat Call Detection 配置：控制蝙蝠叫聲檢測的參數
   // 使用記憶的值作為預設值
   const memory = window.__batCallControlsMemory;
@@ -157,8 +160,17 @@ export function showPowerSpectrumPopup({
     // 計算實際使用的 overlap 百分比並更新 placeholder
     let actualOverlapPercent;
     if (overlapValue === 'auto' || overlapValue === '') {
-      // Auto mode: 預設 50% overlap
-      actualOverlapPercent = 50;
+      // Auto mode: 計算最優 overlap 值
+      actualOverlapPercent = findOptimalOverlap(
+        audioData,
+        sampleRate,
+        powerSpectrumConfig.fftSize,
+        powerSpectrumConfig.windowType
+      );
+      // 存儲計算出的最優值，供後續使用
+      computedOptimalOverlap = actualOverlapPercent;
+      // 轉換為實際的 overlap 值供計算使用
+      overlapValue = actualOverlapPercent;
     } else {
       actualOverlapPercent = parseInt(overlapValue, 10);
     }
@@ -1127,6 +1139,61 @@ function extractAudioData(wavesurfer, selection, sampleRate) {
     console.error('Error extracting audio data:', err);
     return null;
   }
+}
+
+/**
+ * 尋找最優的 overlap 值
+ * 基於頻譜平滑度和峰值檢測效率的平衡
+ * @param {Float32Array} audioData - 音頻數據
+ * @param {number} sampleRate - 採樣率
+ * @param {number} fftSize - FFT 大小
+ * @param {string} windowType - 窗口類型
+ * @returns {number} 最優的 overlap 百分比 (1-99)
+ */
+function findOptimalOverlap(audioData, sampleRate, fftSize, windowType) {
+  if (!audioData || audioData.length < fftSize) {
+    // 如果音頻太短，使用預設 50%
+    return 50;
+  }
+
+  // 候選 overlap 百分比
+  // 選擇常見的值：25%, 50%, 75% (對應 hopSize 為 75%, 50%, 25% 的 fftSize)
+  const candidates = [25, 50, 75];
+  
+  let bestOverlap = 50;
+  let bestScore = -Infinity;
+
+  for (const overlapPercent of candidates) {
+    // 計算 hop size
+    const hopSize = Math.floor(fftSize * (1 - overlapPercent / 100));
+    
+    // 計算該 overlap 下的頻譜幀數
+    const frameCount = Math.floor((audioData.length - fftSize) / hopSize) + 1;
+    
+    // 計算頻率分辨率（越好越好）
+    const freqResolution = sampleRate / fftSize;
+    
+    // 頻率分辨率得分（低分辨率更好，但需要歸一化）
+    const freqResolutionScore = 1.0 / (freqResolution + 1);
+    
+    // 計算頻譜的能量分佈方差（評估平滑度）
+    // 更多幀 → 更平滑的結果 → 更好的 SNR
+    const frameScore = Math.log(frameCount + 1);
+    
+    // 計算時間分辨率（更多幀 = 更好的時間覆蓋）
+    const timeResolutionScore = frameCount / audioData.length;
+    
+    // 綜合評分：平衡時間分辨率、幀數和頻率特性
+    // 權重：時間覆蓋 (40%) + 幀數 (35%) + 頻率分辨率 (25%)
+    const score = 0.4 * timeResolutionScore + 0.35 * frameScore + 0.25 * freqResolutionScore;
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestOverlap = overlapPercent;
+    }
+  }
+
+  return bestOverlap;
 }
 
 /**
