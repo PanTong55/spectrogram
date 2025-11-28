@@ -209,8 +209,15 @@ export function showCallAnalysisPopup({
     }
 
     // 計算 Power Spectrum（使用 Power Spectrum 配置）
+    // 2025: 如果啟用了 Highpass Filter，也應用到 Power Spectrum 的計算
+    let audioDataForSpectrum = audioData;
+    if (batCallConfig.enableHighpassFilter) {
+      const highpassFreq_Hz = batCallConfig.highpassFilterFreq_kHz * 1000;
+      audioDataForSpectrum = applyButterworthHighpassFilter(audioDataForSpectrum, highpassFreq_Hz, sampleRate, batCallConfig.highpassFilterOrder);
+    }
+    
     const spectrum = calculatePowerSpectrumWithOverlap(
-      audioData,
+      audioDataForSpectrum,
       sampleRate,
       powerSpectrumConfig.fftSize,
       powerSpectrumConfig.windowType,
@@ -507,7 +514,9 @@ export function showCallAnalysisPopup({
     }
     // 注意：highpassFilterOrder 供为 number input，有一個 .value 屬性
     if (highpassFilterOrder) {
-      batCallConfig.highpassFilterOrder = parseInt(highpassFilterOrder.value) || 2;
+      const orderValue = parseInt(highpassFilterOrder.value);
+      // 驗證值在有效範圍內（2-8）
+      batCallConfig.highpassFilterOrder = (!isNaN(orderValue) && orderValue >= 2 && orderValue <= 8) ? orderValue : 2;
     }
     
     // 保存到全局記憶中
@@ -551,6 +560,12 @@ export function showCallAnalysisPopup({
     
     // 只進行 Bat Call 分析，不重新計算 Power Spectrum
     await updateBatCallAnalysis(lastPeakFreq);
+    
+    // 2025: 如果改變了 Highpass Filter 設置，也需要重新繪製 Power Spectrum
+    // 因為 Power Spectrum 顯示的頻譜也應該應用 highpass filter 濾波
+    if (batCallConfig.enableHighpassFilter) {
+      await redrawSpectrum();
+    }
   };
 
   /**
