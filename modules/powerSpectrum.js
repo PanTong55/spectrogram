@@ -22,7 +22,6 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   minCallDuration_ms: 2,
   fftSize: '1024',
   hopPercent: 3.125,
-  // 2025 Anti-Rebounce
   enableBackwardEndFreqScan: true,
   maxFrequencyDropThreshold_kHz: 10,
   protectionWindowAfterPeak_ms: 10
@@ -49,7 +48,7 @@ export function showPowerSpectrumPopup({
   // Power Spectrum 配置：控制頻譜圖的計算和顯示
   let powerSpectrumConfig = {
     windowType: windowType,
-    fftSize: 1024,  // 固定預設為 1024
+    fftSize: 1024,
     hopPercent: 25
   };
 
@@ -190,7 +189,6 @@ export function showPowerSpectrumPopup({
         detail: { call: popup.__latestDetectedCall }
       }));
     } catch (e) {
-      // 若 popup 尚不可用或調度失敗，忽略錯誤
     }
 
     // 繪製 Power Spectrum
@@ -914,7 +912,7 @@ function createPopupWindow() {
   // minCallDuration_ms 控制
   const minDurationControl = document.createElement('label');
   const minDurationLabel = document.createElement('span');
-  minDurationLabel.textContent = 'Min Duration:';
+  minDurationLabel.textContent = 'Min Dur:';
   minDurationControl.appendChild(minDurationLabel);
   
   const minDurationInput = document.createElement('input');
@@ -1007,7 +1005,7 @@ function createPopupWindow() {
   protectionWindowInput.type = 'number';
   protectionWindowInput.value = window.__batCallControlsMemory.protectionWindowAfterPeak_ms.toString();
   protectionWindowInput.min = '1';
-  protectionWindowInput.max = '100';
+  protectionWindowInput.max = '20';
   protectionWindowInput.step = '1';
   protectionWindowInput.title = 'Protection window after peak energy (ms)';
   protectionWindowControl.appendChild(protectionWindowInput);
