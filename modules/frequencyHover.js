@@ -2,6 +2,55 @@ import { getTimeExpansionMode } from './fileState.js';
 import { getWavesurfer, getPlugin } from './wsManager.js';
 import { showCallAnalysisPopup, calculateSpectrumWithOverlap, findPeakFrequency } from './callAnalysisPopup.js';
 
+// ============================================================
+// 全局 Call Analysis 窗口狀態管理
+// ============================================================
+// 存儲所有打開的 Call Analysis popup 及其關聯的 selection
+const openCallAnalysisPopups = new Map();  // Map<popupElement, {selection, selectionContextMenu}>
+
+// 添加或更新 popup 狀態
+function registerCallAnalysisPopup(popupElement, selection) {
+  openCallAnalysisPopups.set(popupElement, { selection });
+}
+
+// 移除 popup 狀態並啟用相關的 Call analysis 菜單項
+function unregisterCallAnalysisPopup(popupElement) {
+  const data = openCallAnalysisPopups.get(popupElement);
+  if (data && data.selection) {
+    // 啟用該 selection 的 Call analysis 菜單項
+    enableCallAnalysisMenuItem(data.selection);
+  }
+  openCallAnalysisPopups.delete(popupElement);
+}
+
+// 檢查該 selection 是否已有打開的 popup
+function hasOpenPopup(selection) {
+  for (const [popup, data] of openCallAnalysisPopups) {
+    if (data.selection === selection) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 禁用指定 selection 的 Call analysis 菜單項
+function disableCallAnalysisMenuItem(selection) {
+  if (selection && selection._callAnalysisMenuItem) {
+    selection._callAnalysisMenuItem.classList.add('disabled');
+    selection._callAnalysisMenuItem.style.opacity = '0.5';
+    selection._callAnalysisMenuItem.style.pointerEvents = 'none';
+  }
+}
+
+// 啟用指定 selection 的 Call analysis 菜單項
+function enableCallAnalysisMenuItem(selection) {
+  if (selection && selection._callAnalysisMenuItem) {
+    selection._callAnalysisMenuItem.classList.remove('disabled');
+    selection._callAnalysisMenuItem.style.opacity = '1';
+    selection._callAnalysisMenuItem.style.pointerEvents = 'auto';
+  }
+}
+
 export function initFrequencyHover({
   viewerId,
   wrapperId = 'viewer-wrapper',
@@ -1059,9 +1108,19 @@ const upHandler = () => {
           try { popupElement.removeEventListener('peakUpdated', sel._popupPeakListener); } catch(e) {}
           delete sel._popupPeakListener;
         }
+        if (popupElement && sel._batCallDetectionListener) {
+          try { popupElement.removeEventListener('batCallDetectionCompleted', sel._batCallDetectionListener); } catch(e) {}
+          delete sel._batCallDetectionListener;
+        }
+        if (popupElement && sel._popupMutationObserver) {
+          try { sel._popupMutationObserver.disconnect(); } catch(e) {}
+          delete sel._popupMutationObserver;
+        }
         if (popupElement && document.body.contains(popupElement)) {
           popupElement.remove();
         }
+        // 解除 popup 狀態
+        unregisterCallAnalysisPopup(popupElement);
         sel.powerSpectrumPopup = null;
       }
       viewer.removeChild(sel.rect);
@@ -1107,7 +1166,16 @@ const upHandler = () => {
     menuItem.className = 'selection-context-menu-item';
     menuItem.textContent = 'Call analysis';
 
+    // 存儲菜單項引用以便後續啟用/禁用
+    selection._callAnalysisMenuItem = menuItem;
+
+    // 檢查該 selection 是否已有打開的 popup，若有則禁用
+    if (hasOpenPopup(selection)) {
+      disableCallAnalysisMenuItem(selection);
+    }
+
     menuItem.addEventListener('click', () => {
+      if (menuItem.classList.contains('disabled')) return;
       handleShowPowerSpectrum(selection);
       menu.remove();
     });
@@ -1155,9 +1223,15 @@ const upHandler = () => {
     // 跟踪 popup
     if (popupObj) {
       selection.powerSpectrumPopup = popupObj;
+      const popupElement = popupObj.popup;
+
+      // ============================================================
+      // Call Analysis 窗口狀態管理：禁用該 selection 的菜單項
+      // ============================================================
+      registerCallAnalysisPopup(popupElement, selection);
+      disableCallAnalysisMenuItem(selection);
 
       // 2025: 監聽 bat call 偵測完成事件，更新 selection rect 的 warning 圖標
-      const popupElement = popupObj.popup;
       if (popupElement) {
 
         const updateWarningIcons = (e) => {
@@ -1195,15 +1269,36 @@ const upHandler = () => {
         setTimeout(() => updateWarningIcons(), 0);
       }
 
-      // 監聽 popup 關閉，重新顯示 tooltip
+      // 監聽 popup 關閉，重新顯示 tooltip 並啟用菜單項
       const closeBtn = popupElement && popupElement.querySelector('.popup-close-btn');
       if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
+        const closeHandler = () => {
           if (selection.tooltip) {
             selection.tooltip.style.display = 'block';
           }
-        });
+          // 移除 popup 狀態並啟用菜單項
+          unregisterCallAnalysisPopup(popupElement);
+        };
+        closeBtn.addEventListener('click', closeHandler);
+        selection._popupCloseHandler = closeHandler;
       }
+
+      // 監聽 popup DOM 移除事件（以防其他方式關閉 popup）
+      const mutationObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.removedNodes.length > 0) {
+            for (let node of mutation.removedNodes) {
+              if (node === popupElement) {
+                // popup 已被移除，解除註冊
+                unregisterCallAnalysisPopup(popupElement);
+                mutationObserver.disconnect();
+              }
+            }
+          }
+        });
+      });
+      mutationObserver.observe(document.body, { childList: true });
+      selection._popupMutationObserver = mutationObserver;
 
       // 如果 popup DOM 支援事件，監聽 peakUpdated 事件以同步 tooltip 值
       if (popupObj.popup && popupObj.popup.addEventListener) {

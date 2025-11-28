@@ -4,71 +4,16 @@
 
 /**
  * 尋找最優的 overlap 值
- * 基於頻譜平滑度和峰值檢測效率的平衡
- * 掃描範圍：50% - 95%，精細至每 1%
+ * Auto mode 時直接返回 75%
  * @param {Float32Array} audioData - 音頻數據
  * @param {number} sampleRate - 採樣率
  * @param {number} fftSize - FFT 大小
  * @param {string} windowType - 窗口類型
- * @returns {number} 最優的 overlap 百分比 (50-95)
+ * @returns {number} 最優的 overlap 百分比 (固定 75%)
  */
 export function findOptimalOverlap(audioData, sampleRate, fftSize, windowType) {
-  if (!audioData || audioData.length < fftSize) {
-    // 如果音頻太短，使用預設 75%
-    return 75;
-  }
-
-  // 候選 overlap 百分比：50% - 95%，精細至每 1%
-  const candidates = [];
-  for (let i = 50; i <= 95; i++) {
-    candidates.push(i);
-  }
-  
-  let bestOverlap = 75;  // 預設最優值
-  let bestScore = -Infinity;
-
-  for (const overlapPercent of candidates) {
-    // 計算 hop size
-    const hopSize = Math.floor(fftSize * (1 - overlapPercent / 100));
-    
-    // 確保 hopSize > 0
-    if (hopSize <= 0) continue;
-    
-    // 計算該 overlap 下的頻譜幀數
-    const frameCount = Math.floor((audioData.length - fftSize) / hopSize) + 1;
-    
-    // 計算頻率分辨率（越好越好）
-    const freqResolution = sampleRate / fftSize;
-    
-    // 頻率分辨率得分（低分辨率更好，但需要歸一化）
-    const freqResolutionScore = 1.0 / (freqResolution + 1);
-    
-    // 計算頻譜的能量分佈方差（評估平滑度）
-    // 更多幀 → 更平滑的結果 → 更好的 SNR
-    const frameScore = Math.log(frameCount + 1);
-    
-    // 計算時間分辨率（更多幀 = 更好的時間覆蓋）
-    const timeResolutionScore = frameCount / audioData.length;
-    
-    // 計算 Window Coherent Gain（窗口內聚性增益）
-    // 更高的 overlap 導致更多的樣本被處理，增加信號能量
-    // 但同時也增加計算負荷，需要平衡
-    const windowCoherentGain = 1 + (overlapPercent - 50) / 100;  // 線性增益模型
-    
-    // 綜合評分：平衡時間分辨率、幀數、頻率特性和窗口增益
-    // 權重：時間覆蓋 (35%) + 幀數 (30%) + 頻率分辨率 (20%) + 窗口增益 (15%)
-    const score = 0.35 * timeResolutionScore + 
-                  0.30 * frameScore + 
-                  0.20 * freqResolutionScore + 
-                  0.15 * windowCoherentGain;
-    
-    if (score > bestScore) {
-      bestScore = score;
-      bestOverlap = overlapPercent;
-    }
-  }
-
-  return bestOverlap;
+  // Auto mode 時直接使用 75% overlap
+  return 75;
 }
 
 /**
@@ -85,12 +30,13 @@ export function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize
   // 確定 hop size (每幀之間的步長)
   let hopSize;
   if (overlap === 'auto' || overlap === '') {
-    // 預設 50% overlap
-    hopSize = Math.floor(fftSize / 2);
+    // Auto mode：使用 75% overlap
+    hopSize = Math.floor(fftSize * (1 - 0.75));
   } else {
     const overlapPercent = parseInt(overlap, 10);
     if (isNaN(overlapPercent) || overlapPercent < 0 || overlapPercent > 99) {
-      hopSize = Math.floor(fftSize / 2);
+      // 預設 75% overlap
+      hopSize = Math.floor(fftSize * (1 - 0.75));
     } else {
       hopSize = Math.floor(fftSize * (1 - overlapPercent / 100));
     }
