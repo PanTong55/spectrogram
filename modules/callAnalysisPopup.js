@@ -35,7 +35,7 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   protectionWindowAfterPeak_ms: 10,
   enableHighpassFilter: true,            // Highpass filter enable/disable
   highpassFilterFreq_kHz: 40,            // Highpass filter frequency (kHz)
-  highpassFilterOrder: 2                 // Highpass filter order (2-8)
+  highpassFilterOrder: 1                 // Highpass filter order (1-4, step 0.5)
 };
 
 /**
@@ -1175,10 +1175,10 @@ function createPopupWindow() {
   highpassOrderInput.id = 'highpassFilterOrder';
   highpassOrderInput.type = 'number';
   highpassOrderInput.value = window.__batCallControlsMemory.highpassFilterOrder.toString();
-  highpassOrderInput.min = '2';
-  highpassOrderInput.max = '8';
-  highpassOrderInput.step = '1';
-  highpassOrderInput.title = 'Highpass filter order (2-8) - controls filter strength';
+  highpassOrderInput.min = '1';
+  highpassOrderInput.max = '4';
+  highpassOrderInput.step = '0.5';
+  highpassOrderInput.title = 'Highpass filter order (1-4, step 0.5) - controls filter strength';
   highpassOrderControl.appendChild(highpassOrderInput);
   
   batCallControlPanel.appendChild(highpassOrderControl);
