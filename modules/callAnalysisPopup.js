@@ -269,12 +269,31 @@ export function showCallAnalysisPopup({
         audioDataForDetection = applyButterworthHighpassFilter(audioDataForDetection, highpassFreq_Hz, sampleRate, batCallConfig.highpassFilterOrder);
       }
 
+      // 為了計算 SNR 使用原始（未濾波）的音頻數據，建立一個臨時的 detector 副本
+      // 先用濾波後的數據進行主要檢測
       const calls = await detector.detectCalls(
         audioDataForDetection,
         sampleRate,
         selection.Flow,
         selection.Fhigh
       );
+      
+      // 如果濾波被啟用且有偵測到 call，重新用原始音頻計算 SNR
+      if (batCallConfig.enableHighpassFilter && calls.length > 0) {
+        const originalDetector = new (detector.constructor)(batCallConfig);
+        const originalCalls = await originalDetector.detectCalls(
+          audioData,  // 使用原始未濾波的音頻
+          sampleRate,
+          selection.Flow,
+          selection.Fhigh
+        );
+        
+        // 如果原始檢測也找到 call，將 SNR 從原始檢測複製到濾波後的 call
+        if (originalCalls.length > 0) {
+          calls[0].snr_dB = originalCalls[0].snr_dB;
+          calls[0].quality = originalCalls[0].quality;
+        }
+      }
       
       // 更新 UI 以反映實際使用的 highFreqThreshold 值（用於 High Frequency 計算）
       // Auto mode 時：清空 value，在 placeholder 中顯示 "Auto (24)" 格式（絕對值），灰色樣式
@@ -1176,9 +1195,9 @@ function createPopupWindow() {
   highpassOrderInput.type = 'number';
   highpassOrderInput.value = window.__batCallControlsMemory.highpassFilterOrder.toString();
   highpassOrderInput.min = '1';
-  highpassOrderInput.max = '4';
-  highpassOrderInput.step = '0.5';
-  highpassOrderInput.title = 'Highpass filter order (1-4, step 0.5) - controls filter strength';
+  highpassOrderInput.max = '8';
+  highpassOrderInput.step = '1';
+  highpassOrderInput.title = 'Highpass filter order (1-8) - controls filter strength';
   highpassOrderControl.appendChild(highpassOrderInput);
   
   batCallControlPanel.appendChild(highpassOrderControl);
@@ -1514,11 +1533,11 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
 }
 
 /**
- * 應用 Butterworth Highpass Filter (支持 order 1-4 及小數階)
+ * 應用 Butterworth Highpass Filter (支持 order 1-8)
  * @param {Float32Array} audioData - 輸入音頻數據
  * @param {number} filterFreq_Hz - 濾波器截止頻率 (Hz)
  * @param {number} sampleRate - 採樣率 (Hz)
- * @param {number} order - 濾波器階數 (1-4，預設 2)
+ * @param {number} order - 濾波器階數 (1-8，預設 2)
  * @returns {Float32Array} 濾波後的音頻數據
  */
 export function applyButterworthHighpassFilter(audioData, filterFreq_Hz, sampleRate, order = 2) {
@@ -1526,8 +1545,8 @@ export function applyButterworthHighpassFilter(audioData, filterFreq_Hz, sampleR
     return audioData;
   }
 
-  // 限制 order 在 1-4 範圍內
-  const clampedOrder = Math.max(1, Math.min(4, order));
+  // 限制 order 在 1-8 範圍內
+  const clampedOrder = Math.max(1, Math.min(8, Math.round(order)));
 
   // 計算歸一化頻率 (0 to 1, 1 = Nyquist 頻率)
   const nyquistFreq = sampleRate / 2;
@@ -1542,28 +1561,32 @@ export function applyButterworthHighpassFilter(audioData, filterFreq_Hz, sampleR
   const wc = Math.tan(Math.PI * normalizedFreq / 2);
   const wc2 = wc * wc;
   
-  // 根據階數選擇濾波器實現
-  // 支持小數階數，透過混合不同階次的濾波器
-  const intOrder = Math.floor(clampedOrder);
-  const fracOrder = clampedOrder - intOrder;
+  // 應用級聯的濾波器級數
+  let filtered = new Float32Array(audioData);
   
-  // 應用基礎階次的濾波器
-  let filtered = applyButterworthStage(audioData, wc, intOrder);
+  // 對於 order 1 和 2，直接應用
+  // 對於 order > 2，級聯多個 2 階濾波器和 1 個 1 階濾波器（若需要）
+  const numOf2ndOrder = Math.floor(clampedOrder / 2);
+  const has1stOrder = (clampedOrder % 2) === 1;
   
-  // 如果有小數部分，應用額外的一階濾波器以降低強度
-  if (fracOrder > 0.001) {
-    filtered = applyButterworthFractional(filtered, wc, fracOrder);
+  // 應用多個 2nd order 級聯
+  for (let stage = 0; stage < numOf2ndOrder; stage++) {
+    filtered = applyButterworthStage(filtered, wc, 2);
+  }
+  
+  // 如果階數是奇數，應用一個 1st order 級聯
+  if (has1stOrder) {
+    filtered = applyButterworthStage(filtered, wc, 1);
   }
   
   return filtered;
 }
 
 /**
- * 應用特定階數的 Butterworth Highpass Filter 級聯
+ * 應用特定階數的 Butterworth Highpass Filter 級
  */
 function applyButterworthStage(audioData, wc, order) {
   const wc2 = wc * wc;
-  let filtered = new Float32Array(audioData);
   
   if (order === 1) {
     // 1st order highpass filter
@@ -1572,18 +1595,18 @@ function applyButterworthStage(audioData, wc, order) {
     const b1 = -1 / denom;
     const a1 = (wc - 1) / denom;
     
-    const result = new Float32Array(filtered.length);
+    const result = new Float32Array(audioData.length);
     let y1 = 0, x1 = 0;
     
-    for (let i = 0; i < filtered.length; i++) {
-      const x0 = filtered[i];
+    for (let i = 0; i < audioData.length; i++) {
+      const x0 = audioData[i];
       const y0 = b0 * x0 + b1 * x1 - a1 * y1;
       result[i] = y0;
       x1 = x0;
       y1 = y0;
     }
     return result;
-  } else if (order === 2) {
+  } else {
     // 2nd order Butterworth highpass filter
     const sqrt2wc = Math.sqrt(2) * wc;
     const denom = wc2 + sqrt2wc + 1;
@@ -1594,11 +1617,11 @@ function applyButterworthStage(audioData, wc, order) {
     const a1 = (2 * (wc2 - 1)) / denom;
     const a2 = (wc2 - sqrt2wc + 1) / denom;
     
-    const result = new Float32Array(filtered.length);
+    const result = new Float32Array(audioData.length);
     let y1 = 0, y2 = 0, x1 = 0, x2 = 0;
     
-    for (let i = 0; i < filtered.length; i++) {
-      const x0 = filtered[i];
+    for (let i = 0; i < audioData.length; i++) {
+      const x0 = audioData[i];
       const y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
       result[i] = y0;
       x2 = x1;
@@ -1607,110 +1630,5 @@ function applyButterworthStage(audioData, wc, order) {
       y1 = y0;
     }
     return result;
-  } else if (order === 3) {
-    // 3rd order: cascade 1st + 2nd order stages
-    const sqrt2wc = Math.sqrt(2) * wc;
-    
-    // 1st stage
-    const denom1 = wc + 1;
-    const b0_1 = 1 / denom1;
-    const b1_1 = -1 / denom1;
-    const a1_1 = (wc - 1) / denom1;
-    
-    let temp = new Float32Array(filtered.length);
-    let y1_1 = 0, x1_1 = 0;
-    for (let i = 0; i < filtered.length; i++) {
-      const x0 = filtered[i];
-      const y0 = b0_1 * x0 + b1_1 * x1_1 - a1_1 * y1_1;
-      temp[i] = y0;
-      x1_1 = x0;
-      y1_1 = y0;
-    }
-    
-    // 2nd stage
-    const denom2 = wc2 + sqrt2wc + 1;
-    const b0_2 = 1 / denom2;
-    const b1_2 = -2 / denom2;
-    const b2_2 = 1 / denom2;
-    const a1_2 = (2 * (wc2 - 1)) / denom2;
-    const a2_2 = (wc2 - sqrt2wc + 1) / denom2;
-    
-    const result = new Float32Array(filtered.length);
-    let y1_2 = 0, y2_2 = 0, x1_2 = 0, x2_2 = 0;
-    for (let i = 0; i < temp.length; i++) {
-      const x0 = temp[i];
-      const y0 = b0_2 * x0 + b1_2 * x1_2 + b2_2 * x2_2 - a1_2 * y1_2 - a2_2 * y2_2;
-      result[i] = y0;
-      x2_2 = x1_2;
-      x1_2 = x0;
-      y2_2 = y1_2;
-      y1_2 = y0;
-    }
-    return result;
-  } else if (order === 4) {
-    // 4th order: cascade two 2nd order stages
-    const sqrt2wc = Math.sqrt(2) * wc;
-    const denom = wc2 + sqrt2wc + 1;
-    
-    const b0 = 1 / denom;
-    const b1 = -2 / denom;
-    const b2 = 1 / denom;
-    const a1 = (2 * (wc2 - 1)) / denom;
-    const a2 = (wc2 - sqrt2wc + 1) / denom;
-    
-    // 1st stage
-    let temp = new Float32Array(filtered.length);
-    let y1_1 = 0, y2_1 = 0, x1_1 = 0, x2_1 = 0;
-    for (let i = 0; i < filtered.length; i++) {
-      const x0 = filtered[i];
-      const y0 = b0 * x0 + b1 * x1_1 + b2 * x2_1 - a1 * y1_1 - a2 * y2_1;
-      temp[i] = y0;
-      x2_1 = x1_1;
-      x1_1 = x0;
-      y2_1 = y1_1;
-      y1_1 = y0;
-    }
-    
-    // 2nd stage
-    const result = new Float32Array(filtered.length);
-    let y1_2 = 0, y2_2 = 0, x1_2 = 0, x2_2 = 0;
-    for (let i = 0; i < temp.length; i++) {
-      const x0 = temp[i];
-      const y0 = b0 * x0 + b1 * x1_2 + b2 * x2_2 - a1 * y1_2 - a2 * y2_2;
-      result[i] = y0;
-      x2_2 = x1_2;
-      x1_2 = x0;
-      y2_2 = y1_2;
-      y1_2 = y0;
-    }
-    return result;
   }
-  
-  return filtered;
-}
-
-/**
- * 應用小數階數的濾波器（透過衰減）
- */
-function applyButterworthFractional(audioData, wc, fraction) {
-  // 對於小數部分，應用減弱的一階濾波器
-  // 透過減少濾波器增益來模擬部分階數
-  const denom = wc + 1;
-  const b0 = (1 / denom) * fraction;  // 減弱增益
-  const b1 = (-1 / denom) * fraction;
-  const a1 = (wc - 1) / denom;
-  
-  const result = new Float32Array(audioData.length);
-  let y1 = 0, x1 = 0;
-  
-  for (let i = 0; i < audioData.length; i++) {
-    const x0 = audioData[i];
-    const y0 = b0 * x0 + b1 * x1 - a1 * y1 + audioData[i] * (1 - fraction);
-    result[i] = y0;
-    x1 = x0;
-    y1 = y0;
-  }
-  
-  return result;
-}
 
