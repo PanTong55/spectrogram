@@ -330,8 +330,6 @@ export function showCallAnalysisPopup({
       if (batCallLowThresholdInput) {
         if (detector.config.lowFreqThreshold_dB_isAuto === true) {
           // Auto 模式：清空 value，在 placeholder 中顯示計算值（絕對值），並設定灰色樣式
-          // 2025: 使用實際檢測到的 call 使用的 threshold 值（而不是 config 中的值）
-          // 這樣可以正確反映該 call 實際使用的 threshold，特別是在防呆檢查後可能達到 -70dB 時
           let displayValue = Math.abs(detector.config.lowFreqThreshold_dB);  // 轉換為絕對值
           
           if (calls.length > 0) {
@@ -1009,7 +1007,7 @@ function createPopupWindow() {
   lowThresholdInput.style.width = '65px';
   lowThresholdInput.min = '24';  // 絕對值範圍
   lowThresholdInput.max = '70';
-  lowThresholdInput.step = '0.5';
+  lowThresholdInput.step = '0.2';
   
   // 根據模式初始化顯示
   const isLowAutoMode = window.__batCallControlsMemory.lowFreqThreshold_dB_isAuto !== false;

@@ -1019,7 +1019,7 @@ export class BatCallDetector {
     
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
-    for (let threshold = -24; threshold >= -70; threshold-= 0.5) {
+    for (let threshold = -24; threshold >= -70; threshold-= 0.2) {
       thresholdRange.push(threshold);
     }
     
