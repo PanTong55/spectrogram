@@ -35,7 +35,7 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   protectionWindowAfterPeak_ms: 10,
   enableHighpassFilter: true,            // Highpass filter enable/disable
   highpassFilterFreq_kHz: 40,            // Highpass filter frequency (kHz)
-  highpassFilterOrder: 1                 // Highpass filter order (1-4, step 0.5)
+  highpassFilterOrder: 4                 // Highpass filter order (1-8, step 1)
 };
 
 /**
@@ -92,7 +92,7 @@ export function showCallAnalysisPopup({
     // Highpass Filter Parameters
     enableHighpassFilter: memory.enableHighpassFilter !== false,
     highpassFilterFreq_kHz: memory.highpassFilterFreq_kHz || 40,
-    highpassFilterOrder: memory.highpassFilterOrder || 2
+    highpassFilterOrder: memory.highpassFilterOrder || 4
   };
 
   // 建立 Popup Window
@@ -523,7 +523,7 @@ export function showCallAnalysisPopup({
       batCallConfig.highpassFilterFreq_kHz = parseFloat(highpassFilterFreqInput.value) || 40;
     }
     if (highpassFilterOrderInput) {
-      batCallConfig.highpassFilterOrder = parseInt(highpassFilterOrderInput.value) || 2;
+      batCallConfig.highpassFilterOrder = parseInt(highpassFilterOrderInput.value) || 4;
     }
     
     // 保存到全局記憶中
@@ -1007,7 +1007,7 @@ function createPopupWindow() {
   lowThresholdInput.style.width = '65px';
   lowThresholdInput.min = '24';  // 絕對值範圍
   lowThresholdInput.max = '70';
-  lowThresholdInput.step = '0.2';
+  lowThresholdInput.step = '0.5';
   
   // 根據模式初始化顯示
   const isLowAutoMode = window.__batCallControlsMemory.lowFreqThreshold_dB_isAuto !== false;
