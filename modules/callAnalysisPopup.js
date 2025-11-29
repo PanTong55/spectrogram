@@ -1631,4 +1631,4 @@ function applyButterworthStage(audioData, wc, order) {
     }
     return result;
   }
-
+}
