@@ -34,7 +34,8 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   maxFrequencyDropThreshold_kHz: 10,
   protectionWindowAfterPeak_ms: 10,
   enableHighpassFilter: true,            // Highpass filter enable/disable
-  highpassFilterFreq_kHz: 40             // Highpass filter frequency (kHz)
+  highpassFilterFreq_kHz: 40,            // Highpass filter frequency (kHz)
+  highpassFilterOrder: 2                 // Highpass filter order (2-8)
 };
 
 /**
@@ -90,7 +91,8 @@ export function showCallAnalysisPopup({
     protectionWindowAfterPeak_ms: memory.protectionWindowAfterPeak_ms || 10,
     // Highpass Filter Parameters
     enableHighpassFilter: memory.enableHighpassFilter !== false,
-    highpassFilterFreq_kHz: memory.highpassFilterFreq_kHz || 40
+    highpassFilterFreq_kHz: memory.highpassFilterFreq_kHz || 40,
+    highpassFilterOrder: memory.highpassFilterOrder || 2
   };
 
   // 建立 Popup Window
@@ -264,7 +266,7 @@ export function showCallAnalysisPopup({
       // 如果啟用 Highpass Filter，在進行 call measurement 之前應用濾波
       if (batCallConfig.enableHighpassFilter) {
         const highpassFreq_Hz = batCallConfig.highpassFilterFreq_kHz * 1000;
-        audioDataForDetection = applyButterworthHighpassFilter(audioDataForDetection, highpassFreq_Hz, sampleRate, 2);
+        audioDataForDetection = applyButterworthHighpassFilter(audioDataForDetection, highpassFreq_Hz, sampleRate, batCallConfig.highpassFilterOrder);
       }
 
       const calls = await detector.detectCalls(
@@ -373,6 +375,7 @@ export function showCallAnalysisPopup({
   // 2025 Highpass Filter Controls
   const highpassFilterCheckboxForListeners = popup.querySelector('#enableHighpassFilter');
   const highpassFilterFreqInputForListeners = popup.querySelector('#highpassFilterFreq_kHz');
+  const highpassFilterOrderInputForListeners = popup.querySelector('#highpassFilterOrder');
 
   // 初始化 FFT Size Dropdown
   const batCallFFTDropdown = initDropdown(batCallFFTSizeBtn, [
@@ -484,6 +487,7 @@ export function showCallAnalysisPopup({
     // 2025 Highpass Filter Controls
     let highpassFilterCheckbox = highpassFilterCheckboxForListeners || popup.querySelector('#enableHighpassFilter');
     let highpassFilterFreqInput = highpassFilterFreqInputForListeners || popup.querySelector('#highpassFilterFreq_kHz');
+    let highpassFilterOrderInput = highpassFilterOrderInputForListeners || popup.querySelector('#highpassFilterOrder');
     
     if (antiRebounceCheckbox) {
       batCallConfig.enableBackwardEndFreqScan = antiRebounceCheckbox.checked;
@@ -500,6 +504,9 @@ export function showCallAnalysisPopup({
     }
     if (highpassFilterFreqInput) {
       batCallConfig.highpassFilterFreq_kHz = parseFloat(highpassFilterFreqInput.value) || 40;
+    }
+    if (highpassFilterOrderInput) {
+      batCallConfig.highpassFilterOrder = parseInt(highpassFilterOrderInput.value) || 2;
     }
     
     // 保存到全局記憶中
@@ -519,7 +526,8 @@ export function showCallAnalysisPopup({
       protectionWindowAfterPeak_ms: batCallConfig.protectionWindowAfterPeak_ms,
       // 2025 Highpass Filter
       enableHighpassFilter: batCallConfig.enableHighpassFilter,
-      highpassFilterFreq_kHz: batCallConfig.highpassFilterFreq_kHz
+      highpassFilterFreq_kHz: batCallConfig.highpassFilterFreq_kHz,
+      highpassFilterOrder: batCallConfig.highpassFilterOrder
     };
     
     // 2025 CRITICAL FIX: 檢測 mode 是否改變
@@ -716,6 +724,16 @@ export function showCallAnalysisPopup({
       highpassFilterFreqInputForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
     });
     addNumberInputKeyboardSupport(highpassFilterFreqInputForListeners);
+  }
+
+  // 2025 Highpass Filter Order Input
+  if (highpassFilterOrderInputForListeners) {
+    highpassFilterOrderInputForListeners.addEventListener('change', updateBatCallConfig);
+    highpassFilterOrderInputForListeners.addEventListener('input', () => {
+      clearTimeout(highpassFilterOrderInputForListeners._updateTimeout);
+      highpassFilterOrderInputForListeners._updateTimeout = setTimeout(updateBatCallConfig, 30);
+    });
+    addNumberInputKeyboardSupport(highpassFilterOrderInputForListeners);
   }
 
   // 返回 popup 對象和更新函數
@@ -1146,6 +1164,24 @@ function createPopupWindow() {
   highpassFreqUnit.textContent = 'kHz';
   highpassFreqControl.appendChild(highpassFreqUnit);
   batCallControlPanel.appendChild(highpassFreqControl);
+
+  // highpassFilterOrder (Number input)
+  const highpassOrderControl = document.createElement('label');
+  const highpassOrderLabel = document.createElement('span');
+  highpassOrderLabel.textContent = 'Filter order:';
+  highpassOrderControl.appendChild(highpassOrderLabel);
+  
+  const highpassOrderInput = document.createElement('input');
+  highpassOrderInput.id = 'highpassFilterOrder';
+  highpassOrderInput.type = 'number';
+  highpassOrderInput.value = window.__batCallControlsMemory.highpassFilterOrder.toString();
+  highpassOrderInput.min = '2';
+  highpassOrderInput.max = '8';
+  highpassOrderInput.step = '1';
+  highpassOrderInput.title = 'Highpass filter order (2-8) - controls filter strength';
+  highpassOrderControl.appendChild(highpassOrderInput);
+  
+  batCallControlPanel.appendChild(highpassOrderControl);
 
   popup.appendChild(batCallControlPanel);
 
