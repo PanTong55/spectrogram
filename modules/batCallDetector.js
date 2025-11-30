@@ -747,9 +747,9 @@ export class BatCallDetector {
     // This prevents fluctuations caused by selection area size
     const stablePeakPower_dB = callPeakPower_dB;
     
-    // 測試閾值範圍：-24 到 -70 dB
+    // 測試閾值範圍：-24 到 -70 dB，間距 0.5 dB
     const thresholdRange = [];
-    for (let threshold = -24; threshold >= -70; threshold--) {
+    for (let threshold = -24; threshold >= -70; threshold -= 0.5) {
       thresholdRange.push(threshold);
     }
     
@@ -849,12 +849,6 @@ export class BatCallDetector {
     // 新規則 2025：High Frequency 需應用防呆機制
     // 找出第一個 >= Peak Frequency 且 foundBin=true 的 High Frequency
     // ============================================================
-    
-    // 先從 validMeasurements 中提取 Peak Frequency（來自 measureFrequencyParameters）
-    // 注意：此時在 findOptimalHighFrequencyThreshold 中還未計算 peakFreq
-    // 因此我們需要推遲 Peak Frequency 的安全檢查到 measureFrequencyParameters 中進行
-    // 此函數先返回數據，由 measureFrequencyParameters 處理防呆邏輯
-    
     // ============================================================
     // 決定最終使用的閾值 + Start Frequency
     // ============================================================
@@ -874,11 +868,10 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>5 kHz) - 立即停止
+      // 保險機制 1：超大幅頻率跳變 (>4 kHz) - 立即停止
       // ============================================================
-      if (freqDifference > 5.0) {
-        // 超大幅異常，立即停止測試
-        // 選擇這個超大幅異常前的閾值
+      if (freqDifference > 4.0) {
+        // 超大幅異常，立即停止測試，並選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
         optimalMeasurement = validMeasurements[i - 1];
         break;
@@ -888,7 +881,6 @@ export class BatCallDetector {
       
       if (isAnomaly) {
         // 發現大幅異常 (>2.5 kHz)
-        
         // 如果還沒有記錄早期異常，現在記錄
         if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
           firstAnomalyIndex = i;  // 記錄異常發生的索引
