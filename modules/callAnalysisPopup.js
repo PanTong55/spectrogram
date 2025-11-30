@@ -609,9 +609,7 @@ export function showCallAnalysisPopup({
               // 數值增加
               const numValue = parseFloat(currentValue);
               if (!isNaN(numValue)) {
-                const step = parseFloat(inputElement.step) || 1;
-                const max = inputElement.max ? parseFloat(inputElement.max) : Infinity;
-                const newValue = Math.min(numValue + step, max);
+                const newValue = numValue + 1;
                 inputElement.value = newValue.toString();
               }
             }
@@ -646,9 +644,7 @@ export function showCallAnalysisPopup({
               // 數值減少
               const numValue = parseFloat(currentValue);
               if (!isNaN(numValue)) {
-                const step = parseFloat(inputElement.step) || 1;
-                const min = inputElement.min ? parseFloat(inputElement.min) : -Infinity;
-                const newValue = Math.max(numValue - step, min);
+                const newValue = numValue - 1;
                 inputElement.value = newValue.toString();
               }
             }
@@ -686,34 +682,12 @@ export function showCallAnalysisPopup({
     clearTimeout(batCallHighThresholdInput._updateTimeout);
     batCallHighThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
   });
-  // Allow decimal point input for text-type threshold field
-  batCallHighThresholdInput.addEventListener('keypress', (e) => {
-    const char = e.key;
-    if (!/^[0-9.]$/.test(char) && char !== '-') {
-      e.preventDefault();
-    }
-    // Prevent multiple decimal points
-    if (char === '.' && batCallHighThresholdInput.value.includes('.')) {
-      e.preventDefault();
-    }
-  });
   addNumberInputKeyboardSupport(batCallHighThresholdInput);
 
   batCallLowThresholdInput.addEventListener('change', updateBatCallConfig);
   batCallLowThresholdInput.addEventListener('input', () => {
     clearTimeout(batCallLowThresholdInput._updateTimeout);
     batCallLowThresholdInput._updateTimeout = setTimeout(updateBatCallConfig, 30);
-  });
-  // Allow decimal point input for text-type threshold field
-  batCallLowThresholdInput.addEventListener('keypress', (e) => {
-    const char = e.key;
-    if (!/^[0-9.]$/.test(char) && char !== '-') {
-      e.preventDefault();
-    }
-    // Prevent multiple decimal points
-    if (char === '.' && batCallLowThresholdInput.value.includes('.')) {
-      e.preventDefault();
-    }
   });
   addNumberInputKeyboardSupport(batCallLowThresholdInput);
 
@@ -1005,7 +979,7 @@ function createPopupWindow() {
   // Input field (可顯示 Auto 或具體數值)
   const highThresholdInput = document.createElement('input');
   highThresholdInput.id = 'highThreshold_dB';
-  highThresholdInput.type = 'text';
+  highThresholdInput.type = 'number';
   highThresholdInput.placeholder = 'Auto';
   highThresholdInput.title = 'Auto or Manual High Frequency threshold (-24 to -70)';
   highThresholdInput.style.width = '65px';
@@ -1038,7 +1012,7 @@ function createPopupWindow() {
   // Input field (可顯示 Auto 或具體數值)
   const lowThresholdInput = document.createElement('input');
   lowThresholdInput.id = 'lowThreshold_dB';
-  lowThresholdInput.type = 'text';
+  lowThresholdInput.type = 'number';
   lowThresholdInput.placeholder = 'Auto';
   lowThresholdInput.title = 'Auto or Manual Low Frequency threshold (-24 to -70)';
   lowThresholdInput.style.width = '65px';
