@@ -731,7 +731,7 @@ export class BatCallDetector {
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
    * @returns {Object} {threshold, highFreq_Hz, highFreq_kHz, startFreq_Hz, startFreq_kHz, warning}
    */
-  findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB) {
+  findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB, peakFrameIdx = 0) {
     if (spectrogram.length === 0) return {
       threshold: -24,
       highFreq_Hz: null,
@@ -741,7 +741,7 @@ export class BatCallDetector {
       warning: false
     };
 
-    const firstFramePower = spectrogram[0];
+    const firstFramePower = spectrogram[Math.min(peakFrameIdx, spectrogram.length - 1)];
     
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     // This prevents fluctuations caused by selection area size
@@ -1346,7 +1346,8 @@ export class BatCallDetector {
         freqBins,
         flowKHz,
         fhighKHz,
-        peakPower_dB  // Pass stable call peak value instead of computing global peak again
+        peakPower_dB,  // Pass stable call peak value instead of computing global peak again
+        peakFrameIdx   // Pass peak frame index to only check frames before peak
       );
       
       // ============================================================
