@@ -731,12 +731,6 @@ export class BatCallDetector {
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
    * @returns {Object} {threshold, highFreq_Hz, highFreq_kHz, startFreq_Hz, startFreq_kHz, warning}
    */
-/**
-   * Find optimal High Threshold by testing range and detecting anomalies
-   * * 2025 ENHANCED ALGORITHM (Scan Range: Start -> Peak):
-   * Modified to scan all frames from start up to the peak frequency frame.
-   * Ensures detection respects the time boundary (before peak).
-   */
   findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB, peakFrameIdx = 0) {
     if (spectrogram.length === 0) return {
       threshold: -24,
@@ -747,20 +741,20 @@ export class BatCallDetector {
       warning: false
     };
 
+    const firstFramePower = spectrogram[0];
+    
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
+    // This prevents fluctuations caused by selection area size
     const stablePeakPower_dB = callPeakPower_dB;
     
-    // 測試閾值範圍：-24 到 -70 dB，間距 0.5 dB
+    // 測試閾值範圍：-24 到 -70 dB，間距 1 dB
     const thresholdRange = [];
     for (let threshold = -24; threshold >= -70; threshold -= 0.5) {
       thresholdRange.push(threshold);
     }
     
-    // 限制檢測範圍：只檢查從 Spectrogram 開始到 Peak Frequency 所在的 frame
-    // 確保不會檢測到 Peak 之後的區域 (符合您的要求)
-    const scanEndFrame = Math.min(peakFrameIdx, spectrogram.length - 1);
-    
     // 為每個閾值測量 High Frequency 和 Start Frequency
+    // CRITICAL: 使用與 measureFrequencyParameters 完全相同的計算方法
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
@@ -768,63 +762,45 @@ export class BatCallDetector {
       let startFreq_Hz = null;
       let foundBin = false;
       
+      // 使用穩定的 call peak power（不受 selection 大小影響）
       const highFreqThreshold_dB = stablePeakPower_dB + testThreshold_dB;
       
       // ============================================================
-      // 2025 UPDATED LOGIC: 掃描範圍 [0, scanEndFrame]
-      // 找出該範圍內頻率最高的 frame 來計算 parameters
-      // 這樣可以容許 High Frequency 不一定在第 0 幀，但一定在 Peak 之前
+      // 計算 HIGH FREQUENCY（從高到低掃描，找最高頻率）
       // ============================================================
-      let maxFreqBinIdx = -1;
-      let bestFrame = null;
-      
-      for (let f = 0; f <= scanEndFrame; f++) {
-        const framePower = spectrogram[f];
-        // 從高頻向低頻掃描，找該 Frame 的最高頻 bin
-        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
-          if (framePower[binIdx] > highFreqThreshold_dB) {
-            // 如果找到比當前記錄更高的頻率 bin，更新記錄
-            if (binIdx > maxFreqBinIdx) {
-              maxFreqBinIdx = binIdx;
-              bestFrame = framePower;
+      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (firstFramePower[binIdx] > highFreqThreshold_dB) {
+          highFreq_Hz = freqBins[binIdx];
+          foundBin = true;
+          
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx < firstFramePower.length - 1) {
+            const thisPower = firstFramePower[binIdx];
+            const nextPower = firstFramePower[binIdx + 1];
+            
+            if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
+              const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
             }
-            break; // 該 frame 的最高頻已找到，跳至下一 frame 繼續比對
           }
+          break;
         }
       }
       
-      // 如果找到了有效的 bin (即在 Peak 之前的區域有超過閾值的信號)
-      if (bestFrame !== null && maxFreqBinIdx !== -1) {
-        foundBin = true;
-        highFreq_Hz = freqBins[maxFreqBinIdx];
-        
-        // ============================================================
-        // 計算 HIGH FREQUENCY (基於找到的 bestFrame)
-        // ============================================================
-        // 嘗試線性插值以獲得更高精度
-        if (maxFreqBinIdx < bestFrame.length - 1) {
-          const thisPower = bestFrame[maxFreqBinIdx];
-          const nextPower = bestFrame[maxFreqBinIdx + 1];
-          
-          if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
-            const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
-            const freqDiff = freqBins[maxFreqBinIdx + 1] - freqBins[maxFreqBinIdx];
-            highFreq_Hz = freqBins[maxFreqBinIdx] + powerRatio * freqDiff;
-          }
-        }
-        
-        // ============================================================
-        // 計算 START FREQUENCY (基於找到的 bestFrame)
-        // 保持與 High Frequency 使用同一 frame 的邏輯 (通常是最高頻的那一幀)
-        // ============================================================
-        for (let binIdx = 0; binIdx < bestFrame.length; binIdx++) {
-          if (bestFrame[binIdx] > highFreqThreshold_dB) {
+      // ============================================================
+      // 計算 START FREQUENCY（從低到高掃描，找最低頻率）
+      // 與 High Frequency 獨立計算，使用相同的閾值
+      // ============================================================
+      if (foundBin) {
+        for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+          if (firstFramePower[binIdx] > highFreqThreshold_dB) {
             startFreq_Hz = freqBins[binIdx];
             
             // 嘗試線性插值以獲得更高精度
             if (binIdx > 0) {
-              const thisPower = bestFrame[binIdx];
-              const prevPower = bestFrame[binIdx - 1];
+              const thisPower = firstFramePower[binIdx];
+              const prevPower = firstFramePower[binIdx - 1];
               
               if (prevPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
                 const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - prevPower);
@@ -835,6 +811,12 @@ export class BatCallDetector {
             break;
           }
         }
+      }
+      
+      // 如果沒有找到超過閾值的 bin，則無法測量此閾值
+      if (!foundBin) {
+        highFreq_Hz = null;
+        startFreq_Hz = null;
       }
       
       measurements.push({
@@ -864,22 +846,32 @@ export class BatCallDetector {
     }
     
     // ============================================================
-    // 下面是異常檢測邏輯 (保持不變)
+    // 新規則 2025：High Frequency 需應用防呆機制
+    // 找出第一個 >= Peak Frequency 且 foundBin=true 的 High Frequency
     // ============================================================
-    let optimalThreshold = -24;
-    let optimalMeasurement = validMeasurements[0];
+    // ============================================================
+    // 決定最終使用的閾值 + Start Frequency
+    // ============================================================
+    let optimalThreshold = -24;  // 默認使用最保守的設定
+    let optimalMeasurement = validMeasurements[0];  // 預設為第一個有效測量
     
-    let lastValidThreshold = validMeasurements[0].threshold;
+    // 追蹤異常檢測狀態
+    let lastValidThreshold = validMeasurements[0].threshold;  // 最後一個有效測量（無異常的）
     let lastValidMeasurement = validMeasurements[0];
-    let recordedEarlyAnomaly = null;
-    let firstAnomalyIndex = -1;
+    let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
+    let firstAnomalyIndex = -1;       // 第一個異常發生的索引位置
     
+    // 從第二個有效測量開始，比較與前一個測量的差異
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].highFreq_kHz;
       const currFreq_kHz = validMeasurements[i].highFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
+      // ============================================================
+      // 保險機制 1：超大幅頻率跳變 (>4 kHz) - 立即停止
+      // ============================================================
       if (freqDifference > 4.0) {
+        // 超大幅異常，立即停止測試，並選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
         optimalMeasurement = validMeasurements[i - 1];
         break;
@@ -888,16 +880,24 @@ export class BatCallDetector {
       const isAnomaly = freqDifference > 2.5;
       
       if (isAnomaly) {
+        // 發現大幅異常 (>2.5 kHz)
+        // 如果還沒有記錄早期異常，現在記錄
         if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
-          firstAnomalyIndex = i;
-          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;
+          firstAnomalyIndex = i;  // 記錄異常發生的索引
+          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;  // 異常前的閾值
           lastValidThreshold = validMeasurements[i - 1].threshold;
           lastValidMeasurement = validMeasurements[i - 1];
         }
       } else {
+        // 正常值：沒有大幅跳變
+        
+        // 如果有記錄的早期異常，檢查異常後是否緊接著有 3 個正常值
         if (recordedEarlyAnomaly !== null && firstAnomalyIndex !== -1) {
+          // 計算從異常發生後緊接著的 3 個索引
           const afterAnomalyStart = firstAnomalyIndex + 1;
           const afterAnomalyEnd = Math.min(firstAnomalyIndex + 3, validMeasurements.length - 1);
+          
+          // 檢查異常後的 3 個值是否都無異常
           let hasThreeNormalAfterAnomaly = true;
           
           for (let checkIdx = afterAnomalyStart; checkIdx <= afterAnomalyEnd; checkIdx++) {
@@ -905,36 +905,52 @@ export class BatCallDetector {
               hasThreeNormalAfterAnomaly = false;
               break;
             }
+            
+            // 檢查當前值與前一個值是否有異常
             const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].highFreq_kHz;
             const checkCurrFreq_kHz = validMeasurements[checkIdx].highFreq_kHz;
             const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
+            
             if (checkFreqDiff > 2.5) {
+              // 發現異常，說明異常後面不是連續 3 個正常值
               hasThreeNormalAfterAnomaly = false;
               break;
             }
           }
           
+          // 如果異常後有連續 3 個正常值，忽略早期異常
           if (hasThreeNormalAfterAnomaly && (afterAnomalyEnd - afterAnomalyStart + 1) >= 3) {
-            recordedEarlyAnomaly = null;
-            firstAnomalyIndex = -1;
+            recordedEarlyAnomaly = null;  // 忽略早期異常
+            firstAnomalyIndex = -1;       // 重置
           }
         }
+        
+        // 更新最後一個有效測量
         lastValidThreshold = validMeasurements[i].threshold;
         lastValidMeasurement = validMeasurements[i];
       }
     }
     
+    // ============================================================
+    // 最終決定：選擇最優閾值
+    // ============================================================
     if (recordedEarlyAnomaly !== null) {
+      // 有未被忽略的早期異常：使用異常前的閾值
       optimalThreshold = recordedEarlyAnomaly;
       optimalMeasurement = lastValidMeasurement;
     } else {
+      // 沒有異常或異常被忽略：使用最後一個有效測量
       optimalThreshold = lastValidThreshold;
       optimalMeasurement = lastValidMeasurement;
     }
     
+    // 確保返回值在有效範圍內
     const finalThreshold = Math.max(Math.min(optimalThreshold, -24), -70);
+    
+    // 檢測是否使用了 -70dB 的極限閾值（表示選擇區域未能涵蓋足夠高的頻率）
     const hasWarning = finalThreshold <= -70;
     
+    // 返回優化的 High Frequency 和 Start Frequency
     return {
       threshold: finalThreshold,
       highFreq_Hz: optimalMeasurement.highFreq_Hz,
@@ -1107,17 +1123,59 @@ export class BatCallDetector {
       // 優化 2025：超大幅頻率跳變 (>3 kHz) - 繼續測試而不是立即停止
       // ============================================================
       if (freqDifference > 3.0) {
-        // 超大幅異常，立即停止測試
-        // 選擇這個超大幅異常前的閾值
-        optimalThreshold = validMeasurements[i - 1].threshold;
-        optimalMeasurement = validMeasurements[i - 1];
-        break;
+        // 記錄 Major jump，但繼續測試
+        if (majorJumpIndex === -1) {
+          majorJumpIndex = i;
+          majorJumpThreshold = validMeasurements[i - 1].threshold;
+        }
+        
+        // 繼續測試接著的 10 個測量點
+        // 檢查在 Major jump 後是否有 10+ 個 consecutive "精細正常值" (freqDiff < 0.2 kHz)
+        const checkRangeEnd = Math.min(majorJumpIndex + 10, validMeasurements.length - 1);
+        let consecutiveFineNormal = 0;
+        let hasTenConsecutiveFine = false;
+        
+        for (let checkIdx = majorJumpIndex + 1; checkIdx <= checkRangeEnd; checkIdx++) {
+          if (checkIdx >= validMeasurements.length) break;
+          
+          const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].lowFreq_kHz;
+          const checkCurrFreq_kHz = validMeasurements[checkIdx].lowFreq_kHz;
+          const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
+          
+          // 精細正常值：freqDiff < 0.2 kHz
+          if (checkFreqDiff < 0.2) {
+            consecutiveFineNormal++;
+            if (consecutiveFineNormal >= 10) {
+              hasTenConsecutiveFine = true;
+              break;
+            }
+          } else {
+            consecutiveFineNormal = 0;  // 重置計數
+          }
+        }
+        
+        // 如果找到 10+ 個 consecutive 精細正常值，無視 Major jump，繼續測試
+        if (hasTenConsecutiveFine) {
+          majorJumpIndex = -1;
+          majorJumpThreshold = null;
+          continue;  // 無視 Major jump，繼續循環
+        }
+        
+        // 如果沒有找到足夠的精細正常值，在接著的測試中尋找 Large jump (>1.5 kHz)
+        // 這將在下面的正常異常檢測中被捕捉
       }
       
       const isAnomaly = freqDifference > 1.5;
       
       if (isAnomaly) {
         // 發現大幅異常 (>1.5 kHz)
+        
+        // 如果之前有記錄的 Major jump，現在找到 Large jump，立即停止
+        if (majorJumpIndex !== -1) {
+          optimalThreshold = majorJumpThreshold;
+          optimalMeasurement = validMeasurements[majorJumpIndex - 1];
+          break;  // 立即停止
+        }
         
         // 如果還沒有記錄早期異常，現在記錄
         if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
