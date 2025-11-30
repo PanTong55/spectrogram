@@ -985,7 +985,7 @@ function createPopupWindow() {
   highThresholdInput.style.width = '65px';
   highThresholdInput.min = '24';  // 絕對值範圍
   highThresholdInput.max = '70';
-  highThresholdInput.step = '1';
+  highThresholdInput.step = '0.5';
   
   // 根據模式初始化顯示
   const isAutoMode = window.__batCallControlsMemory.highFreqThreshold_dB_isAuto !== false;
