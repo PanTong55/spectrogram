@@ -409,8 +409,10 @@ export function showCallAnalysisPopup({
     }
   });
 
-  // 設置初始選項
-  batCallFFTDropdown.select(1, { triggerOnChange: false }); // Default to '1024'
+  // 設置初始選項：根據記憶中的 FFT size 值
+  const fftSizeItems = ['512', '1024', '2048'];
+  const fftSizeIndex = fftSizeItems.indexOf(batCallConfig.fftSize.toString());
+  batCallFFTDropdown.select(fftSizeIndex >= 0 ? fftSizeIndex : 1, { triggerOnChange: false }); // Default to '1024'
 
   // 2025: 追蹤前一個 mode 狀態，用於檢測 mode 改變
   let lastHighFreqAutoMode = window.__batCallControlsMemory.highFreqThreshold_dB_isAuto !== false;
