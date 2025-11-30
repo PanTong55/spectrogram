@@ -1107,59 +1107,17 @@ export class BatCallDetector {
       // 優化 2025：超大幅頻率跳變 (>3 kHz) - 繼續測試而不是立即停止
       // ============================================================
       if (freqDifference > 3.0) {
-        // 記錄 Major jump，但繼續測試
-        if (majorJumpIndex === -1) {
-          majorJumpIndex = i;
-          majorJumpThreshold = validMeasurements[i - 1].threshold;
-        }
-        
-        // 繼續測試接著的 8 個測量點
-        // 檢查在 Major jump 後是否有 8+ 個 consecutive "精細正常值" (freqDiff < 0.2 kHz)
-        const checkRangeEnd = Math.min(majorJumpIndex + 8, validMeasurements.length - 1);
-        let consecutiveFineNormal = 0;
-        let hasTenConsecutiveFine = false;
-        
-        for (let checkIdx = majorJumpIndex + 1; checkIdx <= checkRangeEnd; checkIdx++) {
-          if (checkIdx >= validMeasurements.length) break;
-          
-          const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].lowFreq_kHz;
-          const checkCurrFreq_kHz = validMeasurements[checkIdx].lowFreq_kHz;
-          const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
-          
-          // 精細正常值：freqDiff < 0.2 kHz
-          if (checkFreqDiff < 0.2) {
-            consecutiveFineNormal++;
-            if (consecutiveFineNormal >= 8) {
-              hasTenConsecutiveFine = true;
-              break;
-            }
-          } else {
-            consecutiveFineNormal = 0;  // 重置計數
-          }
-        }
-        
-        // 如果找到 8+ 個 consecutive 精細正常值，無視 Major jump，繼續測試
-        if (hasTenConsecutiveFine) {
-          majorJumpIndex = -1;
-          majorJumpThreshold = null;
-          continue;  // 無視 Major jump，繼續循環
-        }
-        
-        // 如果沒有找到足夠的精細正常值，在接著的測試中尋找 Large jump (>1.5 kHz)
-        // 這將在下面的正常異常檢測中被捕捉
+        // 超大幅異常，立即停止測試
+        // 選擇這個超大幅異常前的閾值
+        optimalThreshold = validMeasurements[i - 1].threshold;
+        optimalMeasurement = validMeasurements[i - 1];
+        break;
       }
       
       const isAnomaly = freqDifference > 1.5;
       
       if (isAnomaly) {
         // 發現大幅異常 (>1.5 kHz)
-        
-        // 如果之前有記錄的 Major jump，現在找到 Large jump，立即停止
-        if (majorJumpIndex !== -1) {
-          optimalThreshold = majorJumpThreshold;
-          optimalMeasurement = validMeasurements[majorJumpIndex - 1];
-          break;  // 立即停止
-        }
         
         // 如果還沒有記錄早期異常，現在記錄
         if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
