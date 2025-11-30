@@ -1108,7 +1108,7 @@ export class BatCallDetector {
     
     // ============================================================
     // 決定最終使用的閾值 + End Frequency
-    // 使用與 High Frequency 優化相同的異常檢測邏輯
+    // 優化 2025: Major jump (>3 kHz) 後繼續測試
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
     let optimalMeasurement = validMeasurements[0];  // 預設為第一個有效測量
@@ -1118,6 +1118,8 @@ export class BatCallDetector {
     let lastValidMeasurement = validMeasurements[0];
     let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
     let firstAnomalyIndex = -1;       // 第一個異常發生的索引位置
+    let majorJumpIndex = -1;          // Major jump 發生的索引位置
+    let majorJumpThreshold = null;    // Major jump 前的閾值
     
     // 從第二個有效測量開始，比較與前一個測量的差異
     for (let i = 1; i < validMeasurements.length; i++) {
@@ -1126,20 +1128,62 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>3 kHz) - 立即停止
+      // 優化 2025：超大幅頻率跳變 (>3 kHz) - 繼續測試而不是立即停止
       // ============================================================
       if (freqDifference > 3.0) {
-        // 超大幅異常，立即停止測試
-        // 選擇這個超大幅異常前的閾值
-        optimalThreshold = validMeasurements[i - 1].threshold;
-        optimalMeasurement = validMeasurements[i - 1];
-        break;
+        // 記錄 Major jump，但繼續測試
+        if (majorJumpIndex === -1) {
+          majorJumpIndex = i;
+          majorJumpThreshold = validMeasurements[i - 1].threshold;
+        }
+        
+        // 繼續測試接著的 10 個測量點
+        // 檢查在 Major jump 後是否有 10+ 個 consecutive "精細正常值" (freqDiff < 0.2 kHz)
+        const checkRangeEnd = Math.min(majorJumpIndex + 10, validMeasurements.length - 1);
+        let consecutiveFineNormal = 0;
+        let hasTenConsecutiveFine = false;
+        
+        for (let checkIdx = majorJumpIndex + 1; checkIdx <= checkRangeEnd; checkIdx++) {
+          if (checkIdx >= validMeasurements.length) break;
+          
+          const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].lowFreq_kHz;
+          const checkCurrFreq_kHz = validMeasurements[checkIdx].lowFreq_kHz;
+          const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
+          
+          // 精細正常值：freqDiff < 0.2 kHz
+          if (checkFreqDiff < 0.2) {
+            consecutiveFineNormal++;
+            if (consecutiveFineNormal >= 10) {
+              hasTenConsecutiveFine = true;
+              break;
+            }
+          } else {
+            consecutiveFineNormal = 0;  // 重置計數
+          }
+        }
+        
+        // 如果找到 10+ 個 consecutive 精細正常值，無視 Major jump，繼續測試
+        if (hasTenConsecutiveFine) {
+          majorJumpIndex = -1;
+          majorJumpThreshold = null;
+          continue;  // 無視 Major jump，繼續循環
+        }
+        
+        // 如果沒有找到足夠的精細正常值，在接著的測試中尋找 Large jump (>1.5 kHz)
+        // 這將在下面的正常異常檢測中被捕捉
       }
       
       const isAnomaly = freqDifference > 1.5;
       
       if (isAnomaly) {
         // 發現大幅異常 (>1.5 kHz)
+        
+        // 如果之前有記錄的 Major jump，現在找到 Large jump，立即停止
+        if (majorJumpIndex !== -1) {
+          optimalThreshold = majorJumpThreshold;
+          optimalMeasurement = validMeasurements[majorJumpIndex - 1];
+          break;  // 立即停止
+        }
         
         // 如果還沒有記錄早期異常，現在記錄
         if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
