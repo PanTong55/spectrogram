@@ -410,7 +410,7 @@ export function showCallAnalysisPopup({
       window.__batCallControlsMemory.fftSize = newFftSize.toString();
       
       // 更新 UI 按鈕文本
-      fftSizeBtn.textContent = newFftSize.toString();
+      batCallFFTSizeBtn.textContent = newFftSize.toString();
       
       // 更新 detector 配置
       detector.config = { ...batCallConfig };
