@@ -401,9 +401,18 @@ export function showCallAnalysisPopup({
     { label: '2048', value: '2048' }
   ], {
     onChange: async () => {
-      // 只更新 Bat Call 配置，不影響 Power Spectrum
+      // 更新 Bat Call 配置和全局記憶
       const fftSizeItems = ['512', '1024', '2048'];
-      batCallConfig.fftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+      const newFftSize = parseInt(fftSizeItems[batCallFFTDropdown.selectedIndex] || '1024', 10);
+      batCallConfig.fftSize = newFftSize;
+      
+      // 保存到全局記憶
+      window.__batCallControlsMemory.fftSize = newFftSize.toString();
+      
+      // 更新 UI 按鈕文本
+      fftSizeBtn.textContent = newFftSize.toString();
+      
+      // 更新 detector 配置
       detector.config = { ...batCallConfig };
       await updateBatCallAnalysis(lastPeakFreq);
     }
