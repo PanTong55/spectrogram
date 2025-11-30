@@ -592,25 +592,25 @@ export function showCallAnalysisPopup({
         if (e.key === 'ArrowUp') {
           e.preventDefault();
           
-          // 特殊處理 highThreshold input
-          // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
-          if (inputElement.id === 'highThreshold_dB') {
+          // 特殊處理 highThreshold 和 lowThreshold input
+          // 支持格式：空白 / "auto" / 純數值（絕對值）
+          if (inputElement.id === 'highThreshold_dB' || inputElement.id === 'lowThreshold_dB') {
             const currentValue = inputElement.value.trim().toLowerCase();
             
-            // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
-            if (currentValue === '' || 
-                currentValue === 'auto' ||
-                currentValue.startsWith('auto')) {
-              // 從 Auto 切換到 -24
-              inputElement.value = '-24';
+            // 檢查是否是 Auto 模式（空白或"auto"）
+            if (currentValue === '' || currentValue === 'auto') {
+              // 從 Auto 切換到 24 (絕對值)
+              inputElement.value = '24';
               inputElement.style.color = '#000';
               inputElement.style.fontStyle = 'normal';
             } else {
-              // 數值增加
+              // 數值增加，使用 step 值（0.5）
+              const step = parseFloat(inputElement.step) || 1;
               const numValue = parseFloat(currentValue);
               if (!isNaN(numValue)) {
-                const newValue = numValue + 1;
-                inputElement.value = newValue.toString();
+                const newValue = numValue + step;
+                const max = inputElement.max ? parseFloat(inputElement.max) : Infinity;
+                inputElement.value = Math.min(newValue, max).toString();
               }
             }
           } else {
@@ -627,25 +627,25 @@ export function showCallAnalysisPopup({
         } else if (e.key === 'ArrowDown') {
           e.preventDefault();
           
-          // 特殊處理 highThreshold input
-          // 支持格式：空白 / "auto" / "Auto (值)" / 純數值
-          if (inputElement.id === 'highThreshold_dB') {
+          // 特殊處理 highThreshold 和 lowThreshold input
+          // 支持格式：空白 / "auto" / 純數值（絕對值）
+          if (inputElement.id === 'highThreshold_dB' || inputElement.id === 'lowThreshold_dB') {
             const currentValue = inputElement.value.trim().toLowerCase();
             
-            // 檢查是否是 Auto 模式（空白、"auto" 或 "auto (-40)" 格式）
-            if (currentValue === '' || 
-                currentValue === 'auto' ||
-                currentValue.startsWith('auto')) {
-              // 從 Auto 切換到 -50
-              inputElement.value = '-50';
+            // 檢查是否是 Auto 模式（空白或"auto"）
+            if (currentValue === '' || currentValue === 'auto') {
+              // 從 Auto 切換到 70 (絕對值)
+              inputElement.value = '70';
               inputElement.style.color = '#000';
               inputElement.style.fontStyle = 'normal';
             } else {
-              // 數值減少
+              // 數值減少，使用 step 值（0.5）
+              const step = parseFloat(inputElement.step) || 1;
               const numValue = parseFloat(currentValue);
               if (!isNaN(numValue)) {
-                const newValue = numValue - 1;
-                inputElement.value = newValue.toString();
+                const newValue = numValue - step;
+                const min = inputElement.min ? parseFloat(inputElement.min) : -Infinity;
+                inputElement.value = Math.max(newValue, min).toString();
               }
             }
           } else {
@@ -660,6 +660,34 @@ export function showCallAnalysisPopup({
           inputElement.dispatchEvent(new Event('input', { bubbles: true }));
           inputElement.dispatchEvent(new Event('change', { bubbles: true }));
         }
+      }
+    });
+    
+    // 支持小數點輸入 - 允許數字、小數點和負號
+    inputElement.addEventListener('keypress', (e) => {
+      const char = e.key;
+      const currentValue = inputElement.value;
+      
+      // 允許的字符：0-9, '.', '-'
+      const isDigit = /[0-9]/.test(char);
+      const isDot = char === '.';
+      const isMinus = char === '-';
+      
+      if (!isDigit && !isDot && !isMinus) {
+        e.preventDefault();
+        return;
+      }
+      
+      // 防止多個小數點
+      if (isDot && currentValue.includes('.')) {
+        e.preventDefault();
+        return;
+      }
+      
+      // 防止負號不在最開頭
+      if (isMinus && currentValue !== '') {
+        e.preventDefault();
+        return;
       }
     });
     
