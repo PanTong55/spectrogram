@@ -1113,9 +1113,9 @@ export class BatCallDetector {
           majorJumpThreshold = validMeasurements[i - 1].threshold;
         }
         
-        // 繼續測試接著的 10 個測量點
-        // 檢查在 Major jump 後是否有 10+ 個 consecutive "精細正常值" (freqDiff < 0.2 kHz)
-        const checkRangeEnd = Math.min(majorJumpIndex + 10, validMeasurements.length - 1);
+        // 繼續測試接著的 8 個測量點
+        // 檢查在 Major jump 後是否有 8+ 個 consecutive "精細正常值" (freqDiff < 0.2 kHz)
+        const checkRangeEnd = Math.min(majorJumpIndex + 8, validMeasurements.length - 1);
         let consecutiveFineNormal = 0;
         let hasTenConsecutiveFine = false;
         
@@ -1129,7 +1129,7 @@ export class BatCallDetector {
           // 精細正常值：freqDiff < 0.2 kHz
           if (checkFreqDiff < 0.2) {
             consecutiveFineNormal++;
-            if (consecutiveFineNormal >= 10) {
+            if (consecutiveFineNormal >= 8) {
               hasTenConsecutiveFine = true;
               break;
             }
@@ -1138,7 +1138,7 @@ export class BatCallDetector {
           }
         }
         
-        // 如果找到 10+ 個 consecutive 精細正常值，無視 Major jump，繼續測試
+        // 如果找到 8+ 個 consecutive 精細正常值，無視 Major jump，繼續測試
         if (hasTenConsecutiveFine) {
           majorJumpIndex = -1;
           majorJumpThreshold = null;
