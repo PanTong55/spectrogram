@@ -741,7 +741,7 @@ export class BatCallDetector {
       warning: false
     };
 
-    const firstFramePower = spectrogram[0];
+    const firstFramePower = spectrogram[Math.min(peakFrameIdx, spectrogram.length - 1)];
     
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     // This prevents fluctuations caused by selection area size
@@ -1371,7 +1371,7 @@ export class BatCallDetector {
         
         for (let testThreshold_dB = -24; testThreshold_dB >= -70; testThreshold_dB--) {
           const highFreqThreshold_dB = peakPower_dB + testThreshold_dB;
-          const firstFramePower = spectrogram[0];
+          const firstFramePower = spectrogram[Math.min(peakFrameIdx, spectrogram.length - 1)];
           
           // 計算此閾值的 High Frequency
           let testHighFreq_Hz = null;
