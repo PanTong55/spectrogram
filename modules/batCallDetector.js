@@ -747,9 +747,9 @@ export class BatCallDetector {
     // This prevents fluctuations caused by selection area size
     const stablePeakPower_dB = callPeakPower_dB;
     
-    // 測試閾值範圍：-24 到 -70 dB，間距 0.5 dB
+    // 測試閾值範圍：-24 到 -70 dB，間距 1 dB
     const thresholdRange = [];
-    for (let threshold = -24; threshold >= -70; threshold -= 0.5) {
+    for (let threshold = -24; threshold >= -70; threshold--) {
       thresholdRange.push(threshold);
     }
     
@@ -868,9 +868,9 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 保險機制 1：超大幅頻率跳變 (>4 kHz) - 立即停止
+      // 保險機制 1：超大幅頻率跳變 (>5 kHz) - 立即停止
       // ============================================================
-      if (freqDifference > 4.0) {
+      if (freqDifference > 5.0) {
         // 超大幅異常，立即停止測試，並選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
         optimalMeasurement = validMeasurements[i - 1];
