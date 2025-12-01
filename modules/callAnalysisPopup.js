@@ -276,7 +276,7 @@ export function showCallAnalysisPopup({
     try {
       // 2025 FIX: 首次初始化時，根據highpassFilterFreqInput.value同步batCallConfig的isAuto狀態
       // 這對於redrawSpectrum首次調用時特別重要，因為此時updateBatCallConfig可能還沒被調用過
-      const highpassFilterFreqInput = popup.querySelector('#highpassFilterFreq_kHz');
+      let highpassFilterFreqInput = popup.querySelector('#highpassFilterFreq_kHz');
       if (highpassFilterFreqInput) {
         const currentValue = highpassFilterFreqInput.value.trim();
         // 如果highpassFilterFreqInput為空，則isAuto應該為true；否則為false
@@ -387,7 +387,9 @@ export function showCallAnalysisPopup({
       // 更新 UI 以反映實際使用的 highpassFilterFreq 值
       // Auto mode 時：清空 value，在 placeholder 中顯示 "Auto (40)" 格式，灰色樣式
       // Manual mode 時：顯示用戶設定的值
-      const highpassFilterFreqInput = popup.querySelector('#highpassFilterFreq_kHz');
+      if (!highpassFilterFreqInput) {
+        highpassFilterFreqInput = popup.querySelector('#highpassFilterFreq_kHz');
+      }
       if (highpassFilterFreqInput) {
         if (detector.config.highpassFilterFreq_kHz_isAuto === true) {
           // Auto 模式：清空 value，在 placeholder 中顯示計算值，並設定灰色樣式
