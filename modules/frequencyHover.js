@@ -1100,12 +1100,22 @@ const upHandler = () => {
       const timeExp = getTimeExpansionMode();
       const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
       
-      if (judgeDurationMs <= 100) {
+      // 記錄當前的 isShortSelection 狀態
+      const wasShortSelection = sel._isShortSelection;
+      const isShortSelection = judgeDurationMs <= 100;
+      
+      if (isShortSelection) {
         // <100ms selection: 顯示 btn-group 和 tooltip
-        if (sel.btnGroup) {
-          sel.btnGroup.style.display = '';
-        } else {
+        // 如果從長selection變成短selection，需要重新創建btn-group
+        if (!sel.btnGroup || (wasShortSelection !== isShortSelection)) {
+          // 移除舊的btn-group
+          if (sel.btnGroup) {
+            sel.rect.removeChild(sel.btnGroup);
+            sel.btnGroup = null;
+          }
           createBtnGroup(sel, true);  // isShortSelection = true
+        } else {
+          sel.btnGroup.style.display = '';
         }
         
         if (!sel.tooltip) {
@@ -1118,12 +1128,21 @@ const upHandler = () => {
           sel.tooltip = null;
         }
 
-        if (sel.btnGroup) {
-          sel.btnGroup.style.display = '';
-        } else {
+        // 如果從短selection變成長selection，需要重新創建btn-group
+        if (!sel.btnGroup || (wasShortSelection !== isShortSelection)) {
+          // 移除舊的btn-group
+          if (sel.btnGroup) {
+            sel.rect.removeChild(sel.btnGroup);
+            sel.btnGroup = null;
+          }
           createBtnGroup(sel, false);  // isShortSelection = false
+        } else {
+          sel.btnGroup.style.display = '';
         }
       }
+
+      // 更新狀態記錄
+      sel._isShortSelection = isShortSelection;
 
       repositionTooltip(sel, left, top, width);
 
