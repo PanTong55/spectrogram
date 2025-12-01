@@ -56,11 +56,15 @@ highpassFilterFreq_kHz_isAuto: true  // Default Auto mode (persistent across ses
 #### 3. Auto Calculation Function (Line 263-272)
 - `calculateAutoHighpassFilterFreq()` - Threshold-based calculation from peak frequency
 
-#### 4. updateBatCallAnalysis Function (Line 278-282)
-- Auto calculation applied at function start:
+#### 4. Auto Mode Calculation in updateBatCallConfig (Line 632-635)
+- **CRITICAL: Calculation moved from updateBatCallAnalysis start to updateBatCallConfig**
+- Executed BEFORE detector.config update (ensures fresh config values)
+- Uses `lastPeakFreq` from original spectrum (same as SNR calculation):
 ```javascript
-if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && peakFreq) {
-  batCallConfig.highpassFilterFreq_kHz = calculateAutoHighpassFilterFreq(peakFreq);
+// 2025: Auto Mode 時，根據原始 spectrum 的 peakFreq 計算自動高通濾波器頻率
+// 這與 SNR 計算邏輯一致，都使用原始（未濾波）音頻的峰值頻率
+if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && lastPeakFreq) {
+  batCallConfig.highpassFilterFreq_kHz = calculateAutoHighpassFilterFreq(lastPeakFreq);
 }
 ```
 
@@ -74,6 +78,7 @@ if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && peakFreq) {
 - Parse input value to determine Auto/Manual mode
 - Store mode flag in batCallConfig
 - Handle invalid input (fallback to Auto)
+- **Order: Parse → Set isAuto → Calculate Auto value → Update detector.config → Call updateBatCallAnalysis**
 
 #### 7. Memory Persistence (Line 617)
 - Added to memory save structure: `highpassFilterFreq_kHz_isAuto`
@@ -135,3 +140,51 @@ if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && peakFreq) {
 - `modules/callAnalysisPopup.js` - Main implementation
 - `modules/batCallDetector.js` - Uses config values
 - `modules/powerSpectrum.js` - Provides peak frequency calculation
+
+---
+
+## Bug Fix: Auto Mode Calculation (2025-12-01)
+
+### Problem Identified
+1. Auto Mode calculation was happening in `updateBatCallAnalysis()` start
+2. Peak frequency used was from function parameter (could be old/stale)
+3. `detector.config` was already updated before Auto calculation, causing sync issues
+
+### Root Cause
+```javascript
+// WRONG: In updateBatCallAnalysis (calculated too late)
+if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && peakFreq) {
+  batCallConfig.highpassFilterFreq_kHz = calculateAutoHighpassFilterFreq(peakFreq);
+}
+// Problem: detector.config already has old highpassFilterFreq_kHz value
+```
+
+### Solution Applied
+Moved Auto Mode calculation to `updateBatCallConfig()` **BEFORE** detector.config update:
+
+```javascript
+// CORRECT: In updateBatCallConfig (before detector.config sync)
+if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && lastPeakFreq) {
+  batCallConfig.highpassFilterFreq_kHz = calculateAutoHighpassFilterFreq(lastPeakFreq);
+}
+
+// Now detector.config gets updated with fresh calculated value
+detector.config = { ...batCallConfig };
+```
+
+### Key Changes
+1. **Peak Frequency Source**: Changed from function parameter to `lastPeakFreq`
+   - `lastPeakFreq` is set in `redrawSpectrum()` from original spectrum
+   - Consistent with SNR calculation (both use unfiltered audio peak)
+
+2. **Calculation Timing**: Moved before `detector.config` sync
+   - Ensures detector gets fresh Auto-calculated value
+   - No stale values in detector.config
+
+3. **Result**: Auto Mode now correctly reflects peak frequency in UI
+
+### Verification
+- Peak frequency for Auto calculation: From original spectrum (unfiltered)
+- Same source as SNR calculation: ✓ Consistent
+- Value updates in detector.config: ✓ Fresh
+- UI reflects calculated value: ✓ Correct
