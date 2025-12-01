@@ -12,7 +12,9 @@ export function showMessageBox({
   input = false,
   inputType = 'text', // 'text' | 'password'
   inputPlaceholder = '',
-  inputValue = ''
+  inputValue = '',
+  // new options for custom buttons
+  customButtons = [] // array of { text, callback }
 } = {}) {
   const popup = document.createElement('div');
   popup.className = 'map-popup modal-popup';
@@ -62,20 +64,6 @@ export function showMessageBox({
   const actions = document.createElement('div');
   actions.className = 'message-box-actions';
 
-  const confirmBtn = document.createElement('button');
-  confirmBtn.className = 'flat-icon-button';
-  confirmBtn.textContent = confirmText;
-  actions.appendChild(confirmBtn);
-
-  let cancelBtn = null;
-  if (cancelText) {
-    cancelBtn = document.createElement('button');
-    cancelBtn.className = 'flat-icon-button';
-    cancelBtn.textContent = cancelText;
-    actions.appendChild(cancelBtn);
-  }
-  popup.appendChild(actions);
-
   function close(result) {
     popup.remove();
     if (result === 'confirm' && typeof onConfirm === 'function') {
@@ -90,8 +78,38 @@ export function showMessageBox({
     }
   }
 
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'flat-icon-button';
+  confirmBtn.textContent = confirmText;
   confirmBtn.addEventListener('click', () => close('confirm'));
-  cancelBtn?.addEventListener('click', () => close('cancel'));
+  actions.appendChild(confirmBtn);
+
+  // Add custom buttons if provided
+  if (customButtons && customButtons.length > 0) {
+    customButtons.forEach(({ text, callback }) => {
+      const btn = document.createElement('button');
+      btn.className = 'flat-icon-button';
+      btn.textContent = text;
+      btn.addEventListener('click', () => {
+        popup.remove();
+        if (typeof callback === 'function') {
+          callback();
+        }
+      });
+      actions.appendChild(btn);
+    });
+  }
+
+  let cancelBtn = null;
+  if (cancelText) {
+    cancelBtn = document.createElement('button');
+    cancelBtn.className = 'flat-icon-button';
+    cancelBtn.textContent = cancelText;
+    cancelBtn.addEventListener('click', () => close('cancel'));
+    actions.appendChild(cancelBtn);
+  }
+  popup.appendChild(actions);
+
   closeBtn.addEventListener('click', () => close('close'));
 
   if (inputEl) {

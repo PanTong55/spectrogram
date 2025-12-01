@@ -155,6 +155,37 @@ async function generateCsvRows() {
   return rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
 }
 
+async function exportWav() {
+  // 獲取當前 expand 的 blob 和原始文件名
+  const expandBlob = window.__currentExpandBlob;
+  const currentFileName = window.__currentFileName || 'recording';
+  
+  if (!expandBlob) {
+    alert('No expanded session available for WAV export.');
+    return;
+  }
+
+  try {
+    // 直接使用 expand blob 作為 WAV 文件，因為它已經是 WAV 格式
+    const blob = expandBlob;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    // 生成導出文件名：原檔案名_edited.wav
+    const baseFileName = currentFileName.replace(/\.[^/.]+$/, ''); // 移除副檔名
+    a.download = `${baseFileName}_edited.wav`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Error exporting WAV:', err);
+    alert('Failed to export WAV file.');
+  }
+}
+
 async function exportCsv() {
   const rows = await generateCsvRows();
   const csvContent = rows.join('\n');
@@ -268,9 +299,17 @@ function showExportOptions() {
     title: 'Export',
     message: 'Choose file type to export:',
     confirmText: 'CSV',
-    cancelText: 'XLSX',
-    onConfirm: exportCsv,
-    onCancel: exportXlsx
+    customButtons: [
+      {
+        text: 'XLSX',
+        callback: exportXlsx
+      },
+      {
+        text: 'WAV',
+        callback: exportWav
+      }
+    ],
+    onConfirm: exportCsv
   });
 }
 

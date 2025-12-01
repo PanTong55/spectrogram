@@ -1538,3 +1538,18 @@ window.__spectrogramSettings = {
   get sampleRate() { return currentSampleRate; },
   get overlap() { return currentOverlap; }
 };
+
+// 暴露當前 expand blob 和文件名供 export 模組使用
+Object.defineProperty(window, '__currentExpandBlob', {
+  get: () => currentExpandBlob,
+  configurable: true
+});
+
+Object.defineProperty(window, '__currentFileName', {
+  get: () => {
+    const file = getCurrentFile();
+    return file ? file.name : null;
+  },
+  configurable: true
+});
+
