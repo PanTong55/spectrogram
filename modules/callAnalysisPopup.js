@@ -266,7 +266,7 @@ export function showCallAnalysisPopup({
     if (peakFreq_kHz >= 40) return 30;
     if (peakFreq_kHz >= 35) return 25;
     if (peakFreq_kHz >= 30) return 20;
-    return 15;  // 預設最低值
+    return 0;  // 預設最低值
   };
 
   // 獨立的 Bat Call 檢測分析函數（只更新參數顯示，不重新計算 Power Spectrum）
