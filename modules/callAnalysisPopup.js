@@ -1092,7 +1092,7 @@ function createPopupWindow() {
   highThresholdInput.type = 'number';
   highThresholdInput.placeholder = 'Auto';
   highThresholdInput.title = 'Auto or Manual High Frequency threshold (-24 to -70)';
-  highThresholdInput.style.width = '65px';
+  highThresholdInput.style.width = '69px';
   highThresholdInput.min = '24';
   highThresholdInput.max = '70';
   highThresholdInput.step = '0.5';
@@ -1125,7 +1125,7 @@ function createPopupWindow() {
   lowThresholdInput.type = 'number';
   lowThresholdInput.placeholder = 'Auto';
   lowThresholdInput.title = 'Auto or Manual Low Frequency threshold (-24 to -70)';
-  lowThresholdInput.style.width = '65px';
+  lowThresholdInput.style.width = '69px';
   lowThresholdInput.min = '24';  // 絕對值範圍
   lowThresholdInput.max = '70';
   lowThresholdInput.step = '0.5';
