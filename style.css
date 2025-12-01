@@ -1553,7 +1553,7 @@ input.tag-button.editing {
 
 .freq-tooltip {
   position: absolute;
-  z-index: 30;
+  z-index: 15;
   padding: 6px 8px 2px 2px;
   line-height: 14px;
   background: #fff;
