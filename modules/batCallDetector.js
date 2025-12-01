@@ -141,7 +141,6 @@ export class BatCall {
     this.quality = null;            // Quality rating based on SNR (Very Poor, Poor, Normal, Good, Excellent)
     
     this.highFreqDetectionWarning = false;  // Warning flag: High Frequency detection reached -70dB limit
-    this.lowFreqDetectionWarning = false;   // Warning flag: Low Frequency detection reached -70dB limit (2025)
     
     // 2025: 儲存該 call 實際使用的 threshold 值（用於 UI 顯示）
     this.highFreqThreshold_dB_used = null;  // High Frequency threshold actually used for this call
@@ -1973,8 +1972,6 @@ export class BatCallDetector {
       
       // 2025 SAFETY MECHANISM: 禁用 Low Frequency Warning
       // 由於 findOptimalLowFrequencyThreshold 已實施安全機制（-70時改用-30）
-      // Low Frequency 計算現已穩定，不再需要警告
-      call.lowFreqDetectionWarning = false;
       
       // Use the optimized low frequency values
       lowFreq_Hz = safeLowFreq_Hz;
