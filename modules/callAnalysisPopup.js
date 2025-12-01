@@ -274,6 +274,25 @@ export function showCallAnalysisPopup({
   // 獨立的 Bat Call 檢測分析函數（只更新參數顯示，不重新計算 Power Spectrum）
   const updateBatCallAnalysis = async (peakFreq) => {
     try {
+      // 2025 FIX: 首次初始化時，根據highpassFilterFreqInput.value同步batCallConfig的isAuto狀態
+      // 這對於redrawSpectrum首次調用時特別重要，因為此時updateBatCallConfig可能還沒被調用過
+      const highpassFilterFreqInput = popup.querySelector('#highpassFilterFreq_kHz');
+      if (highpassFilterFreqInput) {
+        const currentValue = highpassFilterFreqInput.value.trim();
+        // 如果highpassFilterFreqInput為空，則isAuto應該為true；否則為false
+        const shouldBeAuto = (currentValue === '');
+        batCallConfig.highpassFilterFreq_kHz_isAuto = shouldBeAuto;
+      }
+      
+      // 2025: Auto Mode 時，根據peakFreq計算自動高通濾波器頻率
+      // 使用原始spectrum的peakFreq（未濾波）
+      if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && peakFreq) {
+        batCallConfig.highpassFilterFreq_kHz = calculateAutoHighpassFilterFreq(peakFreq);
+      }
+      
+      // 同步detector.config以確保使用最新的batCallConfig值
+      detector.config = { ...batCallConfig };
+      
       // 獲取要進行偵測的音頻數據
       let audioDataForDetection = audioData;
 
