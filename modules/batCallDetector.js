@@ -1208,13 +1208,57 @@ export class BatCallDetector {
     // 檢測是否使用了 -70dB 的極限閾值（但實際使用 -30dB）
     const hasWarning = finalThreshold <= -70;
     
+    // 當應用安全機制時（改為 -30dB），需要使用 -30dB 重新計算 lowFreq_Hz
+    let returnLowFreq_Hz = optimalMeasurement.lowFreq_Hz;
+    let returnLowFreq_kHz = optimalMeasurement.lowFreq_kHz;
+    let returnEndFreq_Hz = optimalMeasurement.endFreq_Hz;
+    let returnEndFreq_kHz = optimalMeasurement.endFreq_kHz;
+    
+    if (safeThreshold !== finalThreshold) {
+      // 安全機制改變了閾值，使用 -30dB 重新計算 lowFreq_Hz
+      const lastFramePower = spectrogram[spectrogram.length - 1];
+      const peakPower_dB = callPeakPower_dB;
+      const lowFreqThreshold_dB_safe = peakPower_dB + safeThreshold;
+      
+      let lowFreq_Hz_safe = null;
+      let endFreq_Hz_safe = null;
+      
+      // 使用安全閾值 (-30dB) 計算 Low Frequency
+      for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
+        if (lastFramePower[binIdx] > lowFreqThreshold_dB_safe) {
+          lowFreq_Hz_safe = freqBins[binIdx];
+          
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx > 0) {
+            const thisPower = lastFramePower[binIdx];
+            const prevPower = lastFramePower[binIdx - 1];
+            
+            if (prevPower < lowFreqThreshold_dB_safe && thisPower > lowFreqThreshold_dB_safe) {
+              const powerRatio = (thisPower - lowFreqThreshold_dB_safe) / (thisPower - prevPower);
+              const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+              lowFreq_Hz_safe = freqBins[binIdx] - powerRatio * freqDiff;
+            }
+          }
+          break;
+        }
+      }
+      
+      if (lowFreq_Hz_safe !== null) {
+        endFreq_Hz_safe = lowFreq_Hz_safe;  // End frequency = low frequency
+        returnLowFreq_Hz = lowFreq_Hz_safe;
+        returnLowFreq_kHz = lowFreq_Hz_safe / 1000;
+        returnEndFreq_Hz = endFreq_Hz_safe;
+        returnEndFreq_kHz = endFreq_Hz_safe / 1000;
+      }
+    }
+    
     // 返回優化的 Low Frequency 和 End Frequency
     return {
       threshold: safeThreshold,
-      lowFreq_Hz: optimalMeasurement.lowFreq_Hz,
-      lowFreq_kHz: optimalMeasurement.lowFreq_kHz,
-      endFreq_Hz: optimalMeasurement.endFreq_Hz,
-      endFreq_kHz: optimalMeasurement.endFreq_kHz,
+      lowFreq_Hz: returnLowFreq_Hz,
+      lowFreq_kHz: returnLowFreq_kHz,
+      endFreq_Hz: returnEndFreq_Hz,
+      endFreq_kHz: returnEndFreq_kHz,
       warning: hasWarning
     };
   }
@@ -1894,6 +1938,42 @@ export class BatCallDetector {
       // 2025: 在 auto mode 下保存實際使用的 low frequency threshold
       // Auto mode: 保存經過防呆檢查和安全機制後的最終 threshold 值
       call.lowFreqThreshold_dB_used = finalSafeThreshold;
+      
+      // 如果安全機制改變了閾值，使用新閾值重新計算 lowFreq_Hz
+      if (finalSafeThreshold !== usedThreshold) {
+        const lastFramePowerForSafe = spectrogram[spectrogram.length - 1];
+        const lowFreqThreshold_dB_safe = peakPower_dB + finalSafeThreshold;
+        
+        let testLowFreq_Hz_safe = null;
+        let testEndFreq_Hz_safe = null;
+        
+        // 使用安全閾值 (-30dB) 計算 Low Frequency
+        for (let binIdx = 0; binIdx < lastFramePowerForSafe.length; binIdx++) {
+          if (lastFramePowerForSafe[binIdx] > lowFreqThreshold_dB_safe) {
+            testLowFreq_Hz_safe = freqBins[binIdx];
+            
+            // 線性插值
+            if (binIdx > 0) {
+              const thisPower = lastFramePowerForSafe[binIdx];
+              const prevPower = lastFramePowerForSafe[binIdx - 1];
+              if (prevPower < lowFreqThreshold_dB_safe && thisPower > lowFreqThreshold_dB_safe) {
+                const powerRatio = (thisPower - lowFreqThreshold_dB_safe) / (thisPower - prevPower);
+                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                testLowFreq_Hz_safe = freqBins[binIdx] - powerRatio * freqDiff;
+              }
+            }
+            break;
+          }
+        }
+        
+        if (testLowFreq_Hz_safe !== null) {
+          testEndFreq_Hz_safe = testLowFreq_Hz_safe;
+          safeLowFreq_Hz = testLowFreq_Hz_safe;
+          safeLowFreq_kHz = testLowFreq_Hz_safe / 1000;
+          safeEndFreq_Hz = testEndFreq_Hz_safe;
+          safeEndFreq_kHz = testEndFreq_Hz_safe / 1000;
+        }
+      }
       
       // 2025 SAFETY MECHANISM: 禁用 Low Frequency Warning
       // 由於 findOptimalLowFrequencyThreshold 已實施安全機制（-70時改用-30）
