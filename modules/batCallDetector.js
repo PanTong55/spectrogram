@@ -1888,10 +1888,12 @@ export class BatCallDetector {
       }
       
       // Update the config with the calculated optimal threshold
-      this.config.lowFreqThreshold_dB = usedThreshold;
+      // 2025 SAFETY MECHANISM: 應用安全機制 - 如果 usedThreshold 達到 -70，改用 -30
+      const finalSafeThreshold = (usedThreshold <= -70) ? -30 : usedThreshold;
+      this.config.lowFreqThreshold_dB = finalSafeThreshold;
       // 2025: 在 auto mode 下保存實際使用的 low frequency threshold
-      // Auto mode: 保存經過防呆檢查後的最終 threshold 值
-      call.lowFreqThreshold_dB_used = usedThreshold;
+      // Auto mode: 保存經過防呆檢查和安全機制後的最終 threshold 值
+      call.lowFreqThreshold_dB_used = finalSafeThreshold;
       
       // 2025 SAFETY MECHANISM: 禁用 Low Frequency Warning
       // 由於 findOptimalLowFrequencyThreshold 已實施安全機制（-70時改用-30）
