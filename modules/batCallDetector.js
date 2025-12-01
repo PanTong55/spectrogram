@@ -1096,11 +1096,7 @@ export class BatCallDetector {
     // 新規則 2025：Low Frequency 需應用防呆機制
     // 找出第一個 <= Peak Frequency 且 foundBin=true 的 Low Frequency
     // 低頻應該低於峰值頻率，這是 FM 掃頻信號的特性
-    // ============================================================
-    
-    // ============================================================
     // 決定最終使用的閾值 + End Frequency
-    // 優化 2025: Major jump (>3 kHz) 後繼續測試
     // ============================================================
     let optimalThreshold = -24;  // 默認使用最保守的設定
     let optimalMeasurement = validMeasurements[0];  // 預設為第一個有效測量
@@ -1120,10 +1116,10 @@ export class BatCallDetector {
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
       // ============================================================
-      // 優化 2025：超大幅頻率跳變 (>3 kHz) - 繼續測試而不是立即停止
+      // 優化 2025：超大幅頻率跳變 (>2 kHz)
       // ============================================================
-      if (freqDifference > 3.0) {
-        // 超大幅異常，立即停止測試
+      if (freqDifference > 2.0) {
+        // 超大幅異常 >2.0 kHz，立即停止測試
         // 選擇這個超大幅異常前的閾值
         optimalThreshold = validMeasurements[i - 1].threshold;
         optimalMeasurement = validMeasurements[i - 1];
