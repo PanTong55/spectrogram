@@ -562,8 +562,11 @@ export function initFrequencyHover({
     selections.push(selObj);
 
     // 根據 Time Expansion 模式判斷是否創建按鈕組
-    if (judgeDurationMs > 100) {
-      createBtnGroup(selObj);
+    // 2025: <100ms selection 也創建 btn-group，但只有 closeBtn 和 callAnalysisBtn
+    if (judgeDurationMs <= 100) {
+      createBtnGroup(selObj, true);  // isShortSelection = true
+    } else {
+      createBtnGroup(selObj, false);  // isShortSelection = false (>100ms 有 expand/fit buttons)
     }
 
     enableResize(selObj);
@@ -692,7 +695,7 @@ export function initFrequencyHover({
     return tooltip;
   }
 
-  function createBtnGroup(sel) {
+  function createBtnGroup(sel, isShortSelection = false) {
     const group = document.createElement('div');
     group.className = 'selection-btn-group';
 
@@ -712,45 +715,72 @@ export function initFrequencyHover({
     closeBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
     closeBtn.addEventListener('mouseleave', () => { suppressHover = false; });
 
-    const expandBtn = document.createElement('i');
-    expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
-    expandBtn.title = 'Crop and expand this session';
-    expandBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
-      // 強制解除 suppressHover/isOverBtnGroup，確保 hover 標記能顯示
-      suppressHover = false;
-      isOverBtnGroup = false;
-      viewer.dispatchEvent(new CustomEvent('expand-selection', {
-        detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
-      }));
-      if (lastClientX !== null && lastClientY !== null) {
-        setTimeout(() => {
-          updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
-        }, 0);
-      }
-    });
-    expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-    expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+    group.appendChild(closeBtn);
 
-    const fitBtn = document.createElement('i');
-    fitBtn.className = 'fa-solid fa-up-right-and-down-left-from-center selection-fit-btn';
-    fitBtn.title = 'Fit to window';
-    fitBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      viewer.dispatchEvent(new CustomEvent('fit-window-selection', {
-        detail: {
-          startTime: sel.data.startTime,
-          endTime: sel.data.endTime,
-          Flow: sel.data.Flow,
-          Fhigh: sel.data.Fhigh,
+    // 2025: 為 <100ms selection 添加 Call analysis button
+    if (isShortSelection) {
+      const callAnalysisBtn = document.createElement('i');
+      callAnalysisBtn.className = 'fa-solid fa-info selection-call-analysis-btn';
+      callAnalysisBtn.title = 'Call analysis';
+      callAnalysisBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        // 直接調用 handleShowPowerSpectrum
+        handleShowPowerSpectrum(sel);
+      });
+      callAnalysisBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
+      callAnalysisBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      callAnalysisBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+      
+      group.appendChild(callAnalysisBtn);
+      sel.callAnalysisBtn = callAnalysisBtn;
+    } else {
+      // >100ms selection: 添加 expand 和 fit buttons
+      const expandBtn = document.createElement('i');
+      expandBtn.className = 'fa-solid fa-arrows-left-right-to-line selection-expand-btn';
+      expandBtn.title = 'Crop and expand this session';
+      expandBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        // expand/crop 後主動顯示 hoverline, hoverlineV, freqlabel
+        // 強制解除 suppressHover/isOverBtnGroup，確保 hover 標記能顯示
+        suppressHover = false;
+        isOverBtnGroup = false;
+        viewer.dispatchEvent(new CustomEvent('expand-selection', {
+          detail: { startTime: sel.data.startTime, endTime: sel.data.endTime }
+        }));
+        if (lastClientX !== null && lastClientY !== null) {
+          setTimeout(() => {
+            updateHoverDisplay({ clientX: lastClientX, clientY: lastClientY });
+          }, 0);
         }
-      }));
-      suppressHover = false;
-      isOverBtnGroup = false;
-    });
-    fitBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
-    fitBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+      });
+      expandBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      expandBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+      const fitBtn = document.createElement('i');
+      fitBtn.className = 'fa-solid fa-up-right-and-down-left-from-center selection-fit-btn';
+      fitBtn.title = 'Fit to window';
+      fitBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        viewer.dispatchEvent(new CustomEvent('fit-window-selection', {
+          detail: {
+            startTime: sel.data.startTime,
+            endTime: sel.data.endTime,
+            Flow: sel.data.Flow,
+            Fhigh: sel.data.Fhigh,
+          }
+        }));
+        suppressHover = false;
+        isOverBtnGroup = false;
+      });
+      fitBtn.addEventListener('mouseenter', () => { suppressHover = true; hideAll(); });
+      fitBtn.addEventListener('mouseleave', () => { suppressHover = false; });
+
+      group.appendChild(expandBtn);
+      group.appendChild(fitBtn);
+      
+      sel.expandBtn = expandBtn;
+      sel.fitBtn = fitBtn;
+    }
 
     group.addEventListener('mouseenter', () => {
       isOverBtnGroup = true;
@@ -776,15 +806,10 @@ export function initFrequencyHover({
     });
     group.addEventListener('mousedown', (ev) => { ev.stopPropagation(); });
 
-    group.appendChild(closeBtn);
-    group.appendChild(expandBtn);
-    group.appendChild(fitBtn);
     sel.rect.appendChild(group);
 
     sel.btnGroup = group;
     sel.closeBtn = closeBtn;
-    sel.expandBtn = expandBtn;
-    sel.fitBtn = fitBtn;
 
     repositionBtnGroup(sel);
   }
@@ -1076,11 +1101,18 @@ const upHandler = () => {
       const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
       
       if (judgeDurationMs <= 100) {
-        if (sel.btnGroup) sel.btnGroup.style.display = 'none';
+        // <100ms selection: 顯示 btn-group 和 tooltip
+        if (sel.btnGroup) {
+          sel.btnGroup.style.display = '';
+        } else {
+          createBtnGroup(sel, true);  // isShortSelection = true
+        }
+        
         if (!sel.tooltip) {
           sel.tooltip = buildTooltip(sel, left, top, width);
         }
       } else {
+        // >100ms selection: 隱藏 tooltip，顯示 btn-group
         if (sel.tooltip) {
           viewer.removeChild(sel.tooltip);
           sel.tooltip = null;
@@ -1089,7 +1121,7 @@ const upHandler = () => {
         if (sel.btnGroup) {
           sel.btnGroup.style.display = '';
         } else {
-          createBtnGroup(sel);
+          createBtnGroup(sel, false);  // isShortSelection = false
         }
       }
 
