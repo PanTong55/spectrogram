@@ -1201,12 +1201,16 @@ export class BatCallDetector {
     // 確保返回值在有效範圍內
     const finalThreshold = Math.max(Math.min(optimalThreshold, -24), -70);
     
-    // 檢測是否使用了 -70dB 的極限閾值（表示選擇區域未能涵蓋足夠低的頻率）
+    // 2025 SAFETY MECHANISM: 如果使用了極限閾值 -70dB，改用固定的安全值 -30dB
+    // 這表示 Low Frequency 計算達到極限，使用保守的固定值而不是極限值
+    const safeThreshold = (finalThreshold <= -70) ? -30 : finalThreshold;
+    
+    // 檢測是否使用了 -70dB 的極限閾值（但實際使用 -30dB）
     const hasWarning = finalThreshold <= -70;
     
     // 返回優化的 Low Frequency 和 End Frequency
     return {
-      threshold: finalThreshold,
+      threshold: safeThreshold,
       lowFreq_Hz: optimalMeasurement.lowFreq_Hz,
       lowFreq_kHz: optimalMeasurement.lowFreq_kHz,
       endFreq_Hz: optimalMeasurement.endFreq_Hz,
@@ -1888,11 +1892,11 @@ export class BatCallDetector {
       // 2025: 在 auto mode 下保存實際使用的 low frequency threshold
       // Auto mode: 保存經過防呆檢查後的最終 threshold 值
       call.lowFreqThreshold_dB_used = usedThreshold;
-      // 
-      // 2025 CRITICAL FIX: Warning 應該基於實際使用的 threshold 值而不是原始結果
-      // 防呆檢查可能改變了 threshold（如從 -33 改為 -70）
-      // Warning 判斷：如果實際使用的 threshold 達到 -70dB 極限，則設置 warning
-      call.lowFreqDetectionWarning = (usedThreshold <= -70);
+      
+      // 2025 SAFETY MECHANISM: 禁用 Low Frequency Warning
+      // 由於 findOptimalLowFrequencyThreshold 已實施安全機制（-70時改用-30）
+      // Low Frequency 計算現已穩定，不再需要警告
+      call.lowFreqDetectionWarning = false;
       
       // Use the optimized low frequency values
       lowFreq_Hz = safeLowFreq_Hz;

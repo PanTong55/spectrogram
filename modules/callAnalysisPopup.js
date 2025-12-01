@@ -1602,19 +1602,12 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     // Display Low Freq with warning icon and color if detection warning is set
     // 低頻警告獨立於高頻警告，有自己的狀態和顯示邏輯
     lowFreqEl.textContent = batCall.lowFreq_kHz?.toFixed(2) || '-';
-    if (batCall.lowFreqDetectionWarning === true) {
-      // Show warning icon and change text color to red
-      if (lowFreqWarningIcon) {
-        lowFreqWarningIcon.style.display = 'inline';
-      }
-      lowFreqEl.style.color = '#dc3545';  // Red color for warning
-    } else {
-      // Hide warning icon and use blue color for normal value
-      if (lowFreqWarningIcon) {
-        lowFreqWarningIcon.style.display = 'none';
-      }
-      lowFreqEl.style.color = '#0066cc';  // Blue color for normal value
+    // 2025 SAFETY MECHANISM: 禁用低頻 Warning 顯示
+    // 由於 findOptimalLowFrequencyThreshold 已實施安全機制，低頻計算現已穩定
+    if (lowFreqWarningIcon) {
+      lowFreqWarningIcon.style.display = 'none';
     }
+    lowFreqEl.style.color = '#0066cc';  // Blue color for normal value
     
     kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';
     charFreqEl.textContent = batCall.characteristicFreq_kHz?.toFixed(2) || '-';

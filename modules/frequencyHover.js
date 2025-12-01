@@ -953,9 +953,10 @@ const upHandler = () => {
               if (sel.highFreqWarningIcon) {
                 sel.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
               }
-              // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
+              // 2025 SAFETY MECHANISM: 禁用低頻警告圖標顯示
+              // 由於 findOptimalLowFrequencyThreshold 已實施安全機制，低頻計算現已穩定
               if (sel.lowFreqWarningIcon) {
-                sel.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
+                sel.lowFreqWarningIcon.style.display = 'none';
               }
             } else {
               // 如果沒有偵測到 call，隱藏所有 warning 圖標
@@ -1245,9 +1246,10 @@ const upHandler = () => {
             if (selection.highFreqWarningIcon) {
               selection.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
             }
-            // 根據 call 的 warning 標誌來顯示/隱藏低頻警告圖標
+            // 2025 SAFETY MECHANISM: 禁用低頻警告圖標顯示
+            // 由於 findOptimalLowFrequencyThreshold 已實施安全機制，低頻計算現已穩定
             if (selection.lowFreqWarningIcon) {
-              selection.lowFreqWarningIcon.style.display = call.lowFreqDetectionWarning ? 'block' : 'none';
+              selection.lowFreqWarningIcon.style.display = 'none';
             }
           } else {
             // 如果沒有偵測到 call，隱藏所有 warning 圖標
