@@ -35,6 +35,7 @@ window.__batCallControlsMemory = window.__batCallControlsMemory || {
   protectionWindowAfterPeak_ms: 10,
   enableHighpassFilter: true,            // Highpass filter enable/disable
   highpassFilterFreq_kHz: 40,            // Highpass filter frequency (kHz)
+  highpassFilterFreq_kHz_isAuto: true,   // Auto mode for Highpass filter frequency detection
   highpassFilterOrder: 4                 // Highpass filter order (1-8, step 1)
 };
 
@@ -92,6 +93,7 @@ export function showCallAnalysisPopup({
     // Highpass Filter Parameters
     enableHighpassFilter: memory.enableHighpassFilter !== false,
     highpassFilterFreq_kHz: memory.highpassFilterFreq_kHz || 40,
+    highpassFilterFreq_kHz_isAuto: memory.highpassFilterFreq_kHz_isAuto !== false,  // Auto mode (default true)
     highpassFilterOrder: memory.highpassFilterOrder || 4
   };
 
@@ -257,9 +259,26 @@ export function showCallAnalysisPopup({
     );
   };
 
+  // 根據 peakFreq 計算最佳的高通濾波器頻率（Auto Mode 使用）
+  const calculateAutoHighpassFilterFreq = (peakFreq_kHz) => {
+    // 根據峰值頻率選擇合適的高通濾波器頻率
+    // 閾值：40, 35, 25, 20, 15 kHz
+    if (peakFreq_kHz >= 40) return 40;
+    if (peakFreq_kHz >= 35) return 35;
+    if (peakFreq_kHz >= 25) return 25;
+    if (peakFreq_kHz >= 20) return 20;
+    if (peakFreq_kHz >= 15) return 15;
+    return 15;  // 預設最低值
+  };
+
   // 獨立的 Bat Call 檢測分析函數（只更新參數顯示，不重新計算 Power Spectrum）
   const updateBatCallAnalysis = async (peakFreq) => {
     try {
+      // 2025: Auto Mode 時，根據 peakFreq 計算自動高通濾波器頻率
+      if (batCallConfig.highpassFilterFreq_kHz_isAuto === true && peakFreq) {
+        batCallConfig.highpassFilterFreq_kHz = calculateAutoHighpassFilterFreq(peakFreq);
+      }
+
       // 獲取要進行偵測的音頻數據
       let audioDataForDetection = audioData;
 
@@ -348,6 +367,26 @@ export function showCallAnalysisPopup({
           batCallLowThresholdInput.value = Math.abs(detector.config.lowFreqThreshold_dB).toString();
           batCallLowThresholdInput.placeholder = 'Auto';  // 恢復預設 placeholder
           batCallLowThresholdInput.style.color = '#000';  // 黑色
+        }
+      }
+      
+      // 更新 UI 以反映實際使用的 highpassFilterFreq 值
+      // Auto mode 時：清空 value，在 placeholder 中顯示 "Auto (40)" 格式，灰色樣式
+      // Manual mode 時：顯示用戶設定的值
+      const highpassFilterFreqInput = popup.querySelector('#highpassFilterFreq_kHz');
+      if (highpassFilterFreqInput) {
+        if (detector.config.highpassFilterFreq_kHz_isAuto === true) {
+          // Auto 模式：清空 value，在 placeholder 中顯示計算值，並設定灰色樣式
+          const displayValue = detector.config.highpassFilterFreq_kHz;  // 已在 updateBatCallAnalysis 開始時計算
+          
+          highpassFilterFreqInput.value = '';  // 清空 value
+          highpassFilterFreqInput.placeholder = `Auto (${displayValue})`;  // 更新 placeholder，顯示計算值
+          highpassFilterFreqInput.style.color = '#999';  // 灰色
+        } else {
+          // Manual 模式：顯示用戶設定的值，黑色文字
+          highpassFilterFreqInput.value = detector.config.highpassFilterFreq_kHz.toString();
+          highpassFilterFreqInput.placeholder = 'Auto';  // 恢復預設 placeholder
+          highpassFilterFreqInput.style.color = '#000';  // 黑色
         }
       }
       
@@ -531,7 +570,27 @@ export function showCallAnalysisPopup({
       batCallConfig.enableHighpassFilter = highpassFilterCheckbox.checked;
     }
     if (highpassFilterFreqInput) {
-      batCallConfig.highpassFilterFreq_kHz = parseFloat(highpassFilterFreqInput.value) || 40;
+      // 處理 Highpass Filter Frequency 的 Auto/Manual 模式
+      // - Auto 模式：value 為空（placeholder 顯示 "Auto (40)"）→ 設定 isAuto = true
+      // - Manual 模式：value 顯示用戶輸入的數值 "40" → 設定 isAuto = false
+      const highpassFreqValue = highpassFilterFreqInput.value.trim();
+      
+      if (highpassFreqValue === '') {
+        // Auto 模式：value 為空字符串
+        batCallConfig.highpassFilterFreq_kHz_isAuto = true;
+        batCallConfig.highpassFilterFreq_kHz = 40;  // 預設值，會被 updateBatCallAnalysis 計算覆蓋
+      } else {
+        // Manual 模式：嘗試解析為數字
+        const numValue = parseFloat(highpassFreqValue);
+        if (!isNaN(numValue)) {
+          batCallConfig.highpassFilterFreq_kHz_isAuto = false;
+          batCallConfig.highpassFilterFreq_kHz = numValue;
+        } else {
+          // 無效輸入，回退到 Auto
+          batCallConfig.highpassFilterFreq_kHz_isAuto = true;
+          batCallConfig.highpassFilterFreq_kHz = 40;
+        }
+      }
     }
     if (highpassFilterOrderInput) {
       batCallConfig.highpassFilterOrder = parseInt(highpassFilterOrderInput.value) || 4;
@@ -555,6 +614,7 @@ export function showCallAnalysisPopup({
       // 2025 Highpass Filter
       enableHighpassFilter: batCallConfig.enableHighpassFilter,
       highpassFilterFreq_kHz: batCallConfig.highpassFilterFreq_kHz,
+      highpassFilterFreq_kHz_isAuto: batCallConfig.highpassFilterFreq_kHz_isAuto,
       highpassFilterOrder: batCallConfig.highpassFilterOrder
     };
     
@@ -1204,16 +1264,30 @@ function createPopupWindow() {
   highpassFilterControl.appendChild(highpassFilterLabel);
   batCallControlPanel.appendChild(highpassFilterControl);
 
-  // highpassFilterFreq_kHz (Number input)
+  // highpassFilterFreq_kHz (Number input with Auto/Manual mode)
   const highpassFreqControl = document.createElement('label');
   const highpassFreqInput = document.createElement('input');
   highpassFreqInput.id = 'highpassFilterFreq_kHz';
   highpassFreqInput.type = 'number';
-  highpassFreqInput.value = window.__batCallControlsMemory.highpassFilterFreq_kHz.toString();
   highpassFreqInput.min = '5';
   highpassFreqInput.max = '100';
   highpassFreqInput.step = '5';
-  highpassFreqInput.title = 'Highpass filter frequency (kHz)';
+  highpassFreqInput.title = 'Highpass filter frequency (kHz) - leave empty for Auto mode';
+  
+  // 初始化：根據 isAuto 標誌設置值、placeholder 和樣式
+  const isHighpassFreqAuto = window.__batCallControlsMemory.highpassFilterFreq_kHz_isAuto !== false;
+  if (isHighpassFreqAuto) {
+    // Auto 模式：value 為空，placeholder 顯示 "Auto (value)"，灰色文字
+    highpassFreqInput.value = '';
+    highpassFreqInput.placeholder = `Auto (${window.__batCallControlsMemory.highpassFilterFreq_kHz || 40})`;
+    highpassFreqInput.style.color = '#999';
+  } else {
+    // Manual 模式：value 顯示用戶設定的數值，黑色文字
+    highpassFreqInput.value = (window.__batCallControlsMemory.highpassFilterFreq_kHz || 40).toString();
+    highpassFreqInput.placeholder = 'Auto';
+    highpassFreqInput.style.color = '#000';
+  }
+  
   highpassFreqControl.appendChild(highpassFreqInput);
   
   const highpassFreqUnit = document.createElement('span');
