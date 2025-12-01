@@ -582,6 +582,21 @@ export function initFrequencyHover({
     
     // 添加右鍵菜單処理
     selObj.rect.addEventListener('contextmenu', (e) => {
+      // 根據 Time Expansion 模式計算用於判斷的持續時間
+      const timeExp = getTimeExpansionMode();
+      const durationMs = (selObj.data.endTime - selObj.data.startTime) * 1000;
+      const judgeDurationMs = timeExp ? (durationMs / 10) : durationMs;
+      
+      // 1. 如果 selection >= 100ms，不顯示右鍵菜單
+      if (judgeDurationMs >= 100) {
+        return;
+      }
+      
+      // 2. 如果右鍵在 selection-btn-group 上，不顯示右鍵菜單
+      if (e.target.closest('.selection-btn-group')) {
+        return;
+      }
+      
       e.preventDefault();
       showSelectionContextMenu(e, selObj);
     });
