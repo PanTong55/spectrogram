@@ -2564,6 +2564,10 @@ input.tag-button.editing {
   width: 45px; 
 }
 
+#highpassFilterFreq_kHz {
+  width: 60px; 
+}
+
 .bat-call-controls .dropdown-button {
   padding: 3px 8px;
   text-align:left;
