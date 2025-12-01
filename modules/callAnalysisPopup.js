@@ -262,12 +262,10 @@ export function showCallAnalysisPopup({
   // 根據 peakFreq 計算最佳的高通濾波器頻率（Auto Mode 使用）
   const calculateAutoHighpassFilterFreq = (peakFreq_kHz) => {
     // 根據峰值頻率選擇合適的高通濾波器頻率
-    // 閾值：40, 35, 25, 20, 15 kHz
-    if (peakFreq_kHz >= 40) return 40;
-    if (peakFreq_kHz >= 35) return 35;
-    if (peakFreq_kHz >= 25) return 25;
-    if (peakFreq_kHz >= 20) return 20;
-    if (peakFreq_kHz >= 15) return 15;
+    // 閾值：40, 35, 30 kHz
+    if (peakFreq_kHz >= 40) return 30;
+    if (peakFreq_kHz >= 35) return 25;
+    if (peakFreq_kHz >= 30) return 20;
     return 15;  // 預設最低值
   };
 
