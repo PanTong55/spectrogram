@@ -559,14 +559,77 @@ export function initFrequencyHover({
       return;
     }
 
+    // 重要：時間坐標系統
+    // - startFreqTime_s, endFreqTime_s: 絕對時間（全局秒數），需要減去 selection.startTime
+    // - kneeTime_ms: 相對時間（相對於 call.startTime_s 的毫秒數），不需要減
+    // - 最終 timeValue 應該是相對於 selection.startTime 的秒數（用於 marker 位置計算）
+    
+    const selectionStartTime = selObj.data.startTime;  // Selection 的絕對開始時間
+    
     // 映射 marker 類型到頻率字段和時間字段
     // 注意：Flow 是以 Hz 為單位，需要轉換為 kHz；kneeFreq_kHz 已經是 kHz
     const markerMap = {
-      highFreqMarker: { field: 'Fhigh', timeField: 'startFreqTime_s', color: 'marker-high', label: 'High Freq' },
-      lowFreqMarker: { field: 'Flow', convert: (v) => v ? v / 1000 : null, timeField: 'endFreqTime_s', color: 'marker-low', label: 'Low Freq' },
-      kneeFreqMarker: { field: 'kneeFreq_kHz', timeField: 'kneeTime_ms', color: 'marker-knee', label: 'Knee Freq' },
-      peakFreqMarker: { field: 'peakFreq_kHz', timeField: null, color: 'marker-heel', label: 'Peak Freq' },
-      charFreqMarker: { field: 'characteristicFreq_kHz', timeField: 'endFreqTime_s', color: 'marker-cfstart', label: 'Char Freq' }
+      // High Freq: 使用 startFreqTime_s（絕對時間 → 相對時間）
+      highFreqMarker: { 
+        field: 'Fhigh', 
+        getTime: () => {
+          if (batCall.startFreqTime_s !== null && batCall.startFreqTime_s !== undefined) {
+            return batCall.startFreqTime_s - selectionStartTime;
+          }
+          return null;
+        },
+        color: 'marker-high', 
+        label: 'High Freq' 
+      },
+      // Low Freq: 使用 endFreqTime_s（絕對時間 → 相對時間）
+      lowFreqMarker: { 
+        field: 'Flow', 
+        convert: (v) => v ? v / 1000 : null, 
+        getTime: () => {
+          if (batCall.endFreqTime_s !== null && batCall.endFreqTime_s !== undefined) {
+            return batCall.endFreqTime_s - selectionStartTime;
+          }
+          return null;
+        },
+        color: 'marker-low', 
+        label: 'Low Freq' 
+      },
+      // Knee Freq: 使用 kneeTime_ms（相對時間，單位毫秒 → 秒）
+      // kneeTime_ms 是相對於 call.startTime_s 的時間差，轉換為相對於 selection.startTime 的時間
+      kneeFreqMarker: { 
+        field: 'kneeFreq_kHz', 
+        getTime: () => {
+          if (batCall.kneeTime_ms !== null && batCall.kneeTime_ms !== undefined && batCall.startTime_s !== null) {
+            // kneeTime_ms 是相對於 call.startTime_s 的毫秒數
+            // 實際時間 = call.startTime_s + (kneeTime_ms / 1000)
+            // 相對於 selection 的時間 = 實際時間 - selection.startTime
+            const actualTime_s = batCall.startTime_s + (batCall.kneeTime_ms / 1000);
+            return actualTime_s - selectionStartTime;
+          }
+          return null;
+        },
+        color: 'marker-knee', 
+        label: 'Knee Freq' 
+      },
+      // Peak Freq: 無時間戳（在 Power Spectrum 分析中計算，無特定幀）
+      peakFreqMarker: { 
+        field: 'peakFreq_kHz', 
+        getTime: () => null,
+        color: 'marker-heel', 
+        label: 'Peak Freq' 
+      },
+      // Characteristic Freq: 使用 endFreqTime_s（絕對時間 → 相對時間）
+      charFreqMarker: { 
+        field: 'characteristicFreq_kHz', 
+        getTime: () => {
+          if (batCall.endFreqTime_s !== null && batCall.endFreqTime_s !== undefined) {
+            return batCall.endFreqTime_s - selectionStartTime;
+          }
+          return null;
+        },
+        color: 'marker-cfstart', 
+        label: 'Char Freq' 
+      }
     };
 
     Object.entries(markerMap).forEach(([markerKey, config]) => {
@@ -577,16 +640,8 @@ export function initFrequencyHover({
         freq = config.convert(freq);
       }
       
-      // 獲取時間值
-      let timeValue = null;
-      if (config.timeField) {
-        timeValue = batCall[config.timeField];
-        // 如果時間值是毫秒（如 kneeTime_ms），轉換為秒
-        if (timeValue !== null && timeValue !== undefined && timeValue > 100) {
-          // 假設 > 100 的是毫秒，轉換為秒
-          timeValue = timeValue / 1000;
-        }
-      }
+      // 獲取時間值（已轉換為相對於 selection.startTime 的秒數）
+      let timeValue = config.getTime?.();
       
       createOrUpdateMarker(selObj, markerKey, freq, config.color, config.label, timeValue);
     });
