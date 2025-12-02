@@ -487,35 +487,19 @@ export function initFrequencyHover({
     }
 
     // 計算 marker X 座標
-    // marker 應該在 selection 區域內，時間是相對於 selection 的開始時間
+    // marker 相對於 fixed-overlay（在 container 內），所以使用時間來計算位置
     const actualWidth = getDuration() * getZoomLevel();
-    const freqRange = maxFrequency - minFrequency;
     let xPos;
     
     if (timeValue !== null && timeValue !== undefined) {
-      // 如果有時間值，首先轉換為秒
+      // 如果有時間值，根據時間計算 X 座標
+      // timeValue 可能是秒或毫秒，需要根據值的大小判斷
       let timeInSeconds = timeValue;
       if (timeValue > 100) {
-        // 假設 > 100 的是毫秒，轉換為秒
+        // 假設 > 100 的是毫秒
         timeInSeconds = timeValue / 1000;
       }
-      
-      // 時間相對於 selection 的開始時間
-      const relativeTime = timeInSeconds - selObj.data.startTime;
-      
-      // 在 selection 區域內的相對位置（0-1）
-      const selectionDuration = selObj.data.endTime - selObj.data.startTime;
-      const relativePos = relativeTime / selectionDuration;
-      
-      // 計算 selection 在 spectrogram 中的位置和寬度
-      const selectionLeft = (selObj.data.startTime / getDuration()) * actualWidth;
-      const selectionWidth = (selectionDuration / getDuration()) * actualWidth;
-      
-      // Marker 在 selection 內的位置
-      xPos = selectionLeft + (relativePos * selectionWidth);
-      
-      // 確保 marker 在 selection 區域內
-      xPos = Math.max(selectionLeft, Math.min(selectionLeft + selectionWidth, xPos));
+      xPos = (timeInSeconds / getDuration()) * actualWidth;
     } else {
       // 沒有時間值，默認在 selection 的中心
       const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
@@ -1291,25 +1275,13 @@ const upHandler = () => {
           let newXPos;
           
           if (timeValue) {
-            // 如果有時間值，使用相對於 selection 開始時間的位置計算
+            // 如果有時間值，根據時間計算 X 座標
             let timeInSeconds = parseFloat(timeValue);
             if (timeValue > 100) {
-              // 假設 > 100 的是毫秒，轉換為秒
+              // 假設 > 100 的是毫秒
               timeInSeconds = timeValue / 1000;
             }
-            
-            // 時間相對於 selection 的開始時間
-            const relativeTime = timeInSeconds - sel.data.startTime;
-            
-            // 在 selection 區域內的相對位置（0-1）
-            const selectionDuration = sel.data.endTime - sel.data.startTime;
-            const relativePos = relativeTime / selectionDuration;
-            
-            // Marker 在 selection 內的位置
-            newXPos = left + (relativePos * width);
-            
-            // 確保 marker 在 selection 區域內
-            newXPos = Math.max(left, Math.min(left + width, newXPos));
+            newXPos = (timeInSeconds / getDuration()) * actualWidth;
           } else {
             // 沒有時間值，默認在 selection 的中心
             newXPos = left + width / 2;
