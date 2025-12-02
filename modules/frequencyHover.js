@@ -468,11 +468,23 @@ export function initFrequencyHover({
 
     let marker = selObj.markers[markerType];
     
+    // 格式化 tooltip：顯示標籤、頻率和時間
+    let tooltipText = title;
+    if (freqKHz !== null && freqKHz !== undefined) {
+      tooltipText += ` (${freqKHz.toFixed(2)}kHz`;
+      if (timeValue !== null && timeValue !== undefined) {
+        // timeValue 是秒，轉換為毫秒
+        const timeMs = timeValue * 1000;
+        tooltipText += ` ${timeMs.toFixed(2)}ms`;
+      }
+      tooltipText += ')';
+    }
+    
     if (!marker) {
       // 建立新 marker
       marker = document.createElement('div');
       marker.className = `freq-marker ${color}`;
-      marker.setAttribute('data-title', title);
+      marker.setAttribute('data-title', tooltipText);
       marker.innerHTML = '<i class="fas fa-xmark"></i>';
       fixedOverlay.appendChild(marker);
       selObj.markers[markerType] = marker;
@@ -484,6 +496,9 @@ export function initFrequencyHover({
         marker.style.zIndex = '35'; // 提升 z-index 以顯示在最前面
         e.preventDefault();
       });
+    } else {
+      // 更新現有 marker 的 tooltip
+      marker.setAttribute('data-title', tooltipText);
     }
 
     // 計算 marker X 座標
@@ -495,13 +510,8 @@ export function initFrequencyHover({
     let xPos;
     
     if (timeValue !== null && timeValue !== undefined) {
-      // timeValue 是相對於 selection 開始時間的本地時間
-      // 可能是秒或毫秒，需要根據值的大小判斷
+      // timeValue 是相對於 selection 開始時間的本地時間（秒）
       let timeInSeconds = timeValue;
-      if (timeValue > 100) {
-        // 假設 > 100 的是毫秒
-        timeInSeconds = timeValue / 1000;
-      }
       
       // 計算本地時間對應的像素位置（相對於 selection 的寬度）
       const selectionDuration = selObj.data.endTime - selObj.data.startTime;
@@ -550,11 +560,11 @@ export function initFrequencyHover({
     }
 
     // 映射 marker 類型到頻率字段和時間字段
-    // 注意：Flow 是以 Hz 為單位，需要轉換為 kHz
+    // 注意：Flow 是以 Hz 為單位，需要轉換為 kHz；kneeFreq_kHz 已經是 kHz
     const markerMap = {
       highFreqMarker: { field: 'Fhigh', timeField: 'startFreqTime_s', color: 'marker-high', label: 'High Freq' },
       lowFreqMarker: { field: 'Flow', convert: (v) => v ? v / 1000 : null, timeField: 'endFreqTime_s', color: 'marker-low', label: 'Low Freq' },
-      kneeFreqMarker: { field: 'kneeFreq_kHz', timeField: 'kneeTime_ms', convert: (v) => v ? v / 1000 : null, color: 'marker-knee', label: 'Knee Freq' },
+      kneeFreqMarker: { field: 'kneeFreq_kHz', timeField: 'kneeTime_ms', color: 'marker-knee', label: 'Knee Freq' },
       peakFreqMarker: { field: 'peakFreq_kHz', timeField: null, color: 'marker-heel', label: 'Peak Freq' },
       charFreqMarker: { field: 'characteristicFreq_kHz', timeField: 'endFreqTime_s', color: 'marker-cfstart', label: 'Char Freq' }
     };
@@ -571,6 +581,11 @@ export function initFrequencyHover({
       let timeValue = null;
       if (config.timeField) {
         timeValue = batCall[config.timeField];
+        // 如果時間值是毫秒（如 kneeTime_ms），轉換為秒
+        if (timeValue !== null && timeValue !== undefined && timeValue > 100) {
+          // 假設 > 100 的是毫秒，轉換為秒
+          timeValue = timeValue / 1000;
+        }
       }
       
       createOrUpdateMarker(selObj, markerKey, freq, config.color, config.label, timeValue);
@@ -1276,17 +1291,13 @@ const upHandler = () => {
         const marker = sel.markers[markerKey];
         if (marker && marker.style.display !== 'none') {
           // 根據存儲的時間值計算新的 marker X 座標
-          // marker 應該在 selection 區域內，時間是相對於 selection 的本地時間
+          // marker 應該在 selection 區域內，時間是相對於 selection 的本地時間（秒）
           const timeValue = marker.dataset.timeValue;
           let newXPos;
           
           if (timeValue) {
-            // 時間值是相對於 selection 開始時間的本地時間
+            // 時間值已經被轉換為秒，直接使用
             let timeInSeconds = parseFloat(timeValue);
-            if (timeValue > 100) {
-              // 假設 > 100 的是毫秒
-              timeInSeconds = timeValue / 1000;
-            }
             
             // 計算本地時間對應的像素位置（相對於 selection 的寬度）
             const selectionDuration = sel.data.endTime - sel.data.startTime;
