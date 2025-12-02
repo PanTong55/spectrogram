@@ -487,23 +487,28 @@ export function initFrequencyHover({
     }
 
     // 計算 marker X 座標
-    // marker 相對於 fixed-overlay（在 container 內），所以使用時間來計算位置
+    // marker 應該在 selection 區域內，時間是相對於 selection.startTime 的本地時間
     const actualWidth = getDuration() * getZoomLevel();
+    const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
+    const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
+    
     let xPos;
     
     if (timeValue !== null && timeValue !== undefined) {
-      // 如果有時間值，根據時間計算 X 座標
-      // timeValue 可能是秒或毫秒，需要根據值的大小判斷
+      // timeValue 是相對於 selection 開始時間的本地時間
+      // 可能是秒或毫秒，需要根據值的大小判斷
       let timeInSeconds = timeValue;
       if (timeValue > 100) {
         // 假設 > 100 的是毫秒
         timeInSeconds = timeValue / 1000;
       }
-      xPos = (timeInSeconds / getDuration()) * actualWidth;
+      
+      // 計算本地時間對應的像素位置（相對於 selection 的寬度）
+      const selectionDuration = selObj.data.endTime - selObj.data.startTime;
+      const localTimeRatio = selectionDuration > 0 ? timeInSeconds / selectionDuration : 0;
+      xPos = rectLeft + localTimeRatio * rectWidth;
     } else {
       // 沒有時間值，默認在 selection 的中心
-      const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
-      const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
       xPos = rectLeft + rectWidth / 2;
     }
 
@@ -1271,17 +1276,22 @@ const upHandler = () => {
         const marker = sel.markers[markerKey];
         if (marker && marker.style.display !== 'none') {
           // 根據存儲的時間值計算新的 marker X 座標
+          // marker 應該在 selection 區域內，時間是相對於 selection 的本地時間
           const timeValue = marker.dataset.timeValue;
           let newXPos;
           
           if (timeValue) {
-            // 如果有時間值，根據時間計算 X 座標
+            // 時間值是相對於 selection 開始時間的本地時間
             let timeInSeconds = parseFloat(timeValue);
             if (timeValue > 100) {
               // 假設 > 100 的是毫秒
               timeInSeconds = timeValue / 1000;
             }
-            newXPos = (timeInSeconds / getDuration()) * actualWidth;
+            
+            // 計算本地時間對應的像素位置（相對於 selection 的寬度）
+            const selectionDuration = sel.data.endTime - sel.data.startTime;
+            const localTimeRatio = selectionDuration > 0 ? timeInSeconds / selectionDuration : 0;
+            newXPos = left + localTimeRatio * width;
           } else {
             // 沒有時間值，默認在 selection 的中心
             newXPos = left + width / 2;
