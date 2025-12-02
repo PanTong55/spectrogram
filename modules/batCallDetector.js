@@ -1035,6 +1035,13 @@ export class BatCallDetector {
    * Automatically determines the best low frequency threshold from -24dB to -70dB
    * by testing each threshold and detecting anomalies (frequency jumps > 2.5 kHz).
    * 
+   * OPTIMIZATION MECHANISM (2025):
+   * 1. Extract peak frequency from raw spectrogram data (entire call)
+   * 2. Apply cross-frame smoothing (Simple Moving Average) to last frame's power spectrum
+   * 3. Use smoothed matrix with original detection logic (including -30dB safety mechanism)
+   * 4. Apply optimal threshold to raw last frame to calculate final low frequency
+   * 5. Improve stability across different signal environments
+   * 
    * This method provides:
    * - Consistent low frequency detection across different spectrogram conditions
    * - Anti-rebounce compatibility (works with backward end frame scanning)
@@ -1044,8 +1051,8 @@ export class BatCallDetector {
    * Testing sequence: -24, -25, -26, ..., -69, -70 dB
    * 
    * Anomaly detection:
-   * - Major jump (> 3 kHz): Stop immediately, use previous threshold
-   * - Large jump (1.5-3 kHz): First anomaly detection point
+   * - Major jump (> 2 kHz): Stop immediately, use previous threshold
+   * - Large jump (1.5 kHz): First anomaly detection point
    * - Check if anomaly is followed by 3+ consecutive normal values
    * - If yes: ignore anomaly and continue
    * - If no: use threshold just before anomaly
@@ -1072,11 +1079,70 @@ export class BatCallDetector {
       warning: false
     };
 
+    // ============================================================
+    // STEP 0: Extract peak frequency from entire spectrogram
+    // (CRITICAL: Use peak value across ALL frames for reference)
+    // ============================================================
+    let globalPeakPower_dB = -Infinity;
+    let globalPeakBinIdx = 0;
+    
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        if (framePower[binIdx] > globalPeakPower_dB) {
+          globalPeakPower_dB = framePower[binIdx];
+          globalPeakBinIdx = binIdx;
+        }
+      }
+    }
+    
+    const peakFreq_Hz = freqBins[globalPeakBinIdx];
+    
+    // ============================================================
+    // STEP 1: Create smoothed matrix using Simple Moving Average
+    // Apply cross-frame smoothing on last frame power spectrum
+    // 
+    // Purpose: Reduce high-frequency noise while preserving signal edges
+    // Window size: 3 (typical for bat call analysis) - balanced between smoothing and edge preservation
+    // This improves stability of low frequency detection across varying signal conditions
+    // ============================================================
     const lastFramePower = spectrogram[spectrogram.length - 1];
+    const smoothWindowSize = 3;  // Cross-frame averaging window
+    const smoothMatrix = new Float32Array(lastFramePower.length);
+    
+    // Apply Simple Moving Average smoothing to last frame
+    for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
+      let sum = 0;
+      let count = 0;
+      
+      // Include neighboring frames in the average
+      // Current frame + 1 frame before and after (if available)
+      for (let frameOffset = -Math.floor(smoothWindowSize / 2); frameOffset <= Math.floor(smoothWindowSize / 2); frameOffset++) {
+        const frameIdx = spectrogram.length - 1 + frameOffset;
+        
+        // Boundary check
+        if (frameIdx >= 0 && frameIdx < spectrogram.length) {
+          sum += spectrogram[frameIdx][binIdx];
+          count++;
+        }
+      }
+      
+      // Calculate average (Simple Moving Average)
+      if (count > 0) {
+        smoothMatrix[binIdx] = sum / count;
+      } else {
+        smoothMatrix[binIdx] = lastFramePower[binIdx];
+      }
+    }
     
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     const stablePeakPower_dB = callPeakPower_dB;
     
+    // ============================================================
+    // STEP 2: Test thresholds using smoothed matrix
+    // Apply original detection logic to smoothed power spectrum
+    // This provides more stable low frequency detection
+    // ============================================================
     // 測試閾值範圍：-24 到 -70 dB
     const thresholdRange = [];
     for (let threshold = -24; threshold >= -70; threshold-= 0.5) {
@@ -1097,22 +1163,35 @@ export class BatCallDetector {
       
       // ============================================================
       // 計算 LOW FREQUENCY（從低到高掃描，找最低頻率）
-      // 使用最後一幀的功率譜（代表信號末尾）
+      // 使用 SMOOTHED MATRIX（經過 Simple Moving Average 處理的功率譜）
       // ============================================================
-      for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
-        if (lastFramePower[binIdx] > lowFreqThreshold_dB) {
+      for (let binIdx = 0; binIdx < smoothMatrix.length; binIdx++) {
+        if (smoothMatrix[binIdx] > lowFreqThreshold_dB) {
           lowFreq_Hz = freqBins[binIdx];
           foundBin = true;
           
           // 嘗試線性插值以獲得更高精度
+          // IMPORTANT: 插值參考使用原始 lastFramePower 的功率梯度（不用平滑值）
+          // 這確保最終頻率測量基於真實信號邊界，而非平滑後的近似值
           if (binIdx > 0) {
-            const thisPower = lastFramePower[binIdx];
-            const prevPower = lastFramePower[binIdx - 1];
+            const smoothThisPower = smoothMatrix[binIdx];
+            const smoothPrevPower = smoothMatrix[binIdx - 1];
             
-            if (prevPower < lowFreqThreshold_dB && thisPower > lowFreqThreshold_dB) {
-              const powerRatio = (thisPower - lowFreqThreshold_dB) / (thisPower - prevPower);
-              const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-              lowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+            // 檢查在 smoothMatrix 中是否存在閾值穿越
+            if (smoothPrevPower < lowFreqThreshold_dB && smoothThisPower > lowFreqThreshold_dB) {
+              // 使用原始 lastFramePower 的值進行插值計算
+              const rawThisPower = lastFramePower[binIdx];
+              const rawPrevPower = lastFramePower[binIdx - 1];
+              
+              // 基於原始功率梯度進行線性插值
+              if (rawThisPower > rawPrevPower + 1e-10) {  // Avoid division by near-zero
+                const powerRatio = (rawThisPower - lowFreqThreshold_dB) / (rawThisPower - rawPrevPower);
+                // Clamp ratio to [0, 1] range for stability
+                if (powerRatio >= 0 && powerRatio <= 1) {
+                  const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                  lowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+                }
+              }
             }
           }
           break;
@@ -1146,7 +1225,7 @@ export class BatCallDetector {
     }
     
     // ============================================================
-    // 只收集成功找到 bin 的測量
+    // STEP 3: Only collect successful measurements from smoothed matrix
     const validMeasurements = measurements.filter(m => m.foundBin);
     
     if (validMeasurements.length === 0) {
@@ -1272,48 +1351,58 @@ export class BatCallDetector {
     // 檢測是否使用了 -70dB 的極限閾值（但實際使用 -30dB）
     const hasWarning = finalThreshold <= -70;
     
-    // 當應用安全機制時（改為 -30dB），需要使用 -30dB 重新計算 lowFreq_Hz
-    let returnLowFreq_Hz = optimalMeasurement.lowFreq_Hz;
-    let returnLowFreq_kHz = optimalMeasurement.lowFreq_kHz;
-    let returnEndFreq_Hz = optimalMeasurement.endFreq_Hz;
-    let returnEndFreq_kHz = optimalMeasurement.endFreq_kHz;
+    // ============================================================
+    // STEP 4: Apply optimal threshold to raw data
+    // Use the optimal threshold found from smoothed measurements
+    // to calculate low frequency from original (non-smoothed) last frame
+    // This ensures final measurement is based on real signal boundaries
+    // ============================================================
+    let returnLowFreq_Hz = null;
+    let returnLowFreq_kHz = null;
+    let returnEndFreq_Hz = null;
+    let returnEndFreq_kHz = null;
     
-    if (safeThreshold !== finalThreshold) {
-      // 安全機制改變了閾值，使用 -30dB 重新計算 lowFreq_Hz
-      const lastFramePower = spectrogram[spectrogram.length - 1];
-      const peakPower_dB = callPeakPower_dB;
-      const lowFreqThreshold_dB_safe = peakPower_dB + safeThreshold;
-      
-      let lowFreq_Hz_safe = null;
-      let endFreq_Hz_safe = null;
-      
-      // 使用安全閾值 (-30dB) 計算 Low Frequency
-      for (let binIdx = 0; binIdx < lastFramePower.length; binIdx++) {
-        if (lastFramePower[binIdx] > lowFreqThreshold_dB_safe) {
-          lowFreq_Hz_safe = freqBins[binIdx];
+    const lastFramePowerForApply = spectrogram[spectrogram.length - 1];
+    const peakPower_dB = callPeakPower_dB;
+    
+    // Determine which threshold to use for final calculation
+    const thresholdForFinalCalc = safeThreshold;  // Use safe threshold (may be -30dB if adjusted)
+    const lowFreqThreshold_dB_final = peakPower_dB + thresholdForFinalCalc;
+    
+    // Calculate low frequency from original (non-smoothed) last frame using optimal threshold
+    for (let binIdx = 0; binIdx < lastFramePowerForApply.length; binIdx++) {
+      if (lastFramePowerForApply[binIdx] > lowFreqThreshold_dB_final) {
+        returnLowFreq_Hz = freqBins[binIdx];
+        
+        // Linear interpolation for sub-bin precision
+        if (binIdx > 0) {
+          const thisPower = lastFramePowerForApply[binIdx];
+          const prevPower = lastFramePowerForApply[binIdx - 1];
           
-          // 嘗試線性插值以獲得更高精度
-          if (binIdx > 0) {
-            const thisPower = lastFramePower[binIdx];
-            const prevPower = lastFramePower[binIdx - 1];
-            
-            if (prevPower < lowFreqThreshold_dB_safe && thisPower > lowFreqThreshold_dB_safe) {
-              const powerRatio = (thisPower - lowFreqThreshold_dB_safe) / (thisPower - prevPower);
+          if (prevPower < lowFreqThreshold_dB_final && thisPower > lowFreqThreshold_dB_final) {
+            const powerRatio = (thisPower - lowFreqThreshold_dB_final) / (thisPower - prevPower);
+            // Clamp ratio to [0, 1] for stability
+            if (powerRatio >= 0 && powerRatio <= 1) {
               const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-              lowFreq_Hz_safe = freqBins[binIdx] - powerRatio * freqDiff;
+              returnLowFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
             }
           }
-          break;
         }
+        break;
       }
-      
-      if (lowFreq_Hz_safe !== null) {
-        endFreq_Hz_safe = lowFreq_Hz_safe;  // End frequency = low frequency
-        returnLowFreq_Hz = lowFreq_Hz_safe;
-        returnLowFreq_kHz = lowFreq_Hz_safe / 1000;
-        returnEndFreq_Hz = endFreq_Hz_safe;
-        returnEndFreq_kHz = endFreq_Hz_safe / 1000;
-      }
+    }
+    
+    // Convert Hz to kHz for consistency
+    if (returnLowFreq_Hz !== null) {
+      returnLowFreq_kHz = returnLowFreq_Hz / 1000;
+      returnEndFreq_Hz = returnLowFreq_Hz;  // End frequency = low frequency
+      returnEndFreq_kHz = returnLowFreq_kHz;
+    } else {
+      // Fallback to measurement result if calculation fails
+      returnLowFreq_Hz = optimalMeasurement.lowFreq_Hz;
+      returnLowFreq_kHz = optimalMeasurement.lowFreq_kHz;
+      returnEndFreq_Hz = optimalMeasurement.endFreq_Hz;
+      returnEndFreq_kHz = optimalMeasurement.endFreq_kHz;
     }
     
     // 返回優化的 Low Frequency 和 End Frequency
