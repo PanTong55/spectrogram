@@ -1583,21 +1583,12 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     // Display lowFreq_kHz (may be optimized to use Start Frequency if lower)
     lowFreqEl.textContent = batCall.lowFreq_kHz?.toFixed(2) || '-';
     
-    // Display High Freq with warning icon and color if detection warning is set
+    // Display High Freq (warning suppressed - using -30dB safety mechanism)
     highFreqEl.textContent = batCall.highFreq_kHz?.toFixed(2) || '-';
-    if (batCall.highFreqDetectionWarning === true) {
-      // Show warning icon and change text color to red
-      if (highFreqWarningIcon) {
-        highFreqWarningIcon.style.display = 'inline';
-      }
-      highFreqEl.style.color = '#dc3545';  // Red color for warning
-    } else {
-      // Hide warning icon and use blue color for normal value
-      if (highFreqWarningIcon) {
-        highFreqWarningIcon.style.display = 'none';
-      }
-      highFreqEl.style.color = '#0066cc';  // Blue color for normal value
+    if (highFreqWarningIcon) {
+      highFreqWarningIcon.style.display = 'none';
     }
+    highFreqEl.style.color = '#0066cc';  // Blue color for normal value
     
     // Display Low Freq with warning icon and color if detection warning is set
     // 低頻警告獨立於高頻警告，有自己的狀態和顯示邏輯

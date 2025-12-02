@@ -946,16 +946,85 @@ export class BatCallDetector {
     // 確保返回值在有效範圍內
     const finalThreshold = Math.max(Math.min(optimalThreshold, -24), -70);
     
-    // 檢測是否使用了 -70dB 的極限閾值（表示選擇區域未能涵蓋足夠高的頻率）
+    // 2025 SAFETY MECHANISM: 如果使用了極限閾值 -70dB，改用固定的安全值 -30dB
+    // 這表示 High Frequency 計算達到極限，使用保守的固定值而不是極限值
+    const safeThreshold = (finalThreshold <= -70) ? -30 : finalThreshold;
+    
+    // 檢測是否使用了 -70dB 的極限閾值（但實際使用 -30dB）
     const hasWarning = finalThreshold <= -70;
+    
+    // 當應用安全機制時（改為 -30dB），需要使用 -30dB 重新計算 highFreq_Hz
+    let returnHighFreq_Hz = optimalMeasurement.highFreq_Hz;
+    let returnHighFreq_kHz = optimalMeasurement.highFreq_kHz;
+    let returnStartFreq_Hz = optimalMeasurement.startFreq_Hz;
+    let returnStartFreq_kHz = optimalMeasurement.startFreq_kHz;
+    
+    if (safeThreshold !== finalThreshold) {
+      // 安全機制改變了閾值，使用 -30dB 重新計算 highFreq_Hz
+      const firstFramePower = spectrogram[0];
+      const peakPower_dB = callPeakPower_dB;
+      const highFreqThreshold_dB_safe = peakPower_dB + safeThreshold;
+      
+      let highFreq_Hz_safe = null;
+      let startFreq_Hz_safe = null;
+      
+      // 使用安全閾值 (-30dB) 計算 High Frequency（從高到低掃描）
+      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (firstFramePower[binIdx] > highFreqThreshold_dB_safe) {
+          highFreq_Hz_safe = freqBins[binIdx];
+          
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx < firstFramePower.length - 1) {
+            const thisPower = firstFramePower[binIdx];
+            const nextPower = firstFramePower[binIdx + 1];
+            
+            if (nextPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
+              const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              highFreq_Hz_safe = freqBins[binIdx] + powerRatio * freqDiff;
+            }
+          }
+          break;
+        }
+      }
+      
+      // 計算 Start Frequency（從低到高掃描）
+      if (highFreq_Hz_safe !== null) {
+        for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+          if (firstFramePower[binIdx] > highFreqThreshold_dB_safe) {
+            startFreq_Hz_safe = freqBins[binIdx];
+            
+            // 嘗試線性插值以獲得更高精度
+            if (binIdx > 0) {
+              const thisPower = firstFramePower[binIdx];
+              const prevPower = firstFramePower[binIdx - 1];
+              
+              if (prevPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
+                const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - prevPower);
+                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                startFreq_Hz_safe = freqBins[binIdx] - powerRatio * freqDiff;
+              }
+            }
+            break;
+          }
+        }
+      }
+      
+      if (highFreq_Hz_safe !== null) {
+        returnHighFreq_Hz = highFreq_Hz_safe;
+        returnHighFreq_kHz = highFreq_Hz_safe / 1000;
+        returnStartFreq_Hz = startFreq_Hz_safe;
+        returnStartFreq_kHz = startFreq_Hz_safe / 1000;
+      }
+    }
     
     // 返回優化的 High Frequency 和 Start Frequency
     return {
-      threshold: finalThreshold,
-      highFreq_Hz: optimalMeasurement.highFreq_Hz,
-      highFreq_kHz: optimalMeasurement.highFreq_kHz,
-      startFreq_Hz: optimalMeasurement.startFreq_Hz,
-      startFreq_kHz: optimalMeasurement.startFreq_kHz,
+      threshold: safeThreshold,
+      highFreq_Hz: returnHighFreq_Hz,
+      highFreq_kHz: returnHighFreq_kHz,
+      startFreq_Hz: returnStartFreq_Hz,
+      startFreq_kHz: returnStartFreq_kHz,
       warning: hasWarning
     };
   }
@@ -1435,10 +1504,9 @@ export class BatCallDetector {
       // Auto mode: 保存經過防呆檢查後的最終 threshold 值
       call.highFreqThreshold_dB_used = usedThreshold;
       // 
-      // 2025 CRITICAL FIX: Warning 應該基於實際使用的 threshold 值而不是原始結果
-      // 防呆檢查可能改變了 threshold（如從 -24 改為 -70）
-      // Warning 判斷：如果實際使用的 threshold 達到 -70dB 極限，則設置 warning
-      call.highFreqDetectionWarning = (usedThreshold <= -70);
+      // 2025 CRITICAL FIX: 已應用安全機制
+      // 當 threshold 達到 -70dB 極限時，自動改用 -30dB
+      // 不再需要顯示 warning，因此 highFreqDetectionWarning 已棄用
       
       // ============================================================
       // 重要修正 (2025)：

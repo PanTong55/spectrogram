@@ -498,7 +498,6 @@ export function initFrequencyHover({
       durationLabel: null,
       powerSpectrumPopup: null,  // 跟踪打開的 Power Spectrum popup
       // 2025: Warning 圖標容器
-      highFreqWarningIcon: null,  // High frequency warning icon
       lowFreqWarningIcon: null    // Low frequency warning icon
     };
 
@@ -519,26 +518,6 @@ export function initFrequencyHover({
     selObj.durationLabel = durationLabel;
 
     // 2025: 創建 Warning 圖標容器
-    // High Frequency Warning Icon - 顯示在 selection area 上邊界上方 5px
-    const highFreqWarningIcon = document.createElement('i');
-    highFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
-    highFreqWarningIcon.style.cssText = `
-      position: absolute;
-      top: -20px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: #ffd700;
-      font-size: 16px;
-      display: none;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
-                   -1px 0 0 #000, 1px 0 0 #000, 0 -2px 0 #000, 0 1px 0 #000;
-      z-index: 100;
-      cursor: help;
-    `;
-    highFreqWarningIcon.title = 'The accuracy of High-frequency detection is limited.\nConsider adjusting the upper edge.';
-    rectObj.appendChild(highFreqWarningIcon);
-    selObj.highFreqWarningIcon = highFreqWarningIcon;
-
     // Low Frequency Warning Icon - 顯示在 selection area 下邊界下方 5px
     const lowFreqWarningIcon = document.createElement('i');
     lowFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
@@ -989,20 +968,13 @@ const upHandler = () => {
             const call = sel.powerSpectrumPopup.popup ? sel.powerSpectrumPopup.popup.__latestDetectedCall : null;
             
             if (call) {
-              // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
-              if (sel.highFreqWarningIcon) {
-                sel.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
-              }
-              // 2025 SAFETY MECHANISM: 禁用低頻警告圖標顯示
-              // 由於 findOptimalLowFrequencyThreshold 已實施安全機制，低頻計算現已穩定
+              // 2025 SAFETY MECHANISM: 禁用高頻警告圖標顯示
+              // 由於 findOptimalHighFrequencyThreshold 已實施安全機制，高頻計算現已穩定
               if (sel.lowFreqWarningIcon) {
                 sel.lowFreqWarningIcon.style.display = 'none';
               }
             } else {
               // 如果沒有偵測到 call，隱藏所有 warning 圖標
-              if (sel.highFreqWarningIcon) {
-                sel.highFreqWarningIcon.style.display = 'none';
-              }
               if (sel.lowFreqWarningIcon) {
                 sel.lowFreqWarningIcon.style.display = 'none';
               }
@@ -1308,20 +1280,13 @@ const upHandler = () => {
                        : popupObj.popup.__latestDetectedCall;
 
           if (call) {
-            // 根據 call 的 warning 標誌來顯示/隱藏高頻警告圖標
-            if (selection.highFreqWarningIcon) {
-              selection.highFreqWarningIcon.style.display = call.highFreqDetectionWarning ? 'block' : 'none';
-            }
-            // 2025 SAFETY MECHANISM: 禁用低頻警告圖標顯示
-            // 由於 findOptimalLowFrequencyThreshold 已實施安全機制，低頻計算現已穩定
+            // 2025 SAFETY MECHANISM: 禁用高頻警告圖標顯示
+            // 由於 findOptimalHighFrequencyThreshold 已實施安全機制，高頻計算現已穩定
             if (selection.lowFreqWarningIcon) {
               selection.lowFreqWarningIcon.style.display = 'none';
             }
           } else {
             // 如果沒有偵測到 call，隱藏所有 warning 圖標
-            if (selection.highFreqWarningIcon) {
-              selection.highFreqWarningIcon.style.display = 'none';
-            }
             if (selection.lowFreqWarningIcon) {
               selection.lowFreqWarningIcon.style.display = 'none';
             }
