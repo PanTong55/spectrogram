@@ -513,7 +513,8 @@ export function initFrequencyHover({
     }
 
     // 計算 marker X 座標
-    // marker 應該在 selection 區域內，時間是相對於 selection.startTime 的本地時間
+    // marker 應該在 selection 區域內，相對於 selection rect 的位置
+    // 使用與 updateSelections 相同的計算方式確保一致性
     const actualWidth = getDuration() * getZoomLevel();
     const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
     const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
@@ -522,11 +523,9 @@ export function initFrequencyHover({
     
     if (timeValue !== null && timeValue !== undefined) {
       // timeValue 是相對於 selection 開始時間的本地時間（秒）
-      let timeInSeconds = timeValue;
-      
-      // 計算本地時間對應的像素位置（相對於 selection 的寬度）
       const selectionDuration = selObj.data.endTime - selObj.data.startTime;
-      const localTimeRatio = selectionDuration > 0 ? timeInSeconds / selectionDuration : 0;
+      const localTimeRatio = selectionDuration > 0 ? timeValue / selectionDuration : 0;
+      // marker 在 selection 區域內的位置 = selection 左邊 + (時間比例 × selection 寬度)
       xPos = rectLeft + localTimeRatio * rectWidth;
     } else {
       // 沒有時間值，默認在 selection 的中心
@@ -1376,7 +1375,7 @@ const upHandler = () => {
         const marker = sel.markers[markerKey];
         if (marker && marker.style.display !== 'none') {
           // 根據存儲的時間值計算新的 marker X 座標
-          // marker 應該在 selection 區域內，時間是相對於 selection 的本地時間（秒）
+          // marker 應該在 selection 區域內，相對於 selection rect 的位置
           const timeValue = marker.dataset.timeValue;
           let newXPos;
           
@@ -1387,6 +1386,7 @@ const upHandler = () => {
             // 計算本地時間對應的像素位置（相對於 selection 的寬度）
             const selectionDuration = sel.data.endTime - sel.data.startTime;
             const localTimeRatio = selectionDuration > 0 ? timeInSeconds / selectionDuration : 0;
+            // left 就是 rect 在 viewer 中的 left 座標，width 是 rect 的寬度
             newXPos = left + localTimeRatio * width;
           } else {
             // 沒有時間值，默認在 selection 的中心
