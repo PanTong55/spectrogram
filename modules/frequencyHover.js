@@ -447,7 +447,7 @@ export function initFrequencyHover({
   };
 
   // 創建或更新 marker
-  const createOrUpdateMarker = (selObj, markerType, freqKHz, color, title) => {
+  const createOrUpdateMarker = (selObj, markerType, freqKHz, color, title, timeValue) => {
     if (!fixedOverlay) return null;
     
     // 如果頻率無效，隱藏 marker
@@ -486,17 +486,34 @@ export function initFrequencyHover({
       });
     }
 
-    // 計算 marker X 座標（位於 selection rect 的中心）
-    // marker 相對於 fixed-overlay（在 container 內），所以使用 rect 的 left/right 相對於 container
+    // 計算 marker X 座標
+    // marker 相對於 fixed-overlay（在 container 內），所以使用時間來計算位置
     const actualWidth = getDuration() * getZoomLevel();
-    const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
-    const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
-    const xPos = rectLeft + rectWidth / 2;
+    let xPos;
+    
+    if (timeValue !== null && timeValue !== undefined) {
+      // 如果有時間值，根據時間計算 X 座標
+      // timeValue 可能是秒或毫秒，需要根據值的大小判斷
+      let timeInSeconds = timeValue;
+      if (timeValue > 100) {
+        // 假設 > 100 的是毫秒
+        timeInSeconds = timeValue / 1000;
+      }
+      xPos = (timeInSeconds / getDuration()) * actualWidth;
+    } else {
+      // 沒有時間值，默認在 selection 的中心
+      const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
+      const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
+      xPos = rectLeft + rectWidth / 2;
+    }
 
     // 更新位置和顯示
     marker.style.left = `${xPos}px`;
     marker.style.top = `${yPos}px`;
     marker.style.display = 'block';
+    
+    // 存儲時間值以便稍後在 updateSelections 中使用
+    marker.dataset.timeValue = timeValue || '';
 
     return marker;
   };
@@ -527,18 +544,31 @@ export function initFrequencyHover({
       return;
     }
 
-    // 映射 marker 類型到頻率字段
+    // 映射 marker 類型到頻率字段和時間字段
+    // 注意：Flow 是以 Hz 為單位，需要轉換為 kHz
     const markerMap = {
-      highFreqMarker: { field: 'Fhigh', color: 'marker-high', label: 'High Freq' },
-      lowFreqMarker: { field: 'Flow', color: 'marker-low', label: 'Low Freq' },
-      kneeFreqMarker: { field: 'kneeFreq_kHz', color: 'marker-knee', label: 'Knee Freq' },
-      peakFreqMarker: { field: 'peakFreq_kHz', color: 'marker-heel', label: 'Peak Freq' },
-      charFreqMarker: { field: 'characteristicFreq_kHz', color: 'marker-cfstart', label: 'Char Freq' }
+      highFreqMarker: { field: 'Fhigh', timeField: 'startFreqTime_s', color: 'marker-high', label: 'High Freq' },
+      lowFreqMarker: { field: 'Flow', convert: (v) => v ? v / 1000 : null, timeField: 'endFreqTime_s', color: 'marker-low', label: 'Low Freq' },
+      kneeFreqMarker: { field: 'kneeFreq_kHz', timeField: 'kneeTime_ms', convert: (v) => v ? v / 1000 : null, color: 'marker-knee', label: 'Knee Freq' },
+      peakFreqMarker: { field: 'peakFreq_kHz', timeField: null, color: 'marker-heel', label: 'Peak Freq' },
+      charFreqMarker: { field: 'characteristicFreq_kHz', timeField: 'endFreqTime_s', color: 'marker-cfstart', label: 'Char Freq' }
     };
 
     Object.entries(markerMap).forEach(([markerKey, config]) => {
-      const freq = batCall[config.field];
-      createOrUpdateMarker(selObj, markerKey, freq, config.color, config.label);
+      let freq = batCall[config.field];
+      
+      // 應用單位轉換（如果需要）
+      if (config.convert && freq !== null && freq !== undefined) {
+        freq = config.convert(freq);
+      }
+      
+      // 獲取時間值
+      let timeValue = null;
+      if (config.timeField) {
+        timeValue = batCall[config.timeField];
+      }
+      
+      createOrUpdateMarker(selObj, markerKey, freq, config.color, config.label, timeValue);
     });
   };
 
@@ -1240,8 +1270,23 @@ const upHandler = () => {
       Object.keys(sel.markers).forEach(markerKey => {
         const marker = sel.markers[markerKey];
         if (marker && marker.style.display !== 'none') {
-          // 計算新的 marker X 座標（selection rect 的中心）
-          const newXPos = left + width / 2;
+          // 根據存儲的時間值計算新的 marker X 座標
+          const timeValue = marker.dataset.timeValue;
+          let newXPos;
+          
+          if (timeValue) {
+            // 如果有時間值，根據時間計算 X 座標
+            let timeInSeconds = parseFloat(timeValue);
+            if (timeValue > 100) {
+              // 假設 > 100 的是毫秒
+              timeInSeconds = timeValue / 1000;
+            }
+            newXPos = (timeInSeconds / getDuration()) * actualWidth;
+          } else {
+            // 沒有時間值，默認在 selection 的中心
+            newXPos = left + width / 2;
+          }
+          
           marker.style.left = `${newXPos}px`;
         }
       });
@@ -1389,6 +1434,8 @@ const upHandler = () => {
           if (selection.tooltip) {
             selection.tooltip.style.display = 'block';
           }
+          // 清除 marker
+          clearSelectionMarkers(selection);
           // 移除 popup 狀態並啟用菜單項
           unregisterCallAnalysisPopup(popupElement);
         };
@@ -1402,7 +1449,8 @@ const upHandler = () => {
           if (mutation.removedNodes.length > 0) {
             for (let node of mutation.removedNodes) {
               if (node === popupElement) {
-                // popup 已被移除，解除註冊
+                // popup 已被移除，清除 marker 並解除註冊
+                clearSelectionMarkers(selection);
                 unregisterCallAnalysisPopup(popupElement);
                 mutationObserver.disconnect();
               }
