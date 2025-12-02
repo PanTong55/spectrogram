@@ -407,6 +407,141 @@ export function initFrequencyHover({
     }
   });
 
+  // Marker 拖拽狀態
+  let draggingMarker = null;
+  let markerStartY = 0;
+
+  // 全局 marker 拖拽事件監聽器
+  document.addEventListener('mousemove', (e) => {
+    if (!draggingMarker) return;
+
+    const deltaY = e.clientY - markerStartY;
+    let newY = parseFloat(draggingMarker.marker.style.top) + deltaY;
+
+    // Clamp to spectrogram bounds
+    newY = Math.min(Math.max(newY, 0), spectrogramHeight);
+
+    // 更新 marker 位置（暫時只更新位置，不更新頻率值）
+    // 未來可以擴展為允許手動調整檢測結果
+    draggingMarker.marker.style.top = `${newY}px`;
+    markerStartY = e.clientY;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (draggingMarker) {
+      draggingMarker.marker.style.zIndex = '31'; // 恢復原始 z-index
+      draggingMarker = null;
+    }
+  });
+
+  // ============================================================
+  // Marker 管理系統
+  // ============================================================
+  
+  // 計算頻率對應的 Y 座標
+  const frequencyToY = (freqKHz) => {
+    if (freqKHz === null || freqKHz === undefined) return null;
+    const yNorm = 1 - (freqKHz - minFrequency) / (maxFrequency - minFrequency);
+    if (yNorm < 0 || yNorm > 1) return null; // 超出範圍
+    return yNorm * spectrogramHeight;
+  };
+
+  // 創建或更新 marker
+  const createOrUpdateMarker = (selObj, markerType, freqKHz, color, title) => {
+    if (!fixedOverlay) return null;
+    
+    // 如果頻率無效，隱藏 marker
+    if (freqKHz === null || freqKHz === undefined) {
+      if (selObj.markers[markerType]) {
+        selObj.markers[markerType].style.display = 'none';
+      }
+      return null;
+    }
+
+    const yPos = frequencyToY(freqKHz);
+    if (yPos === null) {
+      if (selObj.markers[markerType]) {
+        selObj.markers[markerType].style.display = 'none';
+      }
+      return null;
+    }
+
+    let marker = selObj.markers[markerType];
+    
+    if (!marker) {
+      // 建立新 marker
+      marker = document.createElement('div');
+      marker.className = `freq-marker ${color}`;
+      marker.setAttribute('data-title', title);
+      marker.innerHTML = '<i class="fas fa-xmark"></i>';
+      fixedOverlay.appendChild(marker);
+      selObj.markers[markerType] = marker;
+
+      // 添加拖拽起始事件監聽
+      marker.addEventListener('mousedown', (e) => {
+        draggingMarker = { marker, markerType, selObj };
+        markerStartY = e.clientY;
+        marker.style.zIndex = '35'; // 提升 z-index 以顯示在最前面
+        e.preventDefault();
+      });
+    }
+
+    // 計算 marker X 座標（位於 selection rect 的中心）
+    // marker 相對於 fixed-overlay（在 container 內），所以使用 rect 的 left/right 相對於 container
+    const actualWidth = getDuration() * getZoomLevel();
+    const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
+    const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
+    const xPos = rectLeft + rectWidth / 2;
+
+    // 更新位置和顯示
+    marker.style.left = `${xPos}px`;
+    marker.style.top = `${yPos}px`;
+    marker.style.display = 'block';
+
+    return marker;
+  };
+
+  // 隱藏所有 selection 的 marker
+  const hideSelectionMarkers = (selObj) => {
+    Object.keys(selObj.markers).forEach(key => {
+      if (selObj.markers[key]) {
+        selObj.markers[key].style.display = 'none';
+      }
+    });
+  };
+
+  // 清除所有 selection 的 marker
+  const clearSelectionMarkers = (selObj) => {
+    Object.keys(selObj.markers).forEach(key => {
+      if (selObj.markers[key]) {
+        selObj.markers[key].remove();
+        selObj.markers[key] = null;
+      }
+    });
+  };
+
+  // 根據 bat call 數據更新所有 marker
+  const updateMarkersFromBatCall = (selObj, batCall) => {
+    if (!batCall) {
+      hideSelectionMarkers(selObj);
+      return;
+    }
+
+    // 映射 marker 類型到頻率字段
+    const markerMap = {
+      highFreqMarker: { field: 'Fhigh', color: 'marker-high', label: 'High Freq' },
+      lowFreqMarker: { field: 'Flow', color: 'marker-low', label: 'Low Freq' },
+      kneeFreqMarker: { field: 'kneeFreq_kHz', color: 'marker-knee', label: 'Knee Freq' },
+      peakFreqMarker: { field: 'peakFreq_kHz', color: 'marker-heel', label: 'Peak Freq' },
+      charFreqMarker: { field: 'characteristicFreq_kHz', color: 'marker-cfstart', label: 'Char Freq' }
+    };
+
+    Object.entries(markerMap).forEach(([markerKey, config]) => {
+      const freq = batCall[config.field];
+      createOrUpdateMarker(selObj, markerKey, freq, config.color, config.label);
+    });
+  };
+
   // 計算 selection area 內的峰值頻率
   async function calculatePeakFrequency(sel) {
     try {
@@ -496,7 +631,15 @@ export function initFrequencyHover({
       closeBtn: null, 
       btnGroup: null, 
       durationLabel: null,
-      powerSpectrumPopup: null  // 跟踪打開的 Power Spectrum popup
+      powerSpectrumPopup: null,  // 跟踪打開的 Power Spectrum popup
+      // Marker 相關屬性
+      markers: {
+        highFreqMarker: null,
+        lowFreqMarker: null,
+        kneeFreqMarker: null,
+        peakFreqMarker: null,
+        charFreqMarker: null
+      }
     };
 
     // 根據 Time Expansion 模式計算用於判斷的持續時間
@@ -569,6 +712,9 @@ export function initFrequencyHover({
   }
 
   function removeSelection(sel) {
+    // 清除 marker
+    clearSelectionMarkers(sel);
+
     // 關閉 Power Spectrum popup (如果打開)
     if (sel.powerSpectrumPopup) {
       const popupElement = sel.powerSpectrumPopup.popup;
@@ -1089,6 +1235,16 @@ const upHandler = () => {
 
       updateTooltipValues(sel, left, top, width, height);
       repositionBtnGroup(sel);
+
+      // 更新 marker 位置
+      Object.keys(sel.markers).forEach(markerKey => {
+        const marker = sel.markers[markerKey];
+        if (marker && marker.style.display !== 'none') {
+          // 計算新的 marker X 座標（selection rect 的中心）
+          const newXPos = left + width / 2;
+          marker.style.left = `${newXPos}px`;
+        }
+      });
     });
   }
 
@@ -1290,6 +1446,29 @@ const upHandler = () => {
             const freqMul = getTimeExpansionMode() ? 10 : 1;
             selection.tooltip.querySelector('.fpeak').textContent = (currentPeak * freqMul).toFixed(1);
           }
+        }
+      } catch (e) { /* ignore */ }
+
+      // 監聽 batCallDetectionCompleted 事件以更新 marker
+      const batCallListener = (ev) => {
+        try {
+          const batCall = ev?.detail?.call;
+          if (batCall) {
+            updateMarkersFromBatCall(selection, batCall);
+          }
+        } catch (e) {
+          console.warn('更新 marker 時出錯:', e);
+        }
+      };
+      
+      popupObj.popup.addEventListener('batCallDetectionCompleted', batCallListener);
+      selection._batCallDetectionListener = batCallListener;
+      
+      // 立即更新 marker（如果已有 bat call 檢測結果）
+      try {
+        const latestCall = popupObj.popup.__latestDetectedCall;
+        if (latestCall) {
+          updateMarkersFromBatCall(selection, latestCall);
         }
       } catch (e) { /* ignore */ }
       }
