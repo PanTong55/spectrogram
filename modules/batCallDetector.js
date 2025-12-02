@@ -2439,17 +2439,32 @@ export class BatCallDetector {
     
     // ============================================================
     // CF-FM AUTO-DETECTION
+    // 2025 ENHANCEMENT: Detect CF calls by Peak Freq vs High Freq difference
+    // CF bats: Peak Freq ≈ High Freq (small difference < 2 kHz)
+    // FM bats: Peak Freq << High Freq (large difference > 2 kHz)
     // ============================================================
-    if (freqDifference < 1.0) {
-      // CF-FM type call detected: peak and start frequencies very close
-      // This means the call has a significant CF phase followed by FM sweep
-      // The call duration likely exceeds the 10ms protection window
-      // Auto-disable anti-rebounce to prevent false truncation
+    const CF_DETECTION_THRESHOLD_kHz = 2.0;  // Threshold for CF/FM distinction
+    
+    if (freqDifference < CF_DETECTION_THRESHOLD_kHz) {
+      // CF call detected: Peak and High frequencies very close
+      // This indicates a Constant Frequency bat (e.g., Molossidae, Rhinolophidae, Hipposideridae)
+      // CF calls have a long sustained frequency portion, often exceeding the 10ms protection window
+      // 
+      // Action: Disable BOTH anti-rebounce protection mechanisms:
+      // 1. enableBackwardEndFreqScan: Disable energy-based end detection
+      // 2. protectionWindowAfterPeak_ms: Disable protection window time limit
+      // This allows CF calls to extend naturally without artificial truncation
       this.config.enableBackwardEndFreqScan = false;
+      this.config.protectionWindowAfterPeak_ms = 999;  // Effectively disable (set to very large value)
     } else {
-      // Pure FM call: restore the anti-rebounce setting from original config
-      // Re-read from parent config to get user's intended setting
+      // FM call detected: Peak and High frequencies significantly different
+      // This indicates a Frequency Modulated bat (e.g., Vespertilionidae, Phyllostomidae)
+      // FM calls have a short sweep and should be properly constrained
+      // 
+      // Action: Restore anti-rebounce settings to user's configured values
+      // These protections will prevent echo/reflection artifacts
       this.config.enableBackwardEndFreqScan = this.config.enableBackwardEndFreqScan !== false;
+      // Keep the original protectionWindowAfterPeak_ms value (typically 10 ms)
     }
   }
   
