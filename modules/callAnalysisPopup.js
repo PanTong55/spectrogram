@@ -1563,7 +1563,6 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const startFreqEl = paramPanel.querySelector('.start-freq');
   const endFreqEl = paramPanel.querySelector('.end-freq');
   const lowFreqEl = paramPanel.querySelector('.low-freq');
-  const lowFreqWarningIcon = paramPanel.querySelector('.low-freq-warning');
   const highFreqEl = paramPanel.querySelector('.high-freq');
   const highFreqWarningIcon = paramPanel.querySelector('.high-freq-warning');
   const kneeFreqEl = paramPanel.querySelector('.knee-freq');
@@ -1590,14 +1589,8 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     }
     highFreqEl.style.color = '#0066cc';  // Blue color for normal value
     
-    // Display Low Freq with warning icon and color if detection warning is set
-    // 低頻警告獨立於高頻警告，有自己的狀態和顯示邏輯
+    // Display Low Freq (warning suppressed - using -30dB safety mechanism)
     lowFreqEl.textContent = batCall.lowFreq_kHz?.toFixed(2) || '-';
-    // 2025 SAFETY MECHANISM: 禁用低頻 Warning 顯示
-    // 由於 findOptimalLowFrequencyThreshold 已實施安全機制，低頻計算現已穩定
-    if (lowFreqWarningIcon) {
-      lowFreqWarningIcon.style.display = 'none';
-    }
     lowFreqEl.style.color = '#0066cc';  // Blue color for normal value
     
     kneeFreqEl.textContent = batCall.kneeFreq_kHz?.toFixed(2) || '-';

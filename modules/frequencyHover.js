@@ -496,9 +496,7 @@ export function initFrequencyHover({
       closeBtn: null, 
       btnGroup: null, 
       durationLabel: null,
-      powerSpectrumPopup: null,  // 跟踪打開的 Power Spectrum popup
-      // 2025: Warning 圖標容器
-      lowFreqWarningIcon: null    // Low frequency warning icon
+      powerSpectrumPopup: null  // 跟踪打開的 Power Spectrum popup
     };
 
     // 根據 Time Expansion 模式計算用於判斷的持續時間
@@ -516,27 +514,6 @@ export function initFrequencyHover({
   durationLabel.textContent = `${displayDurationMs.toFixed(1)} ms`;
     rectObj.appendChild(durationLabel);
     selObj.durationLabel = durationLabel;
-
-    // 2025: 創建 Warning 圖標容器
-    // Low Frequency Warning Icon - 顯示在 selection area 下邊界下方 5px
-    const lowFreqWarningIcon = document.createElement('i');
-    lowFreqWarningIcon.className = 'fa-solid fa-triangle-exclamation';
-    lowFreqWarningIcon.style.cssText = `
-      position: absolute;
-      bottom: 5px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: #ffd700;
-      font-size: 16px;
-      display: none;
-      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000,
-                   -1px 0 0 #000, 1px 0 0 #000, 0 -2px 0 #000, 0 1px 0 #000;
-      z-index: 100;
-      cursor: help;
-    `;
-    lowFreqWarningIcon.title = 'The accuracy of Low-frequency detection is limited.\nConsider adjusting the lower edge.';
-    rectObj.appendChild(lowFreqWarningIcon);
-    selObj.lowFreqWarningIcon = lowFreqWarningIcon;
 
     selections.push(selObj);
 
@@ -962,26 +939,7 @@ const upHandler = () => {
         
         // Resize 完成後，立即進行最終的 Power Spectrum 更新
         if (sel.powerSpectrumPopup && sel.powerSpectrumPopup.isOpen()) {
-          // 定義警告圖標更新函數
-          const updateResizeWarningIcons = () => {
-
-            const call = sel.powerSpectrumPopup.popup ? sel.powerSpectrumPopup.popup.__latestDetectedCall : null;
-            
-            if (call) {
-              // 2025 SAFETY MECHANISM: 禁用高頻警告圖標顯示
-              // 由於 findOptimalHighFrequencyThreshold 已實施安全機制，高頻計算現已穩定
-              if (sel.lowFreqWarningIcon) {
-                sel.lowFreqWarningIcon.style.display = 'none';
-              }
-            } else {
-              // 如果沒有偵測到 call，隱藏所有 warning 圖標
-              if (sel.lowFreqWarningIcon) {
-                sel.lowFreqWarningIcon.style.display = 'none';
-              }
-            }
-          };
-          
-          // 執行異步更新，並在完成後更新警告圖標
+          // 執行異步更新
           const updatePromise = sel.powerSpectrumPopup.update({
             startTime: sel.data.startTime,
             endTime: sel.data.endTime,
@@ -989,15 +947,11 @@ const upHandler = () => {
             Fhigh: sel.data.Fhigh
           });
           
-          // 2025: 等待 Power Spectrum 更新完成後再更新 warning 圖標
+          // 等待 Power Spectrum 更新完成
           if (updatePromise && typeof updatePromise.then === 'function') {
-            updatePromise.then(updateResizeWarningIcons).catch(() => {
-              // 若更新失敗，仍嘗試更新警告圖標
-              updateResizeWarningIcons();
+            updatePromise.catch(() => {
+              // 若更新失敗，仍繼續
             });
-          } else {
-            // 若 update 不返回 Promise，使用 setTimeout 降級
-            setTimeout(updateResizeWarningIcons, 50);
           }
         }
         
@@ -1269,38 +1223,8 @@ const upHandler = () => {
       // ============================================================
       registerCallAnalysisPopup(popupElement, selection);
       disableCallAnalysisMenuItem(selection);
-
-      // 2025: 監聽 bat call 偵測完成事件，更新 selection rect 的 warning 圖標
+      
       if (popupElement) {
-
-        const updateWarningIcons = (e) => {
-
-          const call = (e && e.detail && e.detail.call) 
-                       ? e.detail.call 
-                       : popupObj.popup.__latestDetectedCall;
-
-          if (call) {
-            // 2025 SAFETY MECHANISM: 禁用高頻警告圖標顯示
-            // 由於 findOptimalHighFrequencyThreshold 已實施安全機制，高頻計算現已穩定
-            if (selection.lowFreqWarningIcon) {
-              selection.lowFreqWarningIcon.style.display = 'none';
-            }
-          } else {
-            // 如果沒有偵測到 call，隱藏所有 warning 圖標
-            if (selection.lowFreqWarningIcon) {
-              selection.lowFreqWarningIcon.style.display = 'none';
-            }
-          }
-        };
-        
-        // 監聽後續的 bat call 偵測完成事件
-        popupElement.addEventListener('batCallDetectionCompleted', updateWarningIcons);
-        // 保存引用以便後續清理
-        selection._batCallDetectionListener = updateWarningIcons;
-        
-        // 立即執行一次，以同步當前狀態（使用 setTimeout 確保 DOM 屬性已更新）
-        setTimeout(() => updateWarningIcons(), 0);
-      }
 
       // 監聽 popup 關閉，重新顯示 tooltip 並啟用菜單項
       const closeBtn = popupElement && popupElement.querySelector('.popup-close-btn');
@@ -1368,6 +1292,7 @@ const upHandler = () => {
           }
         }
       } catch (e) { /* ignore */ }
+      }
     }
   }
 
