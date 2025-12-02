@@ -514,40 +514,20 @@ export function initFrequencyHover({
 
     // 計算 marker X 座標
     // marker 應該在 selection 區域內，時間是相對於 selection.startTime 的本地時間
-    // fixedOverlay 是相對於 viewer 的，所以需要計算相對於 viewer 的座標
-    
-    const actualWidth = getDuration() * getZoomLevel();  // 整個 spectrogram 在當前 zoom 下的寬度 (像素)
-    const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;  // selection 左邊界在 viewer 中的 X 座標
-    const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;  // selection 的寬度
+    const actualWidth = getDuration() * getZoomLevel();
+    const rectLeft = (selObj.data.startTime / getDuration()) * actualWidth;
+    const rectWidth = ((selObj.data.endTime - selObj.data.startTime) / getDuration()) * actualWidth;
     
     let xPos;
     
     if (timeValue !== null && timeValue !== undefined) {
-      // timeValue 是相對於 selection.startTime 的本地時間（秒）
-      // 需要將其轉換為像素位置，相對於 selection 的左邊界
+      // timeValue 是相對於 selection 開始時間的本地時間（秒）
+      let timeInSeconds = timeValue;
+      
+      // 計算本地時間對應的像素位置（相對於 selection 的寬度）
       const selectionDuration = selObj.data.endTime - selObj.data.startTime;
-      
-      if (selectionDuration > 0) {
-        // 計算時間值在 selection 內的比例位置
-        const localTimeRatio = timeValue / selectionDuration;
-        // marker 的 X 座標 = selection 左邊界 + (本地時間比例 × selection 寬度)
-        xPos = rectLeft + (localTimeRatio * rectWidth);
-      } else {
-        // selection 沒有持續時間，放在中心
-        xPos = rectLeft + rectWidth / 2;
-      }
-      
-      if (markerType === 'kneeFreqMarker' || markerType === 'peakFreqMarker') {
-        console.log(`📍 ${markerType} X coordinate:`, {
-          selectionStartTime: selObj.data.startTime,
-          timeValue: timeValue,
-          rectLeft: rectLeft,
-          rectWidth: rectWidth,
-          selectionDuration: selectionDuration,
-          localTimeRatio: timeValue / selectionDuration,
-          xPos: xPos
-        });
-      }
+      const localTimeRatio = selectionDuration > 0 ? timeInSeconds / selectionDuration : 0;
+      xPos = rectLeft + localTimeRatio * rectWidth;
     } else {
       // 沒有時間值，默認在 selection 的中心
       xPos = rectLeft + rectWidth / 2;
