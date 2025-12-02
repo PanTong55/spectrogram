@@ -1077,9 +1077,13 @@ export class BatCallDetector {
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     const stablePeakPower_dB = callPeakPower_dB;
     
-    // 測試閾值範圍：-24 到 -70 dB
+    // ============================================================
+    // 2025 IMPROVED TESTING STRATEGY - Use coarse step first
+    // Phase 1: Coarse testing (-24 to -70 dB with 10 dB steps)
+    // This is more efficient than 0.5 dB steps and finds anomalies faster
+    // ============================================================
     const thresholdRange = [];
-    for (let threshold = -24; threshold >= -70; threshold-= 0.5) {
+    for (let threshold = -24; threshold >= -70; threshold -= 10) {
       thresholdRange.push(threshold);
     }
     
@@ -1161,105 +1165,50 @@ export class BatCallDetector {
     }
     
     // ============================================================
-    // 新規則 2025：Low Frequency 需應用防呆機制
-    // 找出第一個 <= Peak Frequency 且 foundBin=true 的 Low Frequency
-    // 低頻應該低於峰值頻率，這是 FM 掃頻信號的特性
-    // 決定最終使用的閾值 + End Frequency
+    // 2025 IMPROVED ANOMALY DETECTION
+    // Use simpler stability metric for coarse 10dB step testing
     // ============================================================
-    let optimalThreshold = -24;  // 默認使用最保守的設定
-    let optimalMeasurement = validMeasurements[0];  // 預設為第一個有效測量
+    let optimalThreshold = validMeasurements[0].threshold;
+    let optimalMeasurement = validMeasurements[0];
     
-    // 追蹤異常檢測狀態
-    let lastValidThreshold = validMeasurements[0].threshold;  // 最後一個有效測量（無異常的）
-    let lastValidMeasurement = validMeasurements[0];
-    let recordedEarlyAnomaly = null;  // 早期記錄的異常前閾值（可能被忽略）
-    let firstAnomalyIndex = -1;       // 第一個異常發生的索引位置
-    let majorJumpIndex = -1;          // Major jump 發生的索引位置
-    let majorJumpThreshold = null;    // Major jump 前的閾值
+    // Track stability
+    let lastStableThreshold = validMeasurements[0].threshold;
+    let lastStableMeasurement = validMeasurements[0];
+    let anomalyDetected = false;
+    let anomalyThreshold = null;
     
-    // 從第二個有效測量開始，比較與前一個測量的差異
+    // Scan for anomalies: frequency jumps > 1.0 kHz indicate threshold saturation
+    const STABILITY_THRESHOLD_kHz = 1.0;
+    
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].lowFreq_kHz;
       const currFreq_kHz = validMeasurements[i].lowFreq_kHz;
       const freqDifference = Math.abs(currFreq_kHz - prevFreq_kHz);
       
-      // ============================================================
-      // 優化 2025：超大幅頻率跳變 (>2 kHz)
-      // ============================================================
-      if (freqDifference > 2.0) {
-        // 超大幅異常 >2.0 kHz，立即停止測試
-        // 選擇這個超大幅異常前的閾值
-        optimalThreshold = validMeasurements[i - 1].threshold;
-        optimalMeasurement = validMeasurements[i - 1];
-        break;
-      }
-      
-      const isAnomaly = freqDifference > 1.5;
-      
-      if (isAnomaly) {
-        // 發現大幅異常 (>1.5 kHz)
-        
-        // 如果還沒有記錄早期異常，現在記錄
-        if (recordedEarlyAnomaly === null && firstAnomalyIndex === -1) {
-          firstAnomalyIndex = i;  // 記錄異常發生的索引
-          recordedEarlyAnomaly = validMeasurements[i - 1].threshold;  // 異常前的閾值
-          lastValidThreshold = validMeasurements[i - 1].threshold;
-          lastValidMeasurement = validMeasurements[i - 1];
+      if (freqDifference > STABILITY_THRESHOLD_kHz) {
+        // First anomaly detected
+        if (!anomalyDetected) {
+          anomalyDetected = true;
+          anomalyThreshold = validMeasurements[i - 1].threshold;
+          lastStableThreshold = validMeasurements[i - 1].threshold;
+          lastStableMeasurement = validMeasurements[i - 1];
         }
       } else {
-        // 正常值：沒有大幅跳變
-        
-        // 如果有記錄的早期異常，檢查異常後是否緊接著有 3 個正常值
-        if (recordedEarlyAnomaly !== null && firstAnomalyIndex !== -1) {
-          // 計算從異常發生後緊接著的 3 個索引
-          const afterAnomalyStart = firstAnomalyIndex + 1;
-          const afterAnomalyEnd = Math.min(firstAnomalyIndex + 3, validMeasurements.length - 1);
-          
-          // 檢查異常後的 3 個值是否都無異常
-          let hasThreeNormalAfterAnomaly = true;
-          
-          for (let checkIdx = afterAnomalyStart; checkIdx <= afterAnomalyEnd; checkIdx++) {
-            if (checkIdx >= validMeasurements.length) {
-              hasThreeNormalAfterAnomaly = false;
-              break;
-            }
-            
-            // 檢查當前值與前一個值是否有異常
-            const checkPrevFreq_kHz = validMeasurements[checkIdx - 1].lowFreq_kHz;
-            const checkCurrFreq_kHz = validMeasurements[checkIdx].lowFreq_kHz;
-            const checkFreqDiff = Math.abs(checkCurrFreq_kHz - checkPrevFreq_kHz);
-            
-            if (checkFreqDiff > 1.5) {
-              // 發現異常，說明異常後面不是連續 3 個正常值
-              hasThreeNormalAfterAnomaly = false;
-              break;
-            }
-          }
-          
-          // 如果異常後有連續 3 個正常值，忽略早期異常
-          if (hasThreeNormalAfterAnomaly && (afterAnomalyEnd - afterAnomalyStart + 1) >= 3) {
-            recordedEarlyAnomaly = null;  // 忽略早期異常
-            firstAnomalyIndex = -1;       // 重置
-          }
-        }
-        
-        // 更新最後一個有效測量
-        lastValidThreshold = validMeasurements[i].threshold;
-        lastValidMeasurement = validMeasurements[i];
+        // Normal value - continue tracking
+        lastStableThreshold = validMeasurements[i].threshold;
+        lastStableMeasurement = validMeasurements[i];
       }
     }
     
     // ============================================================
-    // 最終決定：選擇最優閾值
+    // Decide optimal threshold
     // ============================================================
-    if (recordedEarlyAnomaly !== null) {
-      // 有未被忽略的早期異常：使用異常前的閾值
-      optimalThreshold = recordedEarlyAnomaly;
-      optimalMeasurement = lastValidMeasurement;
+    if (anomalyDetected && anomalyThreshold !== null) {
+      optimalThreshold = anomalyThreshold;
+      optimalMeasurement = lastStableMeasurement;
     } else {
-      // 沒有異常或異常被忽略：使用最後一個有效測量
-      optimalThreshold = lastValidThreshold;
-      optimalMeasurement = lastValidMeasurement;
+      optimalThreshold = lastStableThreshold;
+      optimalMeasurement = lastStableMeasurement;
     }
     
     // 確保返回值在有效範圍內
@@ -1600,8 +1549,11 @@ export class BatCallDetector {
       let hasStartedDecaying = false;
       let lastValidEndBeforeRebounce = peakFrameIdx;
       
+      // 2025 CRITICAL FIX: Apply TRICK 3 protection window limit
       // Scan FORWARD from peak to END to find natural decay point
-      for (let frameIdx = peakFrameIdx; frameIdx < spectrogram.length; frameIdx++) {
+      // BUT STOP at maxFrameIdxAllowed if frequency drop is detected
+      const protectionWindowFrameEnd = Math.min(maxFrameIdxAllowed, spectrogram.length);
+      for (let frameIdx = peakFrameIdx; frameIdx < protectionWindowFrameEnd; frameIdx++) {
         const framePower = spectrogram[frameIdx];
         let frameMaxPower = -Infinity;
         let framePeakFreq = 0;
@@ -1628,8 +1580,11 @@ export class BatCallDetector {
           const frequencyDrop = prevFramePeakFreq - framePeakFreq;
           if (frequencyDrop > maxFrequencyDropThreshold_kHz) {
             // FM call: frequency drop detected, stop here
+            // 2025 CRITICAL FIX: Apply protection window limit for FM detection
+            // If detected frequency drop is beyond protection window, constrain to window
+            const constrainedEndFrame = Math.min(frameIdx - 1, maxFrameIdxAllowed);
             freqDropDetected = true;
-            lastValidEndFrame = frameIdx - 1;
+            lastValidEndFrame = constrainedEndFrame;
             break;
           }
         }
@@ -1665,7 +1620,11 @@ export class BatCallDetector {
           // If signal drops permanently below -18dB, stop
           else if (frameMaxPower <= sustainedEnergyThreshold && frameIdx > peakFrameIdx) {
             // No rebounce detected, just natural decay below threshold
-            newEndFrameIdx = lastFrameAboveSustainedThreshold;
+            // 2025 CRITICAL FIX: Respect protection window limit for CF/QCF too
+            // When natural decay happens within protection window, use it
+            // When it exceeds window, constrain to window limit
+            const constrainedEndFrame = Math.min(lastFrameAboveSustainedThreshold, maxFrameIdxAllowed);
+            newEndFrameIdx = constrainedEndFrame;
             break;
           }
           
@@ -1676,10 +1635,12 @@ export class BatCallDetector {
       // Determine final end frame if loop completed without special conditions
       if (newEndFrameIdx === spectrogram.length - 1 || newEndFrameIdx === 0) {
         if (!freqDropDetected) {
-          // CF/QCF call: use last frame with sustained energy
-          newEndFrameIdx = lastFrameAboveSustainedThreshold;
+          // CF/QCF call: use last frame with sustained energy, respecting protection window
+          // 2025: Constrain CF/QCF end frame to protection window as well
+          const constrainedEndFrame = Math.min(lastFrameAboveSustainedThreshold, maxFrameIdxAllowed);
+          newEndFrameIdx = constrainedEndFrame;
         } else {
-          // FM call: already set by frequency drop detection
+          // FM call: already set by frequency drop detection (which now respects window)
           newEndFrameIdx = lastValidEndFrame;
         }
       }
@@ -1701,10 +1662,9 @@ export class BatCallDetector {
       }
     }
     
-    // 注意：For CF/QCF calls, newEndFrameIdx 可能超過 maxFrameIdxAllowed
-    // 這是正常的，因為 CF 信號可能延續超過 10ms 的保護窗
-    // Protection window 限制只應用於檢測到頻率下降（FM 類型）的情況
-    // 不應在此進行全局限制
+    // 2025: Protection window is now properly applied within the anti-rebounce mechanism
+    // Both FM (frequency drop detection) and CF/QCF (energy decay detection) respect the limit
+    // The window only applies to energy-based endpoint detection, not to raw signal boundaries
     
     // 更新時間邊界
     if (newStartFrameIdx < timeFrames.length) {
