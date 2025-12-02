@@ -1467,6 +1467,48 @@ export class BatCallDetector {
     }
     
     // ============================================================
+    // STEP 1.25: COMPUTE HIGH FREQUENCY EARLY (before time boundary calculation)
+    // This is needed to detect CF calls and adjust protectionWindowAfterPeak_ms
+    // BEFORE the protection window is used in time boundary calculation
+    // ============================================================
+    const firstFramePower_early = spectrogram[0];
+    let highFreq_Hz_early = fhighKHz * 1000;  // Default to upper bound
+    const highThreshold_dB = peakPower_dB + this.config.highFreqThreshold_dB;
+    
+    // Search from high to low frequency (reverse order)
+    for (let binIdx = firstFramePower_early.length - 1; binIdx >= 0; binIdx--) {
+      if (firstFramePower_early[binIdx] > highThreshold_dB) {
+        highFreq_Hz_early = freqBins[binIdx];
+        if (binIdx < firstFramePower_early.length - 1) {
+          const thisPower = firstFramePower_early[binIdx];
+          const nextPower = firstFramePower_early[binIdx + 1];
+          if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
+            const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
+            const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+            highFreq_Hz_early = freqBins[binIdx] + powerRatio * freqDiff;
+          }
+        }
+        break;
+      }
+    }
+    const highFreq_kHz_early = highFreq_Hz_early / 1000;
+    
+    // ============================================================
+    // STEP 1.3: CF-FM AUTO-DETECTION (EARLY - before time boundary calculation)
+    // CRITICAL: Must be done AFTER high frequency is computed
+    // But BEFORE time boundary recalculation to affect protectionWindowAfterPeak_ms
+    // ============================================================
+    const CF_DETECTION_THRESHOLD_kHz = 2.0;
+    const peakFreq_kHz_early = peakFreq_Hz / 1000;
+    const freqDifference_early = Math.abs(peakFreq_kHz_early - highFreq_kHz_early);
+    
+    if (freqDifference_early < CF_DETECTION_THRESHOLD_kHz) {
+      // CF call detected: Disable protection window
+      this.config.enableBackwardEndFreqScan = false;
+      this.config.protectionWindowAfterPeak_ms = 999;
+    }
+    
+    // ============================================================
     // STEP 1.5: 重新計算時間邊界 (基於新的 highFreqThreshold_dB)
     // 
     // 2025 ANTI-REBOUNCE UPGRADE:
@@ -1478,9 +1520,7 @@ export class BatCallDetector {
       enableBackwardEndFreqScan,
       maxFrequencyDropThreshold_kHz,
       protectionWindowAfterPeak_ms
-    } = this.config;
-    
-    const highThreshold_dB = peakPower_dB + this.config.highFreqThreshold_dB;  // High Frequency threshold (可調整)
+    } = this.config;  // NOW reads the potentially modified CF detection values!
     
     // ============================================================
     // End & Low Frequency Threshold
@@ -1708,6 +1748,9 @@ export class BatCallDetector {
       }
     }
     call.highFreq_kHz = highFreq_Hz / 1000;
+    
+    // CF-FM AUTO-DETECTION has been moved to STEP 1.3 (before time boundary calculation)
+    // to ensure protectionWindowAfterPeak_ms is properly set
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
     // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
@@ -2420,52 +2463,8 @@ export class BatCallDetector {
     // Automatically disable anti-rebounce to avoid truncating long CF phases.
     // ============================================================
     
-    // Compare peak frequency with high frequency (calculated from first frame)
-    const peakFreq_kHz = peakFreq_Hz / 1000;
-    const highFreq_kHz = call.highFreq_kHz;  // Already calculated in STEP 2
-    
-    // Calculate difference between peak and high frequency
-    const freqDifference = Math.abs(peakFreq_kHz - highFreq_kHz);
-    
-    // ============================================================
-    // IMPORTANT: Save actual used threshold value (after Auto mode calculation)
-    // This allows UI to reflect the real value being used
-    // Must be done BEFORE any further modifications to config
-    // ============================================================
-    if (this.config.highFreqThreshold_dB_isAuto === true) {
-      // Auto mode: threshold already updated in detectCalls
-      // No need to do anything here - config is already current
-    }
-    
-    // ============================================================
-    // CF-FM AUTO-DETECTION
-    // 2025 ENHANCEMENT: Detect CF calls by Peak Freq vs High Freq difference
-    // CF bats: Peak Freq ≈ High Freq (small difference < 2 kHz)
-    // FM bats: Peak Freq << High Freq (large difference > 2 kHz)
-    // ============================================================
-    const CF_DETECTION_THRESHOLD_kHz = 2.0;  // Threshold for CF/FM distinction
-    
-    if (freqDifference < CF_DETECTION_THRESHOLD_kHz) {
-      // CF call detected: Peak and High frequencies very close
-      // This indicates a Constant Frequency bat (e.g., Molossidae, Rhinolophidae, Hipposideridae)
-      // CF calls have a long sustained frequency portion, often exceeding the 10ms protection window
-      // 
-      // Action: Disable BOTH anti-rebounce protection mechanisms:
-      // 1. enableBackwardEndFreqScan: Disable energy-based end detection
-      // 2. protectionWindowAfterPeak_ms: Disable protection window time limit
-      // This allows CF calls to extend naturally without artificial truncation
-      this.config.enableBackwardEndFreqScan = false;
-      this.config.protectionWindowAfterPeak_ms = 999;  // Effectively disable (set to very large value)
-    } else {
-      // FM call detected: Peak and High frequencies significantly different
-      // This indicates a Frequency Modulated bat (e.g., Vespertilionidae, Phyllostomidae)
-      // FM calls have a short sweep and should be properly constrained
-      // 
-      // Action: Restore anti-rebounce settings to user's configured values
-      // These protections will prevent echo/reflection artifacts
-      this.config.enableBackwardEndFreqScan = this.config.enableBackwardEndFreqScan !== false;
-      // Keep the original protectionWindowAfterPeak_ms value (typically 10 ms)
-    }
+    // CF-FM AUTO-DETECTION has been MOVED to STEP 2 (after High Frequency calculation)
+    // to ensure protectionWindowAfterPeak_ms is properly applied before time boundary calculation
   }
   
   /**
