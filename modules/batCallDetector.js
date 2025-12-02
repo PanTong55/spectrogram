@@ -107,7 +107,6 @@ export class CallTypeClassifier {
     return call.bandwidth_kHz > 10 && call.highFreq_kHz > call.lowFreq_kHz;  // Downward FM
   }
 }
-
 /**
  * Represents a single detected bat call with all parameters
  */
@@ -118,6 +117,7 @@ export class BatCall {
     this.duration_ms = null;        // Total duration (milliseconds)
     
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
+    this.peakFreqTime_s = null;     // Peak frequency time (s) - time point of peak frequency
     this.highFreq_kHz = null;       // High frequency (kHz) - highest frequency in call (calculated from first frame)
     this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (from first frame, -24dB threshold)
     this.startFreqTime_s = null;    // Start frequency time (s) - time point of start frequency (from first frame)
@@ -125,6 +125,7 @@ export class BatCall {
     this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (from last frame, -27dB threshold)
     this.endFreqTime_s = null;      // End frequency time (s) - time point of end frequency (from last frame)
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
+    this.charFreqTime_s = null;     // Characteristic frequency time (s) - time point of characteristic frequency
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
     this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
     this.bandwidth_kHz = null;      // Bandwidth = highFreq - lowFreq
@@ -1404,6 +1405,8 @@ export class BatCallDetector {
     // IMPORTANT: These values are NOW STABLE and don't depend on selection area size
     call.peakFreq_kHz = peakFreq_Hz / 1000;
     call.peakPower_dB = peakPower_dB;
+    // 2025: Add peak frequency time stamp for marker display
+    call.peakFreqTime_s = timeFrames[peakFrameIdx];
     
     // ============================================================
     // AUTO MODE: If highFreqThreshold_dB_isAuto is enabled,
@@ -2142,12 +2145,15 @@ export class BatCallDetector {
     // ============================================================
     const lastPercentStart = Math.floor(spectrogram.length * (1 - characteristicFreq_percentEnd / 100));
     let characteristicFreq_Hz = peakFreq_Hz;
+    let charFreqTimeFrame = spectrogram.length - 1;  // Default to last frame
     
     if (lastPercentStart < spectrogram.length) {
       // Method 1: Find weighted average frequency in last portion
       // This handles CF-FM calls better than just finding the minimum
       let totalPower = 0;
       let weightedFreq = 0;
+      let weightedTimeFrame = 0;
+      let totalTimeWeight = 0;
       
       for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
         const framePower = spectrogram[frameIdx];
@@ -2168,13 +2174,16 @@ export class BatCallDetector {
             const linearPower = Math.pow(10, power / 10);
             totalPower += linearPower;
             weightedFreq += linearPower * freqBins[binIdx];
+            weightedTimeFrame += linearPower * frameIdx;  // Track weighted frame index
+            totalTimeWeight += linearPower;
           }
         }
       }
       
-      // Calculate weighted average frequency
+      // Calculate weighted average frequency and time frame
       if (totalPower > 0) {
         characteristicFreq_Hz = weightedFreq / totalPower;
+        charFreqTimeFrame = Math.round(weightedTimeFrame / totalTimeWeight);
       } else {
         // Fallback: find lowest frequency in end portion
         for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
@@ -2182,6 +2191,7 @@ export class BatCallDetector {
           for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
             if (framePower[binIdx] > -Infinity) {
               characteristicFreq_Hz = freqBins[binIdx];
+              charFreqTimeFrame = frameIdx;
               break;
             }
           }
@@ -2190,6 +2200,8 @@ export class BatCallDetector {
     }
     
     call.characteristicFreq_kHz = characteristicFreq_Hz / 1000;
+    // 2025: Add characteristic frequency time stamp for marker display
+    call.charFreqTime_s = timeFrames[charFreqTimeFrame];
     
     // ============================================================
     // STEP 5: Validate frequency relationships (Avisoft standard)

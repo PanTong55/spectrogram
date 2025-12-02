@@ -450,10 +450,18 @@ export function initFrequencyHover({
   const createOrUpdateMarker = (selObj, markerType, freqKHz, color, title, timeValue) => {
     if (!fixedOverlay) return null;
     
+    // 調試：記錄每個 marker 的創建/更新
+    if (markerType === 'kneeFreqMarker') {
+      console.log(`🔷 ${markerType}: freqKHz=${freqKHz}, timeValue=${timeValue}, title=${title}`);
+    }
+    
     // 如果頻率無效，隱藏 marker
     if (freqKHz === null || freqKHz === undefined) {
       if (selObj.markers[markerType]) {
         selObj.markers[markerType].style.display = 'none';
+      }
+      if (markerType === 'kneeFreqMarker') {
+        console.log(`🔷 ${markerType}: 隱藏 (频率无效)`);
       }
       return null;
     }
@@ -462,6 +470,9 @@ export function initFrequencyHover({
     if (yPos === null) {
       if (selObj.markers[markerType]) {
         selObj.markers[markerType].style.display = 'none';
+      }
+      if (markerType === 'kneeFreqMarker') {
+        console.log(`🔷 ${markerType}: 隱藏 (Y位置无效)`);
       }
       return null;
     }
@@ -559,6 +570,20 @@ export function initFrequencyHover({
       return;
     }
 
+    // 調試：檢查 batCall 是否包含必要的字段
+    console.log('🔍 updateMarkersFromBatCall - batCall fields:', {
+      Fhigh: batCall.Fhigh,
+      Flow: batCall.Flow,
+      kneeFreq_kHz: batCall.kneeFreq_kHz,
+      kneeTime_ms: batCall.kneeTime_ms,
+      peakFreq_kHz: batCall.peakFreq_kHz,
+      characteristicFreq_kHz: batCall.characteristicFreq_kHz,
+      startFreqTime_s: batCall.startFreqTime_s,
+      endFreqTime_s: batCall.endFreqTime_s,
+      startTime_s: batCall.startTime_s,
+      duration_ms: batCall.duration_ms
+    });
+
     // 重要：時間坐標系統
     // - startFreqTime_s, endFreqTime_s: 絕對時間（全局秒數），需要減去 selection.startTime
     // - kneeTime_ms: 相對時間（相對於 call.startTime_s 的毫秒數），不需要減
@@ -611,19 +636,24 @@ export function initFrequencyHover({
         color: 'marker-knee', 
         label: 'Knee Freq' 
       },
-      // Peak Freq: 無時間戳（在 Power Spectrum 分析中計算，無特定幀）
+      // Peak Freq: 使用 peakFreqTime_s（絕對時間 → 相對時間）
       peakFreqMarker: { 
         field: 'peakFreq_kHz', 
-        getTime: () => null,
+        getTime: () => {
+          if (batCall.peakFreqTime_s !== null && batCall.peakFreqTime_s !== undefined) {
+            return batCall.peakFreqTime_s - selectionStartTime;
+          }
+          return null;
+        },
         color: 'marker-heel', 
         label: 'Peak Freq' 
       },
-      // Characteristic Freq: 使用 endFreqTime_s（絕對時間 → 相對時間）
+      // Characteristic Freq: 使用 charFreqTime_s（絕對時間 → 相對時間）
       charFreqMarker: { 
         field: 'characteristicFreq_kHz', 
         getTime: () => {
-          if (batCall.endFreqTime_s !== null && batCall.endFreqTime_s !== undefined) {
-            return batCall.endFreqTime_s - selectionStartTime;
+          if (batCall.charFreqTime_s !== null && batCall.charFreqTime_s !== undefined) {
+            return batCall.charFreqTime_s - selectionStartTime;
           }
           return null;
         },
