@@ -1744,8 +1744,8 @@ export class BatCallDetector {
       call.endTime_s = timeFrames[Math.min(newEndFrameIdx + 1, timeFrames.length - 1)];
     }
     
-    // 重新計算 Duration（基於更新後的時間邊界）
-    call.calculateDuration();
+    // 注意：Duration 將在計算完 endFreqTime_s 後根據 endFreq 的 frameIdx 計算
+    // (見 STEP 3 的結尾)
     
     // ============================================================
     // STEP 2: Calculate HIGH FREQUENCY from first frame
@@ -1969,12 +1969,17 @@ export class BatCallDetector {
     call.endFreqTime_s = lastFrameTime_s;
     
     // ============================================================
-    // NEW (2025): Calculate low and end frequency times in milliseconds
-    // lowFreq_ms = absolute time of low frequency bin (from end frame, limited by newEndFrameIdx) within selection area
-    // endFreq_ms = same as lowFreq_ms (end frequency = low frequency)
-    // Unit: ms (milliseconds), relative to selection area start
-    // 2025: Ensure time values do not exceed call end time (newEndFrameIdx)
+    // 2025 OPTIMIZATION: Calculate duration based on endFreq frameIdx (endFreqTime_s)
+    // Duration is now calculated ONLY ONCE here, based on endFreq time point
+    // This avoids repeated calculations and ensures consistency
+    // Duration = endFreq time - startFreq time (from first frame, which is always timeFrames[0])
     // ============================================================
+    if (call.startFreqTime_s !== null && call.endFreqTime_s !== null) {
+      call.duration_ms = (call.endFreqTime_s - call.startFreqTime_s) * 1000;
+    }
+    
+    // ============================================================
+    // NEW (2025): Calculate low and end frequency times in milliseconds
     const firstFrameTimeInSeconds_low = timeFrames[0];
     const lastFrameTime_ms = (lastFrameTime_s - firstFrameTimeInSeconds_low) * 1000;  // Time relative to selection area start
     call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from end frame (limited by newEndFrameIdx)
