@@ -1802,12 +1802,8 @@ export class BatCallDetector {
     // 2025 新規則修正：Start Frequency 必須獨立計算
     // 方法：
     // 在 AUTO MODE 和 NON-AUTO MODE 中，都使用 -24dB 閾值計算 Start Frequency
-    // (a) 若 -24dB 閾值的頻率 < Peak Frequency：使用該值為 Start Frequency，並使用該 bin 的時間
+    // (a) 若 -24dB 閾值的頻率 < Peak Frequency：使用該值為 Start Frequency
     // (b) 若 -24dB 閾值的頻率 >= Peak Frequency：Start Frequency = High Frequency
-    // 
-    // 2025 重要修正：
-    // Start Frequency 的時間點使用其所在 bin 的實際時間（startFreqTime_s）
-    // 而不是固定的第一幀時間，這樣 duration 計算會更準確
     // 
     // 2025 低頻 Noise 保護機制：
     // 若 Peak Frequency ≥ 60 kHz，則 Start Frequency 不能 ≤ 40 kHz
@@ -1816,7 +1812,6 @@ export class BatCallDetector {
     let startFreq_Hz = null;
     let startFreq_kHz = null;
     let startFreqBinIdx = 0;  // 2025: Track independent bin index for Start Frequency
-    let startFreqFrameIdx = 0;  // 2025: Track frame index where Start Frequency is found
     
     // 使用 -24dB 閾值計算 Start Frequency（無論是否 Auto Mode）
     const threshold_24dB = peakPower_dB - 24;
@@ -1827,50 +1822,38 @@ export class BatCallDetector {
     const peakFreqInKHz = peakFreq_Hz / 1000; // 將 Peak 頻率轉換為 kHz
     const shouldIgnoreLowFreqNoise = peakFreqInKHz >= HIGH_PEAK_THRESHOLD_kHz;
     
-    // 2025: Search through ALL frames to find lowest frequency at -24dB threshold
-    // This provides better Start Frequency detection than just using first frame
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-      const framePower = spectrogram[frameIdx];
-      
-      // Scan from low to high frequency within this frame
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        if (framePower[binIdx] > threshold_24dB) {
-          const testStartFreq_Hz = freqBins[binIdx];
-          const testStartFreq_kHz = testStartFreq_Hz / 1000;
+    // 從低到高掃描，找最低頻率
+    for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+      if (firstFramePower[binIdx] > threshold_24dB) {
+        const testStartFreq_Hz = freqBins[binIdx];
+        const testStartFreq_kHz = testStartFreq_Hz / 1000;
+        
+        // 2025: 應用低頻 Noise 保護機制
+        // 若 Peak ≥ 60 kHz，忽略 40 kHz 或以下的候選值
+        if (shouldIgnoreLowFreqNoise && testStartFreq_kHz <= LOW_FREQ_NOISE_THRESHOLD_kHz) {
+          // 此 bin 被視為低頻 noise，跳過
+          continue;
+        }
+        
+        // 檢查是否低於 Peak Frequency（規則 a）
+        if (testStartFreq_kHz < peakFreqInKHz) {
+          // 滿足規則 (a)：使用此值為 Start Frequency
+          startFreq_Hz = testStartFreq_Hz;
+          startFreq_kHz = testStartFreq_kHz;
+          startFreqBinIdx = binIdx;  // 2025: Store independent bin index for Start Frequency
           
-          // 2025: 應用低頻 Noise 保護機制
-          // 若 Peak ≥ 60 kHz，忽略 40 kHz 或以下的候選值
-          if (shouldIgnoreLowFreqNoise && testStartFreq_kHz <= LOW_FREQ_NOISE_THRESHOLD_kHz) {
-            // 此 bin 被視為低頻 noise，跳過
-            continue;
-          }
-          
-          // 檢查是否低於 Peak Frequency（規則 a）
-          if (testStartFreq_kHz < peakFreqInKHz) {
-            // If we haven't found any candidate yet, or this is lower, update it
-            if (startFreq_Hz === null || testStartFreq_Hz < startFreq_Hz) {
-              // 滿足規則 (a)：使用此值為 Start Frequency
-              startFreq_Hz = testStartFreq_Hz;
-              startFreq_kHz = testStartFreq_kHz;
-              startFreqBinIdx = binIdx;
-              startFreqFrameIdx = frameIdx;
-              
-              // 嘗試線性插值以獲得更高精度（但僅在第一幀進行）
-              // Linear interpolation helps for first frame measurement
-              if (frameIdx === 0 && binIdx > 0) {
-                const thisPower = framePower[binIdx];
-                const prevPower = framePower[binIdx - 1];
-                
-                if (prevPower < threshold_24dB && thisPower > threshold_24dB) {
-                  const powerRatio = (thisPower - threshold_24dB) / (thisPower - prevPower);
-                  const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-                  startFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
-                  startFreq_kHz = startFreq_Hz / 1000;
-                }
-              }
+          // 嘗試線性插值以獲得更高精度
+          if (binIdx > 0) {
+            const thisPower = firstFramePower[binIdx];
+            const prevPower = firstFramePower[binIdx - 1];
+            
+            if (prevPower < threshold_24dB && thisPower > threshold_24dB) {
+              const powerRatio = (thisPower - threshold_24dB) / (thisPower - prevPower);
+              const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+              startFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
+              startFreq_kHz = startFreq_Hz / 1000;
             }
           }
-          // Found first bin above threshold in this frame, move to next frame
           break;
         }
       }
@@ -1882,24 +1865,22 @@ export class BatCallDetector {
       startFreq_Hz = highFreq_Hz;
       startFreq_kHz = highFreq_Hz / 1000;
       startFreqBinIdx = highFreqBinIdx;  // 2025: Use High Frequency's bin index if rule (a) fails
-      startFreqFrameIdx = 0;  // High Frequency is from first frame
     }
     
     // 存儲 Start Frequency 及其時間點
     call.startFreq_kHz = startFreq_kHz;
-    // 2025: Use the actual frame time where Start Frequency was found
-    call.startFreqTime_s = startFreqFrameIdx < timeFrames.length ? timeFrames[startFreqFrameIdx] : timeFrames[0];
+    call.startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
     call.startFreqBinIdx = startFreqBinIdx;  // 2025: Store independent bin index
-    call.startFreqFrameIdx = startFreqFrameIdx;  // 2025: Store frame index
     
     // ============================================================
     // NEW (2025): Calculate start frequency time in milliseconds
-    // startFreq_ms = absolute time of start frequency bin within selection area
+    // startFreq_ms = absolute time of start frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
-    // NOTE: Start Frequency time is based on when it was actually found in the spectrogram
+    // NOTE: Start Frequency and High Frequency use different thresholds (-24dB vs adaptive)
+    // so they have independent bin indices (startFreqBinIdx vs highFreqBinIdx).
+    // Both are from first frame, so both times equal firstFrameTime_ms = 0.0ms
     // ============================================================
-    const firstFrameTimeInSeconds_start = timeFrames[0];
-    call.startFreq_ms = (call.startFreqTime_s - firstFrameTimeInSeconds_start) * 1000;
+    call.startFreq_ms = firstFrameTime_ms;  // Start frequency is from first frame (same as high frequency)
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
