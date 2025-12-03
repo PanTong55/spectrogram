@@ -1458,8 +1458,6 @@ export class BatCallDetector {
       // 需要向上遍歷 thresholdRange 找到第一個 >= Peak Frequency 的值
       let safeHighFreq_kHz = result.highFreq_kHz;
       let safeHighFreq_Hz = result.highFreq_Hz;
-      let safeStartFreq_kHz = result.startFreq_kHz;
-      let safeStartFreq_Hz = result.startFreq_Hz;
       let usedThreshold = result.threshold;
       
       // 如果最優閾值的 High Frequency 低於 Peak Frequency，執行防呆檢查
@@ -1475,8 +1473,6 @@ export class BatCallDetector {
           
           // 計算此閾值的 High Frequency
           let testHighFreq_Hz = null;
-          let testStartFreq_Hz = null;
-          
           // High Frequency 計算（從高到低）
           for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
             if (firstFramePower[binIdx] > highFreqThreshold_dB) {
@@ -1498,29 +1494,13 @@ export class BatCallDetector {
           
           // 如果找到有效的 High Frequency，檢查是否 >= Peak Frequency
           if (testHighFreq_Hz !== null && (testHighFreq_Hz / 1000) >= peakFreq_kHz) {
-            // 計算此閾值的 Start Frequency（從低到高）
-            for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
-              if (firstFramePower[binIdx] > highFreqThreshold_dB) {
-                testStartFreq_Hz = freqBins[binIdx];
-                
-                // 線性插值
-                if (binIdx > 0) {
-                  const thisPower = firstFramePower[binIdx];
-                  const prevPower = firstFramePower[binIdx - 1];
-                  if (prevPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
-                    const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - prevPower);
-                    const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-                    testStartFreq_Hz = freqBins[binIdx] - powerRatio * freqDiff;
-                  }
-                }
-                break;
-              }
-            }
+            // IMPORTANT 2025: 
+            // Start Frequency 必須使用固定的 -24dB 閾值，不能用調整後的 highFreqThreshold_dB
+            // Start Frequency 的規則 (a)/(b) 邏輯在 STEP 2.5 中執行，不在此處
+            // Auto Mode 防呆檢查只調整 High Frequency threshold，不涉及 Start Frequency
             
             safeHighFreq_Hz = testHighFreq_Hz;
             safeHighFreq_kHz = testHighFreq_Hz / 1000;
-            safeStartFreq_Hz = testStartFreq_Hz;
-            safeStartFreq_kHz = testStartFreq_Hz !== null ? testStartFreq_Hz / 1000 : null;
             usedThreshold = testThreshold_dB;
             foundValidHighFreq = true;
             break;
