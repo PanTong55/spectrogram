@@ -1002,68 +1002,66 @@ function createPopupWindow() {
       <td class="param-label">Start Freq:</td>
       <td class="param-value start-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Start Time:</td>
-      <td class="param-value startfreq-time">-</td>
-      <td class="param-unit">ms</td>
-    </tr>
-    <tr>
       <td class="param-label">End Freq:</td>
       <td class="param-value end-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">End Time:</td>
-      <td class="param-value endfreq-time">-</td>
-      <td class="param-unit">ms</td>
     </tr>
     <tr>
       <td class="param-label">High Freq:</td>
       <td class="param-value-container high-freq-container" style="text-align: right; align-items: center;">
-        <i class="fa-solid fa-triangle-exclamation high-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover high enough frequencies.&#10;Consider extending the frequency range."></i>
         <span class="param-value high-freq">-</span>
-      </td>
+      </td>      
       <td class="param-unit">kHz</td>
-      <td class="param-label">High Time:</td>
-      <td class="param-value highfreq-time">-</td>
-      <td class="param-unit">ms</td>
-    </tr>
-    <tr>
       <td class="param-label">Low Freq:</td>
       <td class="param-value-container low-freq-container" style="text-align: right; align-items: center;">
-        <i class="fa-solid fa-triangle-exclamation low-freq-warning" style="display: none; color: #ffc107; margin-right: 6px; cursor: help;" title="Selection area did not cover low enough frequencies.&#10;Consider extending the frequency range."></i>
         <span class="param-value low-freq">-</span>
       </td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Low Time:</td>
-      <td class="param-value lowfreq-time">-</td>
-      <td class="param-unit">ms</td>
     </tr>
     <tr>
       <td class="param-label">Peak Freq:</td>
       <td class="param-value peak-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Peak Time:</td>
-      <td class="param-value peakfreq-time">-</td>
-      <td class="param-unit">ms</td>
-    </tr>
-    <tr>
       <td class="param-label">Char. Freq:</td>
       <td class="param-value char-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Char Time:</td>
-      <td class="param-value charfreq-time">-</td>
-      <td class="param-unit">ms</td>
     </tr>
     <tr>
       <td class="param-label">Knee Freq:</td>
       <td class="param-value knee-freq">-</td>
       <td class="param-unit">kHz</td>
-      <td class="param-label">Knee Time:</td>
-      <td class="param-value knee-time">-</td>
-      <td class="param-unit">ms</td>
-    </tr>
-    <tr>
       <td class="param-label">Bandwidth:</td>
       <td class="param-value bandwidth">-</td>
       <td class="param-unit">kHz</td>
+    </tr>    
+    <tr>
+      <td class="param-label">Start Time:</td>
+      <td class="param-value startfreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">End Time:</td>
+      <td class="param-value endfreq-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
+      <td class="param-label">High Time:</td>
+      <td class="param-value highfreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">Low Time:</td>
+      <td class="param-value lowfreq-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
+      <td class="param-label">Peak Time:</td>
+      <td class="param-value peakfreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">Char Time:</td>
+      <td class="param-value charfreq-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
+      <td class="param-label">Knee Time:</td>
+      <td class="param-value knee-time">-</td>
+      <td class="param-unit">ms</td>    
       <td class="param-label">Duration:</td>
       <td class="param-value duration">-</td>
       <td class="param-unit">ms</td>
