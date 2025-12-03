@@ -1766,46 +1766,38 @@ export class BatCallDetector {
     let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
     let highFreqFrameIdx = 0;  // 2025: Track frame index where high frequency occurs
     
-    // 2025: 如果在 Auto Mode 防呆檢查中找到了 High Frequency bin index，直接使用
-    // 否則進行普通的掃描查找 bin index
-    if (this.config.highFreqThreshold_dB_isAuto === true && typeof safeHighFreqBinIdx !== 'undefined' && safeHighFreqBinIdx !== null) {
-      // Auto Mode: Use the bin index found during anti-dummy check
-      // Note: 防呆檢查中是在 firstFrame 掃描，所以幀索引為 0
-      highFreqBinIdx = safeHighFreqBinIdx;
-      highFreq_Hz = safeHighFreq_Hz;  // Use the frequency from Anti-dummy check
-      highFreqFrameIdx = 0;  // Auto Mode anti-dummy check uses first frame
-    } else {
-      // Manual Mode or Auto Mode without anti-dummy check: scan entire spectrogram
-      // Find highest frequency across ALL frames
-      for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-        const framePower = spectrogram[frameIdx];
-        // Search from high to low frequency (reverse order)
-        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
-          if (framePower[binIdx] > highThreshold_dB) {
-            // Found first bin above threshold in this frame
-            const testHighFreq_Hz = freqBins[binIdx];
+    // 2025 修正：無論是 Auto Mode 還是 Manual Mode，都掃描整個 spectrogram
+    // Auto Mode 和 Manual Mode 的差異只在使用的 threshold 値不同
+    // 但都應該在整個 spectrogram 中找最高頻率
+    // Scan entire spectrogram to find highest frequency across ALL frames
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      // Search from high to low frequency (reverse order)
+      for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
+        if (framePower[binIdx] > highThreshold_dB) {
+          // Found first bin above threshold in this frame
+          const testHighFreq_Hz = freqBins[binIdx];
+          
+          // Only update if this frequency is higher than previously found
+          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
+            highFreq_Hz = testHighFreq_Hz;
+            highFreqBinIdx = binIdx;
+            highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
             
-            // Only update if this frequency is higher than previously found
-            if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
-              highFreq_Hz = testHighFreq_Hz;
-              highFreqBinIdx = binIdx;
-              highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
+            // Attempt linear interpolation for sub-bin precision
+            if (binIdx < framePower.length - 1) {
+              const thisPower = framePower[binIdx];
+              const nextPower = framePower[binIdx + 1];
               
-              // Attempt linear interpolation for sub-bin precision
-              if (binIdx < framePower.length - 1) {
-                const thisPower = framePower[binIdx];
-                const nextPower = framePower[binIdx + 1];
-                
-                if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
-                  // Interpolate between this bin and next
-                  const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
-                  const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-                  highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
-                }
+              if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
+                // Interpolate between this bin and next
+                const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
+                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+                highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
               }
             }
-            break;  // Move to next frame after finding first bin in this frame
           }
+          break;  // Move to next frame after finding first bin in this frame
         }
       }
     }
