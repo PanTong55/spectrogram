@@ -1791,27 +1791,12 @@ export class BatCallDetector {
     
     // ============================================================
     // NEW (2025): Calculate high frequency time in milliseconds
-    // highFreqTime_ms = time when the High Frequency bin (highFreqBinIdx) first exceeds threshold
+    // highFreqTime_ms = absolute time of high frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
-    // 2025: Find the first frame where highFreqBinIdx bin exceeds highThreshold_dB
     // ============================================================
     const firstFrameTimeInSeconds = timeFrames[0];
     const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
-    let highFreqTime_ms = firstFrameTime_ms;  // Default to first frame
-    
-    // Find the frame where High Frequency bin first appears above threshold
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-      if (highFreqBinIdx >= 0 && highFreqBinIdx < spectrogram[frameIdx].length) {
-        if (spectrogram[frameIdx][highFreqBinIdx] > highThreshold_dB) {
-          // Found the first frame where this bin exceeds threshold
-          const frameTime_s = timeFrames[frameIdx];
-          highFreqTime_ms = (frameTime_s - firstFrameTimeInSeconds) * 1000;
-          break;
-        }
-      }
-    }
-    
-    call.highFreqTime_ms = highFreqTime_ms;
+    call.highFreqTime_ms = firstFrameTime_ms;  // High frequency is from first frame
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
     // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
@@ -1897,26 +1882,13 @@ export class BatCallDetector {
     
     // ============================================================
     // NEW (2025): Calculate start frequency time in milliseconds
-    // startFreq_ms = time when the Start Frequency bin (startFreqBinIdx) first exceeds -24dB threshold
+    // startFreq_ms = absolute time of start frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
-    // 2025: Find the first frame where startFreqBinIdx bin exceeds threshold_24dB
+    // NOTE: Start Frequency and High Frequency use different thresholds (-24dB vs adaptive)
+    // so they have independent bin indices (startFreqBinIdx vs highFreqBinIdx).
+    // Both are from first frame, so both times equal firstFrameTime_ms = 0.0ms
     // ============================================================
-    let startFreqTime_ms = firstFrameTime_ms;  // Default to first frame
-    const threshold_24dB_forTime = peakPower_dB - 24;  // -24dB threshold for finding frame time
-    
-    // Find the frame where Start Frequency bin first appears above threshold
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-      if (startFreqBinIdx >= 0 && startFreqBinIdx < spectrogram[frameIdx].length) {
-        if (spectrogram[frameIdx][startFreqBinIdx] > threshold_24dB_forTime) {
-          // Found the first frame where this bin exceeds threshold
-          const frameTime_s = timeFrames[frameIdx];
-          startFreqTime_ms = (frameTime_s - firstFrameTimeInSeconds) * 1000;
-          break;
-        }
-      }
-    }
-    
-    call.startFreq_ms = startFreqTime_ms;
+    call.startFreq_ms = firstFrameTime_ms;  // Start frequency is from first frame (same as high frequency)
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
