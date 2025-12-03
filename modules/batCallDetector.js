@@ -1792,24 +1792,6 @@ export class BatCallDetector {
     
     call.highFreq_kHz = highFreq_Hz / 1000;
     
-    // ============================================================
-    // NEW (2025): Calculate high frequency time in milliseconds
-    // highFreqTime_ms = time when the High Frequency is found in the spectrogram
-    // Unit: ms (milliseconds), relative to selection area start
-    // 2025: Use the frame where High Frequency was found (highFreqFrameIdx)
-    // ============================================================
-    const firstFrameTimeInSeconds = timeFrames[0];
-    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
-    let highFreqTime_ms = firstFrameTime_ms;  // Default to first frame
-    
-    // High Frequency time is when it's found in highFreqFrameIdx
-    if (highFreqFrameIdx >= 0 && highFreqFrameIdx < timeFrames.length) {
-      const highFreqFrameTime_s = timeFrames[highFreqFrameIdx];
-      highFreqTime_ms = (highFreqFrameTime_s - firstFrameTimeInSeconds) * 1000;
-    }
-    
-    call.highFreqTime_ms = highFreqTime_ms;
-    
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
     // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
     // 計算相對於 peakPower_dB 的偏移值
@@ -1914,6 +1896,40 @@ export class BatCallDetector {
     }
     
     call.startFreq_ms = startFreqTime_ms;
+    
+    // ============================================================
+    // NEW (2025): Calculate high frequency time relative to start frequency time
+    // highFreqTime_ms = time when the High Frequency is found in the spectrogram
+    // Unit: ms (milliseconds), relative to Start Frequency time (not first frame)
+    // 2025: High Frequency time is relative to Start Frequency time
+    // ============================================================
+    let highFreqTime_ms = 0;  // Default: same time as Start Frequency
+    
+    // High Frequency time relative to Start Frequency time
+    if (highFreqFrameIdx >= 0 && highFreqFrameIdx < timeFrames.length) {
+      const highFreqFrameTime_s = timeFrames[highFreqFrameIdx];
+      const startFreqFrameTime_s = timeFrames[0];  // Start Frequency is always from first frame (0.00ms baseline)
+      // But we need to use startFreqTime_ms's corresponding frame time
+      // Since startFreqTime_ms might be from a different frame if the bin doesn't start in frame 0
+      // We calculate it relative to the first frame, then adjust
+      
+      // Get the frame index where Start Frequency appears
+      let startFreqFrameIdx = 0;
+      for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+        if (startFreqBinIdx >= 0 && startFreqBinIdx < spectrogram[frameIdx].length) {
+          if (spectrogram[frameIdx][startFreqBinIdx] > threshold_24dB_forTime) {
+            startFreqFrameIdx = frameIdx;
+            break;
+          }
+        }
+      }
+      
+      // Calculate High Frequency time relative to Start Frequency frame
+      const startFreqFrameTime_s_actual = timeFrames[startFreqFrameIdx];
+      highFreqTime_ms = (highFreqFrameTime_s - startFreqFrameTime_s_actual) * 1000;
+    }
+    
+    call.highFreqTime_ms = highFreqTime_ms;
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
