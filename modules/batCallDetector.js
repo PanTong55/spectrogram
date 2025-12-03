@@ -1428,10 +1428,11 @@ export class BatCallDetector {
     // Unit: ms (milliseconds), relative to selection area start
     // ============================================================
     if (peakFrameIdx < timeFrames.length) {
-      // Convert from seconds to milliseconds, using timeFrames[0] as reference point
+      // Convert from seconds to milliseconds, using first frame as reference point (0 ms)
       const peakTimeInSeconds = timeFrames[peakFrameIdx];
-      const selectionStartTime_ms = timeFrames[0] * 1000;  // First frame time in ms
-      call.peakFreqTime_ms = (peakTimeInSeconds * 1000) - selectionStartTime_ms;
+      const firstFrameTimeInSeconds = timeFrames[0];
+      const relativeTime_ms = (peakTimeInSeconds - firstFrameTimeInSeconds) * 1000;
+      call.peakFreqTime_ms = relativeTime_ms;  // Time relative to selection area start
     }
     
     // ============================================================
@@ -1785,8 +1786,8 @@ export class BatCallDetector {
     // highFreqTime_ms = absolute time of high frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
     // ============================================================
-    const selectionStartTime_ms = timeFrames[0] * 1000;  // First frame time in ms
-    const firstFrameTime_ms = (timeFrames[0] * 1000) - selectionStartTime_ms;
+    const firstFrameTimeInSeconds = timeFrames[0];
+    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
     call.highFreqTime_ms = firstFrameTime_ms;  // High frequency is from first frame
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
@@ -1971,7 +1972,8 @@ export class BatCallDetector {
     // endFreq_ms = same as lowFreq_ms (end frequency = low frequency)
     // Unit: ms (milliseconds), relative to selection area start
     // ============================================================
-    const lastFrameTime_ms = (lastFrameTime_s * 1000) - selectionStartTime_ms;
+    const firstFrameTimeInSeconds_low = timeFrames[0];
+    const lastFrameTime_ms = (lastFrameTime_s - firstFrameTimeInSeconds_low) * 1000;  // Time relative to selection area start
     call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from last frame
     call.endFreq_ms = lastFrameTime_ms;  // End frequency = Low frequency (same time)
     
@@ -2270,7 +2272,8 @@ export class BatCallDetector {
     // ============================================================
     if (characteristicFreq_FrameIdx < timeFrames.length) {
       const charFreqTime_s = timeFrames[characteristicFreq_FrameIdx];
-      call.characteristicFreq_ms = (charFreqTime_s * 1000) - selectionStartTime_ms;
+      const firstFrameTimeInSeconds_char = timeFrames[0];
+      call.characteristicFreq_ms = (charFreqTime_s - firstFrameTimeInSeconds_char) * 1000;  // Time relative to selection area start
     }
     
     // ============================================================
@@ -2517,7 +2520,8 @@ export class BatCallDetector {
       // Unit: ms (milliseconds), relative to selection area start
       // ============================================================
       const kneeFreqTime_s = timeFrames[finalKneeIdx];
-      call.kneeFreq_ms = (kneeFreqTime_s * 1000) - selectionStartTime_ms;
+      const firstFrameTimeInSeconds_knee = timeFrames[0];
+      call.kneeFreq_ms = (kneeFreqTime_s - firstFrameTimeInSeconds_knee) * 1000;  // Time relative to selection area start
       
       // Calculate knee time from call start
       if (call.startTime_s !== null) {
