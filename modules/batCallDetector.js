@@ -1426,12 +1426,14 @@ export class BatCallDetector {
     // NEW (2025): Calculate peak frequency time in milliseconds
     // peakFreqTime_ms = absolute time of peak frequency frame within selection area
     // Unit: ms (milliseconds), relative to selection area start
+    // Duration formula: (endFreqTime_s - startFreqTime_s) * 1000
+    // So peakFreq_ms should use: (peakTimeInSeconds - startFreqTime_s) * 1000
     // ============================================================
     if (peakFrameIdx < timeFrames.length) {
-      // Convert from seconds to milliseconds, using first frame as reference point (0 ms)
+      // Convert from seconds to milliseconds, using call's start time as reference
       const peakTimeInSeconds = timeFrames[peakFrameIdx];
-      const firstFrameTimeInSeconds = timeFrames[0];
-      const relativeTime_ms = (peakTimeInSeconds - firstFrameTimeInSeconds) * 1000;
+      const startTimeInSeconds = call.startFreqTime_s;  // Use call's start time
+      const relativeTime_ms = (peakTimeInSeconds - startTimeInSeconds) * 1000;
       call.peakFreqTime_ms = relativeTime_ms;  // Time relative to selection area start
     }
     
@@ -1785,9 +1787,9 @@ export class BatCallDetector {
     // NEW (2025): Calculate high frequency time in milliseconds
     // highFreqTime_ms = absolute time of high frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
+    // First frame time = 0 ms (relative to call start)
     // ============================================================
-    const firstFrameTimeInSeconds = timeFrames[0];
-    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
+    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to call start
     call.highFreqTime_ms = firstFrameTime_ms;  // High frequency is from first frame
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
@@ -1971,9 +1973,10 @@ export class BatCallDetector {
     // lowFreq_ms = absolute time of low frequency bin (from last frame) within selection area
     // endFreq_ms = same as lowFreq_ms (end frequency = low frequency)
     // Unit: ms (milliseconds), relative to selection area start
+    // Formula: duration_ms = (endFreqTime_s - startFreqTime_s) * 1000
+    // So lastFrameTime_ms = (lastFrameTime_s - startFreqTime_s) * 1000
     // ============================================================
-    const firstFrameTimeInSeconds_low = timeFrames[0];
-    const lastFrameTime_ms = (lastFrameTime_s - firstFrameTimeInSeconds_low) * 1000;  // Time relative to selection area start
+    const lastFrameTime_ms = (lastFrameTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
     call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from last frame
     call.endFreq_ms = lastFrameTime_ms;  // End frequency = Low frequency (same time)
     
@@ -2269,11 +2272,11 @@ export class BatCallDetector {
     // NEW (2025): Calculate characteristic frequency time in milliseconds
     // characteristicFreq_ms = absolute time of characteristic frequency point within selection area
     // Unit: ms (milliseconds), relative to selection area start
+    // Formula: (characteristicFreq_s - startFreqTime_s) * 1000
     // ============================================================
     if (characteristicFreq_FrameIdx < timeFrames.length) {
       const charFreqTime_s = timeFrames[characteristicFreq_FrameIdx];
-      const firstFrameTimeInSeconds_char = timeFrames[0];
-      call.characteristicFreq_ms = (charFreqTime_s - firstFrameTimeInSeconds_char) * 1000;  // Time relative to selection area start
+      call.characteristicFreq_ms = (charFreqTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
     }
     
     // ============================================================
@@ -2518,10 +2521,10 @@ export class BatCallDetector {
       // NEW (2025): Calculate knee frequency time in milliseconds
       // kneeFreq_ms = absolute time of knee frequency point within selection area
       // Unit: ms (milliseconds), relative to selection area start
+      // Formula: (kneeFreqTime_s - startFreqTime_s) * 1000
       // ============================================================
       const kneeFreqTime_s = timeFrames[finalKneeIdx];
-      const firstFrameTimeInSeconds_knee = timeFrames[0];
-      call.kneeFreq_ms = (kneeFreqTime_s - firstFrameTimeInSeconds_knee) * 1000;  // Time relative to selection area start
+      call.kneeFreq_ms = (kneeFreqTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
       
       // Calculate knee time from call start
       if (call.startTime_s !== null) {
