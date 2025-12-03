@@ -1752,6 +1752,7 @@ export class BatCallDetector {
     // 2025 UPDATED: Search entire spectrogram, not just first frame
     // Find the highest frequency and the frame where it occurs
     // ============================================================
+    const firstFramePower = spectrogram[0];  // 2025: Get first frame power for Start Frequency calculation
     let highFreq_Hz = 0;  // Start from 0, find the maximum
     let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
     let highFreqFrameIdx = 0;  // 2025: Track frame index where High Frequency is found
