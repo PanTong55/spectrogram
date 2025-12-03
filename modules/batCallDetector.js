@@ -1880,9 +1880,9 @@ export class BatCallDetector {
     // Unit: ms (milliseconds), relative to selection area start
     // NOTE: Start Frequency and High Frequency use different thresholds (-24dB vs adaptive)
     // so they have independent bin indices (startFreqBinIdx vs highFreqBinIdx).
-    // Both are from first frame, so both times equal firstFrameTime_ms = 0.0ms
+    // Both are from first frame, so both times equal 0.0ms
     // ============================================================
-    call.startFreq_ms = firstFrameTime_ms;  // Start frequency is from first frame (same as high frequency)
+    call.startFreq_ms = 0;  // Start frequency is from first frame (same as high frequency)
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
@@ -2526,20 +2526,17 @@ export class BatCallDetector {
       const kneeFreqTime_s = timeFrames[finalKneeIdx];
       call.kneeFreq_ms = (kneeFreqTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
       
-      // Calculate knee time from call start
-      if (call.startTime_s !== null) {
-        const rawKneeTime_ms = (timeFrames[finalKneeIdx] - call.startTime_s) * 1000;
+      // Calculate knee time from call start (using startFreqTime_s as reference)
+      // This ensures knee time is consistent with duration calculation
+      // Formula: (timeFrames[finalKneeIdx] - startFreqTime_s) * 1000
+      const rawKneeTime_ms = (timeFrames[finalKneeIdx] - call.startFreqTime_s) * 1000;
         
-        // SAFETY CHECK: Ensure knee time is valid
-        // Must be positive and less than duration
-        if (rawKneeTime_ms >= 0 && rawKneeTime_ms <= call.duration_ms) {
-          call.kneeTime_ms = rawKneeTime_ms;
-        } else {
-          // Invalid knee time, reset to null (no valid knee)
-          call.kneeTime_ms = null;
-          call.kneeFreq_kHz = null;
-        }
+      // SAFETY CHECK: Ensure knee time is valid
+      // Must be positive and less than duration
+      if (rawKneeTime_ms >= 0 && rawKneeTime_ms <= call.duration_ms) {
+        call.kneeTime_ms = rawKneeTime_ms;
       } else {
+        // Invalid knee time, reset to null (no valid knee)
         call.kneeTime_ms = null;
         call.kneeFreq_kHz = null;
       }
