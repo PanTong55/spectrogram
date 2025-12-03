@@ -1746,51 +1746,72 @@ export class BatCallDetector {
     // (見 STEP 3 的結尾)
     
     // ============================================================
-    // STEP 2: Calculate HIGH FREQUENCY from entire spectrogram
+    // STEP 2: Calculate HIGH FREQUENCY from first frame
     // Professional standard: threshold at adjustable dB below peak
-    // This is the HIGHEST frequency in the call (throughout all frames)
-    // 2025 UPDATED: Search entire spectrogram, not just first frame
-    // Find the highest frequency and the frame where it occurs
+    // This is the HIGHEST frequency in the call (from first frame)
+    // Search from HIGH to LOW frequency (reverse bin order)
     // ============================================================
-    const firstFramePower = spectrogram[0];  // 2025: Get first frame power for Start Frequency calculation
-    let highFreq_Hz = 0;  // Start from 0, find the maximum
+    const firstFramePower = spectrogram[0];
+    let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
-    let highFreqFrameIdx = 0;  // 2025: Track frame index where High Frequency is found
     
-    // 2025: Scan entire spectrogram to find the highest frequency above threshold
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-      const framePower = spectrogram[frameIdx];
-      // Scan from high to low frequency (reverse bin order) to find first bin above threshold
-      for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
-        if (framePower[binIdx] > highThreshold_dB) {
-          // Found a bin above threshold in this frame
-          const currentFreq = freqBins[binIdx];
+    // 2025: 如果在 Auto Mode 防呆檢查中找到了 High Frequency bin index，直接使用
+    // 否則進行普通的掃描查找 bin index
+    if (this.config.highFreqThreshold_dB_isAuto === true && typeof safeHighFreqBinIdx !== 'undefined' && safeHighFreqBinIdx !== null) {
+      // Auto Mode: Use the bin index found during anti-dummy check
+      highFreqBinIdx = safeHighFreqBinIdx;
+      highFreq_Hz = safeHighFreq_Hz;  // Use the frequency from Anti-dummy check
+    } else {
+      // Manual Mode or Auto Mode without anti-dummy check: perform normal scan
+      // Search from high to low frequency (reverse order)
+      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
+        if (firstFramePower[binIdx] > highThreshold_dB) {
+          // Found first bin above threshold
+          highFreq_Hz = freqBins[binIdx];
+          highFreqBinIdx = binIdx;  // 2025: Store bin index for High Frequency
           
-          // Check if this is the highest frequency found so far
-          if (currentFreq > highFreq_Hz) {
-            highFreq_Hz = currentFreq;
-            highFreqBinIdx = binIdx;
-            highFreqFrameIdx = frameIdx;
+          // Attempt linear interpolation for sub-bin precision
+          if (binIdx < firstFramePower.length - 1) {
+            const thisPower = firstFramePower[binIdx];
+            const nextPower = firstFramePower[binIdx + 1];
             
-            // Attempt linear interpolation for sub-bin precision
-            if (binIdx < framePower.length - 1) {
-              const thisPower = framePower[binIdx];
-              const nextPower = framePower[binIdx + 1];
-              
-              if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
-                // Interpolate between this bin and next
-                const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
-                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-                highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
-              }
+            if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
+              // Interpolate between this bin and next
+              const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
             }
           }
-          break;  // Found highest bin in this frame, move to next frame
+          break;
         }
       }
     }
     
     call.highFreq_kHz = highFreq_Hz / 1000;
+    
+    // ============================================================
+    // NEW (2025): Calculate high frequency time in milliseconds
+    // highFreqTime_ms = time when the High Frequency bin (highFreqBinIdx) first exceeds threshold
+    // Unit: ms (milliseconds), relative to selection area start
+    // 2025: Find the first frame where highFreqBinIdx bin exceeds highThreshold_dB
+    // ============================================================
+    const firstFrameTimeInSeconds = timeFrames[0];
+    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
+    let highFreqTime_ms = firstFrameTime_ms;  // Default to first frame
+    
+    // Find the frame where High Frequency bin first appears above threshold
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      if (highFreqBinIdx >= 0 && highFreqBinIdx < spectrogram[frameIdx].length) {
+        if (spectrogram[frameIdx][highFreqBinIdx] > highThreshold_dB) {
+          // Found the first frame where this bin exceeds threshold
+          const frameTime_s = timeFrames[frameIdx];
+          highFreqTime_ms = (frameTime_s - firstFrameTimeInSeconds) * 1000;
+          break;
+        }
+      }
+    }
+    
+    call.highFreqTime_ms = highFreqTime_ms;
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
     // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
@@ -1811,9 +1832,6 @@ export class BatCallDetector {
     // 若 Peak Frequency ≥ 60 kHz，則 Start Frequency 不能 ≤ 40 kHz
     // 在掃描時忽略 40 kHz 或以下的 bin，防止誤判低頻 noise 為 Start Frequency
     // ============================================================
-    const firstFrameTimeInSeconds = timeFrames[0];
-    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
-    
     let startFreq_Hz = null;
     let startFreq_kHz = null;
     let startFreqBinIdx = 0;  // 2025: Track independent bin index for Start Frequency
@@ -1899,40 +1917,6 @@ export class BatCallDetector {
     }
     
     call.startFreq_ms = startFreqTime_ms;
-    
-    // ============================================================
-    // NEW (2025): Calculate high frequency time relative to start frequency time
-    // highFreqTime_ms = time when the High Frequency is found in the spectrogram
-    // Unit: ms (milliseconds), relative to Start Frequency time (not first frame)
-    // 2025: High Frequency time is relative to Start Frequency time
-    // ============================================================
-    let highFreqTime_ms = 0;  // Default: same time as Start Frequency
-    
-    // High Frequency time relative to Start Frequency time
-    if (highFreqFrameIdx >= 0 && highFreqFrameIdx < timeFrames.length) {
-      const highFreqFrameTime_s = timeFrames[highFreqFrameIdx];
-      const startFreqFrameTime_s = timeFrames[0];  // Start Frequency is always from first frame (0.00ms baseline)
-      // But we need to use startFreqTime_ms's corresponding frame time
-      // Since startFreqTime_ms might be from a different frame if the bin doesn't start in frame 0
-      // We calculate it relative to the first frame, then adjust
-      
-      // Get the frame index where Start Frequency appears
-      let startFreqFrameIdx = 0;
-      for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-        if (startFreqBinIdx >= 0 && startFreqBinIdx < spectrogram[frameIdx].length) {
-          if (spectrogram[frameIdx][startFreqBinIdx] > threshold_24dB_forTime) {
-            startFreqFrameIdx = frameIdx;
-            break;
-          }
-        }
-      }
-      
-      // Calculate High Frequency time relative to Start Frequency frame
-      const startFreqFrameTime_s_actual = timeFrames[startFreqFrameIdx];
-      highFreqTime_ms = (highFreqFrameTime_s - startFreqFrameTime_s_actual) * 1000;
-    }
-    
-    call.highFreqTime_ms = highFreqTime_ms;
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
