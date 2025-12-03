@@ -1906,8 +1906,10 @@ export class BatCallDetector {
     // - Detects rebounce transitions: Maintains accurate frequency boundaries
     // - Protects against echo tails: Precise threshold crossing detection
     // ============================================================
-    const lastFramePower = spectrogram[spectrogram.length - 1];
-    const lastFrameTime_s = timeFrames[timeFrames.length - 1];  // Time of last frame
+    // 2025: Limit Low Frequency calculation to newEndFrameIdx (call end point)
+    const endFrameIdx_forLowFreq = Math.min(newEndFrameIdx, spectrogram.length - 1);
+    const lastFramePower = spectrogram[endFrameIdx_forLowFreq];
+    const lastFrameTime_s = timeFrames[endFrameIdx_forLowFreq];  // Time of call end frame
     let lowFreq_Hz = flowKHz * 1000;  // Default to lower bound
     
     // Search from low to high frequency using fixed -27dB threshold
@@ -1968,13 +1970,14 @@ export class BatCallDetector {
     
     // ============================================================
     // NEW (2025): Calculate low and end frequency times in milliseconds
-    // lowFreq_ms = absolute time of low frequency bin (from last frame) within selection area
+    // lowFreq_ms = absolute time of low frequency bin (from end frame, limited by newEndFrameIdx) within selection area
     // endFreq_ms = same as lowFreq_ms (end frequency = low frequency)
     // Unit: ms (milliseconds), relative to selection area start
+    // 2025: Ensure time values do not exceed call end time (newEndFrameIdx)
     // ============================================================
     const firstFrameTimeInSeconds_low = timeFrames[0];
     const lastFrameTime_ms = (lastFrameTime_s - firstFrameTimeInSeconds_low) * 1000;  // Time relative to selection area start
-    call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from last frame
+    call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from end frame (limited by newEndFrameIdx)
     call.endFreq_ms = lastFrameTime_ms;  // End frequency = Low frequency (same time)
     
     // 2025: 在 manual mode 下保存實際使用的 low frequency threshold
@@ -2205,12 +2208,15 @@ export class BatCallDetector {
     // - Characteristic frequency ≈ End frequency (lowest)
     // 
     // Method: Extract CENTER frequency from last 10-20% portion
+    // 2025: Limit search range to endFrameIdx_forLowFreq (call end, limited by newEndFrameIdx)
     // ============================================================
-    const lastPercentStart = Math.floor(spectrogram.length * (1 - characteristicFreq_percentEnd / 100));
+    // Use endFrameIdx_forLowFreq instead of spectrogram.length - 1 to respect call boundaries
+    const charFreqSearchEnd = endFrameIdx_forLowFreq;  // Limited by newEndFrameIdx
+    const lastPercentStart = Math.floor(newStartFrameIdx + (charFreqSearchEnd - newStartFrameIdx) * (1 - characteristicFreq_percentEnd / 100));
     let characteristicFreq_Hz = peakFreq_Hz;
     let characteristicFreq_FrameIdx = 0;  // Track frame index for time calculation
     
-    if (lastPercentStart < spectrogram.length) {
+    if (lastPercentStart < charFreqSearchEnd) {
       // Method 1: Find weighted average frequency in last portion
       // This handles CF-FM calls better than just finding the minimum
       let totalPower = 0;
@@ -2218,7 +2224,8 @@ export class BatCallDetector {
       let weightedFrameIdx = 0;  // Weighted frame index for time calculation
       let totalFrameWeight = 0;
       
-      for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
+      // Search only up to charFreqSearchEnd (limited by newEndFrameIdx)
+      for (let frameIdx = Math.max(0, lastPercentStart); frameIdx <= charFreqSearchEnd; frameIdx++) {
         const framePower = spectrogram[frameIdx];
         
         // Find frame maximum for normalization
@@ -2249,8 +2256,8 @@ export class BatCallDetector {
         characteristicFreq_Hz = weightedFreq / totalPower;
         characteristicFreq_FrameIdx = Math.round(weightedFrameIdx / totalFrameWeight);
       } else {
-        // Fallback: find lowest frequency in end portion
-        for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
+        // Fallback: find lowest frequency in end portion (limited by charFreqSearchEnd)
+        for (let frameIdx = Math.max(0, lastPercentStart); frameIdx <= charFreqSearchEnd; frameIdx++) {
           const framePower = spectrogram[frameIdx];
           for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
             if (framePower[binIdx] > -Infinity) {
