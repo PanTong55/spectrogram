@@ -1426,14 +1426,12 @@ export class BatCallDetector {
     // NEW (2025): Calculate peak frequency time in milliseconds
     // peakFreqTime_ms = absolute time of peak frequency frame within selection area
     // Unit: ms (milliseconds), relative to selection area start
-    // Duration formula: (endFreqTime_s - startFreqTime_s) * 1000
-    // So peakFreq_ms should use: (peakTimeInSeconds - startFreqTime_s) * 1000
     // ============================================================
     if (peakFrameIdx < timeFrames.length) {
-      // Convert from seconds to milliseconds, using call's start time as reference
+      // Convert from seconds to milliseconds, using first frame as reference point (0 ms)
       const peakTimeInSeconds = timeFrames[peakFrameIdx];
-      const startTimeInSeconds = call.startFreqTime_s;  // Use call's start time
-      const relativeTime_ms = (peakTimeInSeconds - startTimeInSeconds) * 1000;
+      const firstFrameTimeInSeconds = timeFrames[0];
+      const relativeTime_ms = (peakTimeInSeconds - firstFrameTimeInSeconds) * 1000;
       call.peakFreqTime_ms = relativeTime_ms;  // Time relative to selection area start
     }
     
@@ -1787,9 +1785,9 @@ export class BatCallDetector {
     // NEW (2025): Calculate high frequency time in milliseconds
     // highFreqTime_ms = absolute time of high frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
-    // First frame time = 0 ms (relative to call start)
     // ============================================================
-    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to call start
+    const firstFrameTimeInSeconds = timeFrames[0];
+    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
     call.highFreqTime_ms = firstFrameTime_ms;  // High frequency is from first frame
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
@@ -1880,9 +1878,9 @@ export class BatCallDetector {
     // Unit: ms (milliseconds), relative to selection area start
     // NOTE: Start Frequency and High Frequency use different thresholds (-24dB vs adaptive)
     // so they have independent bin indices (startFreqBinIdx vs highFreqBinIdx).
-    // Both are from first frame, so both times equal 0.0ms
+    // Both are from first frame, so both times equal firstFrameTime_ms = 0.0ms
     // ============================================================
-    call.startFreq_ms = 0;  // Start frequency is from first frame (same as high frequency)
+    call.startFreq_ms = firstFrameTime_ms;  // Start frequency is from first frame (same as high frequency)
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
@@ -1973,10 +1971,9 @@ export class BatCallDetector {
     // lowFreq_ms = absolute time of low frequency bin (from last frame) within selection area
     // endFreq_ms = same as lowFreq_ms (end frequency = low frequency)
     // Unit: ms (milliseconds), relative to selection area start
-    // Formula: duration_ms = (endFreqTime_s - startFreqTime_s) * 1000
-    // So lastFrameTime_ms = (lastFrameTime_s - startFreqTime_s) * 1000
     // ============================================================
-    const lastFrameTime_ms = (lastFrameTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
+    const firstFrameTimeInSeconds_low = timeFrames[0];
+    const lastFrameTime_ms = (lastFrameTime_s - firstFrameTimeInSeconds_low) * 1000;  // Time relative to selection area start
     call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from last frame
     call.endFreq_ms = lastFrameTime_ms;  // End frequency = Low frequency (same time)
     
@@ -2272,11 +2269,11 @@ export class BatCallDetector {
     // NEW (2025): Calculate characteristic frequency time in milliseconds
     // characteristicFreq_ms = absolute time of characteristic frequency point within selection area
     // Unit: ms (milliseconds), relative to selection area start
-    // Formula: (characteristicFreq_s - startFreqTime_s) * 1000
     // ============================================================
     if (characteristicFreq_FrameIdx < timeFrames.length) {
       const charFreqTime_s = timeFrames[characteristicFreq_FrameIdx];
-      call.characteristicFreq_ms = (charFreqTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
+      const firstFrameTimeInSeconds_char = timeFrames[0];
+      call.characteristicFreq_ms = (charFreqTime_s - firstFrameTimeInSeconds_char) * 1000;  // Time relative to selection area start
     }
     
     // ============================================================
@@ -2521,22 +2518,25 @@ export class BatCallDetector {
       // NEW (2025): Calculate knee frequency time in milliseconds
       // kneeFreq_ms = absolute time of knee frequency point within selection area
       // Unit: ms (milliseconds), relative to selection area start
-      // Formula: (kneeFreqTime_s - startFreqTime_s) * 1000
       // ============================================================
       const kneeFreqTime_s = timeFrames[finalKneeIdx];
-      call.kneeFreq_ms = (kneeFreqTime_s - call.startFreqTime_s) * 1000;  // Time relative to call start
+      const firstFrameTimeInSeconds_knee = timeFrames[0];
+      call.kneeFreq_ms = (kneeFreqTime_s - firstFrameTimeInSeconds_knee) * 1000;  // Time relative to selection area start
       
-      // Calculate knee time from call start (using startFreqTime_s as reference)
-      // This ensures knee time is consistent with duration calculation
-      // Formula: (timeFrames[finalKneeIdx] - startFreqTime_s) * 1000
-      const rawKneeTime_ms = (timeFrames[finalKneeIdx] - call.startFreqTime_s) * 1000;
+      // Calculate knee time from call start
+      if (call.startTime_s !== null) {
+        const rawKneeTime_ms = (timeFrames[finalKneeIdx] - call.startTime_s) * 1000;
         
-      // SAFETY CHECK: Ensure knee time is valid
-      // Must be positive and less than duration
-      if (rawKneeTime_ms >= 0 && rawKneeTime_ms <= call.duration_ms) {
-        call.kneeTime_ms = rawKneeTime_ms;
+        // SAFETY CHECK: Ensure knee time is valid
+        // Must be positive and less than duration
+        if (rawKneeTime_ms >= 0 && rawKneeTime_ms <= call.duration_ms) {
+          call.kneeTime_ms = rawKneeTime_ms;
+        } else {
+          // Invalid knee time, reset to null (no valid knee)
+          call.kneeTime_ms = null;
+          call.kneeFreq_kHz = null;
+        }
       } else {
-        // Invalid knee time, reset to null (no valid knee)
         call.kneeTime_ms = null;
         call.kneeFreq_kHz = null;
       }
