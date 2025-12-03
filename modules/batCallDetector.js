@@ -1808,6 +1808,7 @@ export class BatCallDetector {
     // ============================================================
     let startFreq_Hz = null;
     let startFreq_kHz = null;
+    let startFreqBinIdx = 0;  // 2025: Track independent bin index for Start Frequency
     
     // 使用 -24dB 閾值計算 Start Frequency（無論是否 Auto Mode）
     const threshold_24dB = peakPower_dB - 24;
@@ -1836,6 +1837,7 @@ export class BatCallDetector {
           // 滿足規則 (a)：使用此值為 Start Frequency
           startFreq_Hz = testStartFreq_Hz;
           startFreq_kHz = testStartFreq_kHz;
+          startFreqBinIdx = binIdx;  // 2025: Store independent bin index for Start Frequency
           
           // 嘗試線性插值以獲得更高精度
           if (binIdx > 0) {
@@ -1859,16 +1861,21 @@ export class BatCallDetector {
       // Start Frequency = High Frequency（規則 b）
       startFreq_Hz = highFreq_Hz;
       startFreq_kHz = highFreq_Hz / 1000;
+      startFreqBinIdx = highFreqBinIdx;  // 2025: Use High Frequency's bin index if rule (a) fails
     }
     
     // 存儲 Start Frequency 及其時間點
     call.startFreq_kHz = startFreq_kHz;
     call.startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
+    call.startFreqBinIdx = startFreqBinIdx;  // 2025: Store independent bin index
     
     // ============================================================
     // NEW (2025): Calculate start frequency time in milliseconds
     // startFreq_ms = absolute time of start frequency bin (from first frame) within selection area
     // Unit: ms (milliseconds), relative to selection area start
+    // NOTE: Start Frequency and High Frequency use different thresholds (-24dB vs adaptive)
+    // so they have independent bin indices (startFreqBinIdx vs highFreqBinIdx).
+    // Both are from first frame, so both times equal firstFrameTime_ms = 0.0ms
     // ============================================================
     call.startFreq_ms = firstFrameTime_ms;  // Start frequency is from first frame (same as high frequency)
     

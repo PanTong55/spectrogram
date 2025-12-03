@@ -1066,9 +1066,6 @@ function createPopupWindow() {
   timeParamTable.className = 'bat-call-parameters-table';
   timeParamTable.innerHTML = `
     <tr>
-      <td colspan="6" style="text-align: center; font-weight: 600; color: #333; font-size: 12px; padding: 4px 0;">Frequency Parameter Times (ms)</td>
-    </tr>
-    <tr>
       <td class="param-label">Start Time:</td>
       <td class="param-value startfreq-time">-</td>
       <td class="param-unit">ms</td>
@@ -1687,54 +1684,55 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     
     // ============================================================
     // NEW (2025): Display Time Values for Frequency Parameters
+    // Display with 2 decimal places (toFixed(2))
     // ============================================================
     if (timeParamPanel) {
-      // Start Frequency time (ms)
+      // Start Frequency time (ms) - 2位小數
       if (startFreqTimeEl) {
         startFreqTimeEl.textContent = batCall.startFreq_ms !== null && batCall.startFreq_ms !== undefined 
-          ? batCall.startFreq_ms.toFixed(1) 
+          ? batCall.startFreq_ms.toFixed(2) 
           : '-';
       }
       
-      // End Frequency time (ms)
+      // End Frequency time (ms) - 2位小數
       if (endFreqTimeEl) {
         endFreqTimeEl.textContent = batCall.endFreq_ms !== null && batCall.endFreq_ms !== undefined 
-          ? batCall.endFreq_ms.toFixed(1) 
+          ? batCall.endFreq_ms.toFixed(2) 
           : '-';
       }
       
-      // High Frequency time (ms)
+      // High Frequency time (ms) - 2位小數
       if (highFreqTimeEl) {
         highFreqTimeEl.textContent = batCall.highFreqTime_ms !== null && batCall.highFreqTime_ms !== undefined 
-          ? batCall.highFreqTime_ms.toFixed(1) 
+          ? batCall.highFreqTime_ms.toFixed(2) 
           : '-';
       }
       
-      // Low Frequency time (ms)
+      // Low Frequency time (ms) - 2位小數
       if (lowFreqTimeEl) {
         lowFreqTimeEl.textContent = batCall.lowFreq_ms !== null && batCall.lowFreq_ms !== undefined 
-          ? batCall.lowFreq_ms.toFixed(1) 
+          ? batCall.lowFreq_ms.toFixed(2) 
           : '-';
       }
       
-      // Peak Frequency time (ms)
+      // Peak Frequency time (ms) - 2位小數
       if (peakFreqTimeEl) {
         peakFreqTimeEl.textContent = batCall.peakFreqTime_ms !== null && batCall.peakFreqTime_ms !== undefined 
-          ? batCall.peakFreqTime_ms.toFixed(1) 
+          ? batCall.peakFreqTime_ms.toFixed(2) 
           : '-';
       }
       
-      // Characteristic Frequency time (ms)
+      // Characteristic Frequency time (ms) - 2位小數
       if (charFreqTimeEl) {
         charFreqTimeEl.textContent = batCall.characteristicFreq_ms !== null && batCall.characteristicFreq_ms !== undefined 
-          ? batCall.characteristicFreq_ms.toFixed(1) 
+          ? batCall.characteristicFreq_ms.toFixed(2) 
           : '-';
       }
       
-      // Knee Frequency time (ms)
+      // Knee Frequency time (ms) - 2位小數
       if (kneeFreqTimeEl) {
         kneeFreqTimeEl.textContent = batCall.kneeFreq_ms !== null && batCall.kneeFreq_ms !== undefined 
-          ? batCall.kneeFreq_ms.toFixed(1) 
+          ? batCall.kneeFreq_ms.toFixed(2) 
           : '-';
       }
     }
