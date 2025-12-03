@@ -1378,13 +1378,13 @@ function createPopupWindow() {
         // 展開 - 移除 display 以恢復 CSS 中的 flex
         controlPanel.style.removeProperty('display');
         batCallControlPanel.style.removeProperty('display');
-        popup.style.height = '815px';
+        popup.style.height = '885px';
         settingBtn.classList.add('active');
       } else {
         // 隱藏
         controlPanel.style.display = 'none';
         batCallControlPanel.style.display = 'none';
-        popup.style.height = '630px';
+        popup.style.height = '696px';
         settingBtn.classList.remove('active');
       }
     });
