@@ -1811,6 +1811,9 @@ export class BatCallDetector {
     // 若 Peak Frequency ≥ 60 kHz，則 Start Frequency 不能 ≤ 40 kHz
     // 在掃描時忽略 40 kHz 或以下的 bin，防止誤判低頻 noise 為 Start Frequency
     // ============================================================
+    const firstFrameTimeInSeconds = timeFrames[0];
+    const firstFrameTime_ms = 0;  // First frame is at time 0 relative to selection area start
+    
     let startFreq_Hz = null;
     let startFreq_kHz = null;
     let startFreqBinIdx = 0;  // 2025: Track independent bin index for Start Frequency
