@@ -1053,6 +1053,57 @@ function createPopupWindow() {
     </tr>
   `;
   paramPanel.appendChild(paramTable);
+  
+  // ============================================================
+  // NEW (2025): Add Time Values Table for Frequency Parameters
+  // Display absolute time (in ms) for each of the 7 frequency parameters
+  // ============================================================
+  const timeParamPanel = document.createElement('div');
+  timeParamPanel.className = 'bat-call-parameters-panel';
+  timeParamPanel.id = 'batCallParametersTimePanel';
+  
+  const timeParamTable = document.createElement('table');
+  timeParamTable.className = 'bat-call-parameters-table';
+  timeParamTable.innerHTML = `
+    <tr>
+      <td colspan="6" style="text-align: center; font-weight: 600; color: #333; font-size: 12px; padding: 4px 0;">Frequency Parameter Times (ms)</td>
+    </tr>
+    <tr>
+      <td class="param-label">Start Time:</td>
+      <td class="param-value startfreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">End Time:</td>
+      <td class="param-value endfreq-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
+      <td class="param-label">High Time:</td>
+      <td class="param-value highfreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">Low Time:</td>
+      <td class="param-value lowfreq-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
+      <td class="param-label">Peak Time:</td>
+      <td class="param-value peakfreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td class="param-label">Char Time:</td>
+      <td class="param-value charfreq-time">-</td>
+      <td class="param-unit">ms</td>
+    </tr>
+    <tr>
+      <td class="param-label">Knee Time:</td>
+      <td class="param-value kneefreq-time">-</td>
+      <td class="param-unit">ms</td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>
+  `;
+  timeParamPanel.appendChild(timeParamTable);
+  popup.appendChild(timeParamPanel);
+  
   popup.appendChild(paramPanel);
 
   // 建立 Bat Call 檢測參數控制面板
@@ -1573,6 +1624,23 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
   const snrEl = paramPanel.querySelector('.snr');
   const qualityEl = paramPanel.querySelector('.quality');
   
+  // ============================================================
+  // NEW (2025): Update Time Values for Frequency Parameters
+  // ============================================================
+  const timeParamPanel = popup.querySelector('#batCallParametersTimePanel');
+  let startFreqTimeEl, endFreqTimeEl, highFreqTimeEl, lowFreqTimeEl;
+  let peakFreqTimeEl, charFreqTimeEl, kneeFreqTimeEl;
+  
+  if (timeParamPanel) {
+    startFreqTimeEl = timeParamPanel.querySelector('.startfreq-time');
+    endFreqTimeEl = timeParamPanel.querySelector('.endfreq-time');
+    highFreqTimeEl = timeParamPanel.querySelector('.highfreq-time');
+    lowFreqTimeEl = timeParamPanel.querySelector('.lowfreq-time');
+    peakFreqTimeEl = timeParamPanel.querySelector('.peakfreq-time');
+    charFreqTimeEl = timeParamPanel.querySelector('.charfreq-time');
+    kneeFreqTimeEl = timeParamPanel.querySelector('.kneefreq-time');
+  }
+  
   if (batCall) {
     peakFreqEl.textContent = batCall.peakFreq_kHz?.toFixed(2) || '-';
     // Display startFreq_kHz calculated from -24dB threshold (Rule a/b applied)
@@ -1616,6 +1684,60 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
       qualityEl.textContent = '-';
       qualityEl.className = 'param-value quality';
     }
+    
+    // ============================================================
+    // NEW (2025): Display Time Values for Frequency Parameters
+    // ============================================================
+    if (timeParamPanel) {
+      // Start Frequency time (ms)
+      if (startFreqTimeEl) {
+        startFreqTimeEl.textContent = batCall.startFreq_ms !== null && batCall.startFreq_ms !== undefined 
+          ? batCall.startFreq_ms.toFixed(1) 
+          : '-';
+      }
+      
+      // End Frequency time (ms)
+      if (endFreqTimeEl) {
+        endFreqTimeEl.textContent = batCall.endFreq_ms !== null && batCall.endFreq_ms !== undefined 
+          ? batCall.endFreq_ms.toFixed(1) 
+          : '-';
+      }
+      
+      // High Frequency time (ms)
+      if (highFreqTimeEl) {
+        highFreqTimeEl.textContent = batCall.highFreqTime_ms !== null && batCall.highFreqTime_ms !== undefined 
+          ? batCall.highFreqTime_ms.toFixed(1) 
+          : '-';
+      }
+      
+      // Low Frequency time (ms)
+      if (lowFreqTimeEl) {
+        lowFreqTimeEl.textContent = batCall.lowFreq_ms !== null && batCall.lowFreq_ms !== undefined 
+          ? batCall.lowFreq_ms.toFixed(1) 
+          : '-';
+      }
+      
+      // Peak Frequency time (ms)
+      if (peakFreqTimeEl) {
+        peakFreqTimeEl.textContent = batCall.peakFreqTime_ms !== null && batCall.peakFreqTime_ms !== undefined 
+          ? batCall.peakFreqTime_ms.toFixed(1) 
+          : '-';
+      }
+      
+      // Characteristic Frequency time (ms)
+      if (charFreqTimeEl) {
+        charFreqTimeEl.textContent = batCall.characteristicFreq_ms !== null && batCall.characteristicFreq_ms !== undefined 
+          ? batCall.characteristicFreq_ms.toFixed(1) 
+          : '-';
+      }
+      
+      // Knee Frequency time (ms)
+      if (kneeFreqTimeEl) {
+        kneeFreqTimeEl.textContent = batCall.kneeFreq_ms !== null && batCall.kneeFreq_ms !== undefined 
+          ? batCall.kneeFreq_ms.toFixed(1) 
+          : '-';
+      }
+    }
   } else {
     // 只顯示 peak freq，其他為空
     peakFreqEl.textContent = peakFreqFallback?.toFixed(2) || '-';
@@ -1637,6 +1759,19 @@ function updateParametersDisplay(popup, batCall, peakFreqFallback = null) {
     snrEl.className = 'param-value snr';
     qualityEl.textContent = '-';
     qualityEl.className = 'param-value quality';
+    
+    // ============================================================
+    // NEW (2025): Clear Time Values when no call data
+    // ============================================================
+    if (timeParamPanel) {
+      if (startFreqTimeEl) startFreqTimeEl.textContent = '-';
+      if (endFreqTimeEl) endFreqTimeEl.textContent = '-';
+      if (highFreqTimeEl) highFreqTimeEl.textContent = '-';
+      if (lowFreqTimeEl) lowFreqTimeEl.textContent = '-';
+      if (peakFreqTimeEl) peakFreqTimeEl.textContent = '-';
+      if (charFreqTimeEl) charFreqTimeEl.textContent = '-';
+      if (kneeFreqTimeEl) kneeFreqTimeEl.textContent = '-';
+    }
   }
 }
 

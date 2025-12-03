@@ -2357,7 +2357,7 @@ input.tag-button.editing {
 .power-spectrum-popup {
   position: fixed;
   width: 450px;
-  height: 630px;
+  height: 800px;  /* 2025: Increased from 630px to accommodate new time values table */
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
@@ -2423,7 +2423,7 @@ input.tag-button.editing {
   border-radius: 5px;
   border: 1px solid #ddd;
   margin: 5px 5px 5px 5px;
-  max-height: 150px;
+  max-height: 300px;  /* 2025: Increased from 150px to accommodate time values table */
   font-size: 12px;
   font-family: 'Noto Sans HK', 'Courier New', monospace;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;

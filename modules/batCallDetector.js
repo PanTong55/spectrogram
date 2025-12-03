@@ -117,16 +117,33 @@ export class BatCall {
     this.endTime_s = null;          // Call end time (seconds)
     this.duration_ms = null;        // Total duration (milliseconds)
     
+    // ============================================================
+    // 7 Frequency Parameters with Time Values (ms)
+    // ============================================================
     this.peakFreq_kHz = null;       // Peak frequency (kHz) - absolute max power
+    this.peakFreqTime_ms = null;    // Peak frequency time (ms) - time of peak power frame (absolute time in selection area)
+    
     this.highFreq_kHz = null;       // High frequency (kHz) - highest frequency in call (calculated from first frame)
+    this.highFreqTime_ms = null;    // High frequency time (ms) - time of high frequency bin (absolute time in selection area)
+    
     this.startFreq_kHz = null;      // Start frequency (kHz) - time-domain start frequency (from first frame, -24dB threshold)
-    this.startFreqTime_s = null;    // Start frequency time (s) - time point of start frequency (from first frame)
-    this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (may be optimized with Start Frequency)
+    this.startFreq_ms = null;       // Start frequency time (ms) - absolute time of start frequency in selection area
+    this.startFreqTime_s = null;    // Start frequency time (s) - time point of start frequency (from first frame) [deprecated in favor of startFreq_ms]
+    
     this.endFreq_kHz = null;        // End frequency (kHz) - time-domain end frequency (from last frame, -27dB threshold)
-    this.endFreqTime_s = null;      // End frequency time (s) - time point of end frequency (from last frame)
+    this.endFreq_ms = null;         // End frequency time (ms) - absolute time of end frequency in selection area
+    this.endFreqTime_s = null;      // End frequency time (s) - time point of end frequency (from last frame) [deprecated in favor of endFreq_ms]
+    
+    this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (may be optimized with Start Frequency)
+    this.lowFreq_ms = null;         // Low frequency time (ms) - absolute time of low frequency in selection area
+    
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
+    this.characteristicFreq_ms = null;   // Characteristic frequency time (ms) - absolute time of characteristic frequency in selection area
+    
     this.kneeFreq_kHz = null;       // Knee frequency (kHz) - CF-FM transition point
-    this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition
+    this.kneeFreq_ms = null;        // Knee frequency time (ms) - absolute time of knee frequency in selection area
+    this.kneeTime_ms = null;        // Knee time (ms) - time at CF-FM transition [deprecated in favor of kneeFreq_ms]
+    
     this.bandwidth_kHz = null;      // Bandwidth = highFreq - lowFreq
     
     this.Flow = null;               // Low frequency boundary (Hz) - from detection range
@@ -1406,6 +1423,18 @@ export class BatCallDetector {
     call.peakPower_dB = peakPower_dB;
     
     // ============================================================
+    // NEW (2025): Calculate peak frequency time in milliseconds
+    // peakFreqTime_ms = absolute time of peak frequency frame within selection area
+    // Unit: ms (milliseconds), relative to selection area start
+    // ============================================================
+    if (peakFrameIdx < timeFrames.length) {
+      // Convert from seconds to milliseconds, using timeFrames[0] as reference point
+      const peakTimeInSeconds = timeFrames[peakFrameIdx];
+      const selectionStartTime_ms = timeFrames[0] * 1000;  // First frame time in ms
+      call.peakFreqTime_ms = (peakTimeInSeconds * 1000) - selectionStartTime_ms;
+    }
+    
+    // ============================================================
     // AUTO MODE: If highFreqThreshold_dB_isAuto is enabled,
     // automatically find optimal threshold using STABLE call.peakPower_dB
     // (NOT the floating globalPeakPower_dB from entire spectrogram)
@@ -1749,6 +1778,15 @@ export class BatCallDetector {
     }
     call.highFreq_kHz = highFreq_Hz / 1000;
     
+    // ============================================================
+    // NEW (2025): Calculate high frequency time in milliseconds
+    // highFreqTime_ms = absolute time of high frequency bin (from first frame) within selection area
+    // Unit: ms (milliseconds), relative to selection area start
+    // ============================================================
+    const selectionStartTime_ms = timeFrames[0] * 1000;  // First frame time in ms
+    const firstFrameTime_ms = (timeFrames[0] * 1000) - selectionStartTime_ms;
+    call.highFreqTime_ms = firstFrameTime_ms;  // High frequency is from first frame
+    
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
     // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
     // 計算相對於 peakPower_dB 的偏移值
@@ -1826,6 +1864,13 @@ export class BatCallDetector {
     // 存儲 Start Frequency 及其時間點
     call.startFreq_kHz = startFreq_kHz;
     call.startFreqTime_s = timeFrames[0];  // Time of first frame with start frequency
+    
+    // ============================================================
+    // NEW (2025): Calculate start frequency time in milliseconds
+    // startFreq_ms = absolute time of start frequency bin (from first frame) within selection area
+    // Unit: ms (milliseconds), relative to selection area start
+    // ============================================================
+    call.startFreq_ms = firstFrameTime_ms;  // Start frequency is from first frame (same as high frequency)
     
     // Note: startFreqTime_s is the reference point for duration calculation and knee time
     
@@ -1910,6 +1955,16 @@ export class BatCallDetector {
     let endFreq_kHz = lowFreq_Hz / 1000;
     call.endFreq_kHz = endFreq_kHz;
     call.endFreqTime_s = lastFrameTime_s;
+    
+    // ============================================================
+    // NEW (2025): Calculate low and end frequency times in milliseconds
+    // lowFreq_ms = absolute time of low frequency bin (from last frame) within selection area
+    // endFreq_ms = same as lowFreq_ms (end frequency = low frequency)
+    // Unit: ms (milliseconds), relative to selection area start
+    // ============================================================
+    const lastFrameTime_ms = (lastFrameTime_s * 1000) - selectionStartTime_ms;
+    call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from last frame
+    call.endFreq_ms = lastFrameTime_ms;  // End frequency = Low frequency (same time)
     
     // 2025: 在 manual mode 下保存實際使用的 low frequency threshold
     // Manual mode: endThreshold_dB = peakPower_dB + lowFreqThreshold_dB
@@ -2142,12 +2197,15 @@ export class BatCallDetector {
     // ============================================================
     const lastPercentStart = Math.floor(spectrogram.length * (1 - characteristicFreq_percentEnd / 100));
     let characteristicFreq_Hz = peakFreq_Hz;
+    let characteristicFreq_FrameIdx = 0;  // Track frame index for time calculation
     
     if (lastPercentStart < spectrogram.length) {
       // Method 1: Find weighted average frequency in last portion
       // This handles CF-FM calls better than just finding the minimum
       let totalPower = 0;
       let weightedFreq = 0;
+      let weightedFrameIdx = 0;  // Weighted frame index for time calculation
+      let totalFrameWeight = 0;
       
       for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
         const framePower = spectrogram[frameIdx];
@@ -2168,6 +2226,9 @@ export class BatCallDetector {
             const linearPower = Math.pow(10, power / 10);
             totalPower += linearPower;
             weightedFreq += linearPower * freqBins[binIdx];
+            // Accumulate weighted frame index
+            weightedFrameIdx += linearPower * frameIdx;
+            totalFrameWeight += linearPower;
           }
         }
       }
@@ -2175,6 +2236,7 @@ export class BatCallDetector {
       // Calculate weighted average frequency
       if (totalPower > 0) {
         characteristicFreq_Hz = weightedFreq / totalPower;
+        characteristicFreq_FrameIdx = Math.round(weightedFrameIdx / totalFrameWeight);
       } else {
         // Fallback: find lowest frequency in end portion
         for (let frameIdx = Math.max(0, lastPercentStart); frameIdx < spectrogram.length; frameIdx++) {
@@ -2182,6 +2244,7 @@ export class BatCallDetector {
           for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
             if (framePower[binIdx] > -Infinity) {
               characteristicFreq_Hz = freqBins[binIdx];
+              characteristicFreq_FrameIdx = frameIdx;
               break;
             }
           }
@@ -2190,6 +2253,16 @@ export class BatCallDetector {
     }
     
     call.characteristicFreq_kHz = characteristicFreq_Hz / 1000;
+    
+    // ============================================================
+    // NEW (2025): Calculate characteristic frequency time in milliseconds
+    // characteristicFreq_ms = absolute time of characteristic frequency point within selection area
+    // Unit: ms (milliseconds), relative to selection area start
+    // ============================================================
+    if (characteristicFreq_FrameIdx < timeFrames.length) {
+      const charFreqTime_s = timeFrames[characteristicFreq_FrameIdx];
+      call.characteristicFreq_ms = (charFreqTime_s * 1000) - selectionStartTime_ms;
+    }
     
     // ============================================================
     // STEP 5: Validate frequency relationships (Avisoft standard)
@@ -2428,6 +2501,14 @@ export class BatCallDetector {
     if (finalKneeIdx >= 0 && finalKneeIdx < frameFrequencies.length && finalKneeIdx < timeFrames.length) {
       // Use original (non-smoothed) frequency at knee point
       call.kneeFreq_kHz = frameFrequencies[finalKneeIdx] / 1000;
+      
+      // ============================================================
+      // NEW (2025): Calculate knee frequency time in milliseconds
+      // kneeFreq_ms = absolute time of knee frequency point within selection area
+      // Unit: ms (milliseconds), relative to selection area start
+      // ============================================================
+      const kneeFreqTime_s = timeFrames[finalKneeIdx];
+      call.kneeFreq_ms = (kneeFreqTime_s * 1000) - selectionStartTime_ms;
       
       // Calculate knee time from call start
       if (call.startTime_s !== null) {
