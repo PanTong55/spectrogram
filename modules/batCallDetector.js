@@ -1754,12 +1754,14 @@ export class BatCallDetector {
     // ============================================================
     const firstFramePower = spectrogram[0];
     let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+    let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
     
     // Search from high to low frequency (reverse order)
     for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
       if (firstFramePower[binIdx] > highThreshold_dB) {
         // Found first bin above threshold
         highFreq_Hz = freqBins[binIdx];
+        highFreqBinIdx = binIdx;  // 2025: Store bin index for High Frequency
         
         // Attempt linear interpolation for sub-bin precision
         if (binIdx < firstFramePower.length - 1) {
