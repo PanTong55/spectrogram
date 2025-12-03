@@ -2357,7 +2357,6 @@ input.tag-button.editing {
 .power-spectrum-popup {
   position: fixed;
   width: 450px;
-  height: 800px;  /* 2025: Increased from 630px to accommodate new time values table */
   background: white;
   border: 1px solid #ccc;
   border-radius: 10px;
