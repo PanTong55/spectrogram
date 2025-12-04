@@ -1767,11 +1767,11 @@ export class BatCallDetector {
     let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
     let highFreqFrameIdx = 0;  // 2025: Track frame index where high frequency occurs
     
-    // 2025 修正：無論是 Auto Mode 還是 Manual Mode，都掃描整個 spectrogram
-    // Auto Mode 和 Manual Mode 的差異只在使用的 threshold 値不同
-    // 但都應該在整個 spectrogram 中找最高頻率
-    // Scan entire spectrogram to find highest frequency across ALL frames
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+    // 2025 修正：只掃描 peakFrameIdx 以前的幀
+    // 由 peakFrameIdx 向前掃描（由右至左），找最高頻率
+    // Scan frames BEFORE peakFrameIdx (backward from peak to start)
+    // This ensures high frequency is found only in the ascending portion of the call
+    for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
       const framePower = spectrogram[frameIdx];
       // Search from high to low frequency (reverse order)
       for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
@@ -1780,7 +1780,7 @@ export class BatCallDetector {
           const testHighFreq_Hz = freqBins[binIdx];
           
           // Only update if this frequency is higher than previously found
-          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
+          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
             highFreq_Hz = testHighFreq_Hz;
             highFreqBinIdx = binIdx;
             highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
