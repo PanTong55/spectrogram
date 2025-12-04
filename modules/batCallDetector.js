@@ -13,7 +13,6 @@ export const DEFAULT_DETECTION_CONFIG = {
   
   // Automatic high frequency threshold optimization
   // When enabled, automatically tests thresholds from -24dB to -70dB to find optimal value that provides stable measurements
-  // Default: false (manual threshold mode)
   highFreqThreshold_dB_isAuto: true,
   
   // Low frequency threshold (dB below peak for finding edges) 
@@ -23,12 +22,10 @@ export const DEFAULT_DETECTION_CONFIG = {
   
   // Automatic low frequency threshold optimization
   // When enabled, automatically tests thresholds from -24dB to -70dB to find optimal value that provides stable measurements
-  // Works symmetrically with high frequency optimization
-  // Default: true (automatic threshold mode - enabled by default)
   lowFreqThreshold_dB_isAuto: true,
   
-  // Characteristic frequency is defined as lowest or average frequency in the last 10-20% of the call duration
-  characteristicFreq_percentEnd: 20,  // Last 20% duration
+  // Characteristic frequency is defined as lowest or average frequency in the last 20% of the call duration
+  characteristicFreq_percentEnd: 20,
   
   // Minimum call duration to be considered valid (ms)
   minCallDuration_ms: 1,
@@ -60,7 +57,6 @@ export const DEFAULT_DETECTION_CONFIG = {
   // ============================================================
   // 2025 ANTI-REBOUNCE (Anti-Echo/Reflection) PARAMETERS
   // ============================================================
-  // These parameters protect against reverberations in tunnels, forests, buildings
   
   // Trick 1: Backward scanning for end frequency detection
   // When enabled, scan from end towards start to find -27dB cutoff (prevents rebounce tail)
@@ -77,36 +73,6 @@ export const DEFAULT_DETECTION_CONFIG = {
   protectionWindowAfterPeak_ms: 10,
 };
 
-/**
- * Call type classification helper
- */
-export class CallTypeClassifier {
-  static classify(call) {
-    if (!call.bandwidth_kHz || call.bandwidth_kHz < 5) {
-      return 'CF';  // Constant Frequency
-    }
-    if (call.bandwidth_kHz > 20) {
-      return 'FM';  // Frequency Modulated
-    }
-    return 'CF-FM';  // Mixed
-  }
-  
-  /**
-   * Check if call matches CF bat characteristics
-   * CF bats: typically 10-100 kHz, low bandwidth (< 5 kHz)
-   */
-  static isCFBat(call) {
-    return call.bandwidth_kHz < 5 && call.peakFreq_kHz > 10;
-  }
-  
-  /**
-   * Check if call matches FM bat characteristics
-   * FM bats: typically 20-150 kHz, high bandwidth (> 10 kHz)
-   */
-  static isFMBat(call) {
-    return call.bandwidth_kHz > 10 && call.highFreq_kHz > call.lowFreq_kHz;  // Downward FM
-  }
-}
 
 /**
  * Represents a single detected bat call with all parameters
@@ -361,8 +327,7 @@ export class BatCallDetector {
       call.Flow = call.lowFreq_kHz * 1000;   // Lowest freq in call (Hz)
       call.Fhigh = call.highFreq_kHz;        // Highest freq in call (kHz)
       
-      // Classify call type (CF, FM, or CF-FM)
-      call.callType = CallTypeClassifier.classify(call);
+      // Call type is pre-set to 'FM' in BatCall constructor
       
       return call;
     }).filter(call => call !== null);  // 移除不符合條件的 call

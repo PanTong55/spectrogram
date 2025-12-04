@@ -11,7 +11,7 @@
  * and comparing bat call parameters with scientific precision.
  */
 
-import { BatCall, CallTypeClassifier } from './batCallDetector.js';
+import { BatCall } from './batCallDetector.js';
 
 /**
  * Batch analysis results container
