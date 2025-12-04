@@ -1762,42 +1762,69 @@ export class BatCallDetector {
     // Search from HIGH to LOW frequency (reverse bin order)
     // Track both frequency value AND the frame it appears in
     // ============================================================
-    let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
-    let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
-    let highFreqFrameIdx = 0;  // 2025: Track frame index where high frequency occurs
+    let highFreq_Hz;
+    let highFreqBinIdx;
+    let highFreqFrameIdx;
     
-    // 2025 修正：只掃描 peakFrameIdx 之前的幀
-    // 由 peakFrameIdx 向前掃描（由右至左），找最高頻率
-    // Scan frames BEFORE peakFrameIdx (backward from peak to start)
-    // This ensures high frequency is found only in the ascending portion of the call
-    for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
-      const framePower = spectrogram[frameIdx];
-      // Search from high to low frequency (reverse order)
-      for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
-        if (framePower[binIdx] > highThreshold_dB) {
-          // Found first bin above threshold in this frame
-          const testHighFreq_Hz = freqBins[binIdx];
-          
-          // Only update if this frequency is higher than previously found
-          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
-            highFreq_Hz = testHighFreq_Hz;
-            highFreqBinIdx = binIdx;
-            highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
+    // 2025 修正：在 Auto Mode 中使用 findOptimalHighFrequencyThreshold 的結果
+    // 在 Manual Mode 中通過掃描 spectrogram 找最高頻率
+    if (this.config.highFreqThreshold_dB_isAuto === true && safeHighFreq_Hz !== null) {
+      // AUTO MODE: 使用 findOptimalHighFrequencyThreshold 計算的結果
+      highFreq_Hz = safeHighFreq_Hz;
+      highFreqBinIdx = safeHighFreqBinIdx;
+      // 需要找到 highFreq_Hz 所在的 frameIdx
+      const targetFreqHz = highFreq_Hz;
+      highFreqFrameIdx = 0;
+      for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
+        const framePower = spectrogram[frameIdx];
+        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
+          const binFreqHz = freqBins[binIdx];
+          // 查找對應的幀
+          if (Math.abs(binFreqHz - targetFreqHz) < 1) {  // 允許 1Hz 誤差
+            highFreqFrameIdx = frameIdx;
+            break;
+          }
+        }
+      }
+    } else {
+      // MANUAL MODE: 掃描 spectrogram 找最高頻率
+      highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+      highFreqBinIdx = 0;
+      highFreqFrameIdx = 0;
+      
+      // 2025 修正：只掃描 peakFrameIdx 之前的幀
+      // 由 peakFrameIdx 向前掃描（由右至左），找最高頻率
+      // Scan frames BEFORE peakFrameIdx (backward from peak to start)
+      // This ensures high frequency is found only in the ascending portion of the call
+      for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
+        const framePower = spectrogram[frameIdx];
+        // Search from high to low frequency (reverse order)
+        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
+          if (framePower[binIdx] > highThreshold_dB) {
+            // Found first bin above threshold in this frame
+            const testHighFreq_Hz = freqBins[binIdx];
             
-            // Attempt linear interpolation for sub-bin precision
-            if (binIdx < framePower.length - 1) {
-              const thisPower = framePower[binIdx];
-              const nextPower = framePower[binIdx + 1];
+            // Only update if this frequency is higher than previously found
+            if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
+              highFreq_Hz = testHighFreq_Hz;
+              highFreqBinIdx = binIdx;
+              highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
               
-              if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
-                // Interpolate between this bin and next
-                const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
-                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-                highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+              // Attempt linear interpolation for sub-bin precision
+              if (binIdx < framePower.length - 1) {
+                const thisPower = framePower[binIdx];
+                const nextPower = framePower[binIdx + 1];
+                
+                if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
+                  // Interpolate between this bin and next
+                  const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
+                  const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+                  highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+                }
               }
             }
+            break;  // Move to next frame after finding first bin in this frame
           }
-          break;  // Move to next frame after finding first bin in this frame
         }
       }
     }
