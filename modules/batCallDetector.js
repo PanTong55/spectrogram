@@ -1717,25 +1717,25 @@ export class BatCallDetector {
     // (見 STEP 3 的結尾)
     
     // ============================================================
-    // STEP 2: Calculate HIGH FREQUENCY
+    // STEP 2: Calculate HIGH FREQUENCY from entire spectrogram
     // 
-    // 2025 修正：High Frequency 只掃描 peakFrameIdx 之前的幀
-    // 由 peakFrameIdx 向前掃描（由右至左），以找最高頻率
-    // 確保 High Frequency 只在 call 的上升段找到，不在下降段
+    // 2025 修正：High Frequency 應該掃描整個 spectrogram 以找到最高頻率
+    // 不只限於第一幀，因為最高頻率可能出現在任何幀中
     // 
     // Professional standard: threshold at adjustable dB below peak
+    // This is the HIGHEST frequency in the entire call (not just first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
-    // Search BACKWARD from peakFrameIdx to frame 0 (right to left)
     // Track both frequency value AND the frame it appears in
     // ============================================================
     let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
     let highFreqFrameIdx = 0;  // 2025: Track frame index where high frequency occurs
     
-    // 2025 修正：只掃描 peakFrameIdx 之前的幀，由右至左
-    // Scan frames BACKWARD from peakFrameIdx to 0 (ascending portion only)
-    // This ensures high frequency is found only in the rising portion of the call
-    for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
+    // 2025 修正：無論是 Auto Mode 還是 Manual Mode，都掃描整個 spectrogram
+    // Auto Mode 和 Manual Mode 的差異只在使用的 threshold 値不同
+    // 但都應該在整個 spectrogram 中找最高頻率
+    // Scan entire spectrogram to find highest frequency across ALL frames
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
       const framePower = spectrogram[frameIdx];
       // Search from high to low frequency (reverse order)
       for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
@@ -1744,7 +1744,7 @@ export class BatCallDetector {
           const testHighFreq_Hz = freqBins[binIdx];
           
           // Only update if this frequency is higher than previously found
-          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
+          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
             highFreq_Hz = testHighFreq_Hz;
             highFreqBinIdx = binIdx;
             highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
