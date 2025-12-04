@@ -1782,7 +1782,7 @@ export class BatCallDetector {
       highFreqFrameIdx = safeHighFreqFrameIdx; // direct from optimal finder
     } else {
       // Manual mode (or auto with no safe result): scan frames BEFORE peakFrameIdx
-      highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+      highFreq_Hz = -Infinity;  // Start with minimum, find actual maximum
       highFreqBinIdx = 0;
       highFreqFrameIdx = 0;
 
@@ -1795,8 +1795,8 @@ export class BatCallDetector {
             // Found first bin above threshold in this frame
             const testHighFreq_Hz = freqBins[binIdx];
 
-            // Update only if this frequency is higher than previously found
-            if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
+            // Update if this is the first find OR if frequency is higher than previously found
+            if (highFreq_Hz === -Infinity || testHighFreq_Hz > highFreq_Hz) {
               highFreq_Hz = testHighFreq_Hz;
               highFreqBinIdx = binIdx;
               highFreqFrameIdx = frameIdx;
@@ -1816,6 +1816,12 @@ export class BatCallDetector {
             break; // move to next (earlier) frame after finding in this frame
           }
         }
+      }
+      
+      // If no frequency found, reset to default
+      if (highFreq_Hz === -Infinity) {
+        highFreq_Hz = fhighKHz * 1000;
+        highFreqFrameIdx = 0;
       }
     }
 
