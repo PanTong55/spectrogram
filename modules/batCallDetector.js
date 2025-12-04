@@ -1733,56 +1733,61 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // 注意：Duration 將在計算完 endFreqTime_s 後根據 endFreq 的 frameIdx 計算
     // (見 STEP 3 的結尾)
     
-    // ============================================================
+// ============================================================
     // STEP 2: Calculate HIGH FREQUENCY from entire spectrogram
     // 
-    // 2025 修正：High Frequency 應該掃描整個 spectrogram 以找到最高頻率
-    // 不只限於第一幀，因為最高頻率可能出現在任何幀中
-    // 
-    // Professional standard: threshold at adjustable dB below peak
-    // This is the HIGHEST frequency in the entire call (not just first frame)
-    // Search from HIGH to LOW frequency (reverse bin order)
-    // Track both frequency value AND the frame it appears in
+    // 2025 UPDATE: Scan from left to right (Frame 0 to Peak Frame)
+    // This strictly limits detection to the "Attack Phase" to avoid 
+    // detecting rebounce/echo signals that occur after the peak.
     // ============================================================
-let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+    let highFreq_Hz = 0;  // Initialize to 0 to ensure we find the absolute maximum
     let highFreqBinIdx = 0;
     let highFreqFrameIdx = 0;
     
-    // 2025 CRITICAL CHANGE: Loop only up to peakFrameIdx
-    // Scan spectrogram frames from 0 to Peak to find highest frequency
+    // CRITICAL: Loop only up to peakFrameIdx (Attack Phase)
+    // Do not scan frames after the peak to avoid post-call artifacts
     const highFreqScanLimit = Math.min(peakFrameIdx, spectrogram.length - 1);
 
     for (let frameIdx = 0; frameIdx <= highFreqScanLimit; frameIdx++) {
       const framePower = spectrogram[frameIdx];
-      // Search from high to low frequency (reverse order)
+      
+      // Search from high to low frequency bins (reverse order)
+      // This finds the highest frequency component in the current frame
       for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
         if (framePower[binIdx] > highThreshold_dB) {
-          // Found first bin above threshold in this frame
-          const testHighFreq_Hz = freqBins[binIdx];
+          // Found highest bin above threshold in this frame
+          let testHighFreq_Hz = freqBins[binIdx];
           
-          // Only update if this frequency is higher than previously found
-          // (Or if it's the very first detection)
-          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
+          // Attempt linear interpolation for sub-bin precision
+          if (binIdx < framePower.length - 1) {
+            const thisPower = framePower[binIdx];
+            const nextPower = framePower[binIdx + 1];
+            
+            if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
+              // Interpolate between this bin and next (higher freq bin)
+              const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              testHighFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            }
+          }
+          
+          // Update global High Frequency only if this frame's high freq is higher
+          // than what we've found so far in previous frames
+          if (testHighFreq_Hz > highFreq_Hz) {
             highFreq_Hz = testHighFreq_Hz;
             highFreqBinIdx = binIdx;
             highFreqFrameIdx = frameIdx;
-            
-            // Attempt linear interpolation for sub-bin precision
-            if (binIdx < framePower.length - 1) {
-              const thisPower = framePower[binIdx];
-              const nextPower = framePower[binIdx + 1];
-              
-              if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
-                // Interpolate between this bin and next
-                const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
-                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-                highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
-              }
-            }
           }
-          break;  // Move to next frame after finding first bin in this frame
+          
+          break;  // Move to next frame immediately after finding the top edge of this frame
         }
       }
+    }
+    
+    // Fallback: If no frequency found above threshold (should be impossible if peak logic works),
+    // revert to upper bound to avoid null errors
+    if (highFreq_Hz === 0) {
+      highFreq_Hz = fhighKHz * 1000;
     }
     
     call.highFreq_kHz = highFreq_Hz / 1000;
@@ -1791,10 +1796,6 @@ let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     // ============================================================
     // NEW (2025): Calculate high frequency time in milliseconds
     // highFreqTime_ms = absolute time of high frequency bin within selection area
-    // Unit: ms (milliseconds), relative to selection area start (timeFrames[0])
-    // 
-    // Logic Preserved: Time is derived from the specific frame where High Freq occurred
-    // which is now guaranteed to be <= peakFrameIdx.
     // ============================================================
     const firstFrameTimeInSeconds = timeFrames[0];
     let highFreqTime_ms = 0;
@@ -1805,8 +1806,6 @@ let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     call.highFreqTime_ms = highFreqTime_ms;
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
-    // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
-    // 計算相對於 peakPower_dB 的偏移值
     const highFreqThreshold_dB_used_manual = highThreshold_dB - peakPower_dB;
     call.highFreqThreshold_dB_used = highFreqThreshold_dB_used_manual;
     
