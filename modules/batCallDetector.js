@@ -1779,7 +1779,8 @@ export class BatCallDetector {
     if (this.config.highFreqThreshold_dB_isAuto === true && safeHighFreq_Hz !== null) {
       highFreq_Hz = safeHighFreq_Hz;
       highFreqBinIdx = safeHighFreqBinIdx;
-      highFreqFrameIdx = safeHighFreqFrameIdx; // direct from optimal finder
+      // Ensure highFreqFrameIdx is a valid number (default to 0 if undefined)
+      highFreqFrameIdx = (safeHighFreqFrameIdx !== undefined) ? safeHighFreqFrameIdx : 0;
     } else {
       // Manual mode (or auto with no safe result): scan frames BEFORE peakFrameIdx
       highFreq_Hz = -Infinity;  // Start with minimum, find actual maximum
@@ -1837,7 +1838,8 @@ export class BatCallDetector {
     // ============================================================
     const firstFrameTimeInSeconds = timeFrames[0];
     let highFreqTime_ms = 0;
-    if (highFreqFrameIdx < timeFrames.length) {
+    // Ensure both timeFrames has enough elements and highFreqFrameIdx is valid
+    if (highFreqFrameIdx >= 0 && highFreqFrameIdx < timeFrames.length && timeFrames[highFreqFrameIdx] !== undefined) {
       const highFreqTimeInSeconds = timeFrames[highFreqFrameIdx];
       highFreqTime_ms = (highFreqTimeInSeconds - firstFrameTimeInSeconds) * 1000;
     }
@@ -1868,7 +1870,7 @@ export class BatCallDetector {
       // Update call values with corrected ones
       call.highFreq_kHz = correctedHigh_Hz / 1000;
       call.highFreqFrameIdx = correctedFrameIdx;
-      if (correctedFrameIdx < timeFrames.length) {
+      if (correctedFrameIdx >= 0 && correctedFrameIdx < timeFrames.length && timeFrames[correctedFrameIdx] !== undefined) {
         const correctedTime_s = timeFrames[correctedFrameIdx];
         call.highFreqTime_ms = (correctedTime_s - firstFrameTimeInSeconds) * 1000;
       } else {
