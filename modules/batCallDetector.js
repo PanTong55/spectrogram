@@ -13,7 +13,6 @@ export const DEFAULT_DETECTION_CONFIG = {
   
   // Automatic high frequency threshold optimization
   // When enabled, automatically tests thresholds from -24dB to -70dB to find optimal value that provides stable measurements
-  // Default: false (manual threshold mode)
   highFreqThreshold_dB_isAuto: true,
   
   // Low frequency threshold (dB below peak for finding edges) 
@@ -23,12 +22,10 @@ export const DEFAULT_DETECTION_CONFIG = {
   
   // Automatic low frequency threshold optimization
   // When enabled, automatically tests thresholds from -24dB to -70dB to find optimal value that provides stable measurements
-  // Works symmetrically with high frequency optimization
-  // Default: true (automatic threshold mode - enabled by default)
   lowFreqThreshold_dB_isAuto: true,
   
-  // Characteristic frequency is defined as lowest or average frequency in the last 10-20% of the call duration
-  characteristicFreq_percentEnd: 20,  // Last 20% duration
+  // Characteristic frequency is defined as lowest or average frequency in the last 20% of the call duration
+  characteristicFreq_percentEnd: 20,
   
   // Minimum call duration to be considered valid (ms)
   minCallDuration_ms: 1,
@@ -60,7 +57,6 @@ export const DEFAULT_DETECTION_CONFIG = {
   // ============================================================
   // 2025 ANTI-REBOUNCE (Anti-Echo/Reflection) PARAMETERS
   // ============================================================
-  // These parameters protect against reverberations in tunnels, forests, buildings
   
   // Trick 1: Backward scanning for end frequency detection
   // When enabled, scan from end towards start to find -27dB cutoff (prevents rebounce tail)
@@ -77,36 +73,6 @@ export const DEFAULT_DETECTION_CONFIG = {
   protectionWindowAfterPeak_ms: 10,
 };
 
-/**
- * Call type classification helper
- */
-export class CallTypeClassifier {
-  static classify(call) {
-    if (!call.bandwidth_kHz || call.bandwidth_kHz < 5) {
-      return 'CF';  // Constant Frequency
-    }
-    if (call.bandwidth_kHz > 20) {
-      return 'FM';  // Frequency Modulated
-    }
-    return 'CF-FM';  // Mixed
-  }
-  
-  /**
-   * Check if call matches CF bat characteristics
-   * CF bats: typically 10-100 kHz, low bandwidth (< 5 kHz)
-   */
-  static isCFBat(call) {
-    return call.bandwidth_kHz < 5 && call.peakFreq_kHz > 10;
-  }
-  
-  /**
-   * Check if call matches FM bat characteristics
-   * FM bats: typically 20-150 kHz, high bandwidth (> 10 kHz)
-   */
-  static isFMBat(call) {
-    return call.bandwidth_kHz > 10 && call.highFreq_kHz > call.lowFreq_kHz;  // Downward FM
-  }
-}
 
 /**
  * Represents a single detected bat call with all parameters
@@ -361,8 +327,7 @@ export class BatCallDetector {
       call.Flow = call.lowFreq_kHz * 1000;   // Lowest freq in call (Hz)
       call.Fhigh = call.highFreq_kHz;        // Highest freq in call (kHz)
       
-      // Classify call type (CF, FM, or CF-FM)
-      call.callType = CallTypeClassifier.classify(call);
+      // Call type is pre-set to 'FM' in BatCall constructor
       
       return call;
     }).filter(call => call !== null);  // 移除不符合條件的 call
@@ -1752,25 +1717,25 @@ export class BatCallDetector {
     // (見 STEP 3 的結尾)
     
     // ============================================================
-    // STEP 2: Calculate HIGH FREQUENCY from entire spectrogram
+    // STEP 2: Calculate HIGH FREQUENCY
     // 
-    // 2025 修正：High Frequency 應該掃描整個 spectrogram 以找到最高頻率
-    // 不只限於第一幀，因為最高頻率可能出現在任何幀中
+    // 2025 修正：High Frequency 只掃描 peakFrameIdx 之前的幀
+    // 由 peakFrameIdx 向前掃描（由右至左），以找最高頻率
+    // 確保 High Frequency 只在 call 的上升段找到，不在下降段
     // 
     // Professional standard: threshold at adjustable dB below peak
-    // This is the HIGHEST frequency in the entire call (not just first frame)
     // Search from HIGH to LOW frequency (reverse bin order)
+    // Search BACKWARD from peakFrameIdx to frame 0 (right to left)
     // Track both frequency value AND the frame it appears in
     // ============================================================
     let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
     let highFreqFrameIdx = 0;  // 2025: Track frame index where high frequency occurs
     
-    // 2025 修正：無論是 Auto Mode 還是 Manual Mode，都掃描整個 spectrogram
-    // Auto Mode 和 Manual Mode 的差異只在使用的 threshold 値不同
-    // 但都應該在整個 spectrogram 中找最高頻率
-    // Scan entire spectrogram to find highest frequency across ALL frames
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+    // 2025 修正：只掃描 peakFrameIdx 之前的幀，由右至左
+    // Scan frames BACKWARD from peakFrameIdx to 0 (ascending portion only)
+    // This ensures high frequency is found only in the rising portion of the call
+    for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
       const framePower = spectrogram[frameIdx];
       // Search from high to low frequency (reverse order)
       for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
@@ -1779,7 +1744,7 @@ export class BatCallDetector {
           const testHighFreq_Hz = freqBins[binIdx];
           
           // Only update if this frequency is higher than previously found
-          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
+          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
             highFreq_Hz = testHighFreq_Hz;
             highFreqBinIdx = binIdx;
             highFreqFrameIdx = frameIdx;  // 2025: Store the frame index
