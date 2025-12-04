@@ -762,6 +762,7 @@ export class BatCallDetector {
     for (const testThreshold_dB of thresholdRange) {
       let highFreq_Hz = null;
       let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
+      let highFreqFrameIdx = 0;  // 2025: Track frame index for High Frequency
       let startFreq_Hz = null;
       let foundBin = false;
       
@@ -778,6 +779,7 @@ export class BatCallDetector {
           if (framePower[binIdx] > highFreqThreshold_dB) {
             highFreq_Hz = freqBins[binIdx];
             highFreqBinIdx = binIdx;  // 2025: Save the bin index found
+            highFreqFrameIdx = frameIdx;  // 2025: Save the frame index found
             foundBin = true;
             
             // 嘗試線性插值以獲得更高精度
@@ -834,6 +836,7 @@ export class BatCallDetector {
         highFreq_Hz: highFreq_Hz,
         highFreq_kHz: highFreq_Hz !== null ? highFreq_Hz / 1000 : null,
         highFreqBinIdx: highFreqBinIdx,  // 2025: Include bin index in measurements
+        highFreqFrameIdx: highFreqFrameIdx,  // 2025: Include frame index in measurements
         startFreq_Hz: startFreq_Hz,
         startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
         foundBin: foundBin
@@ -968,6 +971,7 @@ export class BatCallDetector {
     let returnHighFreq_Hz = optimalMeasurement.highFreq_Hz;
     let returnHighFreq_kHz = optimalMeasurement.highFreq_kHz;
     let returnHighFreqBinIdx = optimalMeasurement.highFreqBinIdx;  // 2025: Include bin index
+    let returnHighFreqFrameIdx = optimalMeasurement.highFreqFrameIdx;  // 2025: Include frame index
     let returnStartFreq_Hz = optimalMeasurement.startFreq_Hz;
     let returnStartFreq_kHz = optimalMeasurement.startFreq_kHz;
     
@@ -978,6 +982,7 @@ export class BatCallDetector {
       
       let highFreq_Hz_safe = null;
       let highFreqBinIdx_safe = 0;  // 2025: Track safe bin index
+      let highFreqFrameIdx_safe = 0;  // 2025: Track safe frame index
       let startFreq_Hz_safe = null;
       
       // 2025 MODIFICATION: Only scan frames before peakFrameIdx
@@ -992,6 +997,7 @@ export class BatCallDetector {
           if (framePower[binIdx] > highFreqThreshold_dB_safe) {
             highFreq_Hz_safe = freqBins[binIdx];
             highFreqBinIdx_safe = binIdx;  // 2025: Save safe bin index
+            highFreqFrameIdx_safe = frameIdx;  // 2025: Save safe frame index
             
             // 嘗試線性插值以獲得更高精度
             if (binIdx < framePower.length - 1) {
@@ -1036,6 +1042,7 @@ export class BatCallDetector {
         returnHighFreq_Hz = highFreq_Hz_safe;
         returnHighFreq_kHz = highFreq_Hz_safe / 1000;
         returnHighFreqBinIdx = highFreqBinIdx_safe;  // 2025: Update with safe bin index
+        returnHighFreqFrameIdx = highFreqFrameIdx_safe;  // 2025: Update with safe frame index
         returnStartFreq_Hz = startFreq_Hz_safe;
         returnStartFreq_kHz = startFreq_Hz_safe / 1000;
       }
@@ -1047,6 +1054,7 @@ export class BatCallDetector {
       highFreq_Hz: returnHighFreq_Hz,
       highFreq_kHz: returnHighFreq_kHz,
       highFreqBinIdx: returnHighFreqBinIdx,  // 2025: Return bin index for High Frequency
+      highFreqFrameIdx: returnHighFreqFrameIdx,  // 2025: Return frame index for High Frequency
       startFreq_Hz: returnStartFreq_Hz,
       startFreq_kHz: returnStartFreq_kHz,
       warning: hasWarning
@@ -1451,6 +1459,7 @@ export class BatCallDetector {
     let safeHighFreq_kHz = null;
     let safeHighFreq_Hz = null;
     let safeHighFreqBinIdx = undefined;
+    let safeHighFreqFrameIdx = 0;  // 2025: Initialize frame index
     
     if (this.config.highFreqThreshold_dB_isAuto === true) {
       const result = this.findOptimalHighFrequencyThreshold(
@@ -1471,6 +1480,7 @@ export class BatCallDetector {
       safeHighFreq_kHz = result.highFreq_kHz;
       safeHighFreq_Hz = result.highFreq_Hz;
       safeHighFreqBinIdx = result.highFreqBinIdx;  // 2025: Initialize from findOptimalHighFrequencyThreshold
+      safeHighFreqFrameIdx = result.highFreqFrameIdx;  // 2025: Initialize frame index from result
       let usedThreshold = result.threshold;
       
       // 如果最優閾值的 High Frequency 低於 Peak Frequency，執行防呆檢查
@@ -1489,6 +1499,7 @@ export class BatCallDetector {
           // 計算此閾值的 High Frequency
           let testHighFreq_Hz = null;
           let testHighFreqBinIdx = 0;  // 2025: Track the bin index found
+          let testHighFreqFrameIdx = 0;  // 2025: Track the frame index found
           
           // High Frequency 計算（從高到低掃描所有幀）
           // 2025: Scan all frames from 0 to peakFrameIdx to find highest frequency
@@ -1498,6 +1509,7 @@ export class BatCallDetector {
               if (framePower[binIdx] > highFreqThreshold_dB) {
                 testHighFreq_Hz = freqBins[binIdx];
                 testHighFreqBinIdx = binIdx;  // 2025: Save the found bin index
+                testHighFreqFrameIdx = frameIdx;  // 2025: Save the found frame index
                 
                 // 線性插值
                 if (binIdx < framePower.length - 1) {
@@ -1525,6 +1537,7 @@ export class BatCallDetector {
             safeHighFreq_Hz = testHighFreq_Hz;
             safeHighFreq_kHz = testHighFreq_Hz / 1000;
             safeHighFreqBinIdx = testHighFreqBinIdx;  // 2025: Save the bin index for later use
+            safeHighFreqFrameIdx = testHighFreqFrameIdx;  // 2025: Save the frame index for later use
             usedThreshold = testThreshold_dB;
             foundValidHighFreq = true;
             break;
@@ -1772,20 +1785,7 @@ export class BatCallDetector {
       // AUTO MODE: 使用 findOptimalHighFrequencyThreshold 計算的結果
       highFreq_Hz = safeHighFreq_Hz;
       highFreqBinIdx = safeHighFreqBinIdx;
-      // 需要找到 highFreq_Hz 所在的 frameIdx
-      const targetFreqHz = highFreq_Hz;
-      highFreqFrameIdx = 0;
-      for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
-        const framePower = spectrogram[frameIdx];
-        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
-          const binFreqHz = freqBins[binIdx];
-          // 查找對應的幀
-          if (Math.abs(binFreqHz - targetFreqHz) < 1) {  // 允許 1Hz 誤差
-            highFreqFrameIdx = frameIdx;
-            break;
-          }
-        }
-      }
+      highFreqFrameIdx = safeHighFreqFrameIdx;  // 2025: 直接使用 Auto Mode 計算的 frameIdx
     } else {
       // MANUAL MODE: 掃描 spectrogram 找最高頻率
       highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
