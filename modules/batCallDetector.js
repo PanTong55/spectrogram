@@ -971,6 +971,7 @@ export class BatCallDetector {
     let returnHighFreq_Hz = optimalMeasurement.highFreq_Hz;
     let returnHighFreq_kHz = optimalMeasurement.highFreq_kHz;
     let returnHighFreqBinIdx = optimalMeasurement.highFreqBinIdx;  // 2025: Include bin index
+    let returnHighFreqFrameIdx = optimalMeasurement.highFreqFrameIdx;  // 2025: Include frame index
     let returnStartFreq_Hz = optimalMeasurement.startFreq_Hz;
     let returnStartFreq_kHz = optimalMeasurement.startFreq_kHz;
     
