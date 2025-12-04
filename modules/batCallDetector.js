@@ -1831,54 +1831,44 @@ export class BatCallDetector {
     // ============================================================
     const firstFrameTimeInSeconds = timeFrames[0];
     let highFreqTime_ms = 0;
+    if (highFreqFrameIdx < timeFrames.length) {
+      const highFreqTimeInSeconds = timeFrames[highFreqFrameIdx];
+      highFreqTime_ms = (highFreqTimeInSeconds - firstFrameTimeInSeconds) * 1000;
+    }
+    call.highFreqTime_ms = highFreqTime_ms;  // High frequency time relative to selection area start
 
-    // Normalize and validate highFreqFrameIdx
-    let hfFrame = (typeof highFreqFrameIdx === 'number' && !isNaN(highFreqFrameIdx)) ? Math.floor(highFreqFrameIdx) : null;
+    // SAFETY: Ensure highFreqFrameIdx is not after peakFrameIdx. If it is,
+    // recompute high frequency constrained to frames before peak (right-to-left).
+    if (call.highFreqFrameIdx > peakFrameIdx) {
+      let correctedHigh_Hz = fhighKHz * 1000;
+      let correctedBinIdx = 0;
+      let correctedFrameIdx = 0;
 
-    // If hfFrame is invalid, out of bounds, or after peak, try to find a matching frame
-    if (hfFrame === null || hfFrame >= timeFrames.length || hfFrame > peakFrameIdx) {
-      const targetHz = highFreq_Hz;
-      const binWidthHz = (freqBins.length > 1) ? Math.abs(freqBins[1] - freqBins[0]) : 1;
-      const tolHz = Math.max(binWidthHz / 2, 1); // tolerance for matching freq
-
-      let foundIdx = null;
-      // Search from peakFrameIdx backward to 0 for a bin near targetHz with power above threshold
       for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
         const framePower = spectrogram[frameIdx];
         for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
           if (framePower[binIdx] > highThreshold_dB) {
-            const binHz = freqBins[binIdx];
-            if (Math.abs(binHz - targetHz) <= tolHz) {
-              foundIdx = frameIdx;
-              break;
+            const testHz = freqBins[binIdx];
+            if (testHz > correctedHigh_Hz || correctedFrameIdx === peakFrameIdx) {
+              correctedHigh_Hz = testHz;
+              correctedBinIdx = binIdx;
+              correctedFrameIdx = frameIdx;
             }
-            // If bin is above threshold but not matching, continue searching earlier frames
-            break; // move to next earlier frame
+            break;
           }
         }
-        if (foundIdx !== null) break;
       }
 
-      if (foundIdx !== null) {
-        hfFrame = foundIdx;
+      // Update call values with corrected ones
+      call.highFreq_kHz = correctedHigh_Hz / 1000;
+      call.highFreqFrameIdx = correctedFrameIdx;
+      if (correctedFrameIdx < timeFrames.length) {
+        const correctedTime_s = timeFrames[correctedFrameIdx];
+        call.highFreqTime_ms = (correctedTime_s - firstFrameTimeInSeconds) * 1000;
       } else {
-        // Fallback: clamp to peakFrameIdx or 0 if timeFrames empty
-        hfFrame = Math.min(peakFrameIdx, Math.max(0, timeFrames.length - 1));
+        call.highFreqTime_ms = 0;
       }
-
-      // Update variables and call object
-      highFreqFrameIdx = hfFrame;
-      call.highFreqFrameIdx = hfFrame;
     }
-
-    if (hfFrame < timeFrames.length && hfFrame >= 0) {
-      const highFreqTimeInSeconds = timeFrames[hfFrame];
-      highFreqTime_ms = (highFreqTimeInSeconds - firstFrameTimeInSeconds) * 1000;
-    } else {
-      highFreqTime_ms = 0;
-    }
-
-    call.highFreqTime_ms = highFreqTime_ms;  // High frequency time relative to selection area start
     
     // 2025: 在 manual mode 下保存實際使用的 high frequency threshold
     // Manual mode: highThreshold_dB = peakPower_dB + highFreqThreshold_dB
