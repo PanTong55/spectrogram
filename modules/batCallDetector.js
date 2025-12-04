@@ -1733,59 +1733,55 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // 注意：Duration 將在計算完 endFreqTime_s 後根據 endFreq 的 frameIdx 計算
     // (見 STEP 3 的結尾)
     
-// ============================================================
+    // ============================================================
     // STEP 2: Calculate HIGH FREQUENCY from entire spectrogram
     // 
     // 2025 修正：High Frequency 應該掃描整個 spectrogram 以找到最高頻率
+    // 不只限於第一幀，因為最高頻率可能出現在任何幀中
     // 
-    // USER REQUEST CHANGE: 
-    // 由左至右 (frame[0] to peak frame) 尋找 High Frequency bin。
-    // 使用「最先出現」並符合 threshold 的 bin 作為真正的 High Frequency，
-    // 一旦找到即停止掃描後續 Frame，以避免 detect 到 rebounce signal。
+    // Professional standard: threshold at adjustable dB below peak
+    // This is the HIGHEST frequency in the entire call (not just first frame)
+    // Search from HIGH to LOW frequency (reverse bin order)
+    // Track both frequency value AND the frame it appears in
     // ============================================================
-    let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
+let highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
     let highFreqBinIdx = 0;
     let highFreqFrameIdx = 0;
-    let foundHighFreq = false; // 標記是否已找到
     
     // 2025 CRITICAL CHANGE: Loop only up to peakFrameIdx
-    // Scan spectrogram frames from 0 to Peak
+    // Scan spectrogram frames from 0 to Peak to find highest frequency
     const highFreqScanLimit = Math.min(peakFrameIdx, spectrogram.length - 1);
 
     for (let frameIdx = 0; frameIdx <= highFreqScanLimit; frameIdx++) {
       const framePower = spectrogram[frameIdx];
-      
-      // Search from high to low frequency (reverse order) within this frame
-      // This ensures we find the highest frequency component in this frame
+      // Search from high to low frequency (reverse order)
       for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
         if (framePower[binIdx] > highThreshold_dB) {
           // Found first bin above threshold in this frame
-          highFreq_Hz = freqBins[binIdx];
-          highFreqBinIdx = binIdx;
-          highFreqFrameIdx = frameIdx;
+          const testHighFreq_Hz = freqBins[binIdx];
           
-          // Attempt linear interpolation for sub-bin precision
-          if (binIdx < framePower.length - 1) {
-            const thisPower = framePower[binIdx];
-            const nextPower = framePower[binIdx + 1];
+          // Only update if this frequency is higher than previously found
+          // (Or if it's the very first detection)
+          if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === 0) {
+            highFreq_Hz = testHighFreq_Hz;
+            highFreqBinIdx = binIdx;
+            highFreqFrameIdx = frameIdx;
             
-            if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
-              // Interpolate between this bin and next
-              const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
-              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            // Attempt linear interpolation for sub-bin precision
+            if (binIdx < framePower.length - 1) {
+              const thisPower = framePower[binIdx];
+              const nextPower = framePower[binIdx + 1];
+              
+              if (nextPower < highThreshold_dB && thisPower > highThreshold_dB) {
+                // Interpolate between this bin and next
+                const powerRatio = (thisPower - highThreshold_dB) / (thisPower - nextPower);
+                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+                highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+              }
             }
           }
-          
-          foundHighFreq = true;
-          break;  // Stop scanning bins in this frame (found the max freq for this frame)
+          break;  // Move to next frame after finding first bin in this frame
         }
-      }
-      
-      // CRITICAL: Once a valid High Frequency is found in the earliest frame,
-      // STOP scanning subsequent frames to prevent rebounce detection.
-      if (foundHighFreq) {
-        break;
       }
     }
     
