@@ -1885,15 +1885,15 @@ export class BatCallDetector {
     // 
     // 方法：
     // 在 AUTO MODE 和 NON-AUTO MODE 中，都使用 -24dB 閾值計算 Start Frequency
-    // (a) 若 -24dB 閾值的頻率 < Peak Frequency：使用該值為 Start Frequency
-    // (b) 若 -24dB 閾值的頻率 >= Peak Frequency：Start Frequency = High Frequency
+    // (a) 若 -24dB 閾值的頻率 < High Frequency：使用該值為 Start Frequency [2025 修正：與 High Frequency 比較]
+    // (b) 若 -24dB 閾值的頻率 >= High Frequency：Start Frequency = High Frequency [2025 修正：與 High Frequency 比較]
     // 
     // 時間點說明：
     // Start Frequency 總是在第一幀（frame 0），時間 = 0 ms
     // 但 Start Frequency 的值可能等於 High Frequency（規則 b）
     // 
     // 2025 低頻 Noise 保護機制：
-    // 若 Peak Frequency ≥ 60 kHz，則 Start Frequency 不能 ≤ 40 kHz
+    // 若 High Frequency ≥ 60 kHz，則 Start Frequency 不能 ≤ 40 kHz [2025 修正：使用 High Frequency]
     // 在掃描時忽略 40 kHz 或以下的 bin，防止誤判低頻 noise 為 Start Frequency
     // ============================================================
     const firstFramePower = spectrogram[0];
@@ -1908,8 +1908,8 @@ export class BatCallDetector {
     // 2025: 低頻 Noise 保護閾值
     const LOW_FREQ_NOISE_THRESHOLD_kHz = 40;  // kHz - 低於此頻率的 bin 在某些情況下應被忽略
     const HIGH_PEAK_THRESHOLD_kHz = 60;       // kHz - Peak >= 此值時啟動低頻保護
-    const peakFreqInKHz = peakFreq_Hz / 1000; // 將 Peak 頻率轉換為 kHz
-    const shouldIgnoreLowFreqNoise = peakFreqInKHz >= HIGH_PEAK_THRESHOLD_kHz;
+    const highFreqInKHz = highFreq_Hz / 1000; // 將 High 頻率轉換為 kHz（2025 修正：與 High Frequency 比較，非 Peak）
+    const shouldIgnoreLowFreqNoise = highFreqInKHz >= HIGH_PEAK_THRESHOLD_kHz;  // 2025: Use High Frequency, not Peak
     
     // 從低到高掃描，找最低頻率（規則 a）
     for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
@@ -1918,14 +1918,14 @@ export class BatCallDetector {
         const testStartFreq_kHz = testStartFreq_Hz / 1000;
         
         // 2025: 應用低頻 Noise 保護機制
-        // 若 Peak ≥ 60 kHz，忽略 40 kHz 或以下的候選值
+        // 若 High Frequency ≥ 60 kHz，忽略 40 kHz 或以下的候選值
         if (shouldIgnoreLowFreqNoise && testStartFreq_kHz <= LOW_FREQ_NOISE_THRESHOLD_kHz) {
           // 此 bin 被視為低頻 noise，跳過
           continue;
         }
         
-        // 檢查是否低於 Peak Frequency（規則 a）
-        if (testStartFreq_kHz < peakFreqInKHz) {
+        // 2025 修正：檢查是否低於 High Frequency（規則 a）- 與 High Frequency 比較，非 Peak
+        if (testStartFreq_kHz < highFreqInKHz) {
           // 滿足規則 (a)：使用此值為 Start Frequency
           startFreq_Hz = testStartFreq_Hz;
           startFreq_kHz = testStartFreq_kHz;
@@ -1948,9 +1948,9 @@ export class BatCallDetector {
       }
     }
     
-    // 如果規則 (a) 不滿足（-24dB 頻率 >= Peak Frequency），使用規則 (b)
+    // 2025 修正：如果規則 (a) 不滿足（-24dB 頻率 >= High Frequency），使用規則 (b)
+    // Start Frequency = High Frequency（規則 b）
     if (startFreq_Hz === null) {
-      // Start Frequency = High Frequency（規則 b）
       // Note: 此時 Start Frequency 的值等於 High Frequency 的值
       // 但 Start Frequency 的幀索引固定為 0（frame 0）
       startFreq_Hz = highFreq_Hz;
