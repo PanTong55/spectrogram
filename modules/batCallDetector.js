@@ -730,6 +730,21 @@ export class BatCallDetector {
 
     const firstFramePower = spectrogram[0];
     
+    // 2025 MODIFICATION: Only scan frames before peakFrameIdx
+    // Scan all frames from 0 to peakFrameIdx (inclusive of peak frame for reference)
+    const framesToScan = spectrogram.slice(0, Math.min(peakFrameIdx + 1, spectrogram.length));
+    
+    if (framesToScan.length === 0) {
+      return {
+        threshold: -24,
+        highFreq_Hz: null,
+        highFreq_kHz: null,
+        startFreq_Hz: null,
+        startFreq_kHz: null,
+        warning: false
+      };
+    }
+    
     // CRITICAL FIX (2025): Use stable call.peakPower_dB instead of computing global peak
     // This prevents fluctuations caused by selection area size
     const stablePeakPower_dB = callPeakPower_dB;
@@ -747,6 +762,7 @@ export class BatCallDetector {
     for (const testThreshold_dB of thresholdRange) {
       let highFreq_Hz = null;
       let highFreqBinIdx = 0;  // 2025: Track bin index for High Frequency
+      let highFreqFrameIdx = 0;  // 2025: Track frame index for High Frequency
       let startFreq_Hz = null;
       let foundBin = false;
       
@@ -755,26 +771,32 @@ export class BatCallDetector {
       
       // ============================================================
       // 計算 HIGH FREQUENCY（從高到低掃描，找最高頻率）
+      // 2025: Only scan frames from 0 to peakFrameIdx
       // ============================================================
-      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (firstFramePower[binIdx] > highFreqThreshold_dB) {
-          highFreq_Hz = freqBins[binIdx];
-          highFreqBinIdx = binIdx;  // 2025: Save the bin index found
-          foundBin = true;
-          
-          // 嘗試線性插值以獲得更高精度
-          if (binIdx < firstFramePower.length - 1) {
-            const thisPower = firstFramePower[binIdx];
-            const nextPower = firstFramePower[binIdx + 1];
+      for (let frameIdx = 0; frameIdx < framesToScan.length; frameIdx++) {
+        const framePower = framesToScan[frameIdx];
+        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
+          if (framePower[binIdx] > highFreqThreshold_dB) {
+            highFreq_Hz = freqBins[binIdx];
+            highFreqBinIdx = binIdx;  // 2025: Save the bin index found
+            highFreqFrameIdx = frameIdx;  // 2025: Save the frame index found
+            foundBin = true;
             
-            if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
-              const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
-              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+            // 嘗試線性插值以獲得更高精度
+            if (binIdx < framePower.length - 1) {
+              const thisPower = framePower[binIdx];
+              const nextPower = framePower[binIdx + 1];
+              
+              if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
+                const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
+                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+                highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+              }
             }
+            break;
           }
-          break;
         }
+        if (foundBin) break;  // Stop scanning frames once we find highest frequency
       }
       
       // ============================================================
@@ -814,6 +836,7 @@ export class BatCallDetector {
         highFreq_Hz: highFreq_Hz,
         highFreq_kHz: highFreq_Hz !== null ? highFreq_Hz / 1000 : null,
         highFreqBinIdx: highFreqBinIdx,  // 2025: Include bin index in measurements
+        highFreqFrameIdx: highFreqFrameIdx,  // 2025: Include frame index in measurements
         startFreq_Hz: startFreq_Hz,
         startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
         foundBin: foundBin
@@ -959,27 +982,37 @@ export class BatCallDetector {
       
       let highFreq_Hz_safe = null;
       let highFreqBinIdx_safe = 0;  // 2025: Track safe bin index
+      let highFreqFrameIdx_safe = 0;  // 2025: Track safe frame index
       let startFreq_Hz_safe = null;
       
+      // 2025 MODIFICATION: Only scan frames before peakFrameIdx (same as main detection)
+      const framesToScan_safe = spectrogram.slice(0, Math.min(peakFrameIdx + 1, spectrogram.length));
+      
       // 使用安全閾值 (-30dB) 計算 High Frequency（從高到低掃描）
-      for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-        if (firstFramePower[binIdx] > highFreqThreshold_dB_safe) {
-          highFreq_Hz_safe = freqBins[binIdx];
-          highFreqBinIdx_safe = binIdx;  // 2025: Save safe bin index
-          
-          // 嘗試線性插值以獲得更高精度
-          if (binIdx < firstFramePower.length - 1) {
-            const thisPower = firstFramePower[binIdx];
-            const nextPower = firstFramePower[binIdx + 1];
+      // 2025: Scan all frames from 0 to peakFrameIdx to find highest frequency
+      for (let frameIdx = 0; frameIdx < framesToScan_safe.length; frameIdx++) {
+        const framePower = framesToScan_safe[frameIdx];
+        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
+          if (framePower[binIdx] > highFreqThreshold_dB_safe) {
+            highFreq_Hz_safe = freqBins[binIdx];
+            highFreqBinIdx_safe = binIdx;  // 2025: Save safe bin index
+            highFreqFrameIdx_safe = frameIdx;  // 2025: Save safe frame index
             
-            if (nextPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
-              const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - nextPower);
-              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              highFreq_Hz_safe = freqBins[binIdx] + powerRatio * freqDiff;
+            // 嘗試線性插值以獲得更高精度
+            if (binIdx < framePower.length - 1) {
+              const thisPower = framePower[binIdx];
+              const nextPower = framePower[binIdx + 1];
+              
+              if (nextPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
+                const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - nextPower);
+                const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+                highFreq_Hz_safe = freqBins[binIdx] + powerRatio * freqDiff;
+              }
             }
+            break;
           }
-          break;
         }
+        if (highFreq_Hz_safe !== null) break;  // Stop scanning frames once highest frequency found
       }
       
       // 計算 Start Frequency（從低到高掃描）
@@ -1008,6 +1041,7 @@ export class BatCallDetector {
         returnHighFreq_Hz = highFreq_Hz_safe;
         returnHighFreq_kHz = highFreq_Hz_safe / 1000;
         returnHighFreqBinIdx = highFreqBinIdx_safe;  // 2025: Update with safe bin index
+        returnHighFreqFrameIdx = highFreqFrameIdx_safe;  // 2025: Update with safe frame index
         returnStartFreq_Hz = startFreq_Hz_safe;
         returnStartFreq_kHz = startFreq_Hz_safe / 1000;
       }
@@ -1019,6 +1053,7 @@ export class BatCallDetector {
       highFreq_Hz: returnHighFreq_Hz,
       highFreq_kHz: returnHighFreq_kHz,
       highFreqBinIdx: returnHighFreqBinIdx,  // 2025: Return bin index for High Frequency
+      highFreqFrameIdx: returnHighFreqFrameIdx,  // 2025: Return frame index for High Frequency
       startFreq_Hz: returnStartFreq_Hz,
       startFreq_kHz: returnStartFreq_kHz,
       warning: hasWarning
