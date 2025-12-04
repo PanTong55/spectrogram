@@ -1779,11 +1779,10 @@ export class BatCallDetector {
     if (this.config.highFreqThreshold_dB_isAuto === true && safeHighFreq_Hz !== null) {
       highFreq_Hz = safeHighFreq_Hz;
       highFreqBinIdx = safeHighFreqBinIdx;
-      // Ensure highFreqFrameIdx is a valid number (default to 0 if undefined)
-      highFreqFrameIdx = (safeHighFreqFrameIdx !== undefined) ? safeHighFreqFrameIdx : 0;
+      highFreqFrameIdx = safeHighFreqFrameIdx; // direct from optimal finder
     } else {
       // Manual mode (or auto with no safe result): scan frames BEFORE peakFrameIdx
-      highFreq_Hz = -Infinity;  // Start with minimum, find actual maximum
+      highFreq_Hz = fhighKHz * 1000;  // Default to upper bound
       highFreqBinIdx = 0;
       highFreqFrameIdx = 0;
 
@@ -1796,8 +1795,8 @@ export class BatCallDetector {
             // Found first bin above threshold in this frame
             const testHighFreq_Hz = freqBins[binIdx];
 
-            // Update if this is the first find OR if frequency is higher than previously found
-            if (highFreq_Hz === -Infinity || testHighFreq_Hz > highFreq_Hz) {
+            // Update only if this frequency is higher than previously found
+            if (testHighFreq_Hz > highFreq_Hz || highFreqFrameIdx === peakFrameIdx) {
               highFreq_Hz = testHighFreq_Hz;
               highFreqBinIdx = binIdx;
               highFreqFrameIdx = frameIdx;
@@ -1818,12 +1817,6 @@ export class BatCallDetector {
           }
         }
       }
-      
-      // If no frequency found, reset to default
-      if (highFreq_Hz === -Infinity) {
-        highFreq_Hz = fhighKHz * 1000;
-        highFreqFrameIdx = 0;
-      }
     }
 
     call.highFreq_kHz = highFreq_Hz / 1000;
@@ -1838,40 +1831,9 @@ export class BatCallDetector {
     // ============================================================
     const firstFrameTimeInSeconds = timeFrames[0];
     let highFreqTime_ms = 0;
-
-    // Normalize and validate highFreqFrameIdx
-    let hfFrame = (typeof highFreqFrameIdx === 'number' && !isNaN(highFreqFrameIdx)) ? Math.floor(highFreqFrameIdx) : null;
-
-    // If hfFrame is invalid, out of bounds, or after peak, try to find a matching frame
-    if (hfFrame === null || hfFrame >= timeFrames.length || hfFrame > peakFrameIdx) {
-      const targetHz = highFreq_Hz;
-      const binWidthHz = (freqBins.length > 1) ? Math.abs(freqBins[1] - freqBins[0]) : 1;
-      const tolHz = Math.max(binWidthHz / 2, 1); // tolerance for matching freq
-
-      let foundIdx = null;
-      // Search from peakFrameIdx backward to 0 for a bin near targetHz with power above threshold
-      for (let frameIdx = peakFrameIdx; frameIdx >= 0; frameIdx--) {
-        const framePower = spectrogram[frameIdx];
-        for (let binIdx = framePower.length - 1; binIdx >= 0; binIdx--) {
-          if (framePower[binIdx] > highThreshold_dB) {
-            const binHz = freqBins[binIdx];
-            if (Math.abs(binHz - targetHz) <= tolHz) {
-              foundIdx = frameIdx;
-              break;
-            }
-            // If bin is above threshold but not matching, continue searching earlier frames
-            break; // move to next earlier frame
-          }
-        }
-        if (foundIdx !== null) break;
-      }
-      hfFrame = foundIdx; // might still be null if not found
-    }
-
-    // Now compute time if hfFrame is valid
-    if (hfFrame !== null && hfFrame >= 0 && hfFrame < timeFrames.length) {
-      const hfTimeInSeconds = timeFrames[hfFrame];
-      highFreqTime_ms = (hfTimeInSeconds - firstFrameTimeInSeconds) * 1000;
+    if (highFreqFrameIdx < timeFrames.length) {
+      const highFreqTimeInSeconds = timeFrames[highFreqFrameIdx];
+      highFreqTime_ms = (highFreqTimeInSeconds - firstFrameTimeInSeconds) * 1000;
     }
     call.highFreqTime_ms = highFreqTime_ms;  // High frequency time relative to selection area start
 
@@ -1900,7 +1862,7 @@ export class BatCallDetector {
       // Update call values with corrected ones
       call.highFreq_kHz = correctedHigh_Hz / 1000;
       call.highFreqFrameIdx = correctedFrameIdx;
-      if (correctedFrameIdx >= 0 && correctedFrameIdx < timeFrames.length && timeFrames[correctedFrameIdx] !== undefined) {
+      if (correctedFrameIdx < timeFrames.length) {
         const correctedTime_s = timeFrames[correctedFrameIdx];
         call.highFreqTime_ms = (correctedTime_s - firstFrameTimeInSeconds) * 1000;
       } else {
