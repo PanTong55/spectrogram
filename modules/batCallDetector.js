@@ -736,75 +736,95 @@ export class BatCallDetector {
   /**
    * Find optimal High Threshold by testing range and detecting anomalies
    * 
-   * 2025 ENHANCED ALGORITHM (Independent Start & High Frequency):
-   * 1. Test each threshold on spectrogram's first frame (-24 → -70 dB)
-   * 2. For each threshold, calculate:
-   *    - HIGH FREQUENCY: scan from high to low, find first bin above threshold
-   *    - START FREQUENCY: scan from low to high, find first bin above threshold
-   * 3. Apply safety filter: discard High Frequency if < Peak Frequency
-   * 4. Continue until finding first valid High Frequency >= Peak Frequency
-   * 5. Detect anomalies (frequency jumps > 2.5 kHz) and select appropriate threshold
+   * 2025 ENHANCED ALGORITHM v2 (Narrowing Search Range):
+   * 1. Start with widest range (Frame 0 to Peak Frame)
+   * 2. Test threshold (-24 → -70 dB), detect highFreq position for each step
+   * 3. If no anomaly in this step:
+   *    - Record highFreqFrameIdx for this threshold
+   *    - Narrow next step's search range to Frame 0 to highFreqFrameIdx
+   * 4. Continue narrowing until anomaly detected or threshold exhausted
+   * 5. This follows the signal's energy trajectory and avoids rebounce detection
    * 6. Return: both High Frequency (with optimal threshold) AND Start Frequency
+   * 
+   * Benefits:
+   * - Tracks signal energy forward in time (avoids rebounce)
+   * - Detects frequency transitions at their first occurrence
+   * - More stable multi-frequency detection
    * 
    * @param {Array} spectrogram - 2D array [timeFrame][freqBin] of power values (dB)
    * @param {Array} freqBins - Frequency bin centers (Hz)
    * @param {number} flowKHz - Lower frequency bound (kHz)
    * @param {number} fhighKHz - Upper frequency bound (kHz)
    * @param {number} callPeakPower_dB - Stable call peak power (not global spectrogram max)
-   * @returns {Object} {threshold, highFreq_Hz, highFreq_kHz, startFreq_Hz, startFreq_kHz, warning}
+   * @param {number} peakFrameIdx - Peak frame index to limit initial scan
+   * @returns {Object} {threshold, highFreq_Hz, highFreq_kHz, highFreqFrameIdx, startFreq_Hz, startFreq_kHz, warning}
    */
 findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, callPeakPower_dB, peakFrameIdx = 0) {
     if (spectrogram.length === 0) return {
       threshold: -24,
       highFreq_Hz: null,
       highFreq_kHz: null,
+      highFreqFrameIdx: 0,
       startFreq_Hz: null,
       startFreq_kHz: null,
       warning: false
     };
 
     // ============================================================
-    // PRE-CALCULATION (2025 FIX):
-    // 1. Start Frequency MUST be calculated from Frame 0 (Time = 0).
-    // 2. High Frequency MUST be calculated from the "Attack Phase" (Frame 0 to Peak Frame).
-    //    We create a "Max Hold" spectrum for the attack phase to efficiently test thresholds.
+    // INITIALIZATION (2025 v2 ENHANCEMENT):
+    // 1. Data for Start Frequency (Always Frame 0)
+    // 2. Setup for narrowing search range per step
     // ============================================================
     
-    // 1. Data for Start Frequency (Always Frame 0)
     const firstFramePower = spectrogram[0];
-    
-    // 2. Data for High Frequency (Max power per bin across frames 0 to peakFrameIdx)
     const numBins = firstFramePower.length;
-    const attackPhaseMaxSpectrum = new Float32Array(numBins).fill(-Infinity);
     
-    // Only scan up to peakFrameIdx (inclusive)
-    // This ensures High Frequency detection never looks at the decay phase
-    const searchLimitFrame = Math.min(peakFrameIdx, spectrogram.length - 1);
+    // Initial search limit: from 0 to peakFrameIdx
+    let currentSearchLimitFrame = Math.min(peakFrameIdx, spectrogram.length - 1);
     
-    for (let f = 0; f <= searchLimitFrame; f++) {
-      const frame = spectrogram[f];
-      for (let b = 0; b < numBins; b++) {
-        if (frame[b] > attackPhaseMaxSpectrum[b]) {
-          attackPhaseMaxSpectrum[b] = frame[b];
-        }
-      }
-    }
+    // Track the highFreqFrameIdx for each step to narrow future searches
+    let lastValidHighFreqFrameIdx = currentSearchLimitFrame;
     
-    // CRITICAL FIX (2025): Use stable call.peakPower_dB
     const stablePeakPower_dB = callPeakPower_dB;
     
-    // 測試閾值範圍：-24 到 -70 dB，間距 1 dB
+    // 測試閾值範圍：-24 到 -70 dB，間距 0.5 dB
     const thresholdRange = [];
     for (let threshold = -24; threshold >= -70; threshold -= 0.5) {
       thresholdRange.push(threshold);
     }
     
     // 為每個閾值測量 High Frequency 和 Start Frequency
+    // 2025 v2: 逐步縮小搜尋範圍
     const measurements = [];
     
     for (const testThreshold_dB of thresholdRange) {
+      // Build Max Hold Spectrum for current search range
+      const currentMaxSpectrum = new Float32Array(numBins).fill(-Infinity);
+      
+      // Only use frames up to currentSearchLimitFrame
+      for (let f = 0; f <= currentSearchLimitFrame; f++) {
+        const frame = spectrogram[f];
+        for (let b = 0; b < numBins; b++) {
+          if (frame[b] > currentMaxSpectrum[b]) {
+            currentMaxSpectrum[b] = frame[b];
+          }
+        }
+      }
+      
+      // Also track which frame has the maximum for each bin
+      const frameIndexForBin = new Uint16Array(numBins);
+      for (let b = 0; b < numBins; b++) {
+        frameIndexForBin[b] = 0;
+        for (let f = 0; f <= currentSearchLimitFrame; f++) {
+          if (spectrogram[f][b] > spectrogram[frameIndexForBin[b]][b]) {
+            frameIndexForBin[b] = f;
+          }
+        }
+      }
+      
       let highFreq_Hz = null;
       let highFreqBinIdx = 0;
+      let highFreqFrameIdx = 0;
       let startFreq_Hz = null;
       let foundBin = false;
       
@@ -812,18 +832,19 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       
       // ============================================================
       // 計算 HIGH FREQUENCY（從高到低掃描）
-      // 使用 attackPhaseMaxSpectrum (代表 Frame 0 到 Peak Frame 的最大值)
+      // 使用當前搜尋範圍內的 Max Spectrum
       // ============================================================
-      for (let binIdx = attackPhaseMaxSpectrum.length - 1; binIdx >= 0; binIdx--) {
-        if (attackPhaseMaxSpectrum[binIdx] > highFreqThreshold_dB) {
+      for (let binIdx = currentMaxSpectrum.length - 1; binIdx >= 0; binIdx--) {
+        if (currentMaxSpectrum[binIdx] > highFreqThreshold_dB) {
           highFreq_Hz = freqBins[binIdx];
           highFreqBinIdx = binIdx;
+          highFreqFrameIdx = frameIndexForBin[binIdx];  // 記錄找到的幀索引
           foundBin = true;
           
-          // 嘗試線性插值 (使用 max spectrum 數值)
-          if (binIdx < attackPhaseMaxSpectrum.length - 1) {
-            const thisPower = attackPhaseMaxSpectrum[binIdx];
-            const nextPower = attackPhaseMaxSpectrum[binIdx + 1];
+          // 嘗試線性插值
+          if (binIdx < currentMaxSpectrum.length - 1) {
+            const thisPower = currentMaxSpectrum[binIdx];
+            const nextPower = currentMaxSpectrum[binIdx + 1];
             
             if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
               const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
@@ -863,6 +884,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       if (!foundBin) {
         highFreq_Hz = null;
         startFreq_Hz = null;
+        highFreqFrameIdx = 0;
       }
       
       measurements.push({
@@ -871,15 +893,24 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
         highFreq_Hz: highFreq_Hz,
         highFreq_kHz: highFreq_Hz !== null ? highFreq_Hz / 1000 : null,
         highFreqBinIdx: highFreqBinIdx,
+        highFreqFrameIdx: highFreqFrameIdx,  // 新增：記錄找到高頻的幀
         startFreq_Hz: startFreq_Hz,
         startFreq_kHz: startFreq_Hz !== null ? startFreq_Hz / 1000 : null,
         foundBin: foundBin
       });
+      
+      // ============================================================
+      // 2025 v2 NARROWING LOGIC:
+      // 若此步驟找到有效的 highFreq，
+      // 縮小下一步的搜尋範圍到該幀為止
+      // 這樣可以追蹤信號的能量軌跡，避免檢測 rebounce
+      // ============================================================
+      if (foundBin && highFreqFrameIdx >= 0 && highFreqFrameIdx < currentSearchLimitFrame) {
+        // 如果找到的幀比當前搜尋限制更早，縮小範圍
+        currentSearchLimitFrame = highFreqFrameIdx;
+        lastValidHighFreqFrameIdx = highFreqFrameIdx;
+      }
     }
-    
-    // ... (以下保留原有的異常檢測邏輯: validMeasurements filter, anomaly detection, safe mechanism loop) ...
-    // Note: 在後面的 Safe Threshold Re-calculation block 中，
-    // 也需要將 scanning 改為使用 attackPhaseMaxSpectrum (High Freq) 和 firstFramePower (Start Freq)。
     
     // ============================================================
     // 只收集成功找到 bin 的測量
@@ -890,19 +921,23 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
         threshold: -24,
         highFreq_Hz: null,
         highFreq_kHz: null,
+        highFreqFrameIdx: 0,
         startFreq_Hz: null,
         startFreq_kHz: null,
         warning: false
       };
     }
 
-    // [Standard Anomaly Logic - Preserved from original code]
+    // [Standard Anomaly Logic - Preserved from original code with narrowing enhancement]
     let optimalThreshold = -24;
     let optimalMeasurement = validMeasurements[0];
     let lastValidThreshold = validMeasurements[0].threshold;
     let lastValidMeasurement = validMeasurements[0];
     let recordedEarlyAnomaly = null;
     let firstAnomalyIndex = -1;
+    
+    // 2025 v2: Track when narrowing should stop (anomaly detected)
+    let narrowingStopIndex = validMeasurements.length;  // 無異常時使用所有測量
     
     for (let i = 1; i < validMeasurements.length; i++) {
       const prevFreq_kHz = validMeasurements[i - 1].highFreq_kHz;
@@ -912,6 +947,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       if (freqDifference > 4.0) {
         optimalThreshold = validMeasurements[i - 1].threshold;
         optimalMeasurement = validMeasurements[i - 1];
+        narrowingStopIndex = i;  // 2025 v2: 異常點
         break;
       }
       
@@ -923,6 +959,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
           recordedEarlyAnomaly = validMeasurements[i - 1].threshold;
           lastValidThreshold = validMeasurements[i - 1].threshold;
           lastValidMeasurement = validMeasurements[i - 1];
+          narrowingStopIndex = i;  // 2025 v2: 記錄異常位置
         }
       } else {
         if (recordedEarlyAnomaly !== null && firstAnomalyIndex !== -1) {
@@ -948,6 +985,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
           if (hasThreeNormalAfterAnomaly && (afterAnomalyEnd - afterAnomalyStart + 1) >= 3) {
             recordedEarlyAnomaly = null;
             firstAnomalyIndex = -1;
+            narrowingStopIndex = i + 1;  // 2025 v2: 異常被忽略
           }
         }
         lastValidThreshold = validMeasurements[i].threshold;
@@ -970,6 +1008,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     let returnHighFreq_Hz = optimalMeasurement.highFreq_Hz;
     let returnHighFreq_kHz = optimalMeasurement.highFreq_kHz;
     let returnHighFreqBinIdx = optimalMeasurement.highFreqBinIdx;
+    let returnHighFreqFrameIdx = optimalMeasurement.highFreqFrameIdx;  // 2025 v2: 新增
     let returnStartFreq_Hz = optimalMeasurement.startFreq_Hz;
     let returnStartFreq_kHz = optimalMeasurement.startFreq_kHz;
     
@@ -1026,6 +1065,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
         returnHighFreq_Hz = highFreq_Hz_safe;
         returnHighFreq_kHz = highFreq_Hz_safe / 1000;
         returnHighFreqBinIdx = highFreqBinIdx_safe;
+        // 2025 v2: 安全機制中保持原有的幀索引（已從 optimalMeasurement 取得）
         returnStartFreq_Hz = startFreq_Hz_safe;
         returnStartFreq_kHz = startFreq_Hz_safe / 1000;
       }
@@ -1036,6 +1076,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       highFreq_Hz: returnHighFreq_Hz,
       highFreq_kHz: returnHighFreq_kHz,
       highFreqBinIdx: returnHighFreqBinIdx,
+      highFreqFrameIdx: returnHighFreqFrameIdx,  // 2025 v2: 新增幀索引
       startFreq_Hz: returnStartFreq_Hz,
       startFreq_kHz: returnStartFreq_kHz,
       warning: hasWarning
