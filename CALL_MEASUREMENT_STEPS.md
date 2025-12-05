@@ -556,38 +556,193 @@ call.endFreqTime_ms = endFreqTime_ms;
 
 ---
 
+## STEP 5: 計算衍生參數
+
+完成前四個步驟後，系統自動計算以下衍生參數：
+
+### Phase 5a: 計算持續時間 (Duration)
+
+```javascript
+const duration_ms = (timeFrames[timeFrames.length - 1] - timeFrames[0]) * 1000;
+call.duration_ms = duration_ms;
+```
+
+**說明**: 從選擇區域開始到結束的總時間
+
+### Phase 5b: 計算 Characteristic Frequency (Cf)
+
+**定義**: 峰值功率點所對應的頻率
+
+```javascript
+call.characteristicFreq_kHz = call.peakFreq_kHz;
+call.characteristicFreqTime_ms = call.peakFreqTime_ms;
+call.characteristicFreqFrameIdx = call.peakFrameIdx;
+```
+
+**用途**: 
+- 許多蝙蝠物種的種類鑑定依據
+- 通常是叫聲中最穩定的特徵
+- 在自動分類中優先使用
+
+### Phase 5c: 計算 Knee Frequency (Kf) 和轉折時間
+
+**定義**: 從起始頻率到峰值頻率的轉折點
+
+**計算邏輯**:
+
+```javascript
+// 1. 若 startFreq = highFreq（規則 b 情況）
+//    → 無轉折，Knee Freq = startFreq
+if (call.startFreq_kHz === call.highFreq_kHz) {
+  call.kneeFreq_kHz = call.startFreq_kHz;
+  call.kneeFreqTime_ms = call.startFreqTime_ms;
+  call.kneeFreqFrameIdx = call.startFreqFrameIdx;
+}
+// 2. 若 startFreq < peakFreq < highFreq（罕見）
+//    → 使用 startFreq 作為轉折點
+else if (call.startFreq_kHz < call.peakFreq_kHz && call.peakFreq_kHz < call.highFreq_kHz) {
+  call.kneeFreq_kHz = call.startFreq_kHz;
+  call.kneeFreqTime_ms = call.startFreqTime_ms;
+}
+// 3. 標準情況：startFreq < highFreq ≤ peakFreq
+//    → Knee Freq 在 highFreq 和 peakFreq 之間的中點
+else {
+  const kneeFreq = (call.highFreq_kHz + call.peakFreq_kHz) / 2;
+  const kneeTime = (call.highFreqTime_ms + call.peakFreqTime_ms) / 2;
+  call.kneeFreq_kHz = kneeFreq;
+  call.kneeFreqTime_ms = kneeTime;
+  
+  // 尋找最接近 kneeFreq 的實際幀
+  // 通常在 highFreqFrameIdx 和 peakFrameIdx 之間
+  call.kneeFreqFrameIdx = Math.round(
+    (call.highFreqFrameIdx + call.peakFrameIdx) / 2
+  );
+}
+```
+
+**用途**:
+- 標示頻率上升的轉折位置
+- 幫助識別特定的叫聲形態（如 FM chirp）
+- 在掃頻叫聲分析中重要
+
+### Phase 5d: 計算頻率範圍和帶寬
+
+```javascript
+// 頻率範圍
+const frequencyRange_kHz = call.highFreq_kHz - call.lowFreq_kHz;
+call.frequencyRange_kHz = frequencyRange_kHz;
+
+// 帶寬（從 Start 到 High）
+const bandwidth_kHz = call.highFreq_kHz - call.startFreq_kHz;
+call.bandwidth_kHz = bandwidth_kHz;
+```
+
+---
+
 ## 最終輸出 Call 物件
 
-完成所有步驟後，`call` 物件包含以下 12 個參數：
+完成所有步驟後，`call` 物件包含以下參數：
 
-### 時間參數
+### 主要頻率參數 (5個)
+| 參數 | 單位 | 說明 | 時間戳 |
+|------|------|------|--------|
+| `peakFreq_kHz` | kHz | 最高能量點的頻率 (Characteristic Freq) | `peakFreqTime_ms` |
+| `highFreq_kHz` | kHz | 叫聲中的最高頻率 | `highFreqTime_ms` |
+| `startFreq_kHz` | kHz | 叫聲起始的頻率 | `startFreqTime_ms` (=0) |
+| `lowFreq_kHz` | kHz | 叫聲中的最低頻率 | `lowFreqTime_ms` |
+| `endFreq_kHz` | kHz | 叫聲結束時的頻率 | `endFreqTime_ms` |
+
+### 衍生頻率參數
+| 參數 | 單位 | 說明 | 時間戳 |
+|------|------|------|--------|
+| `characteristicFreq_kHz` | kHz | 峰值頻率（與 peakFreq 相同）| `characteristicFreqTime_ms` |
+| `kneeFreq_kHz` | kHz | 頻率上升的轉折點 | `kneeFreqTime_ms` |
+| `frequencyRange_kHz` | kHz | High - Low 的範圍 | - |
+| `bandwidth_kHz` | kHz | High - Start 的帶寬 | - |
+
+### 時間相關參數
 | 參數 | 單位 | 說明 |
 |------|------|------|
-| `peakFreqTime_ms` | ms | 峰值出現的時間 |
-| `highFreqTime_ms` | ms | 最高頻率出現的時間 |
+| `duration_ms` | ms | 叫聲總持續時間 |
+| `peakFreqTime_ms` | ms | 峰值出現的相對時間 |
+| `highFreqTime_ms` | ms | 最高頻率出現的相對時間 |
 | `startFreqTime_ms` | ms | 起始頻率時間（總是 0 ms） |
-| `lowFreqTime_ms` | ms | 最低頻率出現的時間 |
-| `endFreqTime_ms` | ms | 結束頻率出現的時間 |
-
-### 頻率參數
-| 參數 | 單位 | 說明 |
-|------|------|------|
-| `peakFreq_kHz` | kHz | 最高能量點的頻率 |
-| `highFreq_kHz` | kHz | 叫聲中的最高頻率 |
-| `startFreq_kHz` | kHz | 叫聲起始的頻率 |
-| `lowFreq_kHz` | kHz | 叫聲中的最低頻率 |
-| `endFreq_kHz` | kHz | 叫聲結束時的頻率 |
+| `lowFreqTime_ms` | ms | 最低頻率出現的相對時間 |
+| `endFreqTime_ms` | ms | 結束頻率出現的相對時間 |
+| `characteristicFreqTime_ms` | ms | 峰值出現的相對時間 |
+| `kneeFreqTime_ms` | ms | 轉折點出現的相對時間 |
 
 ### 幀索引參數
 | 參數 | 單位 | 說明 |
 |------|------|------|
-| `peakFreqFrameIdx` | frame | 峰值在時間軸的位置 |
+| `peakFrameIdx` 或 `peakFreqFrameIdx` | frame | 峰值在時間軸的位置 |
 | `highFreqFrameIdx` | frame | 最高頻率在時間軸的位置 |
+| `startFreqFrameIdx` | frame | 起始頻率幀索引（總是 0） |
+| `lowFreqFrameIdx` | frame | 最低頻率在時間軸的位置 |
+| `endFreqFrameIdx` | frame | 結束頻率在時間軸的位置 |
+| `kneeFreqFrameIdx` | frame | 轉折點在時間軸的位置 |
 
 ### 功率參數
 | 參數 | 單位 | 說明 |
 |------|------|------|
 | `peakPower_dB` | dB | 最高能量值 |
+
+### 閾值相關參數
+| 參數 | 單位 | 說明 |
+|------|------|------|
+| `highFreqThreshold_dB_used` | dB | 高頻檢測使用的實際閾值 (相對於峰值) |
+| `lowFreqThreshold_dB_used` | dB | 低頻檢測使用的實際閾值 (相對於峰值) |
+
+---
+
+## 參數之間的關係和時間序列
+
+### 時間順序關係
+
+```
+時間軸 (ms)
+    ↓
+    0                                        duration_ms
+    |────────────────────────────────────────|
+    |                                        |
+    Start                                    End
+    (startFreqTime=0)                        (endFreqTime)
+    |                                        |
+    |  High        Peak    Low               |
+    |   |           |       |                |
+    |   v           v       v                |
+    |───●───...────●───...──●───...─────────|
+       T_high     T_peak   T_low    T_end
+       
+    也可能出現 Knee (轉折點)：
+    |───●───●───...────●───...───────────────|
+       H   K          P
+       High Knee Peak
+```
+
+### 頻率大小關係
+
+**標準情況**:
+```
+lowFreq < startFreq < kneeFreq < highFreq ≤ peakFreq
+```
+
+**特殊情況 (規則 b)**:
+```
+lowFreq < startFreq = highFreq ≤ peakFreq
+（此時 kneeFreq = startFreq）
+```
+
+### 每個參數的物理意義
+
+| 參數 | 物理意義 | 蝙蝠類型示例 |
+|------|---------|-------------|
+| **startFreq** | 叫聲開始時的頻率 | 蝙蝠剛開始發聲時 |
+| **highFreq** | 叫聲中出現的最高頻率 | 快速上升的FM chirp頂端 |
+| **peakFreq** (Cf) | 最高能量濃度的頻率 | 種類識別的關鍵特徵 |
+| **kneeFreq** | 頻率變化的拐點 | 複雜叫聲的形態特徵 |
+| **lowFreq** | 叫聲中出現的最低頻率 | 叫聲衰減時的頻率 |
+| **endFreq** | 叫聲結束時的頻率 | 信號淡出的最後頻率 |
 
 ---
 
@@ -700,6 +855,233 @@ console.log(`highFreqThreshold_dB_used: ${call.highFreqThreshold_dB_used}`);
 // 查看實際使用的閾值值
 ```
 
+### 問題: Knee Frequency 計算結果不符預期
+
+**原因**:
+1. startFreq 等於 highFreq（規則 b）→ 無轉折
+2. 頻率關係異常（罕見情況）
+
+**檢查**:
+```javascript
+console.log(`startFreq: ${call.startFreq_kHz}`);
+console.log(`highFreq: ${call.highFreq_kHz}`);
+console.log(`peakFreq: ${call.peakFreq_kHz}`);
+console.log(`kneeFreq: ${call.kneeFreq_kHz}`);
+
+// 應該滿足： startFreq < highFreq ≤ peakFreq
+```
+
+### 問題: Duration 計算結果異常
+
+**原因**:
+- 選擇區域的時間幀數不正確
+- timeFrames 陣列有缺失或排序錯誤
+
+**檢查**:
+```javascript
+console.log(`timeFrames length: ${call.timeFrames.length}`);
+console.log(`timeFrames[0]: ${call.timeFrames[0]}`);
+console.log(`timeFrames[last]: ${call.timeFrames[call.timeFrames.length-1]}`);
+console.log(`duration: ${call.duration_ms} ms`);
+```
+
+### 問題: 頻率時間順序錯亂 (Time not monotonic)
+
+**期望**:
+```
+startFreqTime (0) < highFreqTime < peakFreqTime < lowFreqTime < endFreqTime
+```
+
+**原因**:
+- 掃描邏輯錯誤
+- 幀索引追蹤失敗
+
+**調試**:
+```javascript
+console.log(`startFreqTime: ${call.startFreqTime_ms}`);
+console.log(`highFreqTime: ${call.highFreqTime_ms}`);
+console.log(`peakFreqTime: ${call.peakFreqTime_ms}`);
+console.log(`lowFreqTime: ${call.lowFreqTime_ms}`);
+console.log(`endFreqTime: ${call.endFreqTime_ms}`);
+```
+
+---
+
+## 常見的叫聲模式識別
+
+基於測量參數，可以識別以下叫聲類型：
+
+### 1. 簡單峰值型 (Simple Peak Call)
+
+**特徵**:
+- startFreq ≈ highFreq (接近)
+- peakFreq = highFreq
+- 無明顯轉折 (Knee ≈ Start)
+- 短時間內完成
+
+**頻譜外觀**: 
+```
+    ╱╲
+   ╱  ╲    (簡單鐘形)
+──╱────╲──
+```
+
+**檢測條件**:
+```javascript
+if (Math.abs(call.startFreq_kHz - call.highFreq_kHz) < 0.5) {
+  // 可能是簡單峰值型
+}
+```
+
+### 2. FM 上升掃頻 (FM Sweep Up)
+
+**特徵**:
+- startFreq < highFreq = peakFreq
+- 有明顯轉折 (kneeFreq)
+- Time: startTime < kneeTime < peakTime
+- 帶寬明顯 (bandwidth > 2 kHz)
+
+**頻譜外觀**:
+```
+        ╱╱  (持續上升)
+       ╱
+      ╱
+─────╱─────
+```
+
+**檢測條件**:
+```javascript
+if (call.startFreq_kHz < call.highFreq_kHz &&
+    Math.abs(call.highFreq_kHz - call.peakFreq_kHz) < 0.5 &&
+    call.bandwidth_kHz > 2) {
+  // 可能是 FM 上升掃頻
+}
+```
+
+### 3. FM 下降掃頻 (FM Sweep Down)
+
+**特徵**:
+- startFreq = highFreq = peakFreq
+- lowFreq < startFreq
+- 時間順序: start → peak → low → end
+- 帶寬明顯
+
+**頻譜外觀**:
+```
+╲╲╲        (持續下降)
+  ╲
+   ╲
+────╲─────
+```
+
+**檢測條件**:
+```javascript
+if (call.startFreq_kHz > call.lowFreq_kHz &&
+    call.endFreq_kHz < call.lowFreq_kHz) {
+  // 可能是 FM 下降掃頻
+}
+```
+
+### 4. 複雜多段型 (Complex Multi-segment)
+
+**特徵**:
+- highFreq < peakFreq (明顯差異)
+- 多個轉折點
+- kneeFreqTime 在 highFreqTime 和 peakFreqTime 之間
+
+**頻譜外觀**:
+```
+        ●
+       ╱ ╲
+      ╱   ╲
+─────●─────●────
+    high  peak
+```
+
+**檢測條件**:
+```javascript
+if (Math.abs(call.highFreq_kHz - call.peakFreq_kHz) > 0.5) {
+  // 可能是複雜多段型
+}
+```
+
+### 5. 噪聲反彈型 (Rebounce - 異常)
+
+**特徵** (應該被系統排除):
+- endFreq > lowFreq (明顯高於)
+- endFreqTime 接近 peakFreqTime (不應有)
+- endFreq 接近 highFreq
+
+**檢測** (用於驗證系統是否正常):
+```javascript
+if (call.endFreq_kHz > call.lowFreq_kHz + 2 &&
+    Math.abs(call.endFreqTime_ms - call.peakFreqTime_ms) < 20) {
+  console.warn("可能偵測到 rebounce 異常");
+}
+```
+
+---
+
+## 參數計算詳細流程圖
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 輸入: Spectrogram + timeFrames + freqBins               │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ STEP 1: 全域掃描找峰值                                  │
+│ 輸出: peakFreq, peakPower, peakFrameIdx                 │
+│       peakFreqTime = timeFrames[peakFrameIdx]           │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+                   ┌─────┴─────┐
+                   ↓           ↓
+           [Auto Mode]     [Manual Mode]
+                   ↓           ↓
+         ┌─────────────────────────┐
+         │ 決定高頻檢測閾值        │
+         └─────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ STEP 2: 掃描找高頻                                      │
+│ 輸出: highFreq, highFreqFrameIdx                        │
+│       highFreqTime = timeFrames[highFreqFrameIdx]       │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ STEP 2.5: 掃描第0幀找起始頻率                           │
+│ 輸出: startFreq, startFreqFrameIdx (=0)                 │
+│       startFreqTime = 0 ms                              │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ STEP 3: 掃描最後幀找低頻                                │
+│ 輸出: lowFreq, lowFreqFrameIdx                          │
+│       lowFreqTime = timeFrames[lowFreqFrameIdx]         │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ STEP 4: 後向掃描找結束頻率                              │
+│ 輸出: endFreq, endFreqFrameIdx                          │
+│       endFreqTime = timeFrames[endFreqFrameIdx]         │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ STEP 5: 計算衍生參數                                    │
+│ ├─ characteristicFreq = peakFreq (別名)                 │
+│ ├─ kneeFreq = (startFreq + peakFreq) / 2 (或規則)      │
+│ ├─ bandwidth = highFreq - startFreq                     │
+│ ├─ frequencyRange = highFreq - lowFreq                  │
+│ └─ duration = timeFrames[last] - timeFrames[0]          │
+└─────────────────────────────────────────────────────────┘
+                         ↓
+┌─────────────────────────────────────────────────────────┐
+│ 完整 Call 物件輸出                                      │
+│ (20+ 個參數)                                            │
+└─────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 參考資源
@@ -713,4 +1095,4 @@ console.log(`highFreqThreshold_dB_used: ${call.highFreqThreshold_dB_used}`);
 
 **文檔版本**: 2025-12-05  
 **維護者**: BatCallDetector 開發團隊  
-**最後更新**: 2025-12-05 with frame index tracking
+**最後更新**: 2025-12-05 with Characteristic Freq, Knee Freq, Duration, and Frame Time Tracking
