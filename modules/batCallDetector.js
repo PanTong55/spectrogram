@@ -262,10 +262,10 @@ export class BatCallDetector {
    * Calculate quality rating based on SNR value
    * SNR ranges:
    * - < +10 dB: Very Poor (紅色)
-   * - 10-20 dB: Poor (橙色)
-   * - 20-40 dB: Normal (正常色)
-   * - 40-60 dB: Good (綠色)
-   * - >= 60 dB: Excellent (深綠色)
+   * - 10-15 dB: Poor (橙色)
+   * - 15-20 dB: Normal (正常色)
+   * - 20-30 dB: Good (綠色)
+   * - >= 30 dB: Excellent (深綠色)
    * 
    * @param {number} snr_dB - Signal to Noise Ratio in dB
    * @returns {string} Quality rating
@@ -273,11 +273,11 @@ export class BatCallDetector {
   getQualityRating(snr_dB) {
     if (snr_dB < 10) {
       return 'Very Poor';
-    } else if (snr_dB < 20) {
+    } else if (snr_dB < 15) {
       return 'Poor';
-    } else if (snr_dB < 40) {
+    } else if (snr_dB < 20) {
       return 'Normal';
-    } else if (snr_dB < 60) {
+    } else if (snr_dB < 30) {
       return 'Good';
     } else {
       return 'Excellent';
@@ -287,7 +287,7 @@ export class BatCallDetector {
   /**
    * 2025 ENHANCEMENT: Calculate RMS-based SNR from Spectrogram
    * 
-   * SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
+   * SNR = 10 × log₁₀ (Signal RMS / Noise RMS)
    * 
    * Signal Region: 
    *   - Time range: from highFreqFrameIdx to endFrameIdx_forLowFreq
