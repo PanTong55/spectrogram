@@ -2315,77 +2315,121 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // ============================================================
     // STEP 4: Calculate characteristic frequency (CF-FM distinction)
     // 
-    // CRITICAL FIX: Characteristic frequency should be calculated from
-    // the END portion of the call (last 10-20%), not just the lowest freq.
+    // 2025 REVISED DEFINITION:
+    // Characteristic frequency = point in the final 40% of the call 
+    // having the LOWEST SLOPE or exhibiting the END of the main trend 
+    // of the body of the call (kHz)
     // 
-    // For CF-FM bats (Molossidae, Rhinolophidae, Hipposideridae):
-    // - CF phase has constant frequency (used for Doppler compensation)
-    // - FM phase has downward sweep
-    // - Characteristic frequency = CF phase frequency (from end portion)
+    // Professional Standard:
+    // - For CF-FM bats: Characteristic frequency marks the CF phase
+    //   (constant frequency region with minimal slope variation)
+    // - For pure FM bats: Marks the point where slope becomes gentlest
+    //   (transition from steep FM to call end)
+    // - For CF bats: Nearly constant throughout, Cf ≈ average frequency
     // 
-    // For pure FM bats (Vespertilionidae):
-    // - Entire call is FM sweep
-    // - Characteristic frequency ≈ End frequency (lowest)
-    // 
-    // Method: Extract CENTER frequency from last 10-20% portion
-    // 2025: Limit search range to endFrameIdx_forLowFreq (call end, limited by newEndFrameIdx)
+    // Method: Calculate SLOPE for each frame transition in last 40%,
+    // find frame(s) with LOWEST absolute slope (< 1 kHz/ms is considered stable)
     // ============================================================
-    // Use endFrameIdx_forLowFreq instead of spectrogram.length - 1 to respect call boundaries
     const charFreqSearchEnd = endFrameIdx_forLowFreq;  // Limited by newEndFrameIdx
-    const lastPercentStart = Math.floor(newStartFrameIdx + (charFreqSearchEnd - newStartFrameIdx) * (1 - characteristicFreq_percentEnd / 100));
+    const lastPercentStart = Math.floor(newStartFrameIdx + (charFreqSearchEnd - newStartFrameIdx) * (1 - 0.40));  // Last 40%
     let characteristicFreq_Hz = peakFreq_Hz;
-    let characteristicFreq_FrameIdx = 0;  // Track frame index for time calculation
+    let characteristicFreq_FrameIdx = 0;
     
     if (lastPercentStart < charFreqSearchEnd) {
-      // Method 1: Find weighted average frequency in last portion
-      // This handles CF-FM calls better than just finding the minimum
-      let totalPower = 0;
-      let weightedFreq = 0;
-      let weightedFrameIdx = 0;  // Weighted frame index for time calculation
-      let totalFrameWeight = 0;
+      // Step 1: Extract peak frequency for each frame in last 40%
+      const frameFrequencies = [];  // { frameIdx, freq_Hz, power_dB, slope_kHz_per_ms }
+      let timeFrameDelta_ms = 0;
       
-      // Search only up to charFreqSearchEnd (limited by newEndFrameIdx)
+      if (timeFrames.length > 1) {
+        timeFrameDelta_ms = (timeFrames[1] - timeFrames[0]) * 1000;  // Convert to ms
+      }
+      
+      // Extract peak frequency trajectory for last 40%
       for (let frameIdx = Math.max(0, lastPercentStart); frameIdx <= charFreqSearchEnd; frameIdx++) {
         const framePower = spectrogram[frameIdx];
+        let maxPower_dB = -Infinity;
+        let peakBin = 0;
         
-        // Find frame maximum for normalization
-        let frameMax = -Infinity;
+        // Find peak bin in this frame
         for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-          frameMax = Math.max(frameMax, framePower[binIdx]);
+          if (framePower[binIdx] > maxPower_dB) {
+            maxPower_dB = framePower[binIdx];
+            peakBin = binIdx;
+          }
         }
         
-        // Use -6dB threshold (half power) to define "significant" region
-        const significantThreshold = frameMax - 6;
-        
-        for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-          const power = framePower[binIdx];
-          if (power > significantThreshold) {
-            // Weight by power in dB scale
-            const linearPower = Math.pow(10, power / 10);
-            totalPower += linearPower;
-            weightedFreq += linearPower * freqBins[binIdx];
-            // Accumulate weighted frame index
-            weightedFrameIdx += linearPower * frameIdx;
-            totalFrameWeight += linearPower;
+        frameFrequencies.push({
+          frameIdx: frameIdx,
+          freq_Hz: freqBins[peakBin],
+          power_dB: maxPower_dB,
+          slope_kHz_per_ms: null  // Will be calculated below
+        });
+      }
+      
+      // Step 2: Calculate slopes between consecutive frames
+      for (let i = 0; i < frameFrequencies.length - 1; i++) {
+        const curr = frameFrequencies[i];
+        const next = frameFrequencies[i + 1];
+        const freqDifference_kHz = (next.freq_Hz - curr.freq_Hz) / 1000;
+        curr.slope_kHz_per_ms = timeFrameDelta_ms > 0 ? freqDifference_kHz / timeFrameDelta_ms : 0;
+      }
+      
+      // Step 3: Find region with LOWEST absolute slope (most stable)
+      // Stable CF region typically has |slope| < 1 kHz/ms
+      let minSlope = Infinity;
+      let charFreqFrameIdx = lastPercentStart;
+      
+      for (let i = 0; i < frameFrequencies.length; i++) {
+        const point = frameFrequencies[i];
+        if (point.slope_kHz_per_ms !== null) {
+          const absSlope = Math.abs(point.slope_kHz_per_ms);
+          
+          // Prefer frames with lower absolute slope
+          // Ties broken by: prefer later frame (closer to call end)
+          if (absSlope < minSlope) {
+            minSlope = absSlope;
+            charFreqFrameIdx = i;
           }
         }
       }
       
-      // Calculate weighted average frequency
-      if (totalPower > 0) {
-        characteristicFreq_Hz = weightedFreq / totalPower;
-        characteristicFreq_FrameIdx = Math.round(weightedFrameIdx / totalFrameWeight);
-      } else {
-        // Fallback: find lowest frequency in end portion (limited by charFreqSearchEnd)
+      // Step 4: Use the frame with lowest slope
+      if (charFreqFrameIdx < frameFrequencies.length) {
+        const cfPoint = frameFrequencies[charFreqFrameIdx];
+        characteristicFreq_Hz = cfPoint.freq_Hz;
+        characteristicFreq_FrameIdx = cfPoint.frameIdx;
+      }
+      
+      // Fallback: if no valid slope found, use center frequency of end 40%
+      if (characteristicFreq_Hz === peakFreq_Hz) {
+        let totalPower = 0;
+        let weightedFreq = 0;
+        let weightedFrameIdx = 0;
+        let totalFrameWeight = 0;
+        
         for (let frameIdx = Math.max(0, lastPercentStart); frameIdx <= charFreqSearchEnd; frameIdx++) {
           const framePower = spectrogram[frameIdx];
+          let frameMax = -Infinity;
           for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-            if (framePower[binIdx] > -Infinity) {
-              characteristicFreq_Hz = freqBins[binIdx];
-              characteristicFreq_FrameIdx = frameIdx;
-              break;
+            frameMax = Math.max(frameMax, framePower[binIdx]);
+          }
+          
+          const significantThreshold = frameMax - 6;
+          for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+            const power = framePower[binIdx];
+            if (power > significantThreshold) {
+              const linearPower = Math.pow(10, power / 10);
+              totalPower += linearPower;
+              weightedFreq += linearPower * freqBins[binIdx];
+              weightedFrameIdx += linearPower * frameIdx;
+              totalFrameWeight += linearPower;
             }
           }
+        }
+        
+        if (totalPower > 0) {
+          characteristicFreq_Hz = weightedFreq / totalPower;
+          characteristicFreq_FrameIdx = Math.round(weightedFrameIdx / totalFrameWeight);
         }
       }
     }
