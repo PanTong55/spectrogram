@@ -283,80 +283,6 @@ export class BatCallDetector {
   }
   
   /**
-   * 2025 ENHANCEMENT: Calculate RMS-based SNR
-   * 
-   * SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
-   * 
-   * Signal Region: Time range from highFreqFrameIdx to endFrameIdx_forLowFreq
-   * Frequency range: from lowFreq_kHz to highFreq_kHz
-   * 
-   * Noise Region: All other regions in the selection area
-   * 
-   * @param {Array} audioData - Time-domain audio samples
-   * @param {number} sampleRate - Sample rate in Hz
-   * @param {Object} call - BatCall object with frequency/time parameters
-   * @param {number} timeFrameInterval_s - Time interval between spectrogram frames in seconds
-   * @param {Array} freqBins - Frequency bin centers in Hz
-   * @returns {number} SNR in dB (20 × log₁₀(Signal RMS / Noise RMS))
-   */
-  calculateRMSbasedSNR(audioData, sampleRate, call, timeFrameInterval_s, freqBins) {
-    if (!audioData || audioData.length === 0) return -Infinity;
-    if (call.highFreqFrameIdx === undefined || call.highFreqFrameIdx === null) return -Infinity;
-    if (call.lowFreqFrameIdx === undefined || call.lowFreqFrameIdx === null) return -Infinity;
-    if (call.highFreq_kHz === undefined || call.lowFreq_kHz === undefined) return -Infinity;
-    
-    // Map frame indices to time domain sample indices
-    const samplesPerFrame = Math.round(sampleRate * timeFrameInterval_s);
-    const signalStartSample = Math.max(0, Math.round(call.highFreqFrameIdx * samplesPerFrame));
-    const signalEndSample = Math.min(audioData.length - 1, Math.round(call.lowFreqFrameIdx * samplesPerFrame));
-    
-    // Calculate Signal RMS in time domain
-    let signalPowerSum = 0;
-    let signalSampleCount = 0;
-    
-    for (let i = signalStartSample; i <= signalEndSample && i < audioData.length; i++) {
-      const sample = audioData[i];
-      signalPowerSum += sample * sample;
-      signalSampleCount++;
-    }
-    
-    if (signalSampleCount === 0) return -Infinity;
-    
-    const signalRMS = Math.sqrt(signalPowerSum / signalSampleCount);
-    
-    // Calculate Noise RMS: All samples outside signal region
-    let noisePowerSum = 0;
-    let noiseSampleCount = 0;
-    
-    // Noise before signal
-    for (let i = 0; i < signalStartSample; i++) {
-      const sample = audioData[i];
-      noisePowerSum += sample * sample;
-      noiseSampleCount++;
-    }
-    
-    // Noise after signal
-    for (let i = signalEndSample + 1; i < audioData.length; i++) {
-      const sample = audioData[i];
-      noisePowerSum += sample * sample;
-      noiseSampleCount++;
-    }
-    
-    if (noiseSampleCount === 0) return Infinity;  // No noise region = perfect SNR
-    
-    const noiseRMS = Math.sqrt(noisePowerSum / noiseSampleCount);
-    
-    // Avoid division by zero
-    if (noiseRMS < 1e-10) return Infinity;
-    if (signalRMS < 1e-10) return -Infinity;
-    
-    // Calculate SNR in dB: 20 × log₁₀(Signal RMS / Noise RMS)
-    const snr_dB = 20 * Math.log10(signalRMS / noiseRMS);
-    
-    return snr_dB;
-  }
-  
-  /**
    * Detect all bat calls in audio selection
    * Returns: array of BatCall objects
    */
@@ -480,52 +406,24 @@ export class BatCallDetector {
     
     // Additional SNR-based filtering: Remove calls with low SNR
     // Real bat calls should have peak power >> above noise baseline
-    // 2025 ENHANCEMENT: Use RMS-based SNR (20 × log₁₀(Signal RMS / Noise RMS))
     const snrThreshold_dB = 20;  // At least 20 dB above noise floor
-    
-    // Calculate time frame interval for SNR RMS calculation
-    const hopSize = Math.floor(this.config.fftSize * (this.config.hopPercent / 100));
-    const timeFrameInterval_s = hopSize / sampleRate;
-    
     const filteredCalls = calls.filter(call => {
       if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
         return false; // No peak power data, discard
       }
       
-      // 2025 ENHANCEMENT: Calculate RMS-based SNR from original time-domain audio
-      // SNR = 20 × log₁₀(Signal RMS / Noise RMS)
-      // Signal: time range [highFreqFrameIdx, lowFreqFrameIdx], freq range [lowFreq, highFreq]
-      // Noise: all other regions in selection area
-      let rmsBasedSNR_dB = null;
-      try {
-        rmsBasedSNR_dB = this.calculateRMSbasedSNR(audioData, sampleRate, call, timeFrameInterval_s, freqBins);
-        
-        // Ensure SNR is reasonable
-        if (rmsBasedSNR_dB !== null && isFinite(rmsBasedSNR_dB)) {
-          call.snr_dB = rmsBasedSNR_dB;
-          call.snrCalculationMethod = 'RMS-based (2025)';
-        } else {
-          // Fallback to spectral SNR if RMS calculation fails
-          const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
-          call.snr_dB = snr_dB;
-          call.snrCalculationMethod = 'Spectral (legacy)';
-        }
-      } catch (error) {
-        // Fallback to spectral SNR on error
-        const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
-        call.snr_dB = snr_dB;
-        call.snrCalculationMethod = 'Spectral (legacy)';
-      }
+      // Calculate SNR using robust noise baseline (25th percentile)
+      const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
       
-      // Store noiseFloor values in call object (for reference)
+      // Store SNR and noiseFloor values in call object
       call.noiseFloor_dB = robustNoiseFloor_dB;
+      call.snr_dB = snr_dB;
       
       // Calculate quality rating based on SNR
-      call.quality = this.getQualityRating(call.snr_dB);
+      call.quality = this.getQualityRating(snr_dB);
       
       // If SNR is too low, likely just noise
-      // Keep the 20 dB threshold for filtering
-      if (call.snr_dB < snrThreshold_dB) {
+      if (snr_dB < snrThreshold_dB) {
         return false;
       }
       
