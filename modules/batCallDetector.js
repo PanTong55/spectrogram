@@ -376,7 +376,6 @@ export class BatCallDetector {
     // 3. Power concentration should be high (not scattered like noise)
     // ============================================================
     
-    // Calculate noise baseline for additional filtering
     // Collect all power values for percentile calculation
     const allPowerValues = [];
     
@@ -413,16 +412,18 @@ export class BatCallDetector {
         return false; // No peak power data, discard
       }
       
-      // Use the RMS-based SNR if available (from measureFrequencyParameters)
-      // Otherwise, fall back to simple dB difference method
-      let snr_check = call.snr_dB;
-      if (snr_check === null || snr_check === undefined) {
-        // Fallback: calculate SNR as difference from noise floor
-        snr_check = call.peakPower_dB - robustNoiseFloor_dB;
-      }
+      // Calculate SNR using robust noise baseline (25th percentile)
+      const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
+      
+      // Store SNR and noiseFloor values in call object
+      call.noiseFloor_dB = robustNoiseFloor_dB;
+      call.snr_dB = snr_dB;
+      
+      // Calculate quality rating based on SNR
+      call.quality = this.getQualityRating(snr_dB);
       
       // If SNR is too low, likely just noise
-      if (snr_check < snrThreshold_dB) {
+      if (snr_dB < snrThreshold_dB) {
         return false;
       }
       
@@ -2755,83 +2756,6 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       // Re-read from parent config to get user's intended setting
       this.config.enableBackwardEndFreqScan = this.config.enableBackwardEndFreqScan !== false;
     }
-    
-    // ============================================================
-    // STEP 7: Calculate SNR (Signal to Noise Ratio)
-    // 
-    // 2025 REVISED METHOD:
-    // SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
-    // 
-    // Signal Region: 
-    // - Frequency: lowFreq to highFreq (kHz)
-    // - Time: highFreqFrameIdx to endFrameIdx_forLowFreq (frames)
-    // 
-    // Noise Region:
-    // - Selection area excluding signal region
-    // - All other frequencies and times in the spectrogram
-    // ============================================================
-    
-    // Get frequency bin indices for signal region
-    const lowFreqBin = Math.floor((call.lowFreq_kHz * 1000) / freqResolution);
-    const highFreqBin = Math.ceil((call.highFreq_kHz * 1000) / freqResolution);
-    const signalStartFrameIdx = call.highFreqFrameIdx;  // From STEP 2
-    const signalEndFrameIdx = endFrameIdx_forLowFreq;   // From STEP 3
-    
-    let signalPowerSum = 0;
-    let signalCount = 0;
-    let noisePowerSum = 0;
-    let noiseCount = 0;
-    
-    // Scan entire spectrogram to separate signal and noise regions
-    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
-      const framePower = spectrogram[frameIdx];
-      
-      // Determine if this frame is in the signal time region
-      const isSignalTimeFrame = (frameIdx >= signalStartFrameIdx && frameIdx <= signalEndFrameIdx);
-      
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        // Determine if this bin is in the signal frequency region
-        const isSignalFreqBin = (binIdx >= lowFreqBin && binIdx <= highFreqBin);
-        
-        // Convert dB to linear power (10^(dB/10))
-        const linearPower = Math.pow(10, framePower[binIdx] / 10);
-        
-        if (isSignalTimeFrame && isSignalFreqBin) {
-          // Inside signal region
-          signalPowerSum += linearPower;
-          signalCount++;
-        } else {
-          // Outside signal region (noise region)
-          noisePowerSum += linearPower;
-          noiseCount++;
-        }
-      }
-    }
-    
-    // Calculate RMS values (root mean square)
-    let signalRMS = 0;
-    let noiseRMS = 0;
-    
-    if (signalCount > 0) {
-      signalRMS = Math.sqrt(signalPowerSum / signalCount);
-    }
-    
-    if (noiseCount > 0) {
-      noiseRMS = Math.sqrt(noisePowerSum / noiseCount);
-    }
-    
-    // Calculate SNR in dB
-    // SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
-    if (noiseRMS > 0 && signalRMS > 0) {
-      const snr_linear = signalRMS / noiseRMS;
-      call.snr_dB = 20 * Math.log10(snr_linear);
-    } else {
-      // Fallback if calculation fails
-      call.snr_dB = 0;
-    }
-    
-    // Calculate quality rating based on SNR
-    call.quality = this.getQualityRating(call.snr_dB);
   }
   
   /**
