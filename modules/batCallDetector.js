@@ -1499,10 +1499,6 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
           
           // 如果找到有效的 High Frequency，檢查是否 >= Peak Frequency
           if (testHighFreq_Hz !== null && (testHighFreq_Hz / 1000) >= peakFreq_kHz) {
-            // IMPORTANT 2025: 
-            // Start Frequency 必須使用固定的 -24dB 閾值，不能用調整後的 highFreqThreshold_dB
-            // Start Frequency 的規則 (a)/(b) 邏輯在 STEP 2.5 中執行，不在此處
-            // Auto Mode 防呆檢查只調整 High Frequency threshold，不涉及 Start Frequency
             
             safeHighFreq_Hz = testHighFreq_Hz;
             safeHighFreq_kHz = testHighFreq_Hz / 1000;
@@ -1524,13 +1520,6 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       // 當 threshold 達到 -70dB 極限時，自動改用 -30dB
       // 不再需要顯示 warning，因此 highFreqDetectionWarning 已棄用
       
-      // ============================================================
-      // 重要修正 (2025)：
-      // Start Frequency 必須基於 -24dB 閾值計算，與 High Frequency 無關
-      // 規則 (a)/(b) 應用在 STEP 2.5 中，不在此處提前計算
-      // Auto Mode 中只使用優化的 High Frequency，Start Frequency 留到 STEP 2.5 計算
-      // 不再存儲臨時的 _startFreq_kHz_fromAuto 和 _startFreq_Hz_fromAuto
-      // ============================================================
     }
     
     // ============================================================
