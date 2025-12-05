@@ -624,7 +624,7 @@ class h extends s {
         };
         
         if (this.options.peakMode) {
-            // 1. 第一次掃描：找出全局最大峰值
+            // 1. 第一次掃描：找出全局最大峰值（使用幅度值進行精確檢測）
             let globalMaxPeakValue = 0;
             
             for (let e = 0; e < i; e++) {
@@ -640,12 +640,10 @@ class h extends s {
                         o
                     );
                     
-                    // Convert magnitude to dB
-                    const spectrogramData = magnitudeToUint8(magnitudeSpectrum);
-                    
+                    // 使用原始幅度值進行峰值檢測（比 dB 值更精確）
                     let peakValueInRange = 0;
-                    for (let k = minBinFull; k < maxBinFull && k < spectrogramData.length; k++) {
-                      peakValueInRange = Math.max(peakValueInRange, spectrogramData[k] || 0);
+                    for (let k = minBinFull; k < maxBinFull && k < magnitudeSpectrum.length; k++) {
+                      peakValueInRange = Math.max(peakValueInRange, magnitudeSpectrum[k] || 0);
                     }
                     
                     globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
@@ -674,19 +672,17 @@ class h extends s {
                         o
                     );
                     
-                    // Convert magnitude to dB
-                    const wasmSpectrum = magnitudeToUint8(magnitudeSpectrum2);
-                    
+                    // 使用幅度值進行峰值檢測（更精確）
                     let peakBandInRange = Math.max(0, minBinFull);
-                    let peakValueInRange = wasmSpectrum[peakBandInRange] || 0;
-                    for (let k = minBinFull; k < maxBinFull && k < wasmSpectrum.length; k++) {
-                      if ((wasmSpectrum[k] || 0) > peakValueInRange) {
-                        peakValueInRange = wasmSpectrum[k];
+                    let peakValueInRange = magnitudeSpectrum2[peakBandInRange] || 0;
+                    for (let k = minBinFull; k < maxBinFull && k < magnitudeSpectrum2.length; k++) {
+                      if ((magnitudeSpectrum2[k] || 0) > peakValueInRange) {
+                        peakValueInRange = magnitudeSpectrum2[k];
                         peakBandInRange = k;
                       }
                     }
                     
-                    // 修改：存儲對象而不是單純的索引
+                    // 存儲對象：峰值箱位置和是否為高峰（相對幅度值）
                     if (peakValueInRange >= peakThreshold) {
                       channelPeakBands.push({
                           bin: peakBandInRange,
@@ -695,6 +691,9 @@ class h extends s {
                     } else {
                       channelPeakBands.push(null);
                     }
+                    
+                    // 轉換幅度值為 dB 和 0-255 範圍
+                    const dbSpectrum = magnitudeToUint8(magnitudeSpectrum2);
                     
                     // Apply filter bank if needed
                     if (c) {
@@ -705,8 +704,8 @@ class h extends s {
                             e[k] = dbFiltered[k];
                         }
                     } else {
-                        for (let k = 0; k < r / 2 && k < wasmSpectrum.length; k++) {
-                            e[k] = wasmSpectrum[k];
+                        for (let k = 0; k < r / 2 && k < dbSpectrum.length; k++) {
+                            e[k] = dbSpectrum[k];
                         }
                     }
                     
