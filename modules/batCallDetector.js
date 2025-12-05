@@ -913,6 +913,10 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     }
     
     // ============================================================
+    // 保存最終的搜尋範圍 (用於 Safety Mechanism)
+    const finalSearchLimitFrame = currentSearchLimitFrame;  // 2025 v2: 保存最後的搜尋範圍
+    
+    // ============================================================
     // 只收集成功找到 bin 的測量
     const validMeasurements = measurements.filter(m => m.foundBin);
     
@@ -1013,17 +1017,79 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     let returnStartFreq_kHz = optimalMeasurement.startFreq_kHz;
     
     // Safety Mechanism Re-calculation
-    // 2025 v2: 當安全機制改變閾值時，從已有的測量中找到對應的 safeThreshold 測量結果
+    // 2025 v2: 當安全機制改變閾值時，需要在最終的搜尋範圍內重新計算
+    // 使用 finalSearchLimitFrame (經過 narrowing 後的範圍) 而不是固定的 peakFrameIdx
     if (safeThreshold !== finalThreshold) {
-      // 查找對應 safeThreshold 的測量結果
-      const safeMeasurement = validMeasurements.find(m => m.threshold === safeThreshold);
-      if (safeMeasurement) {
-        returnHighFreq_Hz = safeMeasurement.highFreq_Hz;
-        returnHighFreq_kHz = safeMeasurement.highFreq_kHz;
-        returnHighFreqBinIdx = safeMeasurement.highFreqBinIdx;
-        returnHighFreqFrameIdx = safeMeasurement.highFreqFrameIdx;
-        returnStartFreq_Hz = safeMeasurement.startFreq_Hz;
-        returnStartFreq_kHz = safeMeasurement.startFreq_kHz;
+      const highFreqThreshold_dB_safe = stablePeakPower_dB + safeThreshold;
+      
+      // 在 finalSearchLimitFrame 範圍內構建 Max Spectrum
+      const safeMaxSpectrum = new Float32Array(numBins).fill(-Infinity);
+      const safeFrameIndexForBin = new Uint16Array(numBins);
+      
+      for (let f = 0; f <= finalSearchLimitFrame; f++) {
+        const frame = spectrogram[f];
+        for (let b = 0; b < numBins; b++) {
+          if (frame[b] > safeMaxSpectrum[b]) {
+            safeMaxSpectrum[b] = frame[b];
+            safeFrameIndexForBin[b] = f;
+          }
+        }
+      }
+      
+      let highFreq_Hz_safe = null;
+      let highFreqBinIdx_safe = 0;
+      let highFreqFrameIdx_safe = 0;
+      let startFreq_Hz_safe = null;
+      
+      // 計算 HIGH FREQUENCY (使用 safeMaxSpectrum)
+      for (let binIdx = safeMaxSpectrum.length - 1; binIdx >= 0; binIdx--) {
+        if (safeMaxSpectrum[binIdx] > highFreqThreshold_dB_safe) {
+          highFreq_Hz_safe = freqBins[binIdx];
+          highFreqBinIdx_safe = binIdx;
+          highFreqFrameIdx_safe = safeFrameIndexForBin[binIdx];
+          
+          // 嘗試線性插值
+          if (binIdx < safeMaxSpectrum.length - 1) {
+            const thisPower = safeMaxSpectrum[binIdx];
+            const nextPower = safeMaxSpectrum[binIdx + 1];
+            if (nextPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
+              const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - nextPower);
+              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+              highFreq_Hz_safe = freqBins[binIdx] + powerRatio * freqDiff;
+            }
+          }
+          break;
+        }
+      }
+      
+      // 計算 START FREQUENCY (始終使用 firstFramePower)
+      if (highFreq_Hz_safe !== null) {
+        for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
+          if (firstFramePower[binIdx] > highFreqThreshold_dB_safe) {
+            startFreq_Hz_safe = freqBins[binIdx];
+            
+            // 嘗試線性插值
+            if (binIdx > 0) {
+              const thisPower = firstFramePower[binIdx];
+              const prevPower = firstFramePower[binIdx - 1];
+              if (prevPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
+                const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - prevPower);
+                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
+                startFreq_Hz_safe = freqBins[binIdx] - powerRatio * freqDiff;
+              }
+            }
+            break;
+          }
+        }
+      }
+      
+      if (highFreq_Hz_safe !== null) {
+        returnHighFreq_Hz = highFreq_Hz_safe;
+        returnHighFreq_kHz = highFreq_Hz_safe / 1000;
+        returnHighFreqBinIdx = highFreqBinIdx_safe;
+        returnHighFreqFrameIdx = highFreqFrameIdx_safe;
+        returnStartFreq_Hz = startFreq_Hz_safe;
+        returnStartFreq_kHz = startFreq_Hz_safe !== null ? startFreq_Hz_safe / 1000 : null;
       }
     }
     
