@@ -418,7 +418,7 @@ export class BatCallDetector {
     
     // Calculate SNR in dB: 10 × log₁₀(Signal Power / Noise Power)
     // (not 20 × log₁₀ because we're comparing power, not amplitude)
-    result.snr_dB = 10 * Math.log10(signalPowerMean_linear / noisePowerMean_linear);
+    result.snr_dB = -10 * Math.log10(signalPowerMean_linear / noisePowerMean_linear);
     
     return result;
   }
