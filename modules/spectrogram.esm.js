@@ -1,15 +1,7 @@
-import * as wasmModule from './spectrogram_wasm.js';
+import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 
-// 導入 WASM 模組
-let wasmReady = null;
-let SpectrogramEngine = null;
-
-// 初始化 WASM
-async function initWasm() {
-    if (wasmReady) return wasmReady;
-    wasmReady = wasmModule.default();
-    return wasmReady;
-}
+// WASM 初始化 Promise
+let wasmReady = init();
 
 function t(t, e, s, r) {
     return new (s || (s = Promise))((function(i, a) {
@@ -269,8 +261,7 @@ class h extends s {
 
         // WASM integration
         this._wasmEngine = null;
-        this._wasmReady = initWasm().then(async () => {
-            const { SpectrogramEngine } = await wasmModule.default();
+        this._wasmReady = wasmReady.then(() => {
             this._wasmEngine = new SpectrogramEngine(
                 this.fftSamples,
                 this.windowFunc,
@@ -357,13 +348,13 @@ class h extends s {
         }, this.wrapper),
         this.spectrCc = this.canvas.getContext("2d")
     }
-    render() {
+    async render() {
         var t;
         if (this.frequenciesDataUrl)
             this.loadFrequenciesData(this.frequenciesDataUrl);
         else {
             const e = null === (t = this.wavesurfer) || void 0 === t ? void 0 : t.getDecodedData();
-            e && this.drawSpectrogram(this.getFrequencies(e))
+            e && this.drawSpectrogram(await this.getFrequencies(e))
         }
     }
     drawSpectrogram(t) {
