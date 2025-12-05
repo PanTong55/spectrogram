@@ -1101,6 +1101,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       highFreqFrameIdx: returnHighFreqFrameIdx,  // 2025 v2: 新增幀索引
       startFreq_Hz: returnStartFreq_Hz,
       startFreq_kHz: returnStartFreq_kHz,
+      finalSearchLimitFrame: finalSearchLimitFrame,  // 2025 v2: 返回最終的搜尋範圍限制
       warning: hasWarning
     };
   }
@@ -1503,6 +1504,8 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     let safeHighFreq_kHz = null;
     let safeHighFreq_Hz = null;
     let safeHighFreqBinIdx = undefined;
+    let safeHighFreqFrameIdx = 0;
+    let finalSearchLimitFrameFromAuto = 0;  // 2025 v2: 保存 auto mode 返回的搜尋範圍限制
     
     if (this.config.highFreqThreshold_dB_isAuto === true) {
       const result = this.findOptimalHighFrequencyThreshold(
@@ -1523,6 +1526,8 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       safeHighFreq_kHz = result.highFreq_kHz;
       safeHighFreq_Hz = result.highFreq_Hz;
       safeHighFreqBinIdx = result.highFreqBinIdx;  // 2025: Initialize from findOptimalHighFrequencyThreshold
+      safeHighFreqFrameIdx = result.highFreqFrameIdx;  // 2025 v2: 取得幀索引
+      finalSearchLimitFrameFromAuto = result.finalSearchLimitFrame;  // 2025 v2: 取得搜尋範圍限制
       let usedThreshold = result.threshold;
       
       // 如果最優閾值的 High Frequency 低於 Peak Frequency，執行防呆檢查
@@ -1534,22 +1539,37 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
         
         for (let testThreshold_dB = -24; testThreshold_dB >= -70; testThreshold_dB--) {
           const highFreqThreshold_dB = peakPower_dB + testThreshold_dB;
-          const firstFramePower = spectrogram[0];
           
-          // 計算此閾值的 High Frequency
+          // 2025 v2: 在 finalSearchLimitFrame 範圍內掃描，而不是只掃描 Frame 0
           let testHighFreq_Hz = null;
-          let testHighFreqBinIdx = 0;  // 2025: Track the bin index found
+          let testHighFreqBinIdx = 0;
+          let testHighFreqFrameIdx = -1;
+          
+          // 在 finalSearchLimitFrame 範圍內構建 Max Spectrum
+          const testMaxSpectrum = new Float32Array(spectrogram[0].length).fill(-Infinity);
+          const testFrameIndexForBin = new Uint16Array(spectrogram[0].length);
+          
+          for (let f = 0; f <= finalSearchLimitFrameFromAuto; f++) {
+            const frame = spectrogram[f];
+            for (let b = 0; b < frame.length; b++) {
+              if (frame[b] > testMaxSpectrum[b]) {
+                testMaxSpectrum[b] = frame[b];
+                testFrameIndexForBin[b] = f;
+              }
+            }
+          }
           
           // High Frequency 計算（從高到低）
-          for (let binIdx = firstFramePower.length - 1; binIdx >= 0; binIdx--) {
-            if (firstFramePower[binIdx] > highFreqThreshold_dB) {
+          for (let binIdx = testMaxSpectrum.length - 1; binIdx >= 0; binIdx--) {
+            if (testMaxSpectrum[binIdx] > highFreqThreshold_dB) {
               testHighFreq_Hz = freqBins[binIdx];
-              testHighFreqBinIdx = binIdx;  // 2025: Save the found bin index
+              testHighFreqBinIdx = binIdx;
+              testHighFreqFrameIdx = testFrameIndexForBin[binIdx];
               
               // 線性插值
-              if (binIdx < firstFramePower.length - 1) {
-                const thisPower = firstFramePower[binIdx];
-                const nextPower = firstFramePower[binIdx + 1];
+              if (binIdx < testMaxSpectrum.length - 1) {
+                const thisPower = testMaxSpectrum[binIdx];
+                const nextPower = testMaxSpectrum[binIdx + 1];
                 if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
                   const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
                   const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
@@ -1565,7 +1585,8 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
             
             safeHighFreq_Hz = testHighFreq_Hz;
             safeHighFreq_kHz = testHighFreq_Hz / 1000;
-            safeHighFreqBinIdx = testHighFreqBinIdx;  // 2025: Save the bin index for later use
+            safeHighFreqBinIdx = testHighFreqBinIdx;
+            safeHighFreqFrameIdx = testHighFreqFrameIdx;  // 2025 v2: 保存幀索引
             usedThreshold = testThreshold_dB;
             foundValidHighFreq = true;
             break;
@@ -1800,9 +1821,12 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     let highFreqBinIdx = 0;
     let highFreqFrameIdx = -1; // 2025: Use -1 to indicate not found yet
     
-    // 2025 CRITICAL CHANGE: Loop only up to peakFrameIdx
-    // Scan spectrogram frames from 0 to Peak to find highest frequency
-    const highFreqScanLimit = Math.min(peakFrameIdx, spectrogram.length - 1);
+    // 2025 v2 CRITICAL CHANGE: 使用 AUTO MODE 返回的 finalSearchLimitFrame
+    // 如果在 AUTO MODE 中，使用其返回的搜尋範圍限制
+    // 如果是 MANUAL MODE 或未設定，使用 peakFrameIdx
+    const highFreqScanLimit = (this.config.highFreqThreshold_dB_isAuto === true && finalSearchLimitFrameFromAuto > 0)
+      ? Math.min(finalSearchLimitFrameFromAuto, spectrogram.length - 1)
+      : Math.min(peakFrameIdx, spectrogram.length - 1);
 
     for (let frameIdx = 0; frameIdx <= highFreqScanLimit; frameIdx++) {
       const framePower = spectrogram[frameIdx];
