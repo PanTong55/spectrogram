@@ -300,7 +300,12 @@ export function showCallAnalysisPopup({
         audioDataForDetection = applyButterworthHighpassFilter(audioDataForDetection, highpassFreq_Hz, sampleRate, batCallConfig.highpassFilterOrder);
       }
 
-      // 為了計算 SNR 使用原始（未濾波）的音頻數據，建立一個臨時的 detector 副本
+      // 為了確保 SNR 計算正確，需要使用原始（未濾波）的音頻數據
+      // 2025 REVISED SNR CALCULATION:
+      // SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
+      // Signal Region: call 的頻率和時間範圍
+      // Noise Region: selection area 除去 signal region 外的區域
+      
       // 先用濾波後的數據進行主要檢測
       const calls = await detector.detectCalls(
         audioDataForDetection,
@@ -313,13 +318,13 @@ export function showCallAnalysisPopup({
       if (batCallConfig.enableHighpassFilter && calls.length > 0) {
         const originalDetector = new (detector.constructor)(batCallConfig);
         const originalCalls = await originalDetector.detectCalls(
-          audioData,  // 使用原始未濾波的音頻
+          audioData,  // 使用原始未濾波的音頻來計算更準確的 SNR
           sampleRate,
           selection.Flow,
           selection.Fhigh
         );
         
-        // 如果原始檢測也找到 call，將 SNR 從原始檢測複製到濾波後的 call
+        // 如果原始檢測也找到 call，將新 RMS-based SNR 從原始檢測複製到濾波後的 call
         if (originalCalls.length > 0) {
           calls[0].snr_dB = originalCalls[0].snr_dB;
           calls[0].quality = originalCalls[0].quality;

@@ -376,54 +376,17 @@ export class BatCallDetector {
     // 3. Power concentration should be high (not scattered like noise)
     // ============================================================
     
-    // Collect all power values for percentile calculation
-    const allPowerValues = [];
-    
-    for (let frameIdx = 0; frameIdx < powerMatrix.length; frameIdx++) {
-      const framePower = powerMatrix[frameIdx];
-      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
-        allPowerValues.push(framePower[binIdx]);
-      }
-    }
-    
-    // Sort to calculate percentiles
-    allPowerValues.sort((a, b) => a - b);
-    
-    // Calculate noise baseline using 25th percentile (robust to call signals)
-    // This represents the typical background noise floor
-    // The lowest 25% of energy bins = pure noise/low signal
-    const percentile25Index = Math.floor(allPowerValues.length * 0.25);
-    const noiseFloor_dB = allPowerValues[Math.max(0, percentile25Index)];
-    
-    // For comparison: also use median (50th percentile) as secondary baseline
-    const medianIndex = Math.floor(allPowerValues.length * 0.5);
-    const medianPower_dB = allPowerValues[Math.max(0, medianIndex)];
-    
-    // Use the higher of noise floor or a minimum threshold to ensure reasonable baseline
-    // Minimum baseline: -80 dB (typical for quiet recording environments)
-    const minNoiseFloor_dB = -80;
-    const robustNoiseFloor_dB = Math.max(noiseFloor_dB, minNoiseFloor_dB);
-    
     // Additional SNR-based filtering: Remove calls with low SNR
-    // Real bat calls should have peak power >> above noise baseline
-    const snrThreshold_dB = 20;  // At least 20 dB above noise floor
+    // Real bat calls should have SNR >> above noise baseline
+    // 2025: SNR now calculated using new RMS-based method in measureFrequencyParameters
+    const snrThreshold_dB = 10;  // At least 10 dB SNR to be considered a valid call
     const filteredCalls = calls.filter(call => {
-      if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
-        return false; // No peak power data, discard
+      if (call.snr_dB === null || call.snr_dB === undefined) {
+        return false; // No SNR data, discard
       }
       
-      // Calculate SNR using robust noise baseline (25th percentile)
-      const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
-      
-      // Store SNR and noiseFloor values in call object
-      call.noiseFloor_dB = robustNoiseFloor_dB;
-      call.snr_dB = snr_dB;
-      
-      // Calculate quality rating based on SNR
-      call.quality = this.getQualityRating(snr_dB);
-      
-      // If SNR is too low, likely just noise
-      if (snr_dB < snrThreshold_dB) {
+      // If SNR is too low, likely just noise or background
+      if (call.snr_dB < snrThreshold_dB) {
         return false;
       }
       
@@ -2756,6 +2719,83 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       // Re-read from parent config to get user's intended setting
       this.config.enableBackwardEndFreqScan = this.config.enableBackwardEndFreqScan !== false;
     }
+    
+    // ============================================================
+    // STEP 7: Calculate SNR (Signal to Noise Ratio)
+    // 
+    // 2025 REVISED METHOD:
+    // SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
+    // 
+    // Signal Region: 
+    // - Frequency: lowFreq to highFreq (kHz)
+    // - Time: highFreqFrameIdx to lowFreqFrameIdx (frames)
+    // 
+    // Noise Region:
+    // - Selection area excluding signal region
+    // - All other frequencies and times in the spectrogram
+    // ============================================================
+    
+    // Get frequency bin indices for signal region
+    const lowFreqBin = Math.floor((call.lowFreq_kHz * 1000) / freqResolution);
+    const highFreqBin = Math.ceil((call.highFreq_kHz * 1000) / freqResolution);
+    const startFreqIdx = highFreqFrameIdx;  // From STEP 2
+    const endFreqIdx = lowFreqFrameIdx;     // From STEP 3
+    
+    let signalPowerSum = 0;
+    let signalCount = 0;
+    let noisePowerSum = 0;
+    let noiseCount = 0;
+    
+    // Scan entire spectrogram to separate signal and noise regions
+    for (let frameIdx = 0; frameIdx < spectrogram.length; frameIdx++) {
+      const framePower = spectrogram[frameIdx];
+      
+      // Determine if this frame is in the signal time region
+      const isSignalTimeFrame = (frameIdx >= startFreqIdx && frameIdx <= endFreqIdx);
+      
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        // Determine if this bin is in the signal frequency region
+        const isSignalFreqBin = (binIdx >= lowFreqBin && binIdx <= highFreqBin);
+        
+        // Convert dB to linear power (10^(dB/10))
+        const linearPower = Math.pow(10, framePower[binIdx] / 10);
+        
+        if (isSignalTimeFrame && isSignalFreqBin) {
+          // Inside signal region
+          signalPowerSum += linearPower;
+          signalCount++;
+        } else {
+          // Outside signal region (noise region)
+          noisePowerSum += linearPower;
+          noiseCount++;
+        }
+      }
+    }
+    
+    // Calculate RMS values (root mean square)
+    let signalRMS = 0;
+    let noiseRMS = 0;
+    
+    if (signalCount > 0) {
+      signalRMS = Math.sqrt(signalPowerSum / signalCount);
+    }
+    
+    if (noiseCount > 0) {
+      noiseRMS = Math.sqrt(noisePowerSum / noiseCount);
+    }
+    
+    // Calculate SNR in dB
+    // SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
+    if (noiseRMS > 0 && signalRMS > 0) {
+      const snr_linear = signalRMS / noiseRMS;
+      call.snr_dB = 20 * Math.log10(snr_linear);
+    } else {
+      // Fallback if calculation fails
+      call.snr_dB = 0;
+    }
+    
+    // Calculate quality rating based on SNR
+    call.quality = this.getQualityRating(call.snr_dB);
   }
   
   /**
