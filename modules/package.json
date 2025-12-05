@@ -1,14 +1,14 @@
 {
-  "name": "spectrogram-wasm",
+  "name": "waveform-wasm",
   "type": "module",
   "version": "0.1.0",
   "files": [
-    "spectrogram_wasm_bg.wasm",
-    "spectrogram_wasm.js",
-    "spectrogram_wasm.d.ts"
+    "waveform_wasm_bg.wasm",
+    "waveform_wasm.js",
+    "waveform_wasm.d.ts"
   ],
-  "main": "spectrogram_wasm.js",
-  "types": "spectrogram_wasm.d.ts",
+  "main": "waveform_wasm.js",
+  "types": "waveform_wasm.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]
