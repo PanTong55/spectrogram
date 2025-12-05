@@ -427,15 +427,13 @@ export function showCallAnalysisPopup({
           console.log(
             `[SNR Range] Frequency: ${call.snrDetails.frequencyRange_kHz?.lowFreq?.toFixed(1) || '-'} ` +
             `to ${call.snrDetails.frequencyRange_kHz?.highFreq?.toFixed(1) || '-'} kHz, ` +
-            `Time: ${call.snrDetails.timeRange_ms?.start?.toFixed(1) || '-'} ` +
-            `to ${call.snrDetails.timeRange_ms?.end?.toFixed(1) || '-'} ms ` +
-            `(Duration: ${call.snrDetails.timeRange_ms?.duration?.toFixed(1) || '-'} ms)`
+            `Time frames: ${call.snrDetails.timeRange_frames?.start || '-'} ` +
+            `to ${call.snrDetails.timeRange_frames?.end || '-'} ` +
+            `(${call.snrDetails.timeRange_frames?.duration || '-'} frames)`
           );
           console.log(
-            `[SNR Values] Signal RMS: ${call.snrDetails.signalRMS?.toExponential(2) || '-'}, ` +
-            `Noise RMS: ${call.snrDetails.noiseRMS?.toExponential(2) || '-'}, ` +
-            `Signal Samples: ${call.snrDetails.signalSampleCount || '-'}, ` +
-            `Noise Samples: ${call.snrDetails.noiseSampleCount || '-'}`
+            `[SNR Values] Signal power: ${call.snrDetails.signalPowerMean_dB?.toFixed(1) || '-'} dB (${call.snrDetails.signalCount || '-'} bins), ` +
+            `Noise power: ${call.snrDetails.noisePowerMean_dB?.toFixed(1) || '-'} dB (${call.snrDetails.noiseCount || '-'} bins)`
           );
         }
         console.log(`[SNR Result] SNR = ${call.snr_dB?.toFixed(2) || '-'} dB, Quality: ${call.quality || '-'}`);
