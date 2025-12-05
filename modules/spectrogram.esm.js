@@ -354,7 +354,12 @@ class h extends s {
             this.loadFrequenciesData(this.frequenciesDataUrl);
         else {
             const e = null === (t = this.wavesurfer) || void 0 === t ? void 0 : t.getDecodedData();
-            e && this.drawSpectrogram(await this.getFrequencies(e))
+            if (e) {
+                const frequencies = await this.getFrequencies(e);
+                if (frequencies) {
+                    this.drawSpectrogram(frequencies);
+                }
+            }
         }
     }
     drawSpectrogram(t) {
@@ -561,6 +566,11 @@ class h extends s {
     }
     
     async getFrequencies(t) {
+        // 檢查 this.options 是否為 null（在 destroy 或 selection mode 切換時可能發生）
+        if (!this.options || !t) {
+            return;
+        }
+        
         var e, s;
         const r = this.fftSamples
           , i = (null !== (e = this.options.splitChannels) && void 0 !== e ? e : null === (s = this.wavesurfer) || void 0 === s ? void 0 : s.options.splitChannels) ? t.numberOfChannels : 1;
@@ -623,7 +633,7 @@ class h extends s {
             return result;
         };
         
-        if (this.options.peakMode) {
+        if (this.options && this.options.peakMode) {
             // 1. 第一次掃描：找出全局最大峰值（使用幅度值進行精確檢測）
             let globalMaxPeakValue = 0;
             
