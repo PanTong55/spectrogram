@@ -605,6 +605,24 @@ class h extends s {
         const gainDBNegRange = gainDBNeg - this.rangeDB;
         const rangeDBReciprocal = 255 / this.rangeDB;
         
+        // 輔助函數：將幅度值轉換為 dB 和 0-255 範圍
+        const magnitudeToUint8 = (magnitudeSpectrum) => {
+            const result = new Uint8Array(magnitudeSpectrum.length);
+            for (let k = 0; k < magnitudeSpectrum.length; k++) {
+                const magnitude = magnitudeSpectrum[k];
+                const s = magnitude > 1e-12 ? magnitude : 1e-12;
+                const db = 20 * Math.log10(s);
+                if (db < gainDBNegRange) {
+                    result[k] = 0;
+                } else if (db > gainDBNeg) {
+                    result[k] = 255;
+                } else {
+                    result[k] = (db + this.gainDB) * rangeDBReciprocal + 256;
+                }
+            }
+            return result;
+        };
+        
         if (this.options.peakMode) {
             // 1. 第一次掃描：找出全局最大峰值
             let globalMaxPeakValue = 0;
@@ -616,13 +634,14 @@ class h extends s {
                 for (; a + r < s.length; ) {
                     const tSlice = s.subarray(a, a + r);
                     
-                    // Use WASM for FFT computation
-                    const spectrogramData = this._wasmEngine.compute_spectrogram(
+                    // Use WASM for FFT computation - returns magnitude values
+                    const magnitudeSpectrum = this._wasmEngine.compute_spectrogram(
                         tSlice,
-                        o,
-                        this.gainDB,
-                        this.rangeDB
+                        o
                     );
+                    
+                    // Convert magnitude to dB
+                    const spectrogramData = magnitudeToUint8(magnitudeSpectrum);
                     
                     let peakValueInRange = 0;
                     for (let k = minBinFull; k < maxBinFull && k < spectrogramData.length; k++) {
@@ -649,13 +668,14 @@ class h extends s {
                     const tSlice = s.subarray(a, a + r)
                         , e = new Uint8Array(r / 2);
                     
-                    // Use WASM for FFT computation
-                    const wasmSpectrum = this._wasmEngine.compute_spectrogram(
+                    // Use WASM for FFT computation - returns magnitude values
+                    const magnitudeSpectrum2 = this._wasmEngine.compute_spectrogram(
                         tSlice,
-                        o,
-                        this.gainDB,
-                        this.rangeDB
+                        o
                     );
+                    
+                    // Convert magnitude to dB
+                    const wasmSpectrum = magnitudeToUint8(magnitudeSpectrum2);
                     
                     let peakBandInRange = Math.max(0, minBinFull);
                     let peakValueInRange = wasmSpectrum[peakBandInRange] || 0;
@@ -676,20 +696,17 @@ class h extends s {
                       channelPeakBands.push(null);
                     }
                     
-                    // Copy WASM output to result array, applying filter bank if needed
-                    for (let t = 0; t < r / 2; t++) {
-                        e[t] = wasmSpectrum[t];
-                    }
-                    
                     // Apply filter bank if needed
                     if (c) {
-                        const spectrum = new Float32Array(r / 2);
-                        for (let k = 0; k < r / 2; k++) {
-                            spectrum[k] = wasmSpectrum[k];
+                        const filtered = this.applyFilterBank(magnitudeSpectrum2, c);
+                        // Convert filtered magnitude values to dB
+                        const dbFiltered = magnitudeToUint8(filtered);
+                        for (let k = 0; k < r / 2 && k < dbFiltered.length; k++) {
+                            e[k] = dbFiltered[k];
                         }
-                        const filtered = this.applyFilterBank(spectrum, c);
-                        for (let k = 0; k < r / 2; k++) {
-                            e[k] = filtered[k];
+                    } else {
+                        for (let k = 0; k < r / 2 && k < wasmSpectrum.length; k++) {
+                            e[k] = wasmSpectrum[k];
                         }
                     }
                     
@@ -708,28 +725,26 @@ class h extends s {
                 for (; a + r < s.length; ) {
                     const e = new Uint8Array(r / 2);
                     
-                    // Use WASM for FFT computation
-                    const wasmSpectrum = this._wasmEngine.compute_spectrogram(
+                    // Use WASM for FFT computation - returns magnitude values
+                    const magnitudeSpectrum3 = this._wasmEngine.compute_spectrogram(
                         s.subarray(a, a + r),
-                        o,
-                        this.gainDB,
-                        this.rangeDB
+                        o
                     );
                     
-                    // Copy WASM output
-                    for (let t = 0; t < r / 2; t++) {
-                        e[t] = wasmSpectrum[t];
-                    }
+                    // Convert magnitude to dB
+                    const wasmSpectrum = magnitudeToUint8(magnitudeSpectrum3);
                     
                     // Apply filter bank if needed
                     if (c) {
-                        const spectrum = new Float32Array(r / 2);
-                        for (let k = 0; k < r / 2; k++) {
-                            spectrum[k] = wasmSpectrum[k];
+                        const filtered = this.applyFilterBank(magnitudeSpectrum3, c);
+                        // Convert filtered magnitude values to dB
+                        const dbFiltered = magnitudeToUint8(filtered);
+                        for (let k = 0; k < r / 2 && k < dbFiltered.length; k++) {
+                            e[k] = dbFiltered[k];
                         }
-                        const filtered = this.applyFilterBank(spectrum, c);
-                        for (let k = 0; k < r / 2; k++) {
-                            e[k] = filtered[k];
+                    } else {
+                        for (let k = 0; k < r / 2 && k < wasmSpectrum.length; k++) {
+                            e[k] = wasmSpectrum[k];
                         }
                     }
                     

@@ -5,11 +5,6 @@ function getArrayF32FromWasm0(ptr, len) {
     return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
 }
 
-function getArrayU8FromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
-}
-
 let cachedFloat32ArrayMemory0 = null;
 function getFloat32ArrayMemory0() {
     if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0) {
@@ -154,28 +149,24 @@ export class SpectrogramEngine {
         return v1;
     }
     /**
-     * 計算頻譜圖
+     * 計算 FFT 頻譜（返回幅度值，不進行 dB 轉換）
      *
      * # Arguments
      * * `audio_data` - 音頻數據 (Float32Array)
      * * `noverlap` - 重疊樣本數
-     * * `gain_db` - 增益 (dB)
-     * * `range_db` - 範圍 (dB)
      *
      * # Returns
-     * 平面的 Uint8Array（頻率箱 * 時間步）
+     * 平面的 Float32Array（頻率箱 * 時間步），包含幅度值
      * @param {Float32Array} audio_data
      * @param {number} noverlap
-     * @param {number} gain_db
-     * @param {number} range_db
-     * @returns {Uint8Array}
+     * @returns {Float32Array}
      */
-    compute_spectrogram(audio_data, noverlap, gain_db, range_db) {
+    compute_spectrogram(audio_data, noverlap) {
         const ptr0 = passArrayF32ToWasm0(audio_data, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.spectrogramengine_compute_spectrogram(this.__wbg_ptr, ptr0, len0, noverlap, gain_db, range_db);
-        var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
-        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        const ret = wasm.spectrogramengine_compute_spectrogram(this.__wbg_ptr, ptr0, len0, noverlap);
+        var v2 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
         return v2;
     }
     /**

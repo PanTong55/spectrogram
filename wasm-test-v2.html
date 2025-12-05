@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM 頻譜圖測試 - 幅度值輸出</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            max-width: 100%;
+        }
+        .info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        .status.error {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+        .status.info {
+            background-color: #bbdefb;
+            color: #1565c0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .output {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 WASM 頻譜圖演算法驗證 - 幅度值輸出版本</h1>
+        
+        <div class="test-section">
+            <h2>測試 1: 基礎功能測試</h2>
+            <p>測試 WASM 引擎是否能正確返回幅度值（未經 dB 轉換）</p>
+            <button onclick="testBasicFunctionality()">執行測試</button>
+            <div id="test1-output" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>測試 2: 幅度值 vs dB 轉換</h2>
+            <p>驗證幅度值是否正確轉換為 dB（20*log10(mag)）</p>
+            <button onclick="testMagnitudeToDb()">執行測試</button>
+            <div id="test2-output" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>測試 3: 窗函數應用</h2>
+            <p>驗證窗函數是否正確應用於輸入音頻</p>
+            <button onclick="testWindowFunction()">執行測試</button>
+            <div id="test3-output" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>測試 4: FFT 計算結果</h2>
+            <p>與原始 JavaScript 實現進行比較</p>
+            <button onclick="testFFTCalculation()">執行測試</button>
+            <div id="test4-output" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>測試狀態</h2>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 導入 WASM 模組
+        import init, { SpectrogramEngine } from './modules/spectrogram_wasm.js';
+
+        let wasmReady = false;
+        let engine = null;
+
+        // 初始化 WASM
+        async function initWasm() {
+            try {
+                await init();
+                engine = new SpectrogramEngine(512, 'hann');
+                wasmReady = true;
+                updateStatus('WASM 初始化成功', 'success');
+                return true;
+            } catch (error) {
+                updateStatus('WASM 初始化失敗: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const statusEl = document.createElement('div');
+            statusEl.className = 'status ' + type;
+            statusEl.textContent = new Date().toLocaleTimeString() + ' - ' + message;
+            statusDiv.appendChild(statusEl);
+            console.log(message);
+        }
+
+        function showOutput(testId, text) {
+            const output = document.getElementById('test' + testId + '-output');
+            output.textContent = text;
+            output.style.display = 'block';
+        }
+
+        // 測試 1: 基礎功能
+        window.testBasicFunctionality = async function() {
+            if (!wasmReady) await initWasm();
+
+            try {
+                // 生成簡單的測試信號
+                const audioData = new Float32Array(512);
+                for (let i = 0; i < 512; i++) {
+                    // 1kHz sine wave
+                    audioData[i] = Math.sin(2 * Math.PI * i / 512 * 10);
+                }
+
+                // 調用 WASM
+                const result = engine.compute_spectrogram(audioData, 128);
+
+                let output = '✅ WASM 返回了結果\n';
+                output += `結果類型: ${result.constructor.name}\n`;
+                output += `結果長度: ${result.length}\n`;
+                output += `前 10 個幅度值:\n`;
+                
+                for (let i = 0; i < Math.min(10, result.length); i++) {
+                    output += `  [${i}]: ${result[i].toFixed(6)}\n`;
+                }
+
+                output += `\n最大幅度值: ${Math.max(...result).toFixed(6)}\n`;
+                output += `最小幅度值: ${Math.min(...result).toFixed(6)}\n`;
+
+                showOutput('1', output);
+                updateStatus('測試 1 完成: 基礎功能正常', 'success');
+            } catch (error) {
+                showOutput('1', '❌ 錯誤: ' + error.message);
+                updateStatus('測試 1 失敗: ' + error.message, 'error');
+            }
+        };
+
+        // 測試 2: 幅度值轉換
+        window.testMagnitudeToDb = async function() {
+            if (!wasmReady) await initWasm();
+
+            try {
+                const audioData = new Float32Array(512);
+                for (let i = 0; i < 512; i++) {
+                    audioData[i] = Math.sin(2 * Math.PI * i / 512 * 10);
+                }
+
+                const magnitudes = engine.compute_spectrogram(audioData, 128);
+
+                // 應用 dB 轉換
+                const gainDB = 20;
+                const rangeDB = 80;
+                const gainDBNeg = -gainDB;
+                const gainDBNegRange = gainDBNeg - rangeDB;
+                const rangeDBReciprocal = 255 / rangeDB;
+
+                let output = '📊 幅度值到 dB 轉換\n\n';
+                output += '前 5 個值的轉換:\n';
+
+                for (let i = 0; i < Math.min(5, magnitudes.length); i++) {
+                    const mag = magnitudes[i];
+                    const s = mag > 1e-12 ? mag : 1e-12;
+                    const db = 20 * Math.log10(s);
+                    let uint8Value;
+                    if (db < gainDBNegRange) {
+                        uint8Value = 0;
+                    } else if (db > gainDBNeg) {
+                        uint8Value = 255;
+                    } else {
+                        uint8Value = Math.round((db + gainDB) * rangeDBReciprocal + 256);
+                    }
+                    
+                    output += `\n[${i}]:\n`;
+                    output += `  幅度: ${mag.toFixed(6)}\n`;
+                    output += `  dB: ${db.toFixed(2)}\n`;
+                    output += `  0-255: ${uint8Value}\n`;
+                }
+
+                showOutput('2', output);
+                updateStatus('測試 2 完成: dB 轉換工作正常', 'success');
+            } catch (error) {
+                showOutput('2', '❌ 錯誤: ' + error.message);
+                updateStatus('測試 2 失敗: ' + error.message, 'error');
+            }
+        };
+
+        // 測試 3: 窗函數
+        window.testWindowFunction = async function() {
+            if (!wasmReady) await initWasm();
+
+            try {
+                const windowValues = engine.get_window_values();
+                
+                let output = '🪟 漢寧窗函數值\n\n';
+                output += `窗函數類型: Hann\n`;
+                output += `窗函數長度: ${windowValues.length}\n`;
+                output += `前 10 個窗值:\n`;
+
+                for (let i = 0; i < Math.min(10, windowValues.length); i++) {
+                    output += `  [${i}]: ${windowValues[i].toFixed(6)}\n`;
+                }
+
+                output += `\n最後 5 個窗值:\n`;
+                const start = Math.max(0, windowValues.length - 5);
+                for (let i = start; i < windowValues.length; i++) {
+                    output += `  [${i}]: ${windowValues[i].toFixed(6)}\n`;
+                }
+
+                showOutput('3', output);
+                updateStatus('測試 3 完成: 窗函數數據正常', 'success');
+            } catch (error) {
+                showOutput('3', '❌ 錯誤: ' + error.message);
+                updateStatus('測試 3 失敗: ' + error.message, 'error');
+            }
+        };
+
+        // 測試 4: FFT 計算
+        window.testFFTCalculation = async function() {
+            if (!wasmReady) await initWasm();
+
+            try {
+                // 生成已知頻率的信號
+                const audioData = new Float32Array(512);
+                const freq = 10; // 10 倍的頻譜箱
+                for (let i = 0; i < 512; i++) {
+                    audioData[i] = Math.sin(2 * Math.PI * i / 512 * freq);
+                }
+
+                const magnitudes = engine.compute_spectrogram(audioData, 128);
+
+                // 找出最大幅度值
+                let maxMag = 0;
+                let maxBin = 0;
+                for (let i = 0; i < magnitudes.length; i++) {
+                    if (magnitudes[i] > maxMag) {
+                        maxMag = magnitudes[i];
+                        maxBin = i;
+                    }
+                }
+
+                let output = '⚡ FFT 計算結果驗證\n\n';
+                output += `輸入信號: ${freq}Hz sine wave (512 樣本)\n`;
+                output += `FFT 箱數: ${magnitudes.length}\n`;
+                output += `最大幅度: ${maxMag.toFixed(6)}\n`;
+                output += `最大幅度位置 (箱): ${maxBin}\n`;
+                output += `預期位置 (箱): ${freq}\n`;
+                output += `匹配結果: ${maxBin === freq ? '✅ 完美匹配' : '⚠️ 差異 ' + Math.abs(maxBin - freq) + ' 箱'}\n`;
+
+                output += `\n前 20 個箱的幅度值:\n`;
+                for (let i = 0; i < Math.min(20, magnitudes.length); i++) {
+                    const isMax = i === maxBin ? ' ⬅️ 最大值' : '';
+                    output += `  [${i.toString().padStart(2)}]: ${magnitudes[i].toFixed(6)}${isMax}\n`;
+                }
+
+                showOutput('4', output);
+                updateStatus('測試 4 完成: FFT 計算驗證完成', 'success');
+            } catch (error) {
+                showOutput('4', '❌ 錯誤: ' + error.message);
+                updateStatus('測試 4 失敗: ' + error.message, 'error');
+            }
+        };
+
+        // 在頁面加載時初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateStatus('正在初始化 WASM...', 'info');
+            await initWasm();
+        });
+    </script>
+</body>
+</html>

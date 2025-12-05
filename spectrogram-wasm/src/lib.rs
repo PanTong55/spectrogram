@@ -49,24 +49,20 @@ impl SpectrogramEngine {
         }
     }
 
-    /// 計算頻譜圖
+    /// 計算 FFT 頻譜（返回幅度值，不進行 dB 轉換）
     ///
     /// # Arguments
     /// * `audio_data` - 音頻數據 (Float32Array)
     /// * `noverlap` - 重疊樣本數
-    /// * `gain_db` - 增益 (dB)
-    /// * `range_db` - 範圍 (dB)
     ///
     /// # Returns
-    /// 平面的 Uint8Array（頻率箱 * 時間步）
+    /// 平面的 Float32Array（頻率箱 * 時間步），包含幅度值
     #[wasm_bindgen]
     pub fn compute_spectrogram(
         &mut self,
         audio_data: &[f32],
         noverlap: usize,
-        gain_db: f32,
-        range_db: f32,
-    ) -> Vec<u8> {
+    ) -> Vec<f32> {
         let step = self.fft_size - noverlap;
         let num_frames = if audio_data.len() >= self.fft_size {
             (audio_data.len() - self.fft_size) / step + 1
@@ -75,12 +71,7 @@ impl SpectrogramEngine {
         };
         
         let freq_bins = self.fft_size / 2;
-        let mut result = vec![0u8; freq_bins * num_frames];
-        
-        // 預計算轉換常數
-        let gain_db_neg = -gain_db;
-        let gain_db_neg_range = gain_db_neg - range_db;
-        let range_db_reciprocal = 255.0 / range_db;
+        let mut result = vec![0.0f32; freq_bins * num_frames];
         
         // 獲取 FFT 算法
         let fft = self.planner.plan_fft_forward(self.fft_size);
@@ -103,27 +94,12 @@ impl SpectrogramEngine {
             // 執行 FFT
             fft.process(&mut self.scratch_buffer);
             
-            // 計算幅度並轉換為 dB
+            // 計算幅度（不轉換為 dB，讓 JavaScript 處理）
+            let scale = 2.0 / self.fft_size as f32;
             for i in 0..freq_bins {
                 let c = self.scratch_buffer[i];
                 let magnitude = (c.re * c.re + c.im * c.im).sqrt();
-                
-                // 避免 log(0)
-                let magnitude = if magnitude > 1e-12 { magnitude } else { 1e-12 };
-                
-                // 轉換為 dB
-                let db = 20.0 * magnitude.log10();
-                
-                // 映射到 0-255 範圍
-                let value = if db < gain_db_neg_range {
-                    0u8
-                } else if db > gain_db_neg {
-                    255u8
-                } else {
-                    ((db + gain_db) * range_db_reciprocal + 256.0).round() as u8
-                };
-                
-                result[frame_idx * freq_bins + i] = value;
+                result[frame_idx * freq_bins + i] = magnitude * scale;
             }
             
             pos += step;

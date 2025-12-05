@@ -2,7 +2,7 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_spectrogramengine_free: (a: number, b: number) => void;
-export const spectrogramengine_compute_spectrogram: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+export const spectrogramengine_compute_spectrogram: (a: number, b: number, c: number, d: number) => [number, number];
 export const spectrogramengine_get_fft_size: (a: number) => number;
 export const spectrogramengine_get_freq_bins: (a: number) => number;
 export const spectrogramengine_get_window_values: (a: number) => [number, number];

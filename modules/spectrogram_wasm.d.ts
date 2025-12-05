@@ -17,18 +17,16 @@ export class SpectrogramEngine {
    */
   get_window_values(): Float32Array;
   /**
-   * 計算頻譜圖
+   * 計算 FFT 頻譜（返回幅度值，不進行 dB 轉換）
    *
    * # Arguments
    * * `audio_data` - 音頻數據 (Float32Array)
    * * `noverlap` - 重疊樣本數
-   * * `gain_db` - 增益 (dB)
-   * * `range_db` - 範圍 (dB)
    *
    * # Returns
-   * 平面的 Uint8Array（頻率箱 * 時間步）
+   * 平面的 Float32Array（頻率箱 * 時間步），包含幅度值
    */
-  compute_spectrogram(audio_data: Float32Array, noverlap: number, gain_db: number, range_db: number): Uint8Array;
+  compute_spectrogram(audio_data: Float32Array, noverlap: number): Float32Array;
   /**
    * 創建新的 SpectrogramEngine 實例
    * 
@@ -45,7 +43,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_spectrogramengine_free: (a: number, b: number) => void;
-  readonly spectrogramengine_compute_spectrogram: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+  readonly spectrogramengine_compute_spectrogram: (a: number, b: number, c: number, d: number) => [number, number];
   readonly spectrogramengine_get_fft_size: (a: number) => number;
   readonly spectrogramengine_get_freq_bins: (a: number) => number;
   readonly spectrogramengine_get_window_values: (a: number) => [number, number];
