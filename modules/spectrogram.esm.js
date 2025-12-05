@@ -363,6 +363,11 @@ class h extends s {
         }
     }
     drawSpectrogram(t) {
+        // 檢查 wrapper 和 canvas 是否已被清空（在 destroy 或 selection mode 切換時可能發生）
+        if (!this.wrapper || !this.canvas) {
+            return;
+        }
+        
         isNaN(t[0][0]) || (t = [t]),
         this.wrapper.style.height = this.height * t.length + "px",
         this.canvas.width = this.getWidth(),
