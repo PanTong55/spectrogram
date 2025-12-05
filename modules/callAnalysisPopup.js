@@ -305,6 +305,9 @@ export function showCallAnalysisPopup({
       // SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
       // Signal Region: call 的頻率和時間範圍
       // Noise Region: selection area 除去 signal region 外的區域
+      // 
+      // NOTE: SNR is now calculated in BatCallDetector.detectCalls() using RMS-based method
+      // with proper frequency and time range (highFreqFrameIdx to lowFreqFrameIdx)
       
       // 先用濾波後的數據進行主要檢測
       const calls = await detector.detectCalls(
@@ -314,7 +317,8 @@ export function showCallAnalysisPopup({
         selection.Fhigh
       );
       
-      // 如果濾波被啟用且有偵測到 call，重新用原始音頻計算 SNR
+      // 如果濾波被啟用且有偵測到 call，重新用原始音頻計算 call
+      // 使用原始音頻的 SNR 更準確
       if (batCallConfig.enableHighpassFilter && calls.length > 0) {
         const originalDetector = new (detector.constructor)(batCallConfig);
         const originalCalls = await originalDetector.detectCalls(
@@ -324,9 +328,11 @@ export function showCallAnalysisPopup({
           selection.Fhigh
         );
         
-        // 如果原始檢測也找到 call，將新 RMS-based SNR 從原始檢測複製到濾波後的 call
+        // 如果原始檢測也找到 call，將 SNR 和機制信息從原始檢測複製到濾波後的 call
         if (originalCalls.length > 0) {
           calls[0].snr_dB = originalCalls[0].snr_dB;
+          calls[0].snrMechanism = originalCalls[0].snrMechanism;
+          calls[0].snrDetails = originalCalls[0].snrDetails;
           calls[0].quality = originalCalls[0].quality;
         }
       }
@@ -411,6 +417,29 @@ export function showCallAnalysisPopup({
       
       if (calls.length > 0) {
         const call = calls[0];  // 取第一個偵測到的 call
+        
+        // 2025 NEW: Log SNR calculation mechanism and details
+        console.log('[SNR Calculation] Detection completed');
+        if (call.snrMechanism) {
+          console.log(`[SNR Mechanism] ${call.snrMechanism}`);
+        }
+        if (call.snrDetails) {
+          console.log(
+            `[SNR Range] Frequency: ${call.snrDetails.frequencyRange_kHz?.lowFreq?.toFixed(1) || '-'} ` +
+            `to ${call.snrDetails.frequencyRange_kHz?.highFreq?.toFixed(1) || '-'} kHz, ` +
+            `Time: ${call.snrDetails.timeRange_ms?.start?.toFixed(1) || '-'} ` +
+            `to ${call.snrDetails.timeRange_ms?.end?.toFixed(1) || '-'} ms ` +
+            `(Duration: ${call.snrDetails.timeRange_ms?.duration?.toFixed(1) || '-'} ms)`
+          );
+          console.log(
+            `[SNR Values] Signal RMS: ${call.snrDetails.signalRMS?.toExponential(2) || '-'}, ` +
+            `Noise RMS: ${call.snrDetails.noiseRMS?.toExponential(2) || '-'}, ` +
+            `Signal Samples: ${call.snrDetails.signalSampleCount || '-'}, ` +
+            `Noise Samples: ${call.snrDetails.noiseSampleCount || '-'}`
+          );
+        }
+        console.log(`[SNR Result] SNR = ${call.snr_dB?.toFixed(2) || '-'} dB, Quality: ${call.quality || '-'}`);
+        
         // 2025: 存儲最新檢測到的 call 對象到 popup 上，供 selection rect warning 圖標使用
         popup.__latestDetectedCall = call;
         updateParametersDisplay(popup, call);

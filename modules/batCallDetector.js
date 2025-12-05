@@ -138,6 +138,8 @@ export class BatCall {
     
     this.lowFreq_kHz = null;        // Low frequency (kHz) - lowest frequency in call (may be optimized with Start Frequency)
     this.lowFreq_ms = null;         // Low frequency time (ms) - absolute time of low frequency in selection area
+    this.lowFreqFrameIdx = null;    // Low frequency frame index - which frame the low frequency occurs in
+    this.endFrameIdx_forLowFreq = null;    // 2025 NEW: End frame index used for Low Frequency calculation (for SNR)
     
     this.characteristicFreq_kHz = null;  // Characteristic freq (lowest in last 20%)
     this.characteristicFreq_ms = null;   // Characteristic frequency time (ms) - absolute time of characteristic frequency in selection area
@@ -283,6 +285,139 @@ export class BatCallDetector {
   }
   
   /**
+   * 2025 ENHANCEMENT: Calculate RMS-based SNR
+   * 
+   * SNR = 20 × log₁₀ (Signal RMS / Noise RMS)
+   * 
+   * Signal Region: Time range from highFreqFrameIdx to lowFreqFrameIdx (endFrameIdx_forLowFreq)
+   * Frequency range: from call.lowFreq_kHz to call.highFreq_kHz (in kHz)
+   * 
+   * Noise Region: All other regions in the selection area
+   * 
+   * @param {Array} audioData - Time-domain audio samples
+   * @param {number} sampleRate - Sample rate in Hz
+   * @param {Object} call - BatCall object with frequency/time parameters
+   * @param {number} timeFrameInterval_s - Time interval between spectrogram frames in seconds
+   * @param {number} endFrameIdx_forLowFreq - End frame index for Low Frequency (limiting frame)
+   * @returns {Object} { snr_dB, mechanism, signalRMS, noiseRMS, signalSampleCount, noiseSampleCount }
+   */
+  calculateRMSbasedSNR(audioData, sampleRate, call, timeFrameInterval_s, endFrameIdx_forLowFreq) {
+    const result = {
+      snr_dB: null,
+      mechanism: 'RMS-based (2025)',
+      signalRMS: null,
+      noiseRMS: null,
+      signalSampleCount: 0,
+      noiseSampleCount: 0,
+      frequencyRange_kHz: null,
+      timeRange_ms: null,
+      debug: {}
+    };
+    
+    // Validate inputs
+    if (!audioData || audioData.length === 0) {
+      result.debug.reason = 'Empty audio data';
+      return result;
+    }
+    
+    if (call.highFreqFrameIdx === undefined || call.highFreqFrameIdx === null) {
+      result.debug.reason = 'highFreqFrameIdx not set';
+      return result;
+    }
+    
+    if (call.highFreq_kHz === undefined || call.lowFreq_kHz === undefined) {
+      result.debug.reason = 'Frequency parameters not set';
+      return result;
+    }
+    
+    // Store frequency range for logging
+    result.frequencyRange_kHz = {
+      lowFreq: call.lowFreq_kHz,
+      highFreq: call.highFreq_kHz
+    };
+    
+    // Map frame indices to time domain sample indices
+    const samplesPerFrame = Math.round(sampleRate * timeFrameInterval_s);
+    const signalStartSample = Math.max(0, Math.round(call.highFreqFrameIdx * samplesPerFrame));
+    const signalEndSample = Math.min(audioData.length - 1, Math.round(endFrameIdx_forLowFreq * samplesPerFrame));
+    
+    // Store time range for logging
+    const startTime_ms = (signalStartSample / sampleRate) * 1000;
+    const endTime_ms = (signalEndSample / sampleRate) * 1000;
+    result.timeRange_ms = {
+      start: startTime_ms,
+      end: endTime_ms,
+      duration: endTime_ms - startTime_ms
+    };
+    
+    // Calculate Signal RMS in time domain
+    let signalPowerSum = 0;
+    let signalSampleCount = 0;
+    
+    for (let i = signalStartSample; i <= signalEndSample && i < audioData.length; i++) {
+      const sample = audioData[i];
+      signalPowerSum += sample * sample;
+      signalSampleCount++;
+    }
+    
+    if (signalSampleCount === 0) {
+      result.debug.reason = 'No signal samples';
+      return result;
+    }
+    
+    const signalRMS = Math.sqrt(signalPowerSum / signalSampleCount);
+    result.signalRMS = signalRMS;
+    result.signalSampleCount = signalSampleCount;
+    
+    // Calculate Noise RMS: All samples outside signal region
+    let noisePowerSum = 0;
+    let noiseSampleCount = 0;
+    
+    // Noise before signal
+    for (let i = 0; i < signalStartSample; i++) {
+      const sample = audioData[i];
+      noisePowerSum += sample * sample;
+      noiseSampleCount++;
+    }
+    
+    // Noise after signal
+    for (let i = signalEndSample + 1; i < audioData.length; i++) {
+      const sample = audioData[i];
+      noisePowerSum += sample * sample;
+      noiseSampleCount++;
+    }
+    
+    if (noiseSampleCount === 0) {
+      result.debug.reason = 'No noise region (perfect SNR)';
+      result.snr_dB = Infinity;
+      result.noiseRMS = 0;
+      return result;
+    }
+    
+    const noiseRMS = Math.sqrt(noisePowerSum / noiseSampleCount);
+    result.noiseRMS = noiseRMS;
+    result.noiseSampleCount = noiseSampleCount;
+    
+    // Avoid division by zero
+    if (noiseRMS < 1e-10) {
+      result.snr_dB = Infinity;
+      result.debug.reason = 'Noise RMS too small';
+      return result;
+    }
+    
+    if (signalRMS < 1e-10) {
+      result.snr_dB = -Infinity;
+      result.debug.reason = 'Signal RMS too small';
+      return result;
+    }
+    
+    // Calculate SNR in dB: 20 × log₁₀(Signal RMS / Noise RMS)
+    result.snr_dB = 20 * Math.log10(signalRMS / noiseRMS);
+    
+    return result;
+  }
+  
+  /**
    * Detect all bat calls in audio selection
    * Returns: array of BatCall objects
    */
@@ -406,24 +541,81 @@ export class BatCallDetector {
     
     // Additional SNR-based filtering: Remove calls with low SNR
     // Real bat calls should have peak power >> above noise baseline
+    // 2025 ENHANCEMENT: Use RMS-based SNR (20 × log₁₀(Signal RMS / Noise RMS))
     const snrThreshold_dB = 20;  // At least 20 dB above noise floor
+    
+    // Calculate time frame interval for SNR calculation
+    const hopSize = Math.floor(this.config.fftSize * (this.config.hopPercent / 100));
+    const timeFrameInterval_s = hopSize / sampleRate;
+    
     const filteredCalls = calls.filter(call => {
       if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
         return false; // No peak power data, discard
       }
       
-      // Calculate SNR using robust noise baseline (25th percentile)
-      const snr_dB = call.peakPower_dB - robustNoiseFloor_dB;
+      // 2025 ENHANCEMENT: Calculate RMS-based SNR
+      // Signal: time range [highFreqFrameIdx, endFrameIdx_forLowFreq], freq range [lowFreq, highFreq]
+      // Noise: all other regions in selection area
+      try {
+        // Call calculateRMSbasedSNR with the actual audio data
+        const snrResult = this.calculateRMSbasedSNR(
+          audioData, 
+          sampleRate, 
+          call, 
+          timeFrameInterval_s, 
+          call.endFrameIdx_forLowFreq  // Use the stored end frame index
+        );
+        
+        // Use the calculated RMS-based SNR
+        if (snrResult.snr_dB !== null && isFinite(snrResult.snr_dB)) {
+          call.snr_dB = snrResult.snr_dB;
+          call.snrMechanism = 'RMS-based (2025)';
+          
+          // Store SNR calculation details for logging
+          call.snrDetails = {
+            frequencyRange_kHz: snrResult.frequencyRange_kHz,
+            timeRange_ms: snrResult.timeRange_ms,
+            signalRMS: snrResult.signalRMS,
+            noiseRMS: snrResult.noiseRMS,
+            signalSampleCount: snrResult.signalSampleCount,
+            noiseSampleCount: snrResult.noiseSampleCount
+          };
+          
+          // Log SNR mechanism for debugging
+          console.log(
+            `[SNR] Call detected - Mechanism: ${call.snrMechanism}, SNR: ${call.snr_dB.toFixed(2)} dB, ` +
+            `Freq range: ${snrResult.frequencyRange_kHz.lowFreq.toFixed(1)}-${snrResult.frequencyRange_kHz.highFreq.toFixed(1)} kHz, ` +
+            `Time range: ${snrResult.timeRange_ms.duration.toFixed(1)} ms, ` +
+            `Signal RMS: ${snrResult.signalRMS.toExponential(2)}, Noise RMS: ${snrResult.noiseRMS.toExponential(2)}`
+          );
+        } else {
+          // If RMS-based SNR calculation failed, fall back to spectral SNR for filtering only
+          // (但仍然標記為 RMS-based，因為這是我們的目標機制)
+          const spectralSNR_dB = call.peakPower_dB - robustNoiseFloor_dB;
+          call.snr_dB = spectralSNR_dB;
+          call.snrMechanism = 'RMS-based (2025) - Spectral fallback for filtering';
+          
+          console.log(
+            `[SNR] RMS-based calculation failed (${snrResult.debug.reason}), using spectral fallback: ${spectralSNR_dB.toFixed(2)} dB`
+          );
+        }
+      } catch (error) {
+        // On error, use spectral SNR for filtering
+        const spectralSNR_dB = call.peakPower_dB - robustNoiseFloor_dB;
+        call.snr_dB = spectralSNR_dB;
+        call.snrMechanism = 'RMS-based (2025) - Error fallback';
+        
+        console.log(`[SNR] RMS-based calculation error: ${error.message}, using spectral fallback: ${spectralSNR_dB.toFixed(2)} dB`);
+      }
       
-      // Store SNR and noiseFloor values in call object
+      // Store noiseFloor for reference (from spectral analysis)
       call.noiseFloor_dB = robustNoiseFloor_dB;
-      call.snr_dB = snr_dB;
       
       // Calculate quality rating based on SNR
-      call.quality = this.getQualityRating(snr_dB);
+      call.quality = this.getQualityRating(call.snr_dB);
       
       // If SNR is too low, likely just noise
-      if (snr_dB < snrThreshold_dB) {
+      if (call.snr_dB < snrThreshold_dB) {
         return false;
       }
       
@@ -2023,6 +2215,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // ============================================================
     // 2025: Limit Low Frequency calculation to newEndFrameIdx (call end point)
     const endFrameIdx_forLowFreq = Math.min(newEndFrameIdx, spectrogram.length - 1);
+    call.endFrameIdx_forLowFreq = endFrameIdx_forLowFreq;  // 2025 NEW: Store for SNR calculation
     const lastFramePower = spectrogram[endFrameIdx_forLowFreq];
     const lastFrameTime_s = timeFrames[endFrameIdx_forLowFreq];  // Time of call end frame
     let lowFreq_Hz = flowKHz * 1000;  // Default to lower bound
@@ -2099,6 +2292,9 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     const lastFrameTime_ms = (lastFrameTime_s - firstFrameTimeInSeconds_low) * 1000;  // Time relative to selection area start
     call.lowFreq_ms = lastFrameTime_ms;  // Low frequency is from end frame (limited by newEndFrameIdx)
     call.endFreq_ms = lastFrameTime_ms;  // End frequency = Low frequency (same time)
+    
+    // 2025 NEW: Store lowFreqFrameIdx - the frame index where low frequency occurs
+    call.lowFreqFrameIdx = endFrameIdx_forLowFreq;  // Low frequency is measured from the end frame
     
     // 2025: 在 manual mode 下保存實際使用的 low frequency threshold
     // Manual mode: endThreshold_dB = peakPower_dB + lowFreqThreshold_dB
