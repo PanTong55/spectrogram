@@ -376,17 +376,53 @@ export class BatCallDetector {
     // 3. Power concentration should be high (not scattered like noise)
     // ============================================================
     
+    // Calculate noise baseline for additional filtering
+    // Collect all power values for percentile calculation
+    const allPowerValues = [];
+    
+    for (let frameIdx = 0; frameIdx < powerMatrix.length; frameIdx++) {
+      const framePower = powerMatrix[frameIdx];
+      for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
+        allPowerValues.push(framePower[binIdx]);
+      }
+    }
+    
+    // Sort to calculate percentiles
+    allPowerValues.sort((a, b) => a - b);
+    
+    // Calculate noise baseline using 25th percentile (robust to call signals)
+    // This represents the typical background noise floor
+    // The lowest 25% of energy bins = pure noise/low signal
+    const percentile25Index = Math.floor(allPowerValues.length * 0.25);
+    const noiseFloor_dB = allPowerValues[Math.max(0, percentile25Index)];
+    
+    // For comparison: also use median (50th percentile) as secondary baseline
+    const medianIndex = Math.floor(allPowerValues.length * 0.5);
+    const medianPower_dB = allPowerValues[Math.max(0, medianIndex)];
+    
+    // Use the higher of noise floor or a minimum threshold to ensure reasonable baseline
+    // Minimum baseline: -80 dB (typical for quiet recording environments)
+    const minNoiseFloor_dB = -80;
+    const robustNoiseFloor_dB = Math.max(noiseFloor_dB, minNoiseFloor_dB);
+    
     // Additional SNR-based filtering: Remove calls with low SNR
-    // Real bat calls should have SNR >> above noise baseline
-    // 2025: SNR now calculated using new RMS-based method in measureFrequencyParameters
-    const snrThreshold_dB = 10;  // At least 10 dB SNR to be considered a valid call
+    // Real bat calls should have peak power >> above noise baseline
+    const snrThreshold_dB = 20;  // At least 20 dB above noise floor
     const filteredCalls = calls.filter(call => {
-      if (call.snr_dB === null || call.snr_dB === undefined) {
-        return false; // No SNR data, discard
+      if (call.peakPower_dB === null || call.peakPower_dB === undefined) {
+        return false; // No peak power data, discard
       }
       
-      // If SNR is too low, likely just noise or background
-      if (call.snr_dB < snrThreshold_dB) {
+      // Use the RMS-based SNR if available (from measureFrequencyParameters)
+      // Otherwise, fall back to simple dB difference method
+      let snr_check = call.snr_dB;
+      if (snr_check === null || snr_check === undefined) {
+        // Fallback: calculate SNR as difference from noise floor
+        snr_check = call.peakPower_dB - robustNoiseFloor_dB;
+      }
+      
+      // If SNR is too low, likely just noise
+      if (snr_check < snrThreshold_dB) {
         return false;
       }
       
