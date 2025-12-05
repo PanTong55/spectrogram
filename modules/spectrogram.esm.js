@@ -1,3 +1,16 @@
+import * as wasmModule from './spectrogram_wasm.js';
+
+// 導入 WASM 模組
+let wasmReady = null;
+let SpectrogramEngine = null;
+
+// 初始化 WASM
+async function initWasm() {
+    if (wasmReady) return wasmReady;
+    wasmReady = wasmModule.default();
+    return wasmReady;
+}
+
 function t(t, e, s, r) {
     return new (s || (s = Promise))((function(i, a) {
         function n(t) {
@@ -253,6 +266,17 @@ class h extends s {
         this.numErbFilters = this.fftSamples / 2,
         this.createWrapper(),
         this.createCanvas();
+
+        // WASM integration
+        this._wasmEngine = null;
+        this._wasmReady = initWasm().then(async () => {
+            const { SpectrogramEngine } = await wasmModule.default();
+            this._wasmEngine = new SpectrogramEngine(
+                this.fftSamples,
+                this.windowFunc,
+                this.alpha
+            );
+        });
 
         // cache for filter banks to avoid rebuilding on each render
         this._filterBankCache = {};
@@ -544,7 +568,8 @@ class h extends s {
     getWidth() {
         return this.wavesurfer.getWrapper().offsetWidth
     }
-    getFrequencies(t) {
+    
+    async getFrequencies(t) {
         var e, s;
         const r = this.fftSamples
           , i = (null !== (e = this.options.splitChannels) && void 0 !== e ? e : null === (s = this.wavesurfer) || void 0 === s ? void 0 : s.options.splitChannels) ? t.numberOfChannels : 1;
@@ -565,7 +590,9 @@ class h extends s {
         const maxBinFull = Math.ceil(this.frequencyMax * r / n);
         const binRangeSize = maxBinFull - minBinFull;
         
-        const l = new a(r,n,this.windowFunc,this.alpha);
+        // Wait for WASM to be ready
+        await this._wasmReady;
+        
         let c;
         switch (this.scale) {
         case "mel":
@@ -597,12 +624,18 @@ class h extends s {
                 
                 for (; a + r < s.length; ) {
                     const tSlice = s.subarray(a, a + r);
-                    l.peak = 0;
-                    let spectrumData = l.calculateSpectrum(tSlice);
+                    
+                    // Use WASM for FFT computation
+                    const spectrogramData = this._wasmEngine.compute_spectrogram(
+                        tSlice,
+                        o,
+                        this.gainDB,
+                        this.rangeDB
+                    );
                     
                     let peakValueInRange = 0;
-                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
-                      peakValueInRange = Math.max(peakValueInRange, spectrumData[k] || 0);
+                    for (let k = minBinFull; k < maxBinFull && k < spectrogramData.length; k++) {
+                      peakValueInRange = Math.max(peakValueInRange, spectrogramData[k] || 0);
                     }
                     
                     globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
@@ -625,14 +658,19 @@ class h extends s {
                     const tSlice = s.subarray(a, a + r)
                         , e = new Uint8Array(r / 2);
                     
-                    l.peak = 0;
-                    let spectrumData = l.calculateSpectrum(tSlice);
+                    // Use WASM for FFT computation
+                    const wasmSpectrum = this._wasmEngine.compute_spectrogram(
+                        tSlice,
+                        o,
+                        this.gainDB,
+                        this.rangeDB
+                    );
                     
                     let peakBandInRange = Math.max(0, minBinFull);
-                    let peakValueInRange = spectrumData[peakBandInRange] || 0;
-                    for (let k = minBinFull; k < maxBinFull && k < spectrumData.length; k++) {
-                      if ((spectrumData[k] || 0) > peakValueInRange) {
-                        peakValueInRange = spectrumData[k];
+                    let peakValueInRange = wasmSpectrum[peakBandInRange] || 0;
+                    for (let k = minBinFull; k < maxBinFull && k < wasmSpectrum.length; k++) {
+                      if ((wasmSpectrum[k] || 0) > peakValueInRange) {
+                        peakValueInRange = wasmSpectrum[k];
                         peakBandInRange = k;
                       }
                     }
@@ -647,23 +685,23 @@ class h extends s {
                       channelPeakBands.push(null);
                     }
                     
-                    let n = spectrumData;
-                    c && (n = this.applyFilterBank(n, c));
+                    // Copy WASM output to result array, applying filter bank if needed
+                    for (let t = 0; t < r / 2; t++) {
+                        e[t] = wasmSpectrum[t];
+                    }
                     
-                    const startBin = c ? 0 : minBinFull;
-                    const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
-                    
-                    for (let t = startBin; t < endBin; t++) {
-                        const s = n[t] > 1e-12 ? n[t] : 1e-12
-                          , r = 20 * Math.log10(s);
-                        if (r < gainDBNegRange) {
-                            e[t] = 0;
-                        } else if (r > gainDBNeg) {
-                            e[t] = 255;
-                        } else {
-                            e[t] = (r + this.gainDB) * rangeDBReciprocal + 256;
+                    // Apply filter bank if needed
+                    if (c) {
+                        const spectrum = new Float32Array(r / 2);
+                        for (let k = 0; k < r / 2; k++) {
+                            spectrum[k] = wasmSpectrum[k];
+                        }
+                        const filtered = this.applyFilterBank(spectrum, c);
+                        for (let k = 0; k < r / 2; k++) {
+                            e[k] = filtered[k];
                         }
                     }
+                    
                     i.push(e),
                     a += r - o
                 }
@@ -678,24 +716,32 @@ class h extends s {
                 let a = 0;
                 for (; a + r < s.length; ) {
                     const e = new Uint8Array(r / 2);
-                    l.peak = 0;
-                    let n = l.calculateSpectrum(s.subarray(a, a + r));
-                    c && (n = this.applyFilterBank(n, c));
                     
-                    const startBin = c ? 0 : minBinFull;
-                    const endBin = c ? r / 2 : Math.min(maxBinFull, r / 2);
+                    // Use WASM for FFT computation
+                    const wasmSpectrum = this._wasmEngine.compute_spectrogram(
+                        s.subarray(a, a + r),
+                        o,
+                        this.gainDB,
+                        this.rangeDB
+                    );
                     
-                    for (let t = startBin; t < endBin; t++) {
-                        const s = n[t] > 1e-12 ? n[t] : 1e-12
-                          , r = 20 * Math.log10(s);
-                        if (r < gainDBNegRange) {
-                            e[t] = 0;
-                        } else if (r > gainDBNeg) {
-                            e[t] = 255;
-                        } else {
-                            e[t] = (r + this.gainDB) * rangeDBReciprocal + 256;
+                    // Copy WASM output
+                    for (let t = 0; t < r / 2; t++) {
+                        e[t] = wasmSpectrum[t];
+                    }
+                    
+                    // Apply filter bank if needed
+                    if (c) {
+                        const spectrum = new Float32Array(r / 2);
+                        for (let k = 0; k < r / 2; k++) {
+                            spectrum[k] = wasmSpectrum[k];
+                        }
+                        const filtered = this.applyFilterBank(spectrum, c);
+                        for (let k = 0; k < r / 2; k++) {
+                            e[k] = filtered[k];
                         }
                     }
+                    
                     i.push(e),
                     a += r - o
                 }
@@ -704,6 +750,7 @@ class h extends s {
         }
         return h
     }
+    
     freqType(t) {
         return t >= 1e3 ? (t / 1e3).toFixed(1) : Math.round(t)
     }
