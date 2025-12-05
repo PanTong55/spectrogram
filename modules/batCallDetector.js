@@ -614,7 +614,6 @@ export class BatCallDetector {
       
       // Store SNR and noiseFloor values in call object
       call.noiseFloor_dB = robustNoiseFloor_dB;
-      call.snr_dB = snr_dB;
 
       // Calculate quality rating based on SNR
       call.quality = this.getQualityRating(call.snr_dB);
