@@ -2728,7 +2728,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // 
     // Signal Region: 
     // - Frequency: lowFreq to highFreq (kHz)
-    // - Time: highFreqFrameIdx to lowFreqFrameIdx (frames)
+    // - Time: highFreqFrameIdx to endFrameIdx_forLowFreq (frames)
     // 
     // Noise Region:
     // - Selection area excluding signal region
@@ -2738,8 +2738,8 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // Get frequency bin indices for signal region
     const lowFreqBin = Math.floor((call.lowFreq_kHz * 1000) / freqResolution);
     const highFreqBin = Math.ceil((call.highFreq_kHz * 1000) / freqResolution);
-    const startFreqIdx = highFreqFrameIdx;  // From STEP 2
-    const endFreqIdx = lowFreqFrameIdx;     // From STEP 3
+    const signalStartFrameIdx = call.highFreqFrameIdx;  // From STEP 2
+    const signalEndFrameIdx = endFrameIdx_forLowFreq;   // From STEP 3
     
     let signalPowerSum = 0;
     let signalCount = 0;
@@ -2751,7 +2751,7 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       const framePower = spectrogram[frameIdx];
       
       // Determine if this frame is in the signal time region
-      const isSignalTimeFrame = (frameIdx >= startFreqIdx && frameIdx <= endFreqIdx);
+      const isSignalTimeFrame = (frameIdx >= signalStartFrameIdx && frameIdx <= signalEndFrameIdx);
       
       for (let binIdx = 0; binIdx < framePower.length; binIdx++) {
         // Determine if this bin is in the signal frequency region
