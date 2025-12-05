@@ -1013,61 +1013,17 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     let returnStartFreq_kHz = optimalMeasurement.startFreq_kHz;
     
     // Safety Mechanism Re-calculation
+    // 2025 v2: 當安全機制改變閾值時，從已有的測量中找到對應的 safeThreshold 測量結果
     if (safeThreshold !== finalThreshold) {
-      // 安全機制改變了閾值，重新計算
-      // CRITICAL: 這裡也必須使用 attackPhaseMaxSpectrum (High Freq) 和 firstFramePower (Start Freq)
-      const highFreqThreshold_dB_safe = stablePeakPower_dB + safeThreshold;
-      
-      let highFreq_Hz_safe = null;
-      let highFreqBinIdx_safe = 0;
-      let startFreq_Hz_safe = null;
-      
-      // 使用 attackPhaseMaxSpectrum 計算 High Frequency
-      for (let binIdx = attackPhaseMaxSpectrum.length - 1; binIdx >= 0; binIdx--) {
-        if (attackPhaseMaxSpectrum[binIdx] > highFreqThreshold_dB_safe) {
-          highFreq_Hz_safe = freqBins[binIdx];
-          highFreqBinIdx_safe = binIdx;
-          
-          if (binIdx < attackPhaseMaxSpectrum.length - 1) {
-            const thisPower = attackPhaseMaxSpectrum[binIdx];
-            const nextPower = attackPhaseMaxSpectrum[binIdx + 1];
-            if (nextPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
-              const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - nextPower);
-              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              highFreq_Hz_safe = freqBins[binIdx] + powerRatio * freqDiff;
-            }
-          }
-          break;
-        }
-      }
-      
-      // 使用 firstFramePower 計算 Start Frequency
-      if (highFreq_Hz_safe !== null) {
-        for (let binIdx = 0; binIdx < firstFramePower.length; binIdx++) {
-          if (firstFramePower[binIdx] > highFreqThreshold_dB_safe) {
-            startFreq_Hz_safe = freqBins[binIdx];
-            
-            if (binIdx > 0) {
-              const thisPower = firstFramePower[binIdx];
-              const prevPower = firstFramePower[binIdx - 1];
-              if (prevPower < highFreqThreshold_dB_safe && thisPower > highFreqThreshold_dB_safe) {
-                const powerRatio = (thisPower - highFreqThreshold_dB_safe) / (thisPower - prevPower);
-                const freqDiff = freqBins[binIdx] - freqBins[binIdx - 1];
-                startFreq_Hz_safe = freqBins[binIdx] - powerRatio * freqDiff;
-              }
-            }
-            break;
-          }
-        }
-      }
-      
-      if (highFreq_Hz_safe !== null) {
-        returnHighFreq_Hz = highFreq_Hz_safe;
-        returnHighFreq_kHz = highFreq_Hz_safe / 1000;
-        returnHighFreqBinIdx = highFreqBinIdx_safe;
-        // 2025 v2: 安全機制中保持原有的幀索引（已從 optimalMeasurement 取得）
-        returnStartFreq_Hz = startFreq_Hz_safe;
-        returnStartFreq_kHz = startFreq_Hz_safe / 1000;
+      // 查找對應 safeThreshold 的測量結果
+      const safeMeasurement = validMeasurements.find(m => m.threshold === safeThreshold);
+      if (safeMeasurement) {
+        returnHighFreq_Hz = safeMeasurement.highFreq_Hz;
+        returnHighFreq_kHz = safeMeasurement.highFreq_kHz;
+        returnHighFreqBinIdx = safeMeasurement.highFreqBinIdx;
+        returnHighFreqFrameIdx = safeMeasurement.highFreqFrameIdx;
+        returnStartFreq_Hz = safeMeasurement.startFreq_Hz;
+        returnStartFreq_kHz = safeMeasurement.startFreq_kHz;
       }
     }
     
