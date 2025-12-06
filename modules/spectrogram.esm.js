@@ -276,6 +276,10 @@ class h extends s {
 
         // cache for filter banks to avoid rebuilding on each render
         this._filterBankCache = {};
+        // 新增: 按完整 key 緩存濾波器組矩陣，避免重複計算
+        this._filterBankCacheByKey = {};
+        // 新增: 追蹤當前加載到 WASM 的濾波器組 key，避免重複加載
+        this._loadedFilterBankKey = null;
         // cache for resample mappings keyed by inputLen:outputWidth
         this._resampleCache = {};
         // precomputed uint8 colormap (RGBA 0-255)
@@ -578,10 +582,11 @@ class h extends s {
     /// * `filterBankMatrix` - 二維濾波器組矩陣 (Float32Array[])
     /// 
     /// 此方法將 2D 矩陣 (num_filters x freq_bins) 轉換為扁平化的 Float32Array (行優先)
+    /// 優化: 只在濾波器組實際改變時才執行扁平化和 WASM 調用
     flattenAndLoadFilterBank(filterBankMatrix) {
         if (!filterBankMatrix || filterBankMatrix.length === 0) {
             // 清除濾波器組
-            if (this._wasmEngine) {
+            if (this._wasmEngine && this._filterBankFlat !== null) {
                 this._wasmEngine.clear_filter_bank();
             }
             this._filterBankMatrix = null;
@@ -593,12 +598,11 @@ class h extends s {
         const freqBins = filterBankMatrix[0].length;
         
         // 建立扁平化陣列 (行優先順序)
+        // 優化: 使用 subarray 批量複製，而不是逐個元素複製
         const flatArray = new Float32Array(numFilters * freqBins);
         for (let i = 0; i < numFilters; i++) {
             const row = filterBankMatrix[i];
-            for (let j = 0; j < freqBins; j++) {
-                flatArray[i * freqBins + j] = row[j];
-            }
+            flatArray.set(row, i * freqBins);  // 更快的批量複製
         }
         
         // 保存並加載到 WASM
@@ -613,6 +617,14 @@ class h extends s {
         return this.wavesurfer.getWrapper().offsetWidth
     }
     
+    /// 清除濾波器組緩存 (當 FFT 大小或頻率範圍改變時調用)
+    clearFilterBankCache() {
+        this._filterBankCache = {};
+        this._filterBankCacheByKey = {};
+        this._loadedFilterBankKey = null;
+        this._filterBankMatrix = null;
+        this._filterBankFlat = null;
+    }
     async getFrequencies(t) {
         // 檢查 this.options 是否為 null（在 destroy 或 selection mode 切換時可能發生）
         if (!this.options || !t) {
@@ -652,34 +664,68 @@ class h extends s {
             if (this._lastFilterBankScale !== currentFilterBankKey) {
                 let c;
                 let numFilters;
-                switch (this.scale) {
-                case "mel":
-                    numFilters = this.numMelFilters;
-                    c = this.createFilterBank(numFilters, n, this.hzToMel, this.melToHz);
-                    break;
-                case "logarithmic":
-                    numFilters = this.numLogFilters;
-                    c = this.createFilterBank(numFilters, n, this.hzToLog, this.logToHz);
-                    break;
-                case "bark":
-                    numFilters = this.numBarkFilters;
-                    c = this.createFilterBank(numFilters, n, this.hzToBark, this.barkToHz);
-                    break;
-                case "erb":
-                    numFilters = this.numErbFilters;
-                    c = this.createFilterBank(numFilters, n, this.hzToErb, this.erbToHz);
-                    break;
+                
+                // 首先檢查是否已緩存此配置的濾波器組
+                if (this._filterBankCacheByKey[currentFilterBankKey]) {
+                    c = this._filterBankCacheByKey[currentFilterBankKey];
+                    console.log('✅ 使用已緩存的濾波器組 (命中)', {
+                        scale: this.scale,
+                        sampleRate: n,
+                        freqMin: this.frequencyMin,
+                        freqMax: this.frequencyMax,
+                        cacheSize: Object.keys(this._filterBankCacheByKey).length
+                    });
+                } else {
+                    // 計算新的濾波器組並緩存
+                    const filterBankStartTime = performance.now();
+                    switch (this.scale) {
+                    case "mel":
+                        numFilters = this.numMelFilters;
+                        c = this.createFilterBank(numFilters, n, this.hzToMel, this.melToHz);
+                        break;
+                    case "logarithmic":
+                        numFilters = this.numLogFilters;
+                        c = this.createFilterBank(numFilters, n, this.hzToLog, this.logToHz);
+                        break;
+                    case "bark":
+                        numFilters = this.numBarkFilters;
+                        c = this.createFilterBank(numFilters, n, this.hzToBark, this.barkToHz);
+                        break;
+                    case "erb":
+                        numFilters = this.numErbFilters;
+                        c = this.createFilterBank(numFilters, n, this.hzToErb, this.erbToHz);
+                        break;
+                    }
+                    const filterBankTime = performance.now() - filterBankStartTime;
+                    
+                    // 緩存計算結果，以便後續使用
+                    this._filterBankCacheByKey[currentFilterBankKey] = c;
+                    console.log(`⏱️  計算濾波器組耗時: ${filterBankTime.toFixed(2)}ms (${numFilters} filters)`, {
+                        scale: this.scale,
+                        sampleRate: n,
+                        cacheSize: Object.keys(this._filterBankCacheByKey).length
+                    });
                 }
                 
-                filterBankMatrix = c;
-                this._lastFilterBankScale = currentFilterBankKey;
+                // 只在濾波器組實際改變時加載到 WASM (關鍵優化)
+                if (this._loadedFilterBankKey !== currentFilterBankKey) {
+                    const wasmLoadStartTime = performance.now();
+                    this.flattenAndLoadFilterBank(c);
+                    const wasmLoadTime = performance.now() - wasmLoadStartTime;
+                    this._loadedFilterBankKey = currentFilterBankKey;
+                    console.log(`⏱️  WASM 加載耗時: ${wasmLoadTime.toFixed(2)}ms`);
+                } else {
+                    console.log('✅ 濾波器組已加載到 WASM (跳過)');
+                }
                 
-                // 扁平化並加載到 WASM
-                this.flattenAndLoadFilterBank(filterBankMatrix);
+                this._lastFilterBankScale = currentFilterBankKey;
             }
         } else {
-            // Linear scale: 不使用濾波器組
-            this.flattenAndLoadFilterBank(null);
+            // Linear scale: 清除濾波器組
+            if (this._loadedFilterBankKey !== null) {
+                this.flattenAndLoadFilterBank(null);
+                this._loadedFilterBankKey = null;
+            }
         }
         
         this.peakBandArrayPerChannel = [];
