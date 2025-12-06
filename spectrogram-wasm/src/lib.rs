@@ -373,6 +373,50 @@ impl SpectrogramEngine {
         peaks
     }
 
+    /// 獲取每個時間幀的峰值幅度值
+    /// 
+    /// 基於在最後一次 compute_spectrogram_u8 調用中計算的線性幅度值。
+    /// 返回每個時間幀中峰值 bin 的幅度值（線性，未轉換為 dB）。
+    /// 
+    /// # Returns
+    /// Float32Array，其中每個元素是對應時間幀的峰值幅度值
+    /// 如果該幀沒有有效的峰值，返回 0.0
+    #[wasm_bindgen]
+    pub fn get_peak_magnitudes(&self, threshold_ratio: f32) -> Vec<f32> {
+        if self.last_magnitude_buffer.is_empty() || self.last_global_max <= 0.0 {
+            return Vec::new();
+        }
+        
+        let freq_bins = self.fft_size / 2;
+        let threshold = self.last_global_max * threshold_ratio;
+        let mut magnitudes = vec![0.0f32; self.last_num_frames];
+        
+        // 對於每個時間幀，找到超過閾值的最大值的幅度
+        for frame_idx in 0..self.last_num_frames {
+            let frame_start = frame_idx * freq_bins;
+            let frame_end = frame_start + freq_bins;
+            
+            if frame_end > self.last_magnitude_buffer.len() {
+                break;
+            }
+            
+            let frame_data = &self.last_magnitude_buffer[frame_start..frame_end];
+            
+            // 找到此幀中的最大值
+            let max_val = frame_data.iter()
+                .fold(0.0f32, |acc, &val| {
+                    if val > acc { val } else { acc }
+                });
+            
+            // 僅當最大值超過閾值時才記錄幅度值
+            if max_val >= threshold {
+                magnitudes[frame_idx] = max_val;
+            }
+        }
+        
+        magnitudes
+    }
+
     /// 獲取最後計算的全局最大幅度值
     /// 
     /// 此值在最後一次 compute_spectrogram_u8 調用時計算。

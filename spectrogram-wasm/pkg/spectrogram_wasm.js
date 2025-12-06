@@ -233,6 +233,24 @@ export class SpectrogramEngine {
         return v2;
     }
     /**
+     * 獲取每個時間幀的峰值幅度值
+     *
+     * 基於在最後一次 compute_spectrogram_u8 調用中計算的線性幅度值。
+     * 返回每個時間幀中峰值 bin 的幅度值（線性，未轉換為 dB）。
+     *
+     * # Returns
+     * Float32Array，其中每個元素是對應時間幀的峰值幅度值
+     * 如果該幀沒有有效的峰值，返回 0.0
+     * @param {number} threshold_ratio
+     * @returns {Float32Array}
+     */
+    get_peak_magnitudes(threshold_ratio) {
+        const ret = wasm.spectrogramengine_get_peak_magnitudes(this.__wbg_ptr, threshold_ratio);
+        var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
      * 計算頻譜圖並轉換為 u8 量化值 (0-255)
      *
      * # Arguments

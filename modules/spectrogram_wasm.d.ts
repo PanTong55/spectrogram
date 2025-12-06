@@ -57,6 +57,17 @@ export class SpectrogramEngine {
    */
   compute_spectrogram(audio_data: Float32Array, noverlap: number): Float32Array;
   /**
+   * 獲取每個時間幀的峰值幅度值
+   * 
+   * 基於在最後一次 compute_spectrogram_u8 調用中計算的線性幅度值。
+   * 返回每個時間幀中峰值 bin 的幅度值（線性，未轉換為 dB）。
+   * 
+   * # Returns
+   * Float32Array，其中每個元素是對應時間幀的峰值幅度值
+   * 如果該幀沒有有效的峰值，返回 0.0
+   */
+  get_peak_magnitudes(threshold_ratio: number): Float32Array;
+  /**
    * 計算頻譜圖並轉換為 u8 量化值 (0-255)
    * 
    * # Arguments
@@ -140,6 +151,7 @@ export interface InitOutput {
   readonly spectrogramengine_get_freq_bins: (a: number) => number;
   readonly spectrogramengine_get_global_max: (a: number) => number;
   readonly spectrogramengine_get_num_filters: (a: number) => number;
+  readonly spectrogramengine_get_peak_magnitudes: (a: number, b: number) => [number, number];
   readonly spectrogramengine_get_peaks: (a: number, b: number) => [number, number];
   readonly spectrogramengine_get_window_values: (a: number) => [number, number];
   readonly spectrogramengine_load_filter_bank: (a: number, b: number, c: number, d: number) => void;

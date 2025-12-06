@@ -753,6 +753,7 @@ class h extends s {
                 
                 // 現在 WASM 已經計算了所有幀的幅度值，我們可以獲取峰值信息
                 const peakIndices = this._wasmEngine.get_peaks(peakThresholdMultiplier);
+                const peakMagnitudes = this._wasmEngine.get_peak_magnitudes(peakThresholdMultiplier);
                 const globalMaxValue = this._wasmEngine.get_global_max();
                 const highPeakThreshold = globalMaxValue * 0.7;
                 
@@ -778,9 +779,13 @@ class h extends s {
                     
                     if (peakBinIndex !== 0xFFFF) {
                         // 有效的峰值（超過閾值）
+                        // 使用峰值幅度值判定是否超過 70% 全局最大值
+                        const peakMagnitude = peakMagnitudes[frameIdx] || 0;
+                        const isHigh = peakMagnitude >= highPeakThreshold;
+                        
                         channelPeakBands.push({
                             bin: peakBinIndex,
-                            isHigh: peakBinIndex > (freq_bins * 0.3)  // 高頻峰值判定：bin > 30% 為高頻
+                            isHigh: isHigh
                         });
                     } else {
                         // 無效的峰值（未超過閾值）
