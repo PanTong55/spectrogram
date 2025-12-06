@@ -787,7 +787,15 @@ class h extends e {
             
             
             // 在 zoom/scroll 時輸出模式資訊
-            console.debug(`🎯 Zoom Render Mode: ${renderMode} [實例 ${this._instanceId}]`);
+            const instId = this._instanceId || 'unknown';
+            const hasWaveEngine = !!this._wasmWaveformEngine;
+            const debugInfo = {
+                instId,
+                hasWaveEngine,
+                hasGlobalWasm: !!globalThis._spectrogramWasm,
+                thisType: this.constructor.name
+            };
+            console.debug(`🎯 Zoom Render Mode: ${renderMode} [實例 ${instId}]`, debugInfo);
             
             
             this.renderSingleCanvas(peaks, e, a, s, o, n, r)
