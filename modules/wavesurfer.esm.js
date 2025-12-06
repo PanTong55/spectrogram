@@ -92,7 +92,12 @@ const i = {
             length: t[0].length,
             sampleRate: t[0].length / e,
             numberOfChannels: t.length,
-            getChannelData: e => null == t ? void 0 : t[e],
+            getChannelData: e => {
+                const channelData = null == t ? void 0 : t[e];
+                // 如果是 Float32Array（來自 WASM），直接返回
+                // 如果是普通數組，也直接返回（兩者都支持索引訪問）
+                return channelData;
+            },
             copyFromChannel: AudioBuffer.prototype.copyFromChannel,
             copyToChannel: AudioBuffer.prototype.copyToChannel
         }
@@ -1089,7 +1094,8 @@ class u extends a {
         this.mediaSubscriptions = [],
         this.abortController = null,
         this.options = Object.assign({}, c, t),
-        this.timer = new l;
+        this.timer = new l,
+        this._wasmWavePeaks = null;
         const i = e ? void 0 : this.getMediaElement();
         this.renderer = new h(this.options,i),
         this.initPlayerEvents(),
@@ -1324,9 +1330,68 @@ class u extends a {
             throw new Error("The audio has not been decoded yet");
         const chans = Math.min(t, this.decodedData.numberOfChannels);
         const result = [];
+        const precisionReciprocal = 1 / i;
+        
+        // 嘗試使用 WASM compute_wave_peaks 以獲得最佳性能
+        // 如果 WASM 不可用，則回退到 JavaScript 實現
+        const useWasm = this._wasmWavePeaks !== false;
+        
+        if (useWasm) {
+            try {
+                // 動態導入 WASM 模組
+                if (!this._wasmWavePeaks) {
+                    // 使用全局導入或動態導入
+                    const wasmModule = typeof globalThis !== 'undefined' && globalThis._spectrogramWasm 
+                        ? globalThis._spectrogramWasm 
+                        : null;
+                    
+                    if (!wasmModule) {
+                        // 嘗試從 spectrogram_wasm 導入
+                        try {
+                            // 如果 WASM 模塊已加載（在 spectrogram.esm.js 中），使用它
+                            const wasmFuncs = window.__spectrogramWasmFuncs;
+                            if (wasmFuncs && wasmFuncs.compute_wave_peaks) {
+                                this._wasmWavePeaks = wasmFuncs.compute_wave_peaks;
+                            }
+                        } catch (e) {
+                            // WASM 未可用，使用 JavaScript 實現
+                            this._wasmWavePeaks = false;
+                        }
+                    } else {
+                        this._wasmWavePeaks = wasmModule.compute_wave_peaks;
+                    }
+                }
+                
+                // 如果成功獲得 WASM 函數
+                if (this._wasmWavePeaks && typeof this._wasmWavePeaks === 'function') {
+                    for (let ch = 0; ch < chans; ch++) {
+                        const samples = this.decodedData.getChannelData(ch);
+                        // 直接調用 WASM compute_wave_peaks（傳遞 Float32Array）
+                        const wasmPeaks = this._wasmWavePeaks(samples, e);
+                        
+                        // 如果需要應用精度縮放
+                        if (i !== 1e4) {
+                            const scaledPeaks = new Float32Array(wasmPeaks.length);
+                            for (let p = 0; p < wasmPeaks.length; p++) {
+                                scaledPeaks[p] = Math.round(wasmPeaks[p] * i) * precisionReciprocal;
+                            }
+                            result.push(scaledPeaks);
+                        } else {
+                            // 直接使用 WASM 返回的峰值
+                            result.push(wasmPeaks);
+                        }
+                    }
+                    return result;
+                }
+            } catch (e) {
+                console.warn('⚠️ WASM compute_wave_peaks 不可用，使用 JavaScript 實現', e);
+                this._wasmWavePeaks = false;
+            }
+        }
+        
+        // JavaScript 回退實現
         // OPTIMIZATION: Pre-calculate reciprocal to avoid division in loop
         const blockSizeReciprocal = e / this.decodedData.length;
-        const precisionReciprocal = 1 / i;
         
         for (let ch = 0; ch < chans; ch++) {
             const samples = this.decodedData.getChannelData(ch);

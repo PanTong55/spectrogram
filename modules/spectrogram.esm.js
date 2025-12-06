@@ -956,4 +956,27 @@ class h extends s {
         return out
     }
 }
+
+// 暴露 WASM 波形峰值計算函數給 wavesurfer
+// 這允許 wavesurfer 在沒有直接導入 WASM 模塊的情況下使用 WASM 優化
+wasmReady.then(() => {
+    // 動態導入 WASM 函數並暴露到全局作用域
+    try {
+        // 導入計算波形峰值的函數
+        const initModule = async () => {
+            const wasmModule = await import('./spectrogram_wasm.js');
+            if (wasmModule && wasmModule.compute_wave_peaks && wasmModule.find_global_max) {
+                window.__spectrogramWasmFuncs = {
+                    compute_wave_peaks: wasmModule.compute_wave_peaks,
+                    find_global_max: wasmModule.find_global_max
+                };
+                console.log('✅ WASM 波形峰值函數已加載');
+            }
+        };
+        initModule().catch(err => console.warn('⚠️ 無法加載 WASM 波形峰值函數:', err));
+    } catch (e) {
+        console.warn('⚠️ 無法暴露 WASM 函數:', e);
+    }
+}).catch(err => console.warn('⚠️ WASM 初始化失敗:', err));
+
 export {h as default};
