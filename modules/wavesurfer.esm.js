@@ -715,7 +715,11 @@ class h extends e {
             let peaks;
             let renderMode = '🔵 原始 JS 實現';  // 預設值
             
-            if (this._wasmWaveformEngine && t[0] && t[0].length > 0) {
+            // 從 WaveSurfer 實例中獲取 WASM 引擎
+            const wavesurfer = this._wavesurfer;
+            const wasmEngine = wavesurfer && wavesurfer._wasmWaveformEngine;
+            
+            if (wasmEngine && t[0] && t[0].length > 0) {
                 try {
                     // 計算樣本範圍
                     const startSample = Math.floor(o * samplingRatio * t[0].length);
@@ -728,7 +732,7 @@ class h extends e {
                     // 調用 WASM 計算每個通道的峰值
                     peaks = t.map((chan, chIdx) => {
                         try {
-                            const wasmPeaks = this._wasmWaveformEngine.get_peaks_in_range(
+                            const wasmPeaks = wasmEngine.get_peaks_in_range(
                                 chIdx,
                                 startSample,
                                 endSample,
@@ -761,12 +765,15 @@ class h extends e {
                 }
             } else {
                 // 診斷：為何沒有初始化 WASM
-                if (!this._wasmWaveformEngine) {
+                if (!wasmEngine) {
                     // 詳細診斷
+                    const hasWavesurfer = !!wavesurfer;
                     const hasWasmModule = typeof globalThis !== 'undefined' && globalThis._spectrogramWasm;
                     const hasWaveformEngine = hasWasmModule && globalThis._spectrogramWasm.WaveformEngine;
                     
-                    if (!hasWasmModule) {
+                    if (!hasWavesurfer) {
+                        renderMode = '⚫ WaveSurfer 實例未綁定到 Renderer';
+                    } else if (!hasWasmModule) {
                         renderMode = '⚫ WASM 模塊未初始化 (globalThis._spectrogramWasm 不存在)';
                     } else if (!hasWaveformEngine) {
                         renderMode = '⚫ WaveformEngine 未找到 (模塊中無此類)';
@@ -786,16 +793,16 @@ class h extends e {
             }
             
             
+            
             // 在 zoom/scroll 時輸出模式資訊
-            const instId = this._instanceId || 'unknown';
-            const hasWaveEngine = !!this._wasmWaveformEngine;
+            const wsId = wavesurfer ? wavesurfer._instanceId : 'unknown';
             const debugInfo = {
-                instId,
-                hasWaveEngine,
-                hasGlobalWasm: !!globalThis._spectrogramWasm,
-                thisType: this.constructor.name
+                wavesurferId: wsId,
+                rendererClass: this.constructor.name,
+                hasWasmEngine: !!wasmEngine,
+                hasGlobalWasm: !!globalThis._spectrogramWasm
             };
-            console.debug(`🎯 Zoom Render Mode: ${renderMode} [實例 ${instId}]`, debugInfo);
+            console.debug(`🎯 Zoom Render Mode: ${renderMode}`, debugInfo);
             
             
             this.renderSingleCanvas(peaks, e, a, s, o, n, r)
@@ -1197,6 +1204,8 @@ class u extends a {
         });
         const i = e ? void 0 : this.getMediaElement();
         this.renderer = new h(this.options,i),
+        // 讓 Renderer 可以訪問 WaveSurfer 實例（用於 WASM 優化）
+        this.renderer._wavesurfer = this,
         this.initPlayerEvents(),
         this.initRendererEvents(),
         this.initTimerEvents(),
