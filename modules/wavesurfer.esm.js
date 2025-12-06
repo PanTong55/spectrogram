@@ -710,13 +710,51 @@ class h extends e {
               , a = Math.min(l - o, d);
             if (a <= 0)
                 return;
-            // OPTIMIZATION: Use pre-calculated samplingRatio for faster computation
-            const h = t.map((chan => {
-                const start = Math.floor(o * samplingRatio * chan.length);
-                const end = Math.floor((o + a) * samplingRatio * chan.length);
-                return chan.subarray(start, Math.min(end, chan.length));
-            }));
-            this.renderSingleCanvas(h, e, a, s, o, n, r)
+            
+            // 使用 WaveformEngine 進行高效下採樣
+            let peaks;
+            if (this._wasmWaveformEngine && t[0] && t[0].length > 0) {
+                try {
+                    // 計算樣本範圍
+                    const startSample = Math.floor(o * samplingRatio * t[0].length);
+                    const endSample = Math.floor((o + a) * samplingRatio * t[0].length);
+                    const targetWidth = Math.ceil(a);
+                    
+                    // 調用 WASM 計算每個通道的峰值
+                    peaks = t.map((chan, chIdx) => {
+                        try {
+                            const wasmPeaks = this._wasmWaveformEngine.get_peaks_in_range(
+                                chIdx,
+                                startSample,
+                                endSample,
+                                targetWidth
+                            );
+                            return wasmPeaks;
+                        } catch (e) {
+                            console.warn(`⚠️ WASM 峰值計算失敗 (通道 ${chIdx}):`, e);
+                            // 回退到 JavaScript 實現
+                            return chan.subarray(startSample, Math.min(endSample, chan.length));
+                        }
+                    });
+                } catch (e) {
+                    console.warn('⚠️ WASM 下採樣失敗，使用 JavaScript 實現:', e);
+                    // 回退到原始的 JavaScript 實現
+                    peaks = t.map((chan => {
+                        const start = Math.floor(o * samplingRatio * chan.length);
+                        const end = Math.floor((o + a) * samplingRatio * chan.length);
+                        return chan.subarray(start, Math.min(end, chan.length));
+                    }));
+                }
+            } else {
+                // OPTIMIZATION: 原始的 JavaScript 實現（回退方案）
+                peaks = t.map((chan => {
+                    const start = Math.floor(o * samplingRatio * chan.length);
+                    const end = Math.floor((o + a) * samplingRatio * chan.length);
+                    return chan.subarray(start, Math.min(end, chan.length));
+                }));
+            }
+            
+            this.renderSingleCanvas(peaks, e, a, s, o, n, r)
         }
           , p = Math.ceil(l / d);
         if (!this.isScrollable) {
@@ -1095,7 +1133,23 @@ class u extends a {
         this.abortController = null,
         this.options = Object.assign({}, c, t),
         this.timer = new l,
-        this._wasmWavePeaks = null;
+        this._wasmWavePeaks = null,
+        // 初始化 WaveformEngine (用於高效波形下採樣)
+        this._wasmWaveformEngine = null,
+        this._wasmReady = Promise.resolve().then( () => {
+            // 動態導入 WaveformEngine
+            try {
+                const wasmModule = typeof globalThis !== 'undefined' && globalThis._spectrogramWasm 
+                    ? globalThis._spectrogramWasm 
+                    : null;
+                
+                if (wasmModule && wasmModule.WaveformEngine) {
+                    this._wasmWaveformEngine = new wasmModule.WaveformEngine();
+                }
+            } catch (e) {
+                console.warn('⚠️ 無法初始化 WaveformEngine:', e);
+            }
+        });
         const i = e ? void 0 : this.getMediaElement();
         this.renderer = new h(this.options,i),
         this.initPlayerEvents(),
@@ -1288,6 +1342,26 @@ class u extends a {
                 const t = yield s.arrayBuffer();
                 this.decodedData = yield i.decode(t, this.options.sampleRate)
             }
+            
+            // 如果 WaveformEngine 可用，將音頻數據加載到 WASM
+            if (this.decodedData && this._wasmWaveformEngine) {
+                try {
+                    const numChannels = this.decodedData.numberOfChannels;
+                    // 調整 WaveformEngine 的通道數
+                    this._wasmWaveformEngine.resize(numChannels);
+                    
+                    // 加載每個通道的數據到 WASM
+                    for (let ch = 0; ch < numChannels; ch++) {
+                        const channelData = this.decodedData.getChannelData(ch);
+                        this._wasmWaveformEngine.load_channel(ch, channelData);
+                    }
+                    
+                    console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本)`);
+                } catch (e) {
+                    console.warn('⚠️ 無法加載音頻數據到 WaveformEngine:', e);
+                }
+            }
+            
             this.decodedData && (this.emit("decode", this.getDuration()),
             this.renderer.render(this.decodedData)),
             this.emit("ready", this.getDuration())

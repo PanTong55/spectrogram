@@ -107,6 +107,71 @@ export class SpectrogramEngine {
   get_peaks(threshold_ratio: number): Uint16Array;
 }
 
+export class WaveformEngine {
+  free(): void;
+  [Symbol.dispose](): void;
+  /**
+   * 加載單個通道的完整音頻數據
+   * 
+   * # Arguments
+   * * `channel_idx` - 通道索引
+   * * `data` - 音頻樣本數據 (Float32Array)
+   * 
+   * 此方法在音頻加載時調用一次，存儲完整的音頻數據供後續查詢使用
+   */
+  load_channel(channel_idx: number, data: Float32Array): void;
+  /**
+   * 獲取通道數量
+   * 
+   * # Returns
+   * 當前加載的通道數量
+   */
+  get_num_channels(): number;
+  /**
+   * 獲取指定通道的樣本總數
+   * 
+   * # Arguments
+   * * `channel_idx` - 通道索引
+   * 
+   * # Returns
+   * 該通道的樣本數
+   */
+  get_channel_length(channel_idx: number): number;
+  /**
+   * 在指定範圍內獲取波形峰值
+   * 
+   * # Arguments
+   * * `channel_idx` - 通道索引
+   * * `start_sample` - 起始樣本索引
+   * * `end_sample` - 結束樣本索引（不包含）
+   * * `target_width` - 目標寬度（輸出峰值數量）
+   * 
+   * # Returns
+   * Float32Array，長度為 target_width，包含每個像素的峰值（絕對值最大值）
+   * 
+   * 邏輯:
+   * 1. 計算每個像素對應的樣本數: step = (end_sample - start_sample) / target_width
+   * 2. 對於每個像素，在對應的樣本區間內找到最大絕對值
+   * 3. 返回包含所有峰值的數組
+   */
+  get_peaks_in_range(channel_idx: number, start_sample: number, end_sample: number, target_width: number): Float32Array;
+  /**
+   * 創建新的 WaveformEngine 實例
+   */
+  constructor();
+  /**
+   * 清除所有音頻數據
+   */
+  clear(): void;
+  /**
+   * 預分配指定數量的通道
+   * 
+   * # Arguments
+   * * `num_channels` - 音頻通道數量
+   */
+  resize(num_channels: number): void;
+}
+
 /**
  * 計算波形峰值用於可視化
  * 
@@ -142,6 +207,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_spectrogramengine_free: (a: number, b: number) => void;
+  readonly __wbg_waveformengine_free: (a: number, b: number) => void;
   readonly compute_wave_peaks: (a: number, b: number, c: number) => [number, number];
   readonly find_global_max: (a: number, b: number) => number;
   readonly spectrogramengine_clear_filter_bank: (a: number) => void;
@@ -156,6 +222,13 @@ export interface InitOutput {
   readonly spectrogramengine_get_window_values: (a: number) => [number, number];
   readonly spectrogramengine_load_filter_bank: (a: number, b: number, c: number, d: number) => void;
   readonly spectrogramengine_new: (a: number, b: number, c: number, d: number) => number;
+  readonly waveformengine_clear: (a: number) => void;
+  readonly waveformengine_get_channel_length: (a: number, b: number) => number;
+  readonly waveformengine_get_num_channels: (a: number) => number;
+  readonly waveformengine_get_peaks_in_range: (a: number, b: number, c: number, d: number, e: number) => [number, number];
+  readonly waveformengine_load_channel: (a: number, b: number, c: number, d: number) => void;
+  readonly waveformengine_new: () => number;
+  readonly waveformengine_resize: (a: number, b: number) => void;
   readonly __wbindgen_externrefs: WebAssembly.Table;
   readonly __wbindgen_malloc: (a: number, b: number) => number;
   readonly __wbindgen_free: (a: number, b: number, c: number) => void;

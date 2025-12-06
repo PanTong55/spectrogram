@@ -125,6 +125,10 @@ const SpectrogramEngineFinalization = (typeof FinalizationRegistry === 'undefine
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_spectrogramengine_free(ptr >>> 0, 1));
 
+const WaveformEngineFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_waveformengine_free(ptr >>> 0, 1));
+
 /**
  * SpectrogramEngine: 處理音頻頻譜圖計算
  * 將 FFT、窗函數應用、濾波器組應用和 dB 轉換從 JavaScript 移到 Rust
@@ -319,6 +323,119 @@ export class SpectrogramEngine {
     }
 }
 if (Symbol.dispose) SpectrogramEngine.prototype[Symbol.dispose] = SpectrogramEngine.prototype.free;
+
+/**
+ * WaveformEngine: 實現波形下採樣和峰值提取
+ * 用於在縮放和滾動時高效渲染波形，避免重複計算
+ */
+export class WaveformEngine {
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WaveformEngineFinalization.unregister(this);
+        return ptr;
+    }
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_waveformengine_free(ptr, 0);
+    }
+    /**
+     * 加載單個通道的完整音頻數據
+     *
+     * # Arguments
+     * * `channel_idx` - 通道索引
+     * * `data` - 音頻樣本數據 (Float32Array)
+     *
+     * 此方法在音頻加載時調用一次，存儲完整的音頻數據供後續查詢使用
+     * @param {number} channel_idx
+     * @param {Float32Array} data
+     */
+    load_channel(channel_idx, data) {
+        const ptr0 = passArrayF32ToWasm0(data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.waveformengine_load_channel(this.__wbg_ptr, channel_idx, ptr0, len0);
+    }
+    /**
+     * 獲取通道數量
+     *
+     * # Returns
+     * 當前加載的通道數量
+     * @returns {number}
+     */
+    get_num_channels() {
+        const ret = wasm.waveformengine_get_num_channels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * 獲取指定通道的樣本總數
+     *
+     * # Arguments
+     * * `channel_idx` - 通道索引
+     *
+     * # Returns
+     * 該通道的樣本數
+     * @param {number} channel_idx
+     * @returns {number}
+     */
+    get_channel_length(channel_idx) {
+        const ret = wasm.waveformengine_get_channel_length(this.__wbg_ptr, channel_idx);
+        return ret >>> 0;
+    }
+    /**
+     * 在指定範圍內獲取波形峰值
+     *
+     * # Arguments
+     * * `channel_idx` - 通道索引
+     * * `start_sample` - 起始樣本索引
+     * * `end_sample` - 結束樣本索引（不包含）
+     * * `target_width` - 目標寬度（輸出峰值數量）
+     *
+     * # Returns
+     * Float32Array，長度為 target_width，包含每個像素的峰值（絕對值最大值）
+     *
+     * 邏輯:
+     * 1. 計算每個像素對應的樣本數: step = (end_sample - start_sample) / target_width
+     * 2. 對於每個像素，在對應的樣本區間內找到最大絕對值
+     * 3. 返回包含所有峰值的數組
+     * @param {number} channel_idx
+     * @param {number} start_sample
+     * @param {number} end_sample
+     * @param {number} target_width
+     * @returns {Float32Array}
+     */
+    get_peaks_in_range(channel_idx, start_sample, end_sample, target_width) {
+        const ret = wasm.waveformengine_get_peaks_in_range(this.__wbg_ptr, channel_idx, start_sample, end_sample, target_width);
+        var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
+     * 創建新的 WaveformEngine 實例
+     */
+    constructor() {
+        const ret = wasm.waveformengine_new();
+        this.__wbg_ptr = ret >>> 0;
+        WaveformEngineFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+    }
+    /**
+     * 清除所有音頻數據
+     */
+    clear() {
+        wasm.waveformengine_clear(this.__wbg_ptr);
+    }
+    /**
+     * 預分配指定數量的通道
+     *
+     * # Arguments
+     * * `num_channels` - 音頻通道數量
+     * @param {number} num_channels
+     */
+    resize(num_channels) {
+        wasm.waveformengine_resize(this.__wbg_ptr, num_channels);
+    }
+}
+if (Symbol.dispose) WaveformEngine.prototype[Symbol.dispose] = WaveformEngine.prototype.free;
 
 /**
  * 計算波形峰值用於可視化

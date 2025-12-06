@@ -575,3 +575,150 @@ pub fn find_global_max(channel_data: &[f32]) -> f32 {
         .map(|x| x.abs())
         .fold(0.0f32, f32::max)
 }
+
+/// WaveformEngine: 實現波形下採樣和峰值提取
+/// 用於在縮放和滾動時高效渲染波形，避免重複計算
+#[wasm_bindgen]
+pub struct WaveformEngine {
+    /// 存儲完整的音頻數據，按通道組織
+    /// 索引: channels[channel_idx][sample_idx]
+    channels: Vec<Vec<f32>>,
+}
+
+#[wasm_bindgen]
+impl WaveformEngine {
+    /// 創建新的 WaveformEngine 實例
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> WaveformEngine {
+        WaveformEngine {
+            channels: Vec::new(),
+        }
+    }
+    
+    /// 預分配指定數量的通道
+    /// 
+    /// # Arguments
+    /// * `num_channels` - 音頻通道數量
+    #[wasm_bindgen]
+    pub fn resize(&mut self, num_channels: usize) {
+        self.channels.clear();
+        self.channels.resize(num_channels, Vec::new());
+    }
+    
+    /// 加載單個通道的完整音頻數據
+    /// 
+    /// # Arguments
+    /// * `channel_idx` - 通道索引
+    /// * `data` - 音頻樣本數據 (Float32Array)
+    /// 
+    /// 此方法在音頻加載時調用一次，存儲完整的音頻數據供後續查詢使用
+    #[wasm_bindgen]
+    pub fn load_channel(&mut self, channel_idx: usize, data: &[f32]) {
+        if channel_idx >= self.channels.len() {
+            return;
+        }
+        
+        // 複製音頻數據到 Rust 向量
+        self.channels[channel_idx] = data.to_vec();
+    }
+    
+    /// 在指定範圍內獲取波形峰值
+    /// 
+    /// # Arguments
+    /// * `channel_idx` - 通道索引
+    /// * `start_sample` - 起始樣本索引
+    /// * `end_sample` - 結束樣本索引（不包含）
+    /// * `target_width` - 目標寬度（輸出峰值數量）
+    /// 
+    /// # Returns
+    /// Float32Array，長度為 target_width，包含每個像素的峰值（絕對值最大值）
+    /// 
+    /// 邏輯:
+    /// 1. 計算每個像素對應的樣本數: step = (end_sample - start_sample) / target_width
+    /// 2. 對於每個像素，在對應的樣本區間內找到最大絕對值
+    /// 3. 返回包含所有峰值的數組
+    #[wasm_bindgen]
+    pub fn get_peaks_in_range(
+        &self,
+        channel_idx: usize,
+        start_sample: usize,
+        end_sample: usize,
+        target_width: usize,
+    ) -> Vec<f32> {
+        // 邊界檢查
+        if channel_idx >= self.channels.len() || target_width == 0 {
+            return vec![0.0; target_width.max(1)];
+        }
+        
+        let channel_data = &self.channels[channel_idx];
+        let data_len = channel_data.len();
+        
+        // 修正 end_sample，確保不超過數據長度
+        let end_sample = end_sample.min(data_len);
+        let sample_range = end_sample.saturating_sub(start_sample);
+        
+        if sample_range == 0 {
+            return vec![0.0; target_width];
+        }
+        
+        let mut peaks = vec![0.0f32; target_width];
+        
+        // 計算每個像素對應的樣本步長
+        let step = sample_range as f32 / target_width as f32;
+        
+        // 對於每個像素，計算峰值
+        for pixel_idx in 0..target_width {
+            let pixel_start = (pixel_idx as f32 * step) as usize;
+            let pixel_end = ((pixel_idx as f32 + 1.0) * step).ceil() as usize;
+            
+            // 計算此像素在原始數據中的實際位置
+            let chunk_start = (start_sample + pixel_start).min(data_len);
+            let chunk_end = (start_sample + pixel_end).min(data_len);
+            
+            // 如果範圍有效，找到最大絕對值
+            if chunk_start < chunk_end && chunk_start < data_len {
+                let chunk = &channel_data[chunk_start..chunk_end];
+                let max_val = chunk
+                    .iter()
+                    .copied()
+                    .map(|x| x.abs())
+                    .fold(0.0f32, f32::max);
+                
+                peaks[pixel_idx] = max_val;
+            }
+        }
+        
+        peaks
+    }
+    
+    /// 獲取指定通道的樣本總數
+    /// 
+    /// # Arguments
+    /// * `channel_idx` - 通道索引
+    /// 
+    /// # Returns
+    /// 該通道的樣本數
+    #[wasm_bindgen]
+    pub fn get_channel_length(&self, channel_idx: usize) -> usize {
+        if channel_idx < self.channels.len() {
+            self.channels[channel_idx].len()
+        } else {
+            0
+        }
+    }
+    
+    /// 獲取通道數量
+    /// 
+    /// # Returns
+    /// 當前加載的通道數量
+    #[wasm_bindgen]
+    pub fn get_num_channels(&self) -> usize {
+        self.channels.len()
+    }
+    
+    /// 清除所有音頻數據
+    #[wasm_bindgen]
+    pub fn clear(&mut self) {
+        self.channels.clear();
+    }
+}
