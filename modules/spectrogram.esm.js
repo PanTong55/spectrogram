@@ -269,6 +269,11 @@ class h extends s {
             );
         });
 
+        // 濾波器組相關字段
+        this._filterBankMatrix = null;  // 當前濾波器組矩陣 (二維陣列)
+        this._filterBankFlat = null;    // 扁平化的濾波器組 (Float32Array)
+        this._lastFilterBankScale = null; // 用於檢測濾波器組是否需要更新
+
         // cache for filter banks to avoid rebuilding on each render
         this._filterBankCache = {};
         // cache for resample mappings keyed by inputLen:outputWidth
@@ -566,6 +571,44 @@ class h extends s {
                 r[i] += t[s] * e[i][s];
         return r
     }
+    
+    /// 輔助方法：將二維濾波器組矩陣扁平化並加載到 WASM
+    /// 
+    /// # Arguments
+    /// * `filterBankMatrix` - 二維濾波器組矩陣 (Float32Array[])
+    /// 
+    /// 此方法將 2D 矩陣 (num_filters x freq_bins) 轉換為扁平化的 Float32Array (行優先)
+    flattenAndLoadFilterBank(filterBankMatrix) {
+        if (!filterBankMatrix || filterBankMatrix.length === 0) {
+            // 清除濾波器組
+            if (this._wasmEngine) {
+                this._wasmEngine.clear_filter_bank();
+            }
+            this._filterBankMatrix = null;
+            this._filterBankFlat = null;
+            return;
+        }
+        
+        const numFilters = filterBankMatrix.length;
+        const freqBins = filterBankMatrix[0].length;
+        
+        // 建立扁平化陣列 (行優先順序)
+        const flatArray = new Float32Array(numFilters * freqBins);
+        for (let i = 0; i < numFilters; i++) {
+            const row = filterBankMatrix[i];
+            for (let j = 0; j < freqBins; j++) {
+                flatArray[i * freqBins + j] = row[j];
+            }
+        }
+        
+        // 保存並加載到 WASM
+        this._filterBankMatrix = filterBankMatrix;
+        this._filterBankFlat = flatArray;
+        
+        if (this._wasmEngine) {
+            this._wasmEngine.load_filter_bank(flatArray, numFilters);
+        }
+    }
     getWidth() {
         return this.wavesurfer.getWrapper().offsetWidth
     }
@@ -599,47 +642,51 @@ class h extends s {
         // Wait for WASM to be ready
         await this._wasmReady;
         
-        let c;
-        switch (this.scale) {
-        case "mel":
-            c = this.createFilterBank(this.numMelFilters, n, this.hzToMel, this.melToHz);
-            break;
-        case "logarithmic":
-            c = this.createFilterBank(this.numLogFilters, n, this.hzToLog, this.logToHz);
-            break;
-        case "bark":
-            c = this.createFilterBank(this.numBarkFilters, n, this.hzToBark, this.barkToHz);
-            break;
-        case "erb":
-            c = this.createFilterBank(this.numErbFilters, n, this.hzToErb, this.erbToHz)
+        // 檢查是否需要重新計算濾波器組
+        // 根據 scale、sampleRate 等決定是否需要更新
+        let filterBankMatrix = null;
+        const currentFilterBankKey = `${this.scale}:${n}:${this.frequencyMin}:${this.frequencyMax}`;
+        
+        if (this.scale !== "linear") {
+            // 如果濾波器組需要更新，則計算新的濾波器組
+            if (this._lastFilterBankScale !== currentFilterBankKey) {
+                let c;
+                let numFilters;
+                switch (this.scale) {
+                case "mel":
+                    numFilters = this.numMelFilters;
+                    c = this.createFilterBank(numFilters, n, this.hzToMel, this.melToHz);
+                    break;
+                case "logarithmic":
+                    numFilters = this.numLogFilters;
+                    c = this.createFilterBank(numFilters, n, this.hzToLog, this.logToHz);
+                    break;
+                case "bark":
+                    numFilters = this.numBarkFilters;
+                    c = this.createFilterBank(numFilters, n, this.hzToBark, this.barkToHz);
+                    break;
+                case "erb":
+                    numFilters = this.numErbFilters;
+                    c = this.createFilterBank(numFilters, n, this.hzToErb, this.erbToHz);
+                    break;
+                }
+                
+                filterBankMatrix = c;
+                this._lastFilterBankScale = currentFilterBankKey;
+                
+                // 扁平化並加載到 WASM
+                this.flattenAndLoadFilterBank(filterBankMatrix);
+            }
+        } else {
+            // Linear scale: 不使用濾波器組
+            this.flattenAndLoadFilterBank(null);
         }
         
         this.peakBandArrayPerChannel = [];
         
-        const gainDBNeg = -this.gainDB;
-        const gainDBNegRange = gainDBNeg - this.rangeDB;
-        const rangeDBReciprocal = 255 / this.rangeDB;
-        
-        // 輔助函數：將幅度值轉換為 dB 和 0-255 範圍
-        const magnitudeToUint8 = (magnitudeSpectrum) => {
-            const result = new Uint8Array(magnitudeSpectrum.length);
-            for (let k = 0; k < magnitudeSpectrum.length; k++) {
-                const magnitude = magnitudeSpectrum[k];
-                const s = magnitude > 1e-12 ? magnitude : 1e-12;
-                const db = 20 * Math.log10(s);
-                if (db < gainDBNegRange) {
-                    result[k] = 0;
-                } else if (db > gainDBNeg) {
-                    result[k] = 255;
-                } else {
-                    result[k] = (db + this.gainDB) * rangeDBReciprocal + 256;
-                }
-            }
-            return result;
-        };
-        
         if (this.options && this.options.peakMode) {
-            // 1. 第一次掃描：找出全局最大峰值（使用幅度值進行精確檢測）
+            // Peak Mode: 使用新的 WASM API (compute_spectrogram_u8) 獲得幅度值，然後進行峰值檢測
+            // 第一次掃描：找出全局最大峰值（使用舊 API 獲得線性幅度值進行精確檢測）
             let globalMaxPeakValue = 0;
             
             for (let e = 0; e < i; e++) {
@@ -649,7 +696,7 @@ class h extends s {
                 for (; a + r < s.length; ) {
                     const tSlice = s.subarray(a, a + r);
                     
-                    // Use WASM for FFT computation - returns magnitude values
+                    // 使用舊 API 獲得線性幅度值進行峰值檢測
                     const magnitudeSpectrum = this._wasmEngine.compute_spectrogram(
                         tSlice,
                         o
@@ -666,103 +713,96 @@ class h extends s {
                 }
             }
             
-            // 2. 計算閾值：基本顯示閾值 (40%) 和 高峰值變色閾值 (70%)
+            // 2. 計算閾值
             const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
             const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
-            const highPeakThreshold = globalMaxPeakValue * 0.7; // 新增：70% 閾值
+            const highPeakThreshold = globalMaxPeakValue * 0.7;
             
-            // 3. 第二次掃描：記錄數據
+            // 3. 第二次掃描：使用新 API 獲得 u8 頻譜，並記錄峰值信息
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e)
                   , i = []
                   , channelPeakBands = [];
                 let a = 0;
                 for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r)
-                        , e = new Uint8Array(r / 2);
+                    const tSlice = s.subarray(a, a + r);
                     
-                    // Use WASM for FFT computation - returns magnitude values
-                    const magnitudeSpectrum2 = this._wasmEngine.compute_spectrogram(
+                    // 使用舊 API 獲得幅度值進行峰值檢測
+                    const magnitudeSpectrum = this._wasmEngine.compute_spectrogram(
                         tSlice,
                         o
                     );
                     
-                    // 使用幅度值進行峰值檢測（更精確）
+                    // 進行峰值檢測
                     let peakBandInRange = Math.max(0, minBinFull);
-                    let peakValueInRange = magnitudeSpectrum2[peakBandInRange] || 0;
-                    for (let k = minBinFull; k < maxBinFull && k < magnitudeSpectrum2.length; k++) {
-                      if ((magnitudeSpectrum2[k] || 0) > peakValueInRange) {
-                        peakValueInRange = magnitudeSpectrum2[k];
+                    let peakValueInRange = magnitudeSpectrum[peakBandInRange] || 0;
+                    for (let k = minBinFull; k < maxBinFull && k < magnitudeSpectrum.length; k++) {
+                      if ((magnitudeSpectrum[k] || 0) > peakValueInRange) {
+                        peakValueInRange = magnitudeSpectrum[k];
                         peakBandInRange = k;
                       }
                     }
                     
-                    // 存儲對象：峰值箱位置和是否為高峰（相對幅度值）
+                    // 存儲峰值信息
                     if (peakValueInRange >= peakThreshold) {
                       channelPeakBands.push({
                           bin: peakBandInRange,
-                          isHigh: peakValueInRange >= highPeakThreshold // 標記是否超過 70%
+                          isHigh: peakValueInRange >= highPeakThreshold
                       });
                     } else {
                       channelPeakBands.push(null);
                     }
                     
-                    // 轉換幅度值為 dB 和 0-255 範圍
-                    const dbSpectrum = magnitudeToUint8(magnitudeSpectrum2);
+                    // 使用新 API 獲得 u8 頻譜（包含濾波器組處理和 dB 轉換）
+                    const u8Spectrum = this._wasmEngine.compute_spectrogram_u8(
+                        tSlice,
+                        o,
+                        this.gainDB,
+                        this.rangeDB
+                    );
                     
-                    // Apply filter bank if needed
-                    if (c) {
-                        const filtered = this.applyFilterBank(magnitudeSpectrum2, c);
-                        // Convert filtered magnitude values to dB
-                        const dbFiltered = magnitudeToUint8(filtered);
-                        for (let k = 0; k < r / 2 && k < dbFiltered.length; k++) {
-                            e[k] = dbFiltered[k];
-                        }
-                    } else {
-                        for (let k = 0; k < r / 2 && k < dbSpectrum.length; k++) {
-                            e[k] = dbSpectrum[k];
-                        }
+                    // 決定輸出大小（與 WASM 端的輸出大小一致）
+                    const numFilters = this._wasmEngine.get_num_filters();
+                    const outputSize = this.scale !== "linear" && numFilters > 0 ? numFilters : (r / 2);
+                    
+                    const outputFrame = new Uint8Array(outputSize);
+                    for (let k = 0; k < Math.min(outputSize, u8Spectrum.length); k++) {
+                        outputFrame[k] = u8Spectrum[k];
                     }
                     
-                    i.push(e),
+                    i.push(outputFrame);
                     a += r - o
                 }
                 this.peakBandArrayPerChannel.push(channelPeakBands);
                 h.push(i)
             }
         } else {
-            // Peak Mode 禁用時的邏輯
+            // Peak Mode 禁用時：直接使用新 API
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e)
                   , i = [];
                 let a = 0;
                 for (; a + r < s.length; ) {
-                    const e = new Uint8Array(r / 2);
+                    const tSlice = s.subarray(a, a + r);
                     
-                    // Use WASM for FFT computation - returns magnitude values
-                    const magnitudeSpectrum3 = this._wasmEngine.compute_spectrogram(
-                        s.subarray(a, a + r),
-                        o
+                    // 使用新 API 獲得 u8 頻譜（包含濾波器組處理和 dB 轉換）
+                    const u8Spectrum = this._wasmEngine.compute_spectrogram_u8(
+                        tSlice,
+                        o,
+                        this.gainDB,
+                        this.rangeDB
                     );
                     
-                    // Convert magnitude to dB
-                    const wasmSpectrum = magnitudeToUint8(magnitudeSpectrum3);
+                    // 決定輸出大小（與 WASM 端的輸出大小一致）
+                    const numFilters = this._wasmEngine.get_num_filters();
+                    const outputSize = this.scale !== "linear" && numFilters > 0 ? numFilters : (r / 2);
                     
-                    // Apply filter bank if needed
-                    if (c) {
-                        const filtered = this.applyFilterBank(magnitudeSpectrum3, c);
-                        // Convert filtered magnitude values to dB
-                        const dbFiltered = magnitudeToUint8(filtered);
-                        for (let k = 0; k < r / 2 && k < dbFiltered.length; k++) {
-                            e[k] = dbFiltered[k];
-                        }
-                    } else {
-                        for (let k = 0; k < r / 2 && k < wasmSpectrum.length; k++) {
-                            e[k] = wasmSpectrum[k];
-                        }
+                    const outputFrame = new Uint8Array(outputSize);
+                    for (let k = 0; k < Math.min(outputSize, u8Spectrum.length); k++) {
+                        outputFrame[k] = u8Spectrum[k];
                     }
                     
-                    i.push(e),
+                    i.push(outputFrame);
                     a += r - o
                 }
                 h.push(i)

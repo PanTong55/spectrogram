@@ -4,16 +4,22 @@ use num_complex::Complex;
 use std::f32::consts::PI;
 
 /// SpectrogramEngine: 處理音頻頻譜圖計算
-/// 將 FFT、窗函數應用和 dB 轉換從 JavaScript 移到 Rust
+/// 將 FFT、窗函數應用、濾波器組應用和 dB 轉換從 JavaScript 移到 Rust
 #[wasm_bindgen]
 pub struct SpectrogramEngine {
     fft_size: usize,
-    window_func: String,
+    _window_func: String,  // 保留用於調試
     window_values: Vec<f32>,
     planner: FftPlanner<f32>,
     scratch_buffer: Vec<Complex<f32>>,
-    output_buffer: Vec<f32>,
-    alpha: f32,
+    _output_buffer: Vec<f32>,  // 保留用於未來擴展
+    _alpha: f32,  // 保留用於未來擴展
+    // 濾波器組相關字段
+    // 扁平化的濾波器組矩陣 (行優先順序)
+    // 維度: num_filters x (fft_size / 2 + 1)
+    filter_bank: Vec<f32>,
+    num_filters: usize,
+    use_filter_bank: bool,
 }
 
 #[wasm_bindgen]
@@ -40,13 +46,39 @@ impl SpectrogramEngine {
         
         SpectrogramEngine {
             fft_size,
-            window_func,
+            _window_func: window_func,
             window_values,
             planner,
             scratch_buffer,
-            output_buffer,
-            alpha,
+            _output_buffer: output_buffer,
+            _alpha: alpha,
+            filter_bank: Vec::new(),
+            num_filters: 0,
+            use_filter_bank: false,
         }
+    }
+
+    /// 載入濾波器組矩陣
+    /// 
+    /// # Arguments
+    /// * `flat_weights` - 扁平化的濾波器組權重矩陣 (Float32Array)
+    /// * `num_filters` - 濾波器數量
+    /// 
+    /// 矩陣順序: 行優先 (row-major)
+    /// 每行長度: fft_size / 2 + 1
+    #[wasm_bindgen]
+    pub fn load_filter_bank(&mut self, flat_weights: &[f32], num_filters: usize) {
+        self.filter_bank = flat_weights.to_vec();
+        self.num_filters = num_filters;
+        self.use_filter_bank = true;
+    }
+
+    /// 清除濾波器組 (禁用濾波)
+    #[wasm_bindgen]
+    pub fn clear_filter_bank(&mut self) {
+        self.filter_bank.clear();
+        self.num_filters = 0;
+        self.use_filter_bank = false;
     }
 
     /// 計算 FFT 頻譜（返回幅度值，不進行 dB 轉換）
@@ -120,10 +152,147 @@ impl SpectrogramEngine {
         self.fft_size
     }
 
+    /// 獲取濾波器數量
+    #[wasm_bindgen]
+    pub fn get_num_filters(&self) -> usize {
+        self.num_filters
+    }
+
     /// 獲取頻率箱數
     #[wasm_bindgen]
     pub fn get_freq_bins(&self) -> usize {
         self.fft_size / 2
+    }
+
+    /// 計算頻譜圖並轉換為 u8 量化值 (0-255)
+    /// 
+    /// # Arguments
+    /// * `audio_data` - 音頻數據 (Float32Array)
+    /// * `noverlap` - 重疊樣本數
+    /// * `gain_db` - 增益 dB 值（用於縮放）
+    /// * `range_db` - 動態範圍 dB 值
+    ///
+    /// # Returns
+    /// 扁平化的 Uint8Array (filter_nums * num_frames 或 freq_bins * num_frames)
+    /// 包含映射到 0-255 範圍的頻譜數據
+    #[wasm_bindgen]
+    pub fn compute_spectrogram_u8(
+        &mut self,
+        audio_data: &[f32],
+        noverlap: usize,
+        gain_db: f32,
+        range_db: f32,
+    ) -> Vec<u8> {
+        let step = self.fft_size - noverlap;
+        let num_frames = if audio_data.len() >= self.fft_size {
+            (audio_data.len() - self.fft_size) / step + 1
+        } else {
+            0
+        };
+        
+        let fft = self.planner.plan_fft_forward(self.fft_size);
+        let freq_bins = self.fft_size / 2;
+        
+        // 決定輸出大小
+        let output_bins = if self.use_filter_bank && self.num_filters > 0 {
+            self.num_filters
+        } else {
+            freq_bins
+        };
+        
+        let mut result = vec![0u8; output_bins * num_frames];
+        let mut pos = 0;
+        
+        // 預計算 dB 範圍值，以優化迴圈
+        let gain_db_neg = -gain_db;
+        let range_db_reciprocal = 255.0 / range_db;
+        
+        for frame_idx in 0..num_frames {
+            if pos + self.fft_size > audio_data.len() {
+                break;
+            }
+            
+            // 第一步: 應用窗函數並準備 FFT 輸入
+            for i in 0..self.fft_size {
+                let windowed = audio_data[pos + i] * self.window_values[i];
+                self.scratch_buffer[i] = Complex {
+                    re: windowed,
+                    im: 0.0,
+                };
+            }
+            
+            // 第二步: 執行 FFT
+            fft.process(&mut self.scratch_buffer);
+            
+            // 第三步: 計算線性幅度
+            let scale = 2.0 / self.fft_size as f32;
+            let mut magnitude = vec![0.0f32; freq_bins];
+            for i in 0..freq_bins {
+                let c = self.scratch_buffer[i];
+                let mag = (c.re * c.re + c.im * c.im).sqrt() * scale;
+                magnitude[i] = mag;
+            }
+            
+            // 第四步: 應用濾波器組 (如果啟用)
+            let filtered = if self.use_filter_bank && self.num_filters > 0 {
+                self.apply_filter_bank(&magnitude)
+            } else {
+                magnitude.clone()
+            };
+            
+            // 第五步: 轉換為 dB 並量化到 0-255
+            for i in 0..filtered.len() {
+                let mag = filtered[i];
+                // 防止 log10(0)，使用最小值 1e-10
+                let safe_mag = if mag > 1e-10 { mag } else { 1e-10 };
+                let db = 20.0 * safe_mag.log10();
+                
+                // 映射到 0-255 範圍
+                let u8_val = if db < gain_db_neg - range_db {
+                    0
+                } else if db > gain_db_neg {
+                    255
+                } else {
+                    ((db - (gain_db_neg - range_db)) * range_db_reciprocal) as u8
+                };
+                
+                result[frame_idx * output_bins + i] = u8_val;
+            }
+            
+            pos += step;
+        }
+        
+        result
+    }
+
+    /// 內部方法: 應用濾波器組 (矩陣乘法)
+    /// 
+    /// magnitude: 線性幅度頻譜 (長度: freq_bins)
+    /// 返回: 濾波後的幅度 (長度: num_filters)
+    fn apply_filter_bank(&self, magnitude: &[f32]) -> Vec<f32> {
+        let mut result = vec![0.0f32; self.num_filters];
+        
+        if self.filter_bank.is_empty() || magnitude.is_empty() {
+            return result;
+        }
+        
+        let freq_bins = magnitude.len();
+        
+        // 矩陣乘法: result[i] = sum(magnitude[j] * filter_bank[i * freq_bins + j])
+        for i in 0..self.num_filters {
+            let mut sum = 0.0f32;
+            let row_start = i * freq_bins;
+            
+            for j in 0..freq_bins {
+                if row_start + j < self.filter_bank.len() {
+                    sum += magnitude[j] * self.filter_bank[row_start + j];
+                }
+            }
+            
+            result[i] = sum;
+        }
+        
+        result
     }
 }
 
