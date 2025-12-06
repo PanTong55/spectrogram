@@ -11,6 +11,7 @@ export const spectrogramengine_get_fft_size: (a: number) => number;
 export const spectrogramengine_get_freq_bins: (a: number) => number;
 export const spectrogramengine_get_global_max: (a: number) => number;
 export const spectrogramengine_get_num_filters: (a: number) => number;
+export const spectrogramengine_get_peak_magnitudes: (a: number, b: number) => [number, number];
 export const spectrogramengine_get_peaks: (a: number, b: number) => [number, number];
 export const spectrogramengine_get_window_values: (a: number) => [number, number];
 export const spectrogramengine_load_filter_bank: (a: number, b: number, c: number, d: number) => void;
