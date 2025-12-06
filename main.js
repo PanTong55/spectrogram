@@ -3,9 +3,8 @@ import init, * as spectrogramWasm from './modules/spectrogram_wasm.js';
 // 初始化並暴露 WASM 模塊到全局變量，讓 WaveSurfer 可以訪問
 init().then(() => {
     globalThis._spectrogramWasm = spectrogramWasm;
-    console.log('✅ WASM 模塊已初始化並暴露到 globalThis._spectrogramWasm');
 }).catch(e => {
-    console.error('❌ WASM 模塊初始化失敗:', e);
+    console.error('WASM 模塊初始化失敗:', e);
 });
 
 import {

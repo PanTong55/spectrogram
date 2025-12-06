@@ -742,7 +742,7 @@ class h extends e {
                             return wasmPeaks;
                         } catch (e) {
                             wasmFailCount++;
-                            console.warn(`⚠️ WASM 峰值計算失敗 (通道 ${chIdx}):`, e);
+                            // WASM 峰值計算失敗，自動 fallback 到 JS
                             // 回退到 JavaScript 實現
                             renderMode = `⚠️ 混合模式 (通道 ${chIdx} fallback)`;
                             return chan.subarray(startSample, Math.min(endSample, chan.length));
@@ -755,7 +755,7 @@ class h extends e {
                     }
                 } catch (e) {
                     renderMode = '🔴 完全 Fallback (JS 實現)';
-                    console.warn('⚠️ WASM 下採樣失敗，使用 JavaScript 實現:', e);
+                    // WASM 下採樣失敗，自動回退到 JS 實現
                     // 回退到原始的 JavaScript 實現
                     peaks = t.map((chan => {
                         const start = Math.floor(o * samplingRatio * chan.length);
@@ -794,15 +794,7 @@ class h extends e {
             
             
             
-            // 在 zoom/scroll 時輸出模式資訊
-            const wsId = wavesurfer ? wavesurfer._instanceId : 'unknown';
-            const debugInfo = {
-                wavesurferId: wsId,
-                rendererClass: this.constructor.name,
-                hasWasmEngine: !!wasmEngine,
-                hasGlobalWasm: !!globalThis._spectrogramWasm
-            };
-            console.debug(`🎯 Zoom Render Mode: ${renderMode}`, debugInfo);
+            // WASM 優化：使用 WaveformEngine 進行高效下採樣
             
             
             this.renderSingleCanvas(peaks, e, a, s, o, n, r)
@@ -1199,7 +1191,7 @@ class u extends a {
                     this._wasmWaveformEngine = new wasmModule.WaveformEngine();
                 }
             } catch (e) {
-                console.warn('⚠️ 無法初始化 WaveformEngine:', e);
+                // WaveformEngine 初始化失敗，will retry in loadAudio
             }
         });
         const i = e ? void 0 : this.getMediaElement();
@@ -1405,10 +1397,10 @@ class u extends a {
                         try {
                             if (globalThis._spectrogramWasm.WaveformEngine) {
                                 this._wasmWaveformEngine = new globalThis._spectrogramWasm.WaveformEngine();
-                                console.log(`✅ 延遲初始化 WaveformEngine 成功 [實例 ${this._instanceId}]`);
+                                // WaveformEngine 延遲初始化成功
                             }
                         } catch (e) {
-                            console.warn(`⚠️ 延遲初始化 WaveformEngine 失敗 [實例 ${this._instanceId}]:`, e);
+                            // WaveformEngine 延遲初始化失敗，will use JS fallback
                         }
                     }
                     
@@ -1424,12 +1416,12 @@ class u extends a {
                             this._wasmWaveformEngine.load_channel(ch, channelData);
                         }
                         
-                        console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本) [實例 ${this._instanceId}]`);
+                        // Audio data loaded to WaveformEngine
                     } else {
-                        console.warn(`⚠️ WaveformEngine 未可用 [實例 ${this._instanceId}]，使用 JS 實現渲染波形`);
+                        // WaveformEngine 未可用，使用 JS fallback
                     }
                 } catch (e) {
-                    console.warn('⚠️ 加載音頻數據到 WASM 失敗:', e);
+                    // Loading audio to WASM failed, will use JS fallback
                 }
             }
             
@@ -1529,7 +1521,7 @@ class u extends a {
                     return result;
                 }
             } catch (e) {
-                console.warn('⚠️ WASM compute_wave_peaks 不可用，使用 JavaScript 實現', e);
+                // WASM compute_wave_peaks not available, using JS fallback
                 this._wasmWavePeaks = false;
             }
         }

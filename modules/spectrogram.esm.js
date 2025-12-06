@@ -668,13 +668,7 @@ class h extends s {
                 // 首先檢查是否已緩存此配置的濾波器組
                 if (this._filterBankCacheByKey[currentFilterBankKey]) {
                     c = this._filterBankCacheByKey[currentFilterBankKey];
-                    console.log('✅ 使用已緩存的濾波器組 (命中)', {
-                        scale: this.scale,
-                        sampleRate: n,
-                        freqMin: this.frequencyMin,
-                        freqMax: this.frequencyMax,
-                        cacheSize: Object.keys(this._filterBankCacheByKey).length
-                    });
+                    // Using cached filter bank
                 } else {
                     // 計算新的濾波器組並緩存
                     const filterBankStartTime = performance.now();
@@ -700,11 +694,7 @@ class h extends s {
                     
                     // 緩存計算結果，以便後續使用
                     this._filterBankCacheByKey[currentFilterBankKey] = c;
-                    console.log(`⏱️  計算濾波器組耗時: ${filterBankTime.toFixed(2)}ms (${numFilters} filters)`, {
-                        scale: this.scale,
-                        sampleRate: n,
-                        cacheSize: Object.keys(this._filterBankCacheByKey).length
-                    });
+                    // Filter bank computed
                 }
                 
                 // 只在濾波器組實際改變時加載到 WASM (關鍵優化)
@@ -713,9 +703,9 @@ class h extends s {
                     this.flattenAndLoadFilterBank(c);
                     const wasmLoadTime = performance.now() - wasmLoadStartTime;
                     this._loadedFilterBankKey = currentFilterBankKey;
-                    console.log(`⏱️  WASM 加載耗時: ${wasmLoadTime.toFixed(2)}ms`);
+                    // WASM loading completed
                 } else {
-                    console.log('✅ 濾波器組已加載到 WASM (跳過)');
+                    // Filter bank already loaded to WASM
                 }
                 
                 this._lastFilterBankScale = currentFilterBankKey;
@@ -944,13 +934,17 @@ wasmReady.then(() => {
                     compute_wave_peaks: wasmModule.compute_wave_peaks,
                     find_global_max: wasmModule.find_global_max
                 };
-                console.log('✅ WASM 波形峰值函數已加載');
+                // WASM waveform peaks function loaded
             }
         };
-        initModule().catch(err => console.warn('⚠️ 無法加載 WASM 波形峰值函數:', err));
+        initModule().catch(err => {
+            // WASM waveform peaks initialization failed, will use JS fallback
+        });
     } catch (e) {
-        console.warn('⚠️ 無法暴露 WASM 函數:', e);
+        // WASM function exposure failed, will use JS fallback
     }
-}).catch(err => console.warn('⚠️ WASM 初始化失敗:', err));
+}).catch(err => {
+    // WASM initialization failed, will use JS fallback
+});
 
 export {h as default};
