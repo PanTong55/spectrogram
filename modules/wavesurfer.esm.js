@@ -787,7 +787,7 @@ class h extends e {
             
             
             // 在 zoom/scroll 時輸出模式資訊
-            console.debug(`🎯 Zoom Render Mode: ${renderMode}`);
+            console.debug(`🎯 Zoom Render Mode: ${renderMode} [實例 ${this._instanceId}]`);
             
             
             this.renderSingleCanvas(peaks, e, a, s, o, n, r)
@@ -1172,6 +1172,7 @@ class u extends a {
         this._wasmWavePeaks = null,
         // 初始化 WaveformEngine (用於高效波形下採樣)
         this._wasmWaveformEngine = null,
+        this._instanceId = Math.random().toString(36).substr(2, 9),  // 實例 ID 用於調試
         this._wasmReady = Promise.resolve().then( () => {
             // 動態導入 WaveformEngine
             try {
@@ -1387,10 +1388,10 @@ class u extends a {
                         try {
                             if (globalThis._spectrogramWasm.WaveformEngine) {
                                 this._wasmWaveformEngine = new globalThis._spectrogramWasm.WaveformEngine();
-                                console.log('✅ 延遲初始化 WaveformEngine 成功');
+                                console.log(`✅ 延遲初始化 WaveformEngine 成功 [實例 ${this._instanceId}]`);
                             }
                         } catch (e) {
-                            console.warn('⚠️ 延遲初始化 WaveformEngine 失敗:', e);
+                            console.warn(`⚠️ 延遲初始化 WaveformEngine 失敗 [實例 ${this._instanceId}]:`, e);
                         }
                     }
                     
@@ -1406,9 +1407,9 @@ class u extends a {
                             this._wasmWaveformEngine.load_channel(ch, channelData);
                         }
                         
-                        console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本)`);
+                        console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本) [實例 ${this._instanceId}]`);
                     } else {
-                        console.warn('⚠️ WaveformEngine 未可用，使用 JS 實現渲染波形');
+                        console.warn(`⚠️ WaveformEngine 未可用 [實例 ${this._instanceId}]，使用 JS 實現渲染波形`);
                     }
                 } catch (e) {
                     console.warn('⚠️ 加載音頻數據到 WASM 失敗:', e);
