@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>WASM 初始化測試</title>
+</head>
+<body>
+    <h1>WASM 初始化測試</h1>
+    <div id="output" style="white-space: pre; font-family: monospace; background: #f0f0f0; padding: 10px;"></div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        function log(msg) {
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        async function testWasm() {
+            log('🔍 開始測試 WASM 初始化...\n');
+
+            try {
+                // 導入並初始化 WASM
+                log('📦 正在導入 WASM 模塊...');
+                const wasmModule = await import('./modules/spectrogram_wasm.js');
+                log('✅ WASM 模塊已導入');
+
+                // 檢查 WaveformEngine
+                if (wasmModule.WaveformEngine) {
+                    log('✅ WaveformEngine 類已找到');
+                    
+                    // 創建實例
+                    const engine = new wasmModule.WaveformEngine();
+                    log('✅ WaveformEngine 實例已創建');
+                    
+                    // 測試 resize
+                    engine.resize(2);
+                    log('✅ resize(2) 調用成功');
+                    
+                    // 測試 load_channel
+                    const testData = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5]);
+                    engine.load_channel(0, testData);
+                    log('✅ load_channel(0, ...) 調用成功');
+                    
+                    // 測試 get_peaks_in_range
+                    const peaks = engine.get_peaks_in_range(0, 0, 5, 2);
+                    log(`✅ get_peaks_in_range(0, 0, 5, 2) 返回 ${peaks.length} 個峰值`);
+                    log(`   峰值: ${Array.from(peaks).join(', ')}`);
+                    
+                    log('\n✅ 所有 WASM 功能測試通過！');
+                } else {
+                    log('❌ WaveformEngine 類未找到在 WASM 模塊中');
+                    log('可用的導出:', Object.keys(wasmModule));
+                }
+
+                // 暴露到全局變量
+                globalThis._spectrogramWasm = wasmModule;
+                log('✅ WASM 模塊已暴露到 globalThis._spectrogramWasm');
+
+            } catch (e) {
+                log(`❌ 錯誤: ${e.message}`);
+                log(e.stack);
+            }
+        }
+
+        testWasm();
+    </script>
+</body>
+</html>

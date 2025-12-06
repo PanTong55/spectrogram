@@ -760,6 +760,13 @@ class h extends e {
                     }));
                 }
             } else {
+                // 診斷：為何沒有初始化 WASM
+                if (!this._wasmWaveformEngine) {
+                    renderMode = '⚫ WASM 未初始化 (globalThis._spectrogramWasm 不可用)';
+                } else if (!t[0] || t[0].length === 0) {
+                    renderMode = '⚫ 無有效音頻數據 (通道為空)';
+                }
+                
                 // OPTIMIZATION: 原始的 JavaScript 實現（回退方案）
                 peaks = t.map((chan => {
                     const start = Math.floor(o * samplingRatio * chan.length);
@@ -767,6 +774,7 @@ class h extends e {
                     return chan.subarray(start, Math.min(end, chan.length));
                 }));
             }
+            
             
             // 在 zoom/scroll 時輸出模式資訊（可選：註解掉來減少日誌）
             console.debug(`🎯 Zoom Render Mode: ${renderMode}`);
@@ -1361,22 +1369,26 @@ class u extends a {
                 this.decodedData = yield i.decode(t, this.options.sampleRate)
             }
             
-            // 如果 WaveformEngine 可用，將音頻數據加載到 WASM
-            if (this.decodedData && this._wasmWaveformEngine) {
+            // 等待 WASM 初始化完成，然後加載音頻數據
+            if (this.decodedData) {
                 try {
-                    const numChannels = this.decodedData.numberOfChannels;
-                    // 調整 WaveformEngine 的通道數
-                    this._wasmWaveformEngine.resize(numChannels);
+                    yield this._wasmReady;  // 等待 WaveformEngine 初始化完成
                     
-                    // 加載每個通道的數據到 WASM
-                    for (let ch = 0; ch < numChannels; ch++) {
-                        const channelData = this.decodedData.getChannelData(ch);
-                        this._wasmWaveformEngine.load_channel(ch, channelData);
+                    if (this._wasmWaveformEngine) {
+                        const numChannels = this.decodedData.numberOfChannels;
+                        // 調整 WaveformEngine 的通道數
+                        this._wasmWaveformEngine.resize(numChannels);
+                        
+                        // 加載每個通道的數據到 WASM
+                        for (let ch = 0; ch < numChannels; ch++) {
+                            const channelData = this.decodedData.getChannelData(ch);
+                            this._wasmWaveformEngine.load_channel(ch, channelData);
+                        }
+                        
+                        console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本)`);
                     }
-                    
-                    console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本)`);
                 } catch (e) {
-                    console.warn('⚠️ 無法加載音頻數據到 WaveformEngine:', e);
+                    console.warn('⚠️ WASM 初始化或加載失敗:', e);
                 }
             }
             
