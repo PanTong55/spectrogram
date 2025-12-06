@@ -762,7 +762,17 @@ class h extends e {
             } else {
                 // 診斷：為何沒有初始化 WASM
                 if (!this._wasmWaveformEngine) {
-                    renderMode = '⚫ WASM 未初始化 (globalThis._spectrogramWasm 不可用)';
+                    // 詳細診斷
+                    const hasWasmModule = typeof globalThis !== 'undefined' && globalThis._spectrogramWasm;
+                    const hasWaveformEngine = hasWasmModule && globalThis._spectrogramWasm.WaveformEngine;
+                    
+                    if (!hasWasmModule) {
+                        renderMode = '⚫ WASM 模塊未初始化 (globalThis._spectrogramWasm 不存在)';
+                    } else if (!hasWaveformEngine) {
+                        renderMode = '⚫ WaveformEngine 未找到 (模塊中無此類)';
+                    } else {
+                        renderMode = '⚫ WaveformEngine 未初始化 (可能未調用 loadAudio)';
+                    }
                 } else if (!t[0] || t[0].length === 0) {
                     renderMode = '⚫ 無有效音頻數據 (通道為空)';
                 }
@@ -776,7 +786,7 @@ class h extends e {
             }
             
             
-            // 在 zoom/scroll 時輸出模式資訊（可選：註解掉來減少日誌）
+            // 在 zoom/scroll 時輸出模式資訊
             console.debug(`🎯 Zoom Render Mode: ${renderMode}`);
             
             
@@ -1369,11 +1379,22 @@ class u extends a {
                 this.decodedData = yield i.decode(t, this.options.sampleRate)
             }
             
-            // 等待 WASM 初始化完成，然後加載音頻數據
+            // 加載音頻數據到 WASM（如果可用）
             if (this.decodedData) {
                 try {
-                    yield this._wasmReady;  // 等待 WaveformEngine 初始化完成
+                    // 如果 _wasmWaveformEngine 還沒初始化，嘗試重新初始化
+                    if (!this._wasmWaveformEngine && typeof globalThis !== 'undefined' && globalThis._spectrogramWasm) {
+                        try {
+                            if (globalThis._spectrogramWasm.WaveformEngine) {
+                                this._wasmWaveformEngine = new globalThis._spectrogramWasm.WaveformEngine();
+                                console.log('✅ 延遲初始化 WaveformEngine 成功');
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ 延遲初始化 WaveformEngine 失敗:', e);
+                        }
+                    }
                     
+                    // 現在加載音頻數據到 WASM
                     if (this._wasmWaveformEngine) {
                         const numChannels = this.decodedData.numberOfChannels;
                         // 調整 WaveformEngine 的通道數
@@ -1386,9 +1407,11 @@ class u extends a {
                         }
                         
                         console.log(`✅ 已加載 ${numChannels} 個通道到 WaveformEngine (${this.decodedData.length} 樣本)`);
+                    } else {
+                        console.warn('⚠️ WaveformEngine 未可用，使用 JS 實現渲染波形');
                     }
                 } catch (e) {
-                    console.warn('⚠️ WASM 初始化或加載失敗:', e);
+                    console.warn('⚠️ 加載音頻數據到 WASM 失敗:', e);
                 }
             }
             
