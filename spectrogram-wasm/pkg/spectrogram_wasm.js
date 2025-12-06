@@ -5,6 +5,11 @@ function getArrayF32FromWasm0(ptr, len) {
     return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
 }
 
+function getArrayU16FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getUint16ArrayMemory0().subarray(ptr / 2, ptr / 2 + len);
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
@@ -21,6 +26,14 @@ function getFloat32ArrayMemory0() {
 function getStringFromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return decodeText(ptr, len);
+}
+
+let cachedUint16ArrayMemory0 = null;
+function getUint16ArrayMemory0() {
+    if (cachedUint16ArrayMemory0 === null || cachedUint16ArrayMemory0.byteLength === 0) {
+        cachedUint16ArrayMemory0 = new Uint16Array(wasm.memory.buffer);
+    }
+    return cachedUint16ArrayMemory0;
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -144,6 +157,20 @@ export class SpectrogramEngine {
         return ret >>> 0;
     }
     /**
+     * 獲取最後計算的全局最大幅度值
+     *
+     * 此值在最後一次 compute_spectrogram_u8 調用時計算。
+     * 用於與閾值進行比較以進行峰值檢測。
+     *
+     * # Returns
+     * 線性幅度值（未轉換為 dB）
+     * @returns {number}
+     */
+    get_global_max() {
+        const ret = wasm.spectrogramengine_get_global_max(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * 獲取濾波器數量
      * @returns {number}
      */
@@ -250,6 +277,28 @@ export class SpectrogramEngine {
         SpectrogramEngineFinalization.register(this, this.__wbg_ptr, this);
         return this;
     }
+    /**
+     * 獲取峰值檢測結果 (頻率 bin 索引)
+     *
+     * 基於在最後一次 compute_spectrogram_u8 調用中計算的線性幅度值。
+     * 返回每個時間幀中超過閾值的峰值頻率 bin 索引。
+     *
+     * # Arguments
+     * * `threshold_ratio` - 相對於全局最大值的閾值比率 (0.0-1.0, 典型值: 0.4)
+     *
+     * # Returns
+     * Uint16Array，每個元素對應一個時間幀：
+     * - 如果超過閾值: 峰值所在的頻率 bin 索引 (0 到 fft_size/2-1)
+     * - 如果未超過閾值: u16::MAX (0xFFFF，表示無效)
+     * @param {number} threshold_ratio
+     * @returns {Uint16Array}
+     */
+    get_peaks(threshold_ratio) {
+        const ret = wasm.spectrogramengine_get_peaks(this.__wbg_ptr, threshold_ratio);
+        var v1 = getArrayU16FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 2, 2);
+        return v1;
+    }
 }
 if (Symbol.dispose) SpectrogramEngine.prototype[Symbol.dispose] = SpectrogramEngine.prototype.free;
 
@@ -355,6 +404,7 @@ function __wbg_finalize_init(instance, module) {
     wasm = instance.exports;
     __wbg_init.__wbindgen_wasm_module = module;
     cachedFloat32ArrayMemory0 = null;
+    cachedUint16ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
 
 

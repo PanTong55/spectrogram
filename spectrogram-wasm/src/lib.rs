@@ -20,6 +20,10 @@ pub struct SpectrogramEngine {
     filter_bank: Vec<f32>,
     num_filters: usize,
     use_filter_bank: bool,
+    // 內部緩衝區：存儲最後計算的線性幅度值 (用於峰值檢測)
+    last_magnitude_buffer: Vec<f32>,
+    last_num_frames: usize,
+    last_global_max: f32,
 }
 
 #[wasm_bindgen]
@@ -55,6 +59,9 @@ impl SpectrogramEngine {
             filter_bank: Vec::new(),
             num_filters: 0,
             use_filter_bank: false,
+            last_magnitude_buffer: Vec::new(),
+            last_num_frames: 0,
+            last_global_max: 0.0,
         }
     }
 
@@ -201,6 +208,11 @@ impl SpectrogramEngine {
         };
         
         let mut result = vec![0u8; output_bins * num_frames];
+        
+        // 初始化內部緩衝區用於存儲所有時間幀的線性幅度值
+        let mut all_magnitudes = vec![0.0f32; freq_bins * num_frames];
+        let mut global_max = 0.0f32;
+        
         let mut pos = 0;
         
         // 預計算 dB 範圍值，以優化迴圈
@@ -231,6 +243,14 @@ impl SpectrogramEngine {
                 let c = self.scratch_buffer[i];
                 let mag = (c.re * c.re + c.im * c.im).sqrt() * scale;
                 magnitude[i] = mag;
+                
+                // 更新全局最大值
+                if mag > global_max {
+                    global_max = mag;
+                }
+                
+                // 保存到內部緩衝區
+                all_magnitudes[frame_idx * freq_bins + i] = mag;
             }
             
             // 第四步: 應用濾波器組 (如果啟用)
@@ -261,6 +281,11 @@ impl SpectrogramEngine {
             
             pos += step;
         }
+        
+        // 保存最後的幅度值和幀數到內部狀態，供 get_peaks() 使用
+        self.last_magnitude_buffer = all_magnitudes;
+        self.last_num_frames = num_frames;
+        self.last_global_max = global_max;
         
         result
     }
@@ -294,7 +319,73 @@ impl SpectrogramEngine {
         
         result
     }
+
+    /// 獲取峰值檢測結果 (頻率 bin 索引)
+    /// 
+    /// 基於在最後一次 compute_spectrogram_u8 調用中計算的線性幅度值。
+    /// 返回每個時間幀中超過閾值的峰值頻率 bin 索引。
+    /// 
+    /// # Arguments
+    /// * `threshold_ratio` - 相對於全局最大值的閾值比率 (0.0-1.0, 典型值: 0.4)
+    /// 
+    /// # Returns
+    /// Uint16Array，每個元素對應一個時間幀：
+    /// - 如果超過閾值: 峰值所在的頻率 bin 索引 (0 到 fft_size/2-1)
+    /// - 如果未超過閾值: u16::MAX (0xFFFF，表示無效)
+    #[wasm_bindgen]
+    pub fn get_peaks(&self, threshold_ratio: f32) -> Vec<u16> {
+        if self.last_magnitude_buffer.is_empty() || self.last_global_max <= 0.0 {
+            return Vec::new();
+        }
+        
+        let freq_bins = self.fft_size / 2;
+        let threshold = self.last_global_max * threshold_ratio;
+        let mut peaks = vec![u16::MAX; self.last_num_frames];
+        
+        // 對於每個時間幀，找到超過閾值的最大值的 bin 索引
+        for frame_idx in 0..self.last_num_frames {
+            let frame_start = frame_idx * freq_bins;
+            let frame_end = frame_start + freq_bins;
+            
+            if frame_end > self.last_magnitude_buffer.len() {
+                break;
+            }
+            
+            let frame_data = &self.last_magnitude_buffer[frame_start..frame_end];
+            
+            // 找到此幀中的最大值及其索引
+            let (max_idx, max_val) = frame_data.iter()
+                .enumerate()
+                .fold((0, 0.0f32), |acc, (idx, &val)| {
+                    if val > acc.1 {
+                        (idx, val)
+                    } else {
+                        acc
+                    }
+                });
+            
+            // 僅當最大值超過閾值時才記錄峰值
+            if max_val >= threshold {
+                peaks[frame_idx] = max_idx as u16;
+            }
+        }
+        
+        peaks
+    }
+
+    /// 獲取最後計算的全局最大幅度值
+    /// 
+    /// 此值在最後一次 compute_spectrogram_u8 調用時計算。
+    /// 用於與閾值進行比較以進行峰值檢測。
+    /// 
+    /// # Returns
+    /// 線性幅度值（未轉換為 dB）
+    #[wasm_bindgen]
+    pub fn get_global_max(&self) -> f32 {
+        self.last_global_max
+    }
 }
+
 
 /// 根據名稱創建窗函數
 fn create_window(window_name: &str, size: usize, alpha: f32) -> Vec<f32> {

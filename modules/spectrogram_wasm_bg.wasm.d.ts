@@ -9,7 +9,9 @@ export const spectrogramengine_compute_spectrogram: (a: number, b: number, c: nu
 export const spectrogramengine_compute_spectrogram_u8: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
 export const spectrogramengine_get_fft_size: (a: number) => number;
 export const spectrogramengine_get_freq_bins: (a: number) => number;
+export const spectrogramengine_get_global_max: (a: number) => number;
 export const spectrogramengine_get_num_filters: (a: number) => number;
+export const spectrogramengine_get_peaks: (a: number, b: number) => [number, number];
 export const spectrogramengine_get_window_values: (a: number) => [number, number];
 export const spectrogramengine_load_filter_bank: (a: number, b: number, c: number, d: number) => void;
 export const spectrogramengine_new: (a: number, b: number, c: number, d: number) => number;

@@ -13,6 +13,16 @@ export class SpectrogramEngine {
    */
   get_freq_bins(): number;
   /**
+   * 獲取最後計算的全局最大幅度值
+   * 
+   * 此值在最後一次 compute_spectrogram_u8 調用時計算。
+   * 用於與閾值進行比較以進行峰值檢測。
+   * 
+   * # Returns
+   * 線性幅度值（未轉換為 dB）
+   */
+  get_global_max(): number;
+  /**
    * 獲取濾波器數量
    */
   get_num_filters(): number;
@@ -69,6 +79,21 @@ export class SpectrogramEngine {
    * * `alpha` - 某些窗函數的 alpha 參數（可選）
    */
   constructor(fft_size: number, window_func: string, alpha?: number | null);
+  /**
+   * 獲取峰值檢測結果 (頻率 bin 索引)
+   * 
+   * 基於在最後一次 compute_spectrogram_u8 調用中計算的線性幅度值。
+   * 返回每個時間幀中超過閾值的峰值頻率 bin 索引。
+   * 
+   * # Arguments
+   * * `threshold_ratio` - 相對於全局最大值的閾值比率 (0.0-1.0, 典型值: 0.4)
+   * 
+   * # Returns
+   * Uint16Array，每個元素對應一個時間幀：
+   * - 如果超過閾值: 峰值所在的頻率 bin 索引 (0 到 fft_size/2-1)
+   * - 如果未超過閾值: u16::MAX (0xFFFF，表示無效)
+   */
+  get_peaks(threshold_ratio: number): Uint16Array;
 }
 
 /**
@@ -113,7 +138,9 @@ export interface InitOutput {
   readonly spectrogramengine_compute_spectrogram_u8: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
   readonly spectrogramengine_get_fft_size: (a: number) => number;
   readonly spectrogramengine_get_freq_bins: (a: number) => number;
+  readonly spectrogramengine_get_global_max: (a: number) => number;
   readonly spectrogramengine_get_num_filters: (a: number) => number;
+  readonly spectrogramengine_get_peaks: (a: number, b: number) => [number, number];
   readonly spectrogramengine_get_window_values: (a: number) => [number, number];
   readonly spectrogramengine_load_filter_bank: (a: number, b: number, c: number, d: number) => void;
   readonly spectrogramengine_new: (a: number, b: number, c: number, d: number) => number;

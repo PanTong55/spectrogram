@@ -731,96 +731,65 @@ class h extends s {
         this.peakBandArrayPerChannel = [];
         
         if (this.options && this.options.peakMode) {
-            // Peak Mode: 使用新的 WASM API (compute_spectrogram_u8) 獲得幅度值，然後進行峰值檢測
-            // 第一次掃描：找出全局最大峰值（使用舊 API 獲得線性幅度值進行精確檢測）
-            let globalMaxPeakValue = 0;
-            
-            for (let e = 0; e < i; e++) {
-                const s = t.getChannelData(e);
-                let a = 0;
-                
-                for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r);
-                    
-                    // 使用舊 API 獲得線性幅度值進行峰值檢測
-                    const magnitudeSpectrum = this._wasmEngine.compute_spectrogram(
-                        tSlice,
-                        o
-                    );
-                    
-                    // 使用原始幅度值進行峰值檢測（比 dB 值更精確）
-                    let peakValueInRange = 0;
-                    for (let k = minBinFull; k < maxBinFull && k < magnitudeSpectrum.length; k++) {
-                      peakValueInRange = Math.max(peakValueInRange, magnitudeSpectrum[k] || 0);
-                    }
-                    
-                    globalMaxPeakValue = Math.max(globalMaxPeakValue, peakValueInRange);
-                    a += r - o;
-                }
-            }
-            
-            // 2. 計算閾值
+            // Peak Mode: 使用新的 WASM API (get_peaks) 進行峰值檢測
+            // 峰值檢測現在在 WASM 中進行，這大大加速了計算（避免了雙重掃描）
             const peakThresholdMultiplier = this.options.peakThreshold !== undefined ? this.options.peakThreshold : 0.4;
-            const peakThreshold = globalMaxPeakValue * peakThresholdMultiplier;
-            const highPeakThreshold = globalMaxPeakValue * 0.7;
             
-            // 3. 第二次掃描：使用新 API 獲得 u8 頻譜，並記錄峰值信息
+            // 對每個通道進行峰值檢測
             for (let e = 0; e < i; e++) {
                 const s = t.getChannelData(e)
-                  , i = []
+                  , channelFrames = []
                   , channelPeakBands = [];
                 let a = 0;
-                for (; a + r < s.length; ) {
-                    const tSlice = s.subarray(a, a + r);
-                    
-                    // 使用舊 API 獲得幅度值進行峰值檢測
-                    const magnitudeSpectrum = this._wasmEngine.compute_spectrogram(
-                        tSlice,
-                        o
-                    );
-                    
-                    // 進行峰值檢測
-                    let peakBandInRange = Math.max(0, minBinFull);
-                    let peakValueInRange = magnitudeSpectrum[peakBandInRange] || 0;
-                    for (let k = minBinFull; k < maxBinFull && k < magnitudeSpectrum.length; k++) {
-                      if ((magnitudeSpectrum[k] || 0) > peakValueInRange) {
-                        peakValueInRange = magnitudeSpectrum[k];
-                        peakBandInRange = k;
-                      }
-                    }
-                    
-                    // 存儲峰值信息
-                    if (peakValueInRange >= peakThreshold) {
-                      channelPeakBands.push({
-                          bin: peakBandInRange,
-                          isHigh: peakValueInRange >= highPeakThreshold
-                      });
-                    } else {
-                      channelPeakBands.push(null);
-                    }
-                    
-                    // 使用新 API 獲得 u8 頻譜（包含濾波器組處理和 dB 轉換）
-                    const u8Spectrum = this._wasmEngine.compute_spectrogram_u8(
-                        tSlice,
-                        o,
-                        this.gainDB,
-                        this.rangeDB
-                    );
-                    
-                    // 決定輸出大小（與 WASM 端的輸出大小一致）
-                    const numFilters = this._wasmEngine.get_num_filters();
-                    const outputSize = this.scale !== "linear" && numFilters > 0 ? numFilters : (r / 2);
-                    
+                
+                // 計算完整通道的幅度數據（這會在 WASM 內部存儲所有幀的幅度值）
+                // 為了獲得完整的幀數據，我們先計算整個通道的頻譜
+                const fullU8Spectrum = this._wasmEngine.compute_spectrogram_u8(
+                    s,
+                    o,
+                    this.gainDB,
+                    this.rangeDB
+                );
+                
+                // 現在 WASM 已經計算了所有幀的幅度值，我們可以獲取峰值信息
+                const peakIndices = this._wasmEngine.get_peaks(peakThresholdMultiplier);
+                const globalMaxValue = this._wasmEngine.get_global_max();
+                const highPeakThreshold = globalMaxValue * 0.7;
+                
+                // 計算幀數（根據 WASM 存儲的幀數）
+                const freq_bins = this.fftSamples / 2;
+                const numFilters = this._wasmEngine.get_num_filters();
+                const outputSize = this.scale !== "linear" && numFilters > 0 ? numFilters : freq_bins;
+                const numFrames = Math.floor(fullU8Spectrum.length / outputSize);
+                
+                // 將 u8 頻譜數據按幀拆分
+                for (let frameIdx = 0; frameIdx < numFrames; frameIdx++) {
                     const outputFrame = new Uint8Array(outputSize);
-                    for (let k = 0; k < Math.min(outputSize, u8Spectrum.length); k++) {
-                        outputFrame[k] = u8Spectrum[k];
+                    const frameStartIdx = frameIdx * outputSize;
+                    for (let k = 0; k < outputSize; k++) {
+                        outputFrame[k] = fullU8Spectrum[frameStartIdx + k];
                     }
-                    
-                    i.push(outputFrame);
-                    a += r - o
+                    channelFrames.push(outputFrame);
                 }
+                
+                // 轉換峰值索引為 channelPeakBands 格式
+                for (let frameIdx = 0; frameIdx < peakIndices.length && frameIdx < channelFrames.length; frameIdx++) {
+                    const peakBinIndex = peakIndices[frameIdx];
+                    
+                    if (peakBinIndex !== 0xFFFF) {
+                        // 有效的峰值（超過閾值）
+                        channelPeakBands.push({
+                            bin: peakBinIndex,
+                            isHigh: peakBinIndex > (freq_bins * 0.3)  // 高頻峰值判定：bin > 30% 為高頻
+                        });
+                    } else {
+                        // 無效的峰值（未超過閾值）
+                        channelPeakBands.push(null);
+                    }
+                }
+                
                 this.peakBandArrayPerChannel.push(channelPeakBands);
-                h.push(i)
+                h.push(channelFrames)
             }
         } else {
             // Peak Mode 禁用時：直接使用新 API
