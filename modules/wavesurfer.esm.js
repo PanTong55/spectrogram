@@ -713,12 +713,17 @@ class h extends e {
             
             // 使用 WaveformEngine 進行高效下採樣
             let peaks;
+            let renderMode = '🔵 原始 JS 實現';  // 預設值
+            
             if (this._wasmWaveformEngine && t[0] && t[0].length > 0) {
                 try {
                     // 計算樣本範圍
                     const startSample = Math.floor(o * samplingRatio * t[0].length);
                     const endSample = Math.floor((o + a) * samplingRatio * t[0].length);
                     const targetWidth = Math.ceil(a);
+                    
+                    let wasmSuccessCount = 0;
+                    let wasmFailCount = 0;
                     
                     // 調用 WASM 計算每個通道的峰值
                     peaks = t.map((chan, chIdx) => {
@@ -729,14 +734,23 @@ class h extends e {
                                 endSample,
                                 targetWidth
                             );
+                            wasmSuccessCount++;
                             return wasmPeaks;
                         } catch (e) {
+                            wasmFailCount++;
                             console.warn(`⚠️ WASM 峰值計算失敗 (通道 ${chIdx}):`, e);
                             // 回退到 JavaScript 實現
+                            renderMode = `⚠️ 混合模式 (通道 ${chIdx} fallback)`;
                             return chan.subarray(startSample, Math.min(endSample, chan.length));
                         }
                     });
+                    
+                    // 如果全部成功，更新模式為 WASM
+                    if (wasmFailCount === 0 && wasmSuccessCount > 0) {
+                        renderMode = `✅ WASM 優化版本 (${wasmSuccessCount} 通道)`;
+                    }
                 } catch (e) {
+                    renderMode = '🔴 完全 Fallback (JS 實現)';
                     console.warn('⚠️ WASM 下採樣失敗，使用 JavaScript 實現:', e);
                     // 回退到原始的 JavaScript 實現
                     peaks = t.map((chan => {
@@ -753,6 +767,10 @@ class h extends e {
                     return chan.subarray(start, Math.min(end, chan.length));
                 }));
             }
+            
+            // 在 zoom/scroll 時輸出模式資訊（可選：註解掉來減少日誌）
+            console.debug(`🎯 Zoom Render Mode: ${renderMode}`);
+            
             
             this.renderSingleCanvas(peaks, e, a, s, o, n, r)
         }
