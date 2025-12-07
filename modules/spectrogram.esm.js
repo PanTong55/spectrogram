@@ -851,29 +851,53 @@ class h extends s {
                 // Added "this.options &&" check to prevent crash if plugin destroyed during async render
                 if (this.options && this.options.peakMode && this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[channelIdx]) {
                     const peaks = this.peakBandArrayPerChannel[channelIdx];
-                    const numFilters = this._wasmEngine.get_num_filters();
-                    // Use filter count if log scale, otherwise fftSamples/2
-                    const totalBins = (this.scale !== "linear" && numFilters > 0) ? numFilters : (this.fftSamples / 2);
                     
+                    // Get View Range (Hz)
+                    const viewMinHz = this.frequencyMin || 0;
+                    const viewMaxHz = this.frequencyMax || (this.buffer.sampleRate / 2);
+                    const viewRangeHz = viewMaxHz - viewMinHz;
+                    
+                    // Get Nyquist (Max Freq of Data)
+                    const nyquistHz = this.buffer.sampleRate / 2;
+                    
+                    // Total Bins in the underlying data (0 to Nyquist)
+                    // In Linear mode, peak indices are 0..fftSamples/2
+                    const totalBins = (this.scale !== "linear" && this._wasmEngine.get_num_filters() > 0) 
+                        ? this._wasmEngine.get_num_filters() 
+                        : (this.fftSamples / 2);
+
                     const xStep = canvasWidth / peaks.length;
                     
-                    // Choose a high-contrast color for peaks (Cyan usually works well on dark maps)
-                    // We can also make this configurable or dependent on the map, but bright cyan is safe.
+                    // Use Cyan for high contrast
                     canvasCtx.fillStyle = "rgba(0, 255, 255, 0.9)"; 
                     
                     for (let i = 0; i < peaks.length; i++) {
                         const peakData = peaks[i];
                         if (peakData && peakData.bin !== undefined) {
-                            // Calculate Y position relative to the drawn slice
-                            // Invert bin index because 0Hz is usually at bottom
-                            const binFraction = peakData.bin / totalBins;
+                            let peakFreqHz;
                             
-                            // Map fraction to the actual drawn height area
-                            const yPos = drawY + drawH - (binFraction * drawH);
+                            // Calculate Hz based on scale type
+                            if (this.scale === 'linear') {
+                                // Linear: Bin index maps linearly to 0..Nyquist
+                                peakFreqHz = (peakData.bin / totalBins) * nyquistHz;
+                            } else {
+                                // Non-linear fallback: Assume bins map to view range (simplified)
+                                // or use filter bank logic if precise mapping needed.
+                                // For Bat analysis (Linear), the above block is critical.
+                                peakFreqHz = viewMinHz + (peakData.bin / totalBins) * viewRangeHz;
+                            }
                             
-                            // Draw a small dot
-                            const xPos = i * xStep;
-                            canvasCtx.fillRect(xPos, yPos - 1, Math.max(1.5, xStep), 3);
+                            // Only draw if within the current visible frequency range
+                            if (peakFreqHz >= viewMinHz && peakFreqHz <= viewMaxHz) {
+                                // Map Hz to Canvas Y (0Hz is Bottom, MaxHz is Top)
+                                // drawY corresponds to viewMaxHz (Top of strip)
+                                // drawY + drawH corresponds to viewMinHz (Bottom of strip)
+                                const yFraction = (peakFreqHz - viewMinHz) / viewRangeHz;
+                                const yPos = drawY + drawH - (yFraction * drawH);
+                                
+                                const xPos = i * xStep;
+                                canvasCtx.fillRect(xPos, yPos - 1, Math.max(1.5, xStep), 3);
+                            }
                         }
                     }
                 }

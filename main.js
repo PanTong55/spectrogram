@@ -591,6 +591,7 @@ duration = getWavesurfer().getDuration();
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
     updateSpectrogramSettingsText();
+    restoreImageEnhancement(); // ✅ Restore Brightness/Contrast/Gain
   }
 );
 }
