@@ -24,6 +24,14 @@ pub struct SpectrogramEngine {
     last_magnitude_buffer: Vec<f32>,
     last_num_frames: usize,
     last_global_max: f32,
+    // 色彩映射：256 種顏色的 RGBA 值 (u32 packed)
+    color_map: Vec<u32>,
+    // 配置存儲
+    current_scale: String,  // "linear", "mel", "log", "bark", "erb"
+    freq_min: f32,
+    freq_max: f32,
+    // 輸出緩衝區 (避免每次分配)
+    image_buffer: Vec<u8>,
 }
 
 #[wasm_bindgen]
@@ -62,6 +70,11 @@ impl SpectrogramEngine {
             last_magnitude_buffer: Vec::new(),
             last_num_frames: 0,
             last_global_max: 0.0,
+            color_map: Vec::new(),  // 256 * 4 bytes
+            current_scale: "linear".to_string(),
+            freq_min: 0.0,
+            freq_max: 0.0,
+            image_buffer: Vec::new(),
         }
     }
 
@@ -427,6 +440,238 @@ impl SpectrogramEngine {
     #[wasm_bindgen]
     pub fn get_global_max(&self) -> f32 {
         self.last_global_max
+    }
+
+    /// 設置 256 色的色彩映射 (RGBA)
+    /// 
+    /// # Arguments
+    /// * `colors` - 256 * 4 字節的 RGBA 顏色數組
+    #[wasm_bindgen]
+    pub fn set_color_map(&mut self, colors: &[u8]) {
+        // 預期大小：256 * 4 = 1024 字節
+        if colors.len() != 1024 {
+            return;  // 無效的色彩映射大小，跳過
+        }
+        
+        // 轉換 [u8; 4] 成 u32 (RGBA 打包)
+        self.color_map.clear();
+        self.color_map.reserve(256);
+        
+        for i in 0..256 {
+            let offset = i * 4;
+            let r = colors[offset] as u32;
+            let g = colors[offset + 1] as u32;
+            let b = colors[offset + 2] as u32;
+            let a = colors[offset + 3] as u32;
+            
+            // 打包為 u32 (RGBA 順序)
+            let packed = (r << 24) | (g << 16) | (b << 8) | a;
+            self.color_map.push(packed);
+        }
+    }
+
+    /// 設置光譜配置 (用於記錄，但主要用於驗證)
+    #[wasm_bindgen]
+    pub fn set_spectrum_config(&mut self, scale: String, freq_min: f32, freq_max: f32) {
+        self.current_scale = scale;
+        self.freq_min = freq_min;
+        self.freq_max = freq_max;
+    }
+
+    /// 計算完整的光譜圖像 (FFT -> 重採樣 -> 色彩化)
+    /// 
+    /// # Arguments
+    /// * `audio_data` - 單通道音頻數據 (Float32Array)
+    /// * `width` - 輸出圖像寬度 (時間軸)
+    /// * `height` - 輸出圖像高度 (頻率軸)
+    /// * `noverlap` - 窗重疊樣本數
+    /// * `gain_db` - 增益 (dB)
+    /// * `range_db` - 動態範圍 (dB)
+    /// 
+    /// # Returns
+    /// RGBA 圖像數據 (Uint8ClampedArray) 大小：width * height * 4
+    #[wasm_bindgen]
+    pub fn compute_spectrogram_image(
+        &mut self,
+        audio_data: &[f32],
+        width: usize,
+        height: usize,
+        noverlap: usize,
+        gain_db: f32,
+        range_db: f32,
+    ) -> Vec<u8> {
+        // 驗證參數
+        if width == 0 || height == 0 || self.color_map.is_empty() {
+            return vec![0; width * height * 4];
+        }
+
+        // 預分配輸出緩衝區
+        let mut output = vec![0u8; width * height * 4];
+
+        // 步驟 1: 計算完整光譜 (FFT -> u8 量化)
+        let fft_size = self.fft_size;
+        let freq_bins = fft_size / 2;
+        
+        // 計算窗函數與幀數
+        let frame_step = fft_size - noverlap;
+        let num_frames = if audio_data.len() >= fft_size {
+            (audio_data.len() - noverlap) / frame_step
+        } else {
+            0
+        };
+
+        if num_frames == 0 {
+            return output;
+        }
+
+        // 決定輸出大小：如果使用濾波器組，高度是 num_filters；否則是 freq_bins
+        let spec_height = if self.use_filter_bank {
+            self.num_filters
+        } else {
+            freq_bins
+        };
+
+        // 步驟 2: 計算重採樣映射
+        // 源座標系統: (time_idx, freq_idx) -> time_idx in [0, num_frames), freq_idx in [0, spec_height)
+        // 目標座標系統: (x, y) -> x in [0, width), y in [0, height)
+        
+        // 預計算時間和頻率的採樣因子
+        let time_sample_step = num_frames as f32 / width as f32;
+        let freq_sample_step = spec_height as f32 / height as f32;
+
+        // 步驟 3: 處理每個輸出像素
+        for y in 0..height {
+            // 頻率軸採樣（從上到下對應從高到低頻率）
+            let src_freq_idx = (height - 1 - y) as f32 * freq_sample_step;
+            let src_freq_int = src_freq_idx.floor() as usize;
+            let src_freq_frac = src_freq_idx - src_freq_int as f32;
+            
+            // 確保索引在範圍內
+            let src_freq_idx0 = src_freq_int.min(spec_height - 1);
+            let src_freq_idx1 = (src_freq_int + 1).min(spec_height - 1);
+
+            for x in 0..width {
+                // 時間軸採樣
+                let src_time_idx = x as f32 * time_sample_step;
+                let src_time_int = src_time_idx.floor() as usize;
+                let src_time_frac = src_time_idx - src_time_int as f32;
+                
+                // 確保索引在範圍內
+                let src_time_idx0 = src_time_int.min(num_frames - 1);
+                let src_time_idx1 = (src_time_int + 1).min(num_frames - 1);
+
+                // 執行雙線性插值以獲取幅度值
+                let mut magnitude = 0.0f32;
+
+                // 計算 4 個鄰近點的幅度值
+                for &time_idx in &[src_time_idx0, src_time_idx1] {
+                    for &freq_idx in &[src_freq_idx0, src_freq_idx1] {
+                        // 計算該幀的 u8 頻譜
+                        let frame_start = time_idx * frame_step;
+                        let frame_end = (frame_start + fft_size).min(audio_data.len());
+                        
+                        if frame_end <= frame_start {
+                            continue;
+                        }
+
+                        let frame = &audio_data[frame_start..frame_end];
+                        
+                        // 計算此幀的頻譜
+                        let frame_spec = self.compute_frame_spectrum(frame, gain_db, range_db);
+                        
+                        if freq_idx < frame_spec.len() {
+                            let val = frame_spec[freq_idx] as f32 / 255.0;  // 歸一化至 [0, 1]
+                            
+                            // 加權（雙線性）
+                            let time_weight = if time_idx == src_time_idx0 {
+                                1.0 - src_time_frac
+                            } else {
+                                src_time_frac
+                            };
+                            let freq_weight = if freq_idx == src_freq_idx0 {
+                                1.0 - src_freq_frac
+                            } else {
+                                src_freq_frac
+                            };
+                            
+                            magnitude += val * time_weight * freq_weight;
+                        }
+                    }
+                }
+
+                // 步驟 4: 色彩化
+                let clamped_idx = (magnitude * 255.0).clamp(0.0, 255.0) as usize;
+                let rgba = self.color_map.get(clamped_idx).copied().unwrap_or(0);
+
+                // 解包 RGBA 並寫入輸出
+                let pixel_idx = (y * width + x) * 4;
+                output[pixel_idx] = (rgba >> 24) as u8;      // R
+                output[pixel_idx + 1] = ((rgba >> 16) & 0xFF) as u8;  // G
+                output[pixel_idx + 2] = ((rgba >> 8) & 0xFF) as u8;   // B
+                output[pixel_idx + 3] = (rgba & 0xFF) as u8;          // A
+            }
+        }
+
+        output
+    }
+
+    /// 輔助方法：計算單幀的頻譜 (返回 u8 值)
+    fn compute_frame_spectrum(&mut self, frame: &[f32], gain_db: f32, range_db: f32) -> Vec<u8> {
+        let fft_size = self.fft_size;
+        let freq_bins = fft_size / 2;
+
+        // 填充窗函數和 FFT
+        let mut input = vec![Complex::default(); fft_size];
+        for (i, val) in frame.iter().enumerate().take(fft_size) {
+            input[i] = Complex::new(val * self.window_values[i], 0.0);
+        }
+
+        // 執行 FFT
+        let fft = self.planner.plan_fft_forward(fft_size);
+        let mut buffer = input;
+        fft.process(&mut buffer);
+
+        // 計算幅度
+        let mut magnitudes = vec![0.0; freq_bins];
+        for i in 0..freq_bins {
+            let magnitude = (buffer[i].norm() * 2.0) / fft_size as f32;  // 歸一化
+            magnitudes[i] = magnitude;
+        }
+
+        // 應用濾波器組（如果已加載）
+        let output = if self.use_filter_bank && !self.filter_bank.is_empty() {
+            let mut filtered = vec![0.0; self.num_filters];
+            let filter_len = fft_size / 2 + 1;
+
+            for (filter_idx, filtered_val) in filtered.iter_mut().enumerate() {
+                let filter_row_start = filter_idx * filter_len;
+                let filter_row_end = filter_row_start + filter_len.min(magnitudes.len());
+                
+                for (j, weight) in self.filter_bank[filter_row_start..filter_row_end].iter().enumerate() {
+                    *filtered_val += magnitudes[j] * weight;
+                }
+            }
+            filtered
+        } else {
+            magnitudes
+        };
+
+        // 轉換為 dB 並量化為 u8
+        let mut result = vec![0u8; output.len()];
+        for (i, &magnitude) in output.iter().enumerate() {
+            let db = if magnitude > 0.0 {
+                20.0 * magnitude.log10()
+            } else {
+                -80.0
+            };
+            
+            // 應用增益和範圍
+            let normalized = (db + range_db / 2.0 + gain_db) / range_db;
+            let clamped = normalized.clamp(0.0, 1.0);
+            result[i] = (clamped * 255.0) as u8;
+        }
+
+        result
     }
 }
 

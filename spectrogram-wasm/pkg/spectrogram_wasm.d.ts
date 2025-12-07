@@ -13,6 +13,13 @@ export class SpectrogramEngine {
    */
   get_freq_bins(): number;
   /**
+   * 設置 256 色的色彩映射 (RGBA)
+   * 
+   * # Arguments
+   * * `colors` - 256 * 4 字節的 RGBA 顏色數組
+   */
+  set_color_map(colors: Uint8Array): void;
+  /**
    * 獲取最後計算的全局最大幅度值
    * 
    * 此值在最後一次 compute_spectrogram_u8 調用時計算。
@@ -68,6 +75,10 @@ export class SpectrogramEngine {
    */
   get_peak_magnitudes(threshold_ratio: number): Float32Array;
   /**
+   * 設置光譜配置 (用於記錄，但主要用於驗證)
+   */
+  set_spectrum_config(scale: string, freq_min: number, freq_max: number): void;
+  /**
    * 計算頻譜圖並轉換為 u8 量化值 (0-255)
    * 
    * # Arguments
@@ -81,6 +92,21 @@ export class SpectrogramEngine {
    * 包含映射到 0-255 範圍的頻譜數據
    */
   compute_spectrogram_u8(audio_data: Float32Array, noverlap: number, gain_db: number, range_db: number): Uint8Array;
+  /**
+   * 計算完整的光譜圖像 (FFT -> 重採樣 -> 色彩化)
+   * 
+   * # Arguments
+   * * `audio_data` - 單通道音頻數據 (Float32Array)
+   * * `width` - 輸出圖像寬度 (時間軸)
+   * * `height` - 輸出圖像高度 (頻率軸)
+   * * `noverlap` - 窗重疊樣本數
+   * * `gain_db` - 增益 (dB)
+   * * `range_db` - 動態範圍 (dB)
+   * 
+   * # Returns
+   * RGBA 圖像數據 (Uint8ClampedArray) 大小：width * height * 4
+   */
+  compute_spectrogram_image(audio_data: Float32Array, width: number, height: number, noverlap: number, gain_db: number, range_db: number): Uint8Array;
   /**
    * 創建新的 SpectrogramEngine 實例
    * 
@@ -212,6 +238,7 @@ export interface InitOutput {
   readonly find_global_max: (a: number, b: number) => number;
   readonly spectrogramengine_clear_filter_bank: (a: number) => void;
   readonly spectrogramengine_compute_spectrogram: (a: number, b: number, c: number, d: number) => [number, number];
+  readonly spectrogramengine_compute_spectrogram_image: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
   readonly spectrogramengine_compute_spectrogram_u8: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
   readonly spectrogramengine_get_fft_size: (a: number) => number;
   readonly spectrogramengine_get_freq_bins: (a: number) => number;
@@ -222,6 +249,8 @@ export interface InitOutput {
   readonly spectrogramengine_get_window_values: (a: number) => [number, number];
   readonly spectrogramengine_load_filter_bank: (a: number, b: number, c: number, d: number) => void;
   readonly spectrogramengine_new: (a: number, b: number, c: number, d: number) => number;
+  readonly spectrogramengine_set_color_map: (a: number, b: number, c: number) => void;
+  readonly spectrogramengine_set_spectrum_config: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly waveformengine_clear: (a: number) => void;
   readonly waveformengine_get_channel_length: (a: number, b: number) => number;
   readonly waveformengine_get_num_channels: (a: number) => number;

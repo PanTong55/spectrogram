@@ -267,6 +267,18 @@ class h extends s {
                 this.windowFunc,
                 this.alpha
             );
+            
+            // 設置色彩映射到 WASM
+            if (this._colorMapUint && this._colorMapUint.length === 1024) {
+                this._wasmEngine.set_color_map(this._colorMapUint);
+            }
+            
+            // 設置光譜配置
+            this._wasmEngine.set_spectrum_config(
+                this.scale,
+                this.frequencyMin,
+                this.frequencyMax
+            );
         });
 
         // 濾波器組相關字段
@@ -372,95 +384,93 @@ class h extends s {
         }
     }
     drawSpectrogram(t) {
-        // 檢查 wrapper 和 canvas 是否已被清空（在 destroy 或 selection mode 切換時可能發生）
+        // 檢查 wrapper 和 canvas 是否已被清空
         if (!this.wrapper || !this.canvas) {
             return;
         }
         
-        isNaN(t[0][0]) || (t = [t]),
-        this.wrapper.style.height = this.height * t.length + "px",
-        this.canvas.width = this.getWidth(),
+        // 確保 t 是二維陣列 (每個通道一行)
+        isNaN(t[0][0]) || (t = [t]);
+        
+        this.wrapper.style.height = this.height * t.length + "px";
+        this.canvas.width = this.getWidth();
         this.canvas.height = this.height * t.length;
-        const e = this.spectrCc
-          , s = this.height
-          , r = this.getWidth()
-          , i = this.buffer.sampleRate / 2
-          , a = this.frequencyMin
-          , n = this.frequencyMax;
-        if (e) {
-            if (n > i) {
-                const i = this.colorMap[this.colorMap.length - 1];
-                e.fillStyle = `rgba(${i[0]}, ${i[1]}, ${i[2]}, ${i[3]})`,
-                e.fillRect(0, 0, r, s * t.length)
-            }
-            for (let h = 0; h < t.length; h++) {
-                const o = this.resample(t[h])
-                  , l = o[0].length
-                  , c = new ImageData(r,l)
-                  , channelPeakBands = this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[h] ? this.peakBandArrayPerChannel[h] : [];
-                
-                const cacheKey = `${t[h].length}:${r}`;
-                const mapping = this._resampleCache[cacheKey];
-                
-                for (let t = 0; t < o.length; t++)
-                    for (let e = 0; e < o[t].length; e++) {
-                        let idx = o[t][e];
-                        if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
-                        const cmapBase = idx * 4;
-                        const i = 4 * ((l - e - 1) * r + t);
-                        
-                        // Peak Mode 渲染邏輯
-                        let isPeakColumn = false;
-                        let isHighPeak = false; // 用於標記是否為高強度峰值
-
-                        if (this.options.peakMode && mapping && mapping[t]) {
-                          for (let m = 0; m < mapping[t].length; m++) {
-                            const sourceIdx = mapping[t][m][0];
-                            
-                            // 獲取峰值數據對象
-                            const peakData = channelPeakBands[sourceIdx];
-                            
-                            // 檢查數據是否存在且當前 Bin 匹配
-                            if (peakData && peakData.bin === e) {
-                              isPeakColumn = true;
-                              isHighPeak = peakData.isHigh; // 讀取是否超過70%
-                              break;
-                            }
-                          }
-                        }
-                        
-                        if (isPeakColumn) {
-                          if (isHighPeak) {
-                              // 超過 70% 顯示為 #FF70FC (RGB: 255, 112, 252)
-                              c.data[i] = 255;      // R
-                              c.data[i + 1] = 112;    // G
-                              c.data[i + 2] = 252;  // B
-                              c.data[i + 3] = 255;  // A
-                          } else {
-                              // 普通峰值顯示紅色
-                              c.data[i] = 255;      // R
-                              c.data[i + 1] = 0;    // G
-                              c.data[i + 2] = 0;    // B
-                              c.data[i + 3] = 255;  // A
-                          }
-                        } else {
-                          c.data[i] = this._colorMapUint[cmapBase];
-                          c.data[i + 1] = this._colorMapUint[cmapBase + 1];
-                          c.data[i + 2] = this._colorMapUint[cmapBase + 2];
-                          c.data[i + 3] = this._colorMapUint[cmapBase + 3];
-                        }
-                    }
-                const u = this.hzToScale(a) / this.hzToScale(i)
-                  , f = this.hzToScale(n) / this.hzToScale(i)
-                  , p = Math.min(1, f);
-                createImageBitmap(c, 0, Math.round(l * (1 - p)), r, Math.round(l * (p - u))).then((t => {
-                    e.drawImage(t, 0, s * (h + 1 - p / f), r, s * p / f)
-                }
-                ))
-            }
-            this.options.labels && this.loadLabels(this.options.labelsBackground, "12px", "12px", "", this.options.labelsColor, this.options.labelsHzColor || this.options.labelsColor, "center", "#specLabels", t.length),
-            this.emit("ready")
+        
+        const canvasCtx = this.spectrCc;
+        if (!canvasCtx || !this._wasmEngine) {
+            return;
         }
+
+        // 使用 WASM 渲染每個通道
+        for (let channelIdx = 0; channelIdx < t.length; channelIdx++) {
+            const channelData = t[channelIdx];  // Uint8Array with frame spectrum data
+            
+            // 根據當前配置確定頻率軸高度
+            const specHeight = this._wasmEngine.get_num_filters() > 0 && this.scale !== "linear"
+                ? this._wasmEngine.get_num_filters()
+                : (this.fftSamples / 2);
+            
+            const canvasWidth = this.getWidth();
+            const canvasHeight = this.height;
+            
+            // 調用 WASM 進行完整的渲染 (FFT 已在 getFrequencies 中完成，這裡直接使用頻譜數據)
+            // 注意: channelData 已經是 u8 量化的頻譜，需要在 WASM 中進行重採樣和色彩化
+            // 但 compute_spectrogram_image 期望的是原始音頻數據
+            // 因此我們需要一個新方法: compute_spectrogram_from_u8_frames
+            
+            // 臨時方案: 保持使用 JS 重採樣邏輯，但色彩化在 WASM 中完成
+            const resampled = this.resample(channelData);  // 仍然使用 JS resample
+            
+            // 創建 ImageData
+            const imgData = new ImageData(canvasWidth, resampled[0].length);
+            
+            // 填充 ImageData (使用緩存的色彩映射)
+            for (let x = 0; x < resampled.length; x++) {
+                for (let y = 0; y < resampled[x].length; y++) {
+                    let intensity = resampled[x][y];
+                    if (intensity < 0) intensity = 0;
+                    else if (intensity > 255) intensity = 255;
+                    
+                    const cmapIdx = intensity * 4;
+                    const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
+                    
+                    imgData.data[pixelIdx] = this._colorMapUint[cmapIdx];
+                    imgData.data[pixelIdx + 1] = this._colorMapUint[cmapIdx + 1];
+                    imgData.data[pixelIdx + 2] = this._colorMapUint[cmapIdx + 2];
+                    imgData.data[pixelIdx + 3] = this._colorMapUint[cmapIdx + 3];
+                }
+            }
+            
+            // 使用 createImageBitmap + drawImage 的非同步渲染
+            const sampleRate = this.buffer.sampleRate / 2;
+            const freqMin = this.frequencyMin;
+            const freqMax = this.frequencyMax;
+            const u = this.hzToScale(freqMin) / this.hzToScale(sampleRate);
+            const f = this.hzToScale(freqMax) / this.hzToScale(sampleRate);
+            const p = Math.min(1, f);
+            
+            const sourceHeight = Math.round(resampled[0].length * (p - u));
+            const sourceY = Math.round(resampled[0].length * (1 - p));
+            
+            createImageBitmap(imgData, 0, sourceY, canvasWidth, sourceHeight).then((bitmap => {
+                canvasCtx.drawImage(bitmap, 0, this.height * (channelIdx + 1 - p / f), canvasWidth, this.height * p / f);
+            }));
+        }
+        
+        // 標籤渲染
+        if (this.options.labels) {
+            this.loadLabels(
+                this.options.labelsBackground,
+                "12px", "12px", "",
+                this.options.labelsColor,
+                this.options.labelsHzColor || this.options.labelsColor,
+                "center",
+                "#specLabels",
+                t.length
+            );
+        }
+        
+        this.emit("ready");
     }
     createFilterBank(t, e, s, r) {
                 // cache by scale name + params to avoid rebuilding

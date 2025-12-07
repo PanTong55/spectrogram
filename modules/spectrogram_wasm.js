@@ -48,6 +48,13 @@ function isLikeNone(x) {
     return x === undefined || x === null;
 }
 
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
+}
+
 function passArrayF32ToWasm0(arg, malloc) {
     const ptr = malloc(arg.length * 4, 4) >>> 0;
     getFloat32ArrayMemory0().set(arg, ptr / 4);
@@ -161,6 +168,18 @@ export class SpectrogramEngine {
         return ret >>> 0;
     }
     /**
+     * 設置 256 色的色彩映射 (RGBA)
+     *
+     * # Arguments
+     * * `colors` - 256 * 4 字節的 RGBA 顏色數組
+     * @param {Uint8Array} colors
+     */
+    set_color_map(colors) {
+        const ptr0 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.spectrogramengine_set_color_map(this.__wbg_ptr, ptr0, len0);
+    }
+    /**
      * 獲取最後計算的全局最大幅度值
      *
      * 此值在最後一次 compute_spectrogram_u8 調用時計算。
@@ -255,6 +274,17 @@ export class SpectrogramEngine {
         return v1;
     }
     /**
+     * 設置光譜配置 (用於記錄，但主要用於驗證)
+     * @param {string} scale
+     * @param {number} freq_min
+     * @param {number} freq_max
+     */
+    set_spectrum_config(scale, freq_min, freq_max) {
+        const ptr0 = passStringToWasm0(scale, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.spectrogramengine_set_spectrum_config(this.__wbg_ptr, ptr0, len0, freq_min, freq_max);
+    }
+    /**
      * 計算頻譜圖並轉換為 u8 量化值 (0-255)
      *
      * # Arguments
@@ -276,6 +306,35 @@ export class SpectrogramEngine {
         const ptr0 = passArrayF32ToWasm0(audio_data, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.spectrogramengine_compute_spectrogram_u8(this.__wbg_ptr, ptr0, len0, noverlap, gain_db, range_db);
+        var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v2;
+    }
+    /**
+     * 計算完整的光譜圖像 (FFT -> 重採樣 -> 色彩化)
+     *
+     * # Arguments
+     * * `audio_data` - 單通道音頻數據 (Float32Array)
+     * * `width` - 輸出圖像寬度 (時間軸)
+     * * `height` - 輸出圖像高度 (頻率軸)
+     * * `noverlap` - 窗重疊樣本數
+     * * `gain_db` - 增益 (dB)
+     * * `range_db` - 動態範圍 (dB)
+     *
+     * # Returns
+     * RGBA 圖像數據 (Uint8ClampedArray) 大小：width * height * 4
+     * @param {Float32Array} audio_data
+     * @param {number} width
+     * @param {number} height
+     * @param {number} noverlap
+     * @param {number} gain_db
+     * @param {number} range_db
+     * @returns {Uint8Array}
+     */
+    compute_spectrogram_image(audio_data, width, height, noverlap, gain_db, range_db) {
+        const ptr0 = passArrayF32ToWasm0(audio_data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.spectrogramengine_compute_spectrogram_image(this.__wbg_ptr, ptr0, len0, width, height, noverlap, gain_db, range_db);
         var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
         wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
         return v2;
