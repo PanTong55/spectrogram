@@ -132,6 +132,27 @@ export function getCurrentColorMap() {
   return currentColorMap;
 }
 
+/**
+ * Retrieves the currently active color map name.
+ * Prioritizes the running plugin instance (in case user changed it via dropdown).
+ * Fallbacks to the stored `currentColorMap` or default 'viridis'.
+ */
+export function getEffectiveColorMap() {
+  // 1. Check active plugin instance first
+  const activePlugin = getPlugin();
+  if (activePlugin && activePlugin.colorMapName) {
+    return activePlugin.colorMapName;
+  }
+  
+  // 2. Fallback to stored state in wsManager
+  if (currentColorMap) {
+    return currentColorMap;
+  }
+  
+  // 3. Default
+  return 'viridis';
+}
+
 export function getCurrentFftSize() {
   return currentFftSize;
 }

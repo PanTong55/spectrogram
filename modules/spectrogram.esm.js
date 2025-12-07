@@ -313,6 +313,8 @@ class h extends s {
     constructor(t) {
         var e, s;
         if (super(t),
+        // Initialize colorMapName to track the current selection string
+        this.colorMapName = (typeof t.colorMap === 'string') ? t.colorMap : 'viridis',
         this.frequenciesDataUrl = t.frequenciesDataUrl,
         this.container = "string" == typeof t.container ? document.querySelector(t.container) : t.container,
         t.colorMap && "string" != typeof t.colorMap) {
@@ -516,6 +518,9 @@ class h extends s {
         super.destroy()
     }
     setColorMap(mapName) {
+        // Update the name tracking
+        this.colorMapName = mapName;
+        
         // 1. Generate new base map
         const newBaseMap = generateColorMapRGBA(mapName);
         this._baseColorMapUint.set(newBaseMap);
@@ -654,6 +659,11 @@ class h extends s {
             item.textContent = option.label;
             item.dataset.colorMapName = option.name;
             item.dataset.index = index;
+            
+            // Apply selected class if this is the currently active color map
+            if (option.name === this.colorMapName) {
+                item.classList.add('selected');
+            }
             
             // 點擊事件：切換色彩映射（不關閉菜單，允許多次點擊）
             item.addEventListener("click", (e) => {

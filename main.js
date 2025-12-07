@@ -14,6 +14,7 @@ getPlugin,
 replacePlugin,
 createSpectrogramPlugin,
 getCurrentColorMap,
+getEffectiveColorMap,
 initScrollSync,
 setPeakMode,
 setPeakThreshold,
@@ -229,7 +230,7 @@ if (timeExpBtn) {
         }
       } else {
         replacePlugin(
-          getCurrentColorMap(),
+          getEffectiveColorMap(),
           spectrogramHeight,
           currentFreqMin,
           currentFreqMax,
@@ -579,7 +580,7 @@ await fileLoaderControl.loadFileAtIndex(idx);
 }
 freqHoverControl?.hideHover();
 replacePlugin(
-getCurrentColorMap(),
+getEffectiveColorMap(),
 spectrogramHeight,
 currentFreqMin,
 currentFreqMax,
@@ -1125,7 +1126,7 @@ document.getElementById('fileInput').click();
 
 function handleFftSize(size) {
   currentFftSize = size;
-  const colorMap = getCurrentColorMap();
+  const colorMap = getEffectiveColorMap();
   freqHoverControl?.hideHover();
   replacePlugin(
     colorMap,
@@ -1149,7 +1150,7 @@ function handleFftSize(size) {
 
 function handleWindowType(type) {
   currentWindowType = type;
-  const colorMap = getCurrentColorMap();
+  const colorMap = getEffectiveColorMap();
   freqHoverControl?.hideHover();
   replacePlugin(
     colorMap,
@@ -1172,7 +1173,7 @@ function handleWindowType(type) {
 }
 
 function handleOverlapChange() {
-const colorMap = getCurrentColorMap();
+const colorMap = getEffectiveColorMap();
 freqHoverControl?.hideHover();
 replacePlugin(
 colorMap,
@@ -1193,7 +1194,7 @@ restoreImageEnhancement(); // Restore brightness/contrast/gain settings
 }
 
 function updateFrequencyRange(freqMin, freqMax) {
-const colorMap = getCurrentColorMap();
+const colorMap = getEffectiveColorMap();
 currentFreqMin = freqMin;
 currentFreqMax = freqMax;
 
@@ -1225,7 +1226,7 @@ clearAllBtn.addEventListener('click', () => {
 clearFileList();
 sidebarControl.refresh('');
 replacePlugin(
-getCurrentColorMap(),
+getEffectiveColorMap(),
 spectrogramHeight,
 currentFreqMin,
 currentFreqMax,
@@ -1279,7 +1280,7 @@ clearTrashBtn.addEventListener('click', () => {
         if (remaining.length === 0) {
           sidebarControl.refresh('');
           replacePlugin(
-            getCurrentColorMap(),
+            getEffectiveColorMap(),
             spectrogramHeight,
             currentFreqMin,
             currentFreqMax,
@@ -1335,7 +1336,7 @@ initPeakControl({
     setPeakMode(isActive);
     // 重新創建 Spectrogram 插件以應用 Peak Mode
     replacePlugin(
-      getCurrentColorMap(),
+      getEffectiveColorMap(),
       spectrogramHeight,
       currentFreqMin,
       currentFreqMax,
@@ -1357,7 +1358,7 @@ initPeakControl({
     // 設置 Peak Threshold 並重新渲染
     setPeakThreshold(threshold);
     replacePlugin(
-      getCurrentColorMap(),
+      getEffectiveColorMap(),
       spectrogramHeight,
       currentFreqMin,
       currentFreqMax,
