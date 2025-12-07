@@ -1033,8 +1033,9 @@ function updateSpectrogramSettingsText() {
 
 function drawColorBar(colorMap) {
   const canvas = document.getElementById('color-bar');
-  if (!canvas) return;
+  if (!canvas || !colorMap) return;
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   const width = canvas.width;
   const height = canvas.height;
   const step = width / colorMap.length;
