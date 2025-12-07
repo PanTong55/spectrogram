@@ -391,7 +391,14 @@ class h extends s {
         this._loadedFilterBankKey = null;
         // cache for resample mappings keyed by inputLen:outputWidth
         this._resampleCache = {};
-        // precomputed uint8 colormap (RGBA 0-255)
+        
+        // --- NEW: Image Enhancement State ---
+        this.imgParams = { brightness: 0, contrast: 1, gain: 1 };
+        this._baseColorMapUint = new Uint8ClampedArray(256 * 4);   // Original pure colormap
+        this._activeColorMapUint = new Uint8ClampedArray(256 * 4); // Processed (with B/C/G applied)
+        
+        // precomputed uint8 colormap (RGBA 0-255) - Now we populate _baseColorMapUint
+        // Keep _colorMapUint for backward compatibility during transition
         this._colorMapUint = new Uint8ClampedArray(256 * 4);
         if (this.colorMap && this._colorMapUint) {
             for (let ii = 0; ii < 256; ii++) {
@@ -401,8 +408,59 @@ class h extends s {
                 this._colorMapUint[ii * 4 + 2] = Math.round(255 * cc[2]);
                 this._colorMapUint[ii * 4 + 3] = Math.round(255 * cc[3]);
             }
+            // Copy to base colormap
+            this._baseColorMapUint.set(this._colorMapUint);
+        }
+        
+        // Generate initial active colormap with current enhancement params
+        this._updateActiveColorMap();
+    }
+    
+    // [NEW] Internal method to calculate the active colormap from base + image enhancement
+    _updateActiveColorMap() {
+        const { brightness, contrast, gain } = this.imgParams;
+
+        for (let i = 0; i < 256; i++) {
+            const baseIdx = i * 4;
+            
+            // Process R, G, B channels
+            for (let c = 0; c < 3; c++) {
+                // Normalize 0-255 to 0.0-1.0
+                let v = this._baseColorMapUint[baseIdx + c] / 255;
+
+                // 1. Contrast (Expand from center 0.5)
+                v = (v - 0.5) * contrast + 0.5;
+
+                // 2. Brightness (Linear offset)
+                v = v + brightness;
+
+                // 3. Gain (Linear multiplier)
+                v = v * gain;
+
+                // Clamp to 0.0-1.0
+                v = Math.max(0, Math.min(1, v));
+
+                // Store back to 0-255
+                this._activeColorMapUint[baseIdx + c] = Math.round(v * 255);
+            }
+            
+            // Preserve Alpha
+            this._activeColorMapUint[baseIdx + 3] = this._baseColorMapUint[baseIdx + 3];
+        }
+
+        // Push to WASM engine
+        if (this._wasmEngine && this._wasmEngine.set_color_map) {
+            this._wasmEngine.set_color_map(this._activeColorMapUint);
+        }
+
+        // Redraw components
+        this.drawColorMapBar();
+        
+        if (this.lastRenderData) {
+            this.drawSpectrogram(this.lastRenderData);
         }
     }
+    
     onInit() {
         this.container = this.container || this.wavesurfer.getWrapper(),
         this.container.appendChild(this.wrapper),
@@ -428,29 +486,33 @@ class h extends s {
         super.destroy()
     }
     setColorMap(mapName) {
-        // 生成新的色彩映射
-        const newColorMap = generateColorMapRGBA(mapName);
+        // 1. Generate new base map
+        const newBaseMap = generateColorMapRGBA(mapName);
+        this._baseColorMapUint.set(newBaseMap);
+        this._colorMapUint.set(newBaseMap); // Keep backup for compatibility
         
-        // 更新實例的色彩映射數據
-        this._colorMapUint = newColorMap;
+        // 2. Re-apply current brightness/contrast/gain to create active map
+        this._updateActiveColorMap();
         
-        // 如果 WASM 引擎已初始化，更新色彩映射
-        if (this._wasmEngine && this._wasmEngine.set_color_map) {
-            this._wasmEngine.set_color_map(this._colorMapUint);
-            console.log(`✅ [Spectrogram] 色彩映射已切換至: ${mapName}`);
+        // 3. Update Dropdown UI (if exists)
+        if (this.colorMapDropdown) {
+            this.colorMapDropdown.querySelectorAll(".dropdown-item").forEach(el => {
+                el.classList.toggle("selected", el.dataset.colorMapName === mapName);
+            });
         }
         
-        // 更新 color-bar canvas 的顯示
-        this.drawColorMapBar();
+        console.log(`✅ [Spectrogram] 色彩映射已切換至: ${mapName} (並應用當前的亮度/對比度/增益)`);
+    }
+    
+    // [NEW] Public API for brightness/contrast/gain control
+    setImageEnhancement(brightness, contrast, gain) {
+        this.imgParams.brightness = brightness;
+        this.imgParams.contrast = contrast;
+        this.imgParams.gain = gain;
         
-        // 觸發重新渲染（利用 WASM 中已緩存的頻譜數據以及當前的亮度/增益/對比度值）
-        // 通過調用 onSpectrogramRender 回調，它會使用當前的亮度/增益/對比度值重新生成色圖
-        if (this.onSpectrogramRender && typeof this.onSpectrogramRender === 'function') {
-            this.onSpectrogramRender();
-        } else if (this.lastRenderData) {
-            // 備選方案：直接重新渲染（如果還沒設置 onSpectrogramRender）
-            this.drawSpectrogram(this.lastRenderData);
-        }
+        console.log('[Spectrogram] setImageEnhancement called:', { brightness, contrast, gain });
+        
+        this._updateActiveColorMap();
     }
     applyBrightnessFilter(brightnessColorMap) {
         // 應用亮度濾鏡到當前色彩映射
@@ -595,9 +657,9 @@ class h extends s {
         });
     }
     drawColorMapBar() {
-        // 將當前色圖繪製到 color-bar canvas
+        // 將當前色圖繪製到 color-bar canvas (使用處理後的活躍色圖)
         const canvas = document.getElementById("color-bar");
-        if (!canvas || !this._colorMapUint) return;
+        if (!canvas || !this._activeColorMapUint) return;
         
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -609,10 +671,10 @@ class h extends s {
         const step = 256 / canvas.width;
         for (let x = 0; x < canvas.width; x++) {
             const colorIdx = Math.floor(x * step);
-            const r = this._colorMapUint[colorIdx * 4];
-            const g = this._colorMapUint[colorIdx * 4 + 1];
-            const b = this._colorMapUint[colorIdx * 4 + 2];
-            const a = this._colorMapUint[colorIdx * 4 + 3];
+            const r = this._activeColorMapUint[colorIdx * 4];
+            const g = this._activeColorMapUint[colorIdx * 4 + 1];
+            const b = this._activeColorMapUint[colorIdx * 4 + 2];
+            const a = this._activeColorMapUint[colorIdx * 4 + 3];
             
             // 填充此列的所有像素
             for (let y = 0; y < canvas.height; y++) {
@@ -698,8 +760,8 @@ class h extends s {
             const imgData = new ImageData(canvasWidth, resampled[0].length);
             
             // 填充 ImageData (使用緩存的色彩映射)
-            if (this._colorMapUint && this._colorMapUint.length === 1024) {
-                // 新方法: 使用 WASM 預計算的色彩映射
+            if (this._activeColorMapUint && this._activeColorMapUint.length === 1024) {
+                // 使用處理後的活躍色彩映射 (已套用亮度/對比度/增益)
                 for (let x = 0; x < resampled.length; x++) {
                     for (let y = 0; y < resampled[x].length; y++) {
                         let intensity = resampled[x][y];
@@ -709,10 +771,10 @@ class h extends s {
                         const cmapIdx = intensity * 4;
                         const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
                         
-                        imgData.data[pixelIdx] = this._colorMapUint[cmapIdx];
-                        imgData.data[pixelIdx + 1] = this._colorMapUint[cmapIdx + 1];
-                        imgData.data[pixelIdx + 2] = this._colorMapUint[cmapIdx + 2];
-                        imgData.data[pixelIdx + 3] = this._colorMapUint[cmapIdx + 3];
+                        imgData.data[pixelIdx] = this._activeColorMapUint[cmapIdx];
+                        imgData.data[pixelIdx + 1] = this._activeColorMapUint[cmapIdx + 1];
+                        imgData.data[pixelIdx + 2] = this._activeColorMapUint[cmapIdx + 2];
+                        imgData.data[pixelIdx + 3] = this._activeColorMapUint[cmapIdx + 3];
                     }
                 }
             } else {

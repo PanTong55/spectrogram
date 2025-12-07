@@ -785,31 +785,20 @@ viewer.addEventListener('fit-window-selection', async (e) => {
 });
 
 initBrightnessControl({
-brightnessSliderId: 'brightnessSlider',
-gainSliderId: 'gainSlider',
-contrastSliderId: 'contrastSlider',
-brightnessValId: 'brightnessVal',
-gainValId: 'gainVal',
-contrastValId: 'contrastVal',
-resetBtnId: 'resetButton',
-onColorMapUpdated: (brightnessColorMap) => {
-  // 應用亮度濾鏡到當前選定的色彩映射（而不是替換為灰度色圖）
-  freqHoverControl?.hideHover();
-  const plugin = getPlugin();
-  if (plugin && plugin.applyBrightnessFilter) {
-    plugin.applyBrightnessFilter(brightnessColorMap);
+  brightnessSliderId: 'brightnessSlider',
+  gainSliderId: 'gainSlider',
+  contrastSliderId: 'contrastSlider',
+  brightnessValId: 'brightnessVal',
+  gainValId: 'gainVal',
+  contrastValId: 'contrastVal',
+  resetBtnId: 'resetButton',
+  // Connect UI directly to Spectrogram's image enhancement method
+  onSettingsChanged: ({ brightness, contrast, gain }) => {
+    const plugin = getPlugin();
+    if (plugin && plugin.setImageEnhancement) {
+      plugin.setImageEnhancement(brightness, contrast, gain);
+    }
   }
-  freqHoverControl?.refreshHover();
-  autoIdControl?.updateMarkers();
-  updateSpectrogramSettingsText();
-},
-onSpectrogramRender: () => {
-  // 使用當前已選擇的色彩映射和當前的亮度/增益/對比度值重新渲染 spectrogram
-  const plugin = getPlugin();
-  if (plugin && plugin.render) {
-    plugin.render();
-  }
-},
 });
 
 initDragDropLoader({
