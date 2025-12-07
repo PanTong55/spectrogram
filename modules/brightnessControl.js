@@ -37,6 +37,12 @@ export function initBrightnessControl({
     
     // Contrast: 0.0 to 5.0 (1 is neutral)
     setSliderAttributes(contrastSlider, 0.0, 5.0, 0.01, defaultContrast);
+    
+    console.log('[BrightnessControl] Initialized sliders:', {
+      brightness: brightnessSlider?.value,
+      gain: gainSlider?.value,
+      contrast: contrastSlider?.value
+    });
   }
 
   function setSliderAttributes(el, min, max, step, value) {
@@ -67,6 +73,8 @@ export function initBrightnessControl({
 
     // Sync UI
     updateSliderValues();
+
+    console.log('[BrightnessControl] updateColorMap:', { brightness, gain, contrast });
 
     // Generate 256 intensity multipliers
     // The Spectrogram plugin will multiply the original RGB by these values.
@@ -114,6 +122,7 @@ export function initBrightnessControl({
   }
 
   function handleChange() {
+    console.log('[BrightnessControl] handleChange triggered');
     updateColorMap();
   }
 

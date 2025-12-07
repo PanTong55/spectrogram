@@ -454,28 +454,37 @@ class h extends s {
     }
     applyBrightnessFilter(brightnessColorMap) {
         // 應用亮度濾鏡到當前色彩映射
-        // brightnessColorMap 是由 brightnessControl 生成的灰度色圖，用於亮度調整
-        if (!this._colorMapUint || !brightnessColorMap) return;
+        // brightnessColorMap 是由 brightnessControl 生成的濾鏡色圖，用於調整亮度/增益/對比度
+        if (!this._colorMapUint || !brightnessColorMap) {
+            console.warn('[Spectrogram] applyBrightnessFilter: missing colorMap or filter');
+            return;
+        }
         
-        // 應用亮度濾鏡：使用 brightnessColorMap 的亮度值來調整當前色彩映射
+        console.log('[Spectrogram] applyBrightnessFilter called');
+        
+        // 創建濾鏡後的色圖
         const filtered = new Uint8ClampedArray(256 * 4);
         for (let i = 0; i < 256; i++) {
-            const brightnessValue = brightnessColorMap[i][0]; // 灰度值（0-1）
+            // 獲取濾鏡值（0-1）
+            const filterValue = brightnessColorMap[i][0];
+            
+            // 獲取原始色彩值
             const originalR = this._colorMapUint[i * 4];
             const originalG = this._colorMapUint[i * 4 + 1];
             const originalB = this._colorMapUint[i * 4 + 2];
             const originalA = this._colorMapUint[i * 4 + 3];
             
-            // 應用亮度調整
-            filtered[i * 4] = Math.round(originalR * brightnessValue);
-            filtered[i * 4 + 1] = Math.round(originalG * brightnessValue);
-            filtered[i * 4 + 2] = Math.round(originalB * brightnessValue);
+            // 應用濾鏡：乘法混合
+            filtered[i * 4] = Math.round(originalR * filterValue);
+            filtered[i * 4 + 1] = Math.round(originalG * filterValue);
+            filtered[i * 4 + 2] = Math.round(originalB * filterValue);
             filtered[i * 4 + 3] = originalA;
         }
         
-        // 臨時應用濾鏡後的色圖
+        // 將濾鏡後的色圖應用到 WASM 引擎
         if (this._wasmEngine && this._wasmEngine.set_color_map) {
             this._wasmEngine.set_color_map(filtered);
+            console.log('[Spectrogram] Color map applied to WASM engine');
         }
         
         // 重新渲染頻譜
@@ -486,6 +495,7 @@ class h extends s {
         // 恢復原始色圖到 WASM 引擎（以備下次顏色切換）
         if (this._wasmEngine && this._wasmEngine.set_color_map) {
             this._wasmEngine.set_color_map(this._colorMapUint);
+            console.log('[Spectrogram] Original color map restored');
         }
     }
     loadFrequenciesData(e) {
