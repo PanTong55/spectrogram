@@ -74,16 +74,12 @@ export function initFrequencyHover({
         --hover-color: #ffffff;
         --selection-border: #ffffff;
         --selection-bg: rgba(255, 255, 255, 0.2);
-        --text-color: #ffffff;
-        --text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
       }
       
       #viewer-wrapper.theme-light {
         --hover-color: #000000;
         --selection-border: #000000;
         --selection-bg: rgba(0, 0, 0, 0.2);
-        --text-color: #000000;
-        --text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
       }
       
       #hover-line, .persistent-line {
