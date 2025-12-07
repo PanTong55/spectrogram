@@ -205,12 +205,12 @@ function a(t, e, s, r) {
     }
 }
 
-// 顏色映射生成函數 - 支持 Inferno, Viridis, Magma, Grayscale, Jet
+// Color map generation - optimized for bioacoustics
 function generateColorMapRGBA(mapName) {
     const lut = new Uint8ClampedArray(256 * 4);
     
-    // 定義顏色映射的關鍵點 (位置，RGB值)
     const colorMaps = {
+        // Existing Scientific Maps
         inferno: [
             { pos: 0.0, r: 0, g: 0, b: 4 },
             { pos: 0.25, r: 87, g: 16, b: 109 },
@@ -232,26 +232,55 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.75, r: 250, g: 155, b: 135 },
             { pos: 1.0, r: 252, g: 253, b: 191 }
         ],
-        grayscale: [
+        // [New] 1. Cool Black & Yellow (High Contrast)
+        bat_yellow: [
+            { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 0.25, r: 60, g: 0, b: 0 },
+            { pos: 0.5, r: 180, g: 60, b: 0 },
+            { pos: 0.75, r: 255, g: 180, b: 0 },
+            { pos: 1.0, r: 255, g: 255, b: 200 }
+        ],
+        // [New] 2. Inversed Grayscale (Black Background -> White Signal)
+        mono_dark: [
+            { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 1.0, r: 255, g: 255, b: 255 }
+        ],
+        // [Renamed] Standard Grayscale (White Background -> Black Signal)
+        mono_light: [
             { pos: 0.0, r: 255, g: 255, b: 255 },
             { pos: 1.0, r: 0, g: 0, b: 0 }
         ],
-        jet: [
-            { pos: 0.0, r: 0, g: 0, b: 255 },
-            { pos: 0.25, r: 0, g: 255, b: 255 },
-            { pos: 0.5, r: 0, g: 255, b: 0 },
-            { pos: 0.75, r: 255, g: 255, b: 0 },
-            { pos: 1.0, r: 255, g: 0, b: 0 }
+        // [New] 3. Kaleidoscope Style (Bioacoustics Standard: Blue->Green->Red)
+        kaleidoscope: [
+            { pos: 0.0, r: 0, g: 0, b: 0 },       // Black
+            { pos: 0.2, r: 0, g: 0, b: 255 },     // Blue
+            { pos: 0.4, r: 0, g: 255, b: 255 },   // Cyan
+            { pos: 0.6, r: 0, g: 255, b: 0 },     // Green
+            { pos: 0.8, r: 255, g: 255, b: 0 },   // Yellow
+            { pos: 1.0, r: 255, g: 0, b: 0 }      // Red
+        ],
+        // [New] 4. Iron (Thermal Style)
+        iron: [
+            { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 0.3, r: 0, g: 0, b: 255 },     // Blue
+            { pos: 0.55, r: 255, g: 0, b: 128 },  // Purple/Magenta
+            { pos: 0.8, r: 255, g: 128, b: 0 },   // Orange
+            { pos: 1.0, r: 255, g: 255, b: 255 }  // White
+        ],
+        // [New] 5. Neon (Cyberpunk)
+        neon: [
+            { pos: 0.0, r: 10, g: 0, b: 20 },      // Dark Purple
+            { pos: 0.3, r: 60, g: 0, b: 180 },     // Purple
+            { pos: 0.6, r: 0, g: 255, b: 255 },    // Cyan
+            { pos: 1.0, r: 255, g: 0, b: 200 }     // Magenta
         ]
     };
     
     const keyframes = colorMaps[mapName] || colorMaps.viridis;
     
-    // 插值生成 256 個顏色
+    // Interpolation Logic
     for (let i = 0; i < 256; i++) {
         const pos = i / 255;
-        
-        // 找到相鄰的關鍵點
         let lower = keyframes[0];
         let upper = keyframes[keyframes.length - 1];
         
@@ -263,19 +292,16 @@ function generateColorMapRGBA(mapName) {
             }
         }
         
-        // 線性插值
         const t = (pos - lower.pos) / (upper.pos - lower.pos);
         const r = Math.round(lower.r + t * (upper.r - lower.r));
         const g = Math.round(lower.g + t * (upper.g - lower.g));
         const b = Math.round(lower.b + t * (upper.b - lower.b));
-        const a = 255;
         
         lut[i * 4] = r;
         lut[i * 4 + 1] = g;
         lut[i * 4 + 2] = b;
-        lut[i * 4 + 3] = a;
+        lut[i * 4 + 3] = 255;
     }
-    
     return lut;
 }
 
@@ -317,9 +343,13 @@ class h extends s {
             case "inferno":
             case "viridis":
             case "magma":
-            case "grayscale":
-            case "jet": {
-                // 使用新的 generateColorMapRGBA 函數生成色彩映射
+            case "bat_yellow":
+            case "mono_dark":
+            case "mono_light":
+            case "kaleidoscope":
+            case "iron":
+            case "neon": {
+                // Use generateColorMapRGBA function to generate color mapping
                 const colorMapUint = generateColorMapRGBA(this.colorMap);
                 this.colorMap = [];
                 for (let i = 0; i < 256; i++) {
@@ -604,16 +634,20 @@ class h extends s {
         this.colorMapDropdown.style.display = "none";
         document.body.appendChild(this.colorMapDropdown);
         
-        // 色彩映射選項
+        // Color map options
         const colorMapOptions = [
-            { name: "inferno", label: "烈焰 (Inferno)" },
-            { name: "viridis", label: "科學 (Viridis)" },
-            { name: "magma", label: "岩漿 (Magma)" },
-            { name: "grayscale", label: "灰度 (Grayscale)" },
-            { name: "jet", label: "彩虹 (Jet)" }
+            { name: "inferno", label: "Inferno" },
+            { name: "viridis", label: "Viridis" },
+            { name: "magma", label: "Magma" },
+            { name: "bat_yellow", label: "Bat Yellow (High Contrast)" },
+            { name: "mono_dark", label: "Mono Dark (Black BG)" },
+            { name: "mono_light", label: "Mono Light (White BG)" },
+            { name: "kaleidoscope", label: "Kaleidoscope" },
+            { name: "iron", label: "Iron" },
+            { name: "neon", label: "Neon" }
         ];
         
-        // 為每個選項創建菜單項（使用 dropdown-item 樣式類）
+        // Create menu items for each option (using dropdown-item style class)
         colorMapOptions.forEach((option, index) => {
             const item = document.createElement("div");
             item.className = "dropdown-item";
@@ -806,11 +840,46 @@ class h extends s {
             const sourceY = Math.round(resampled[0].length * (1 - p));
             
             createImageBitmap(imgData, 0, sourceY, canvasWidth, sourceHeight).then((bitmap => {
-                canvasCtx.drawImage(bitmap, 0, this.height * (channelIdx + 1 - p / f), canvasWidth, this.height * p / f);
+                const drawY = this.height * (channelIdx + 1 - p / f);
+                const drawH = this.height * p / f;
+                
+                // 1. Draw the Spectrogram Bitmap
+                canvasCtx.drawImage(bitmap, 0, drawY, canvasWidth, drawH);
+
+                // 2. Overlay Peak Mode Dots (if active)
+                // This ensures peaks are drawn on top of the new color map system
+                if (this.options.peakMode && this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[channelIdx]) {
+                    const peaks = this.peakBandArrayPerChannel[channelIdx];
+                    const numFilters = this._wasmEngine.get_num_filters();
+                    // Use filter count if log scale, otherwise fftSamples/2
+                    const totalBins = (this.scale !== "linear" && numFilters > 0) ? numFilters : (this.fftSamples / 2);
+                    
+                    const xStep = canvasWidth / peaks.length;
+                    
+                    // Choose a high-contrast color for peaks (Cyan usually works well on dark maps)
+                    // We can also make this configurable or dependent on the map, but bright cyan is safe.
+                    canvasCtx.fillStyle = "rgba(0, 255, 255, 0.9)"; 
+                    
+                    for (let i = 0; i < peaks.length; i++) {
+                        const peakData = peaks[i];
+                        if (peakData && peakData.bin !== undefined) {
+                            // Calculate Y position relative to the drawn slice
+                            // Invert bin index because 0Hz is usually at bottom
+                            const binFraction = peakData.bin / totalBins;
+                            
+                            // Map fraction to the actual drawn height area
+                            const yPos = drawY + drawH - (binFraction * drawH);
+                            
+                            // Draw a small dot
+                            const xPos = i * xStep;
+                            canvasCtx.fillRect(xPos, yPos - 1, Math.max(1.5, xStep), 3);
+                        }
+                    }
+                }
             }));
         }
         
-        // 標籤渲染
+        // Label rendering
         if (this.options.labels) {
             this.loadLabels(
                 this.options.labelsBackground,
