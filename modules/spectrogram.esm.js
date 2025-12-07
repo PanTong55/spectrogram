@@ -426,9 +426,49 @@ class h extends s {
         // 更新 color-bar canvas 的顯示
         this.drawColorMapBar();
         
-        // 觸發重新渲染（利用 WASM 中已緩存的頻譜數據）
+        // 觸發重新渲染（利用 WASM 中已緩存的頻譜數據以及當前的亮度/增益/對比度值）
+        // 通過調用 onSpectrogramRender 回調，它會使用當前的亮度/增益/對比度值重新生成色圖
+        if (this.onSpectrogramRender && typeof this.onSpectrogramRender === 'function') {
+            this.onSpectrogramRender();
+        } else if (this.lastRenderData) {
+            // 備選方案：直接重新渲染（如果還沒設置 onSpectrogramRender）
+            this.drawSpectrogram(this.lastRenderData);
+        }
+    }
+    applyBrightnessFilter(brightnessColorMap) {
+        // 應用亮度濾鏡到當前色彩映射
+        // brightnessColorMap 是由 brightnessControl 生成的灰度色圖，用於亮度調整
+        if (!this._colorMapUint || !brightnessColorMap) return;
+        
+        // 應用亮度濾鏡：使用 brightnessColorMap 的亮度值來調整當前色彩映射
+        const filtered = new Uint8ClampedArray(256 * 4);
+        for (let i = 0; i < 256; i++) {
+            const brightnessValue = brightnessColorMap[i][0]; // 灰度值（0-1）
+            const originalR = this._colorMapUint[i * 4];
+            const originalG = this._colorMapUint[i * 4 + 1];
+            const originalB = this._colorMapUint[i * 4 + 2];
+            const originalA = this._colorMapUint[i * 4 + 3];
+            
+            // 應用亮度調整
+            filtered[i * 4] = Math.round(originalR * brightnessValue);
+            filtered[i * 4 + 1] = Math.round(originalG * brightnessValue);
+            filtered[i * 4 + 2] = Math.round(originalB * brightnessValue);
+            filtered[i * 4 + 3] = originalA;
+        }
+        
+        // 臨時應用濾鏡後的色圖
+        if (this._wasmEngine && this._wasmEngine.set_color_map) {
+            this._wasmEngine.set_color_map(filtered);
+        }
+        
+        // 重新渲染頻譜
         if (this.lastRenderData) {
             this.drawSpectrogram(this.lastRenderData);
+        }
+        
+        // 恢復原始色圖到 WASM 引擎（以備下次顏色切換）
+        if (this._wasmEngine && this._wasmEngine.set_color_map) {
+            this._wasmEngine.set_color_map(this._colorMapUint);
         }
     }
     loadFrequenciesData(e) {
@@ -492,11 +532,10 @@ class h extends s {
             item.dataset.colorMapName = option.name;
             item.dataset.index = index;
             
-            // 點擊事件：切換色彩映射
+            // 點擊事件：切換色彩映射（不關閉菜單，允許多次點擊）
             item.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this.setColorMap(option.name);
-                this.colorMapDropdown.style.display = "none";
                 // 更新選中狀態（添加/移除 selected class）
                 this.colorMapDropdown.querySelectorAll(".dropdown-item").forEach((el, idx) => {
                     el.classList.toggle("selected", idx === index);

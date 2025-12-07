@@ -792,27 +792,19 @@ brightnessValId: 'brightnessVal',
 gainValId: 'gainVal',
 contrastValId: 'contrastVal',
 resetBtnId: 'resetButton',
-onColorMapUpdated: (colorMap) => {
-freqHoverControl?.hideHover();        
-replacePlugin(
-colorMap,
-spectrogramHeight,
-currentFreqMin,
-currentFreqMax,
-getOverlapPercent(),
-() => {
-duration = getWavesurfer().getDuration();
-    zoomControl.applyZoom();
-    renderAxes();
+onColorMapUpdated: (brightnessColorMap) => {
+  // 應用亮度濾鏡到當前選定的色彩映射（而不是替換為灰度色圖）
+  freqHoverControl?.hideHover();
+  const plugin = getPlugin();
+  if (plugin && plugin.applyBrightnessFilter) {
+    plugin.applyBrightnessFilter(brightnessColorMap);
+  }
   freqHoverControl?.refreshHover();
   autoIdControl?.updateMarkers();
   updateSpectrogramSettingsText();
-  }
-  );
-  drawColorBar(colorMap);
-  },
+},
 onSpectrogramRender: () => {
-  // 使用當前已選擇的色彩映射重新渲染 spectrogram
+  // 使用當前已選擇的色彩映射和當前的亮度/增益/對比度值重新渲染 spectrogram
   const plugin = getPlugin();
   if (plugin && plugin.render) {
     plugin.render();
