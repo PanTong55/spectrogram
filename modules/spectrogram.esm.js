@@ -848,7 +848,8 @@ class h extends s {
 
                 // 2. Overlay Peak Mode Dots (if active)
                 // This ensures peaks are drawn on top of the new color map system
-                if (this.options.peakMode && this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[channelIdx]) {
+                // Added "this.options &&" check to prevent crash if plugin destroyed during async render
+                if (this.options && this.options.peakMode && this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[channelIdx]) {
                     const peaks = this.peakBandArrayPerChannel[channelIdx];
                     const numFilters = this._wasmEngine.get_num_filters();
                     // Use filter count if log scale, otherwise fftSamples/2

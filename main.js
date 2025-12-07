@@ -42,6 +42,7 @@ import { getCurrentIndex, getFileList, toggleFileIcon, setFileList, clearFileLis
 const spectrogramHeight = 800;
 let sidebarControl;
 let fileLoaderControl;
+let brightnessController = null; // Global reference to brightness control for settings restoration
 
 /**
  * 在 Wavesurfer Spectrogram 上應用紅色 Peak 線
@@ -64,6 +65,21 @@ function applyPeakLineToCanvas() {
   // TODO: 實現從 Spectrogram 對象獲取 peakBand 信息的方式
   // 暫時這是一個佔位符
   console.log('[applyPeakLineToCanvas] Would draw peak line on canvas');
+}
+
+/**
+ * Restore image enhancement settings to the current plugin
+ * Called after plugin recreation (peak mode toggle, FFT change, etc.)
+ */
+function restoreImageEnhancement() {
+  if (brightnessController && brightnessController.getSettings) {
+    const { brightness, contrast, gain } = brightnessController.getSettings();
+    const plugin = getPlugin();
+    if (plugin && plugin.setImageEnhancement) {
+      console.log('[restoreImageEnhancement] Restoring settings:', { brightness, contrast, gain });
+      plugin.setImageEnhancement(brightness, contrast, gain);
+    }
+  }
 }
 
 const container = document.getElementById('spectrogram-only');
@@ -784,7 +800,7 @@ viewer.addEventListener('fit-window-selection', async (e) => {
   }
 });
 
-initBrightnessControl({
+brightnessController = initBrightnessControl({
   brightnessSliderId: 'brightnessSlider',
   gainSliderId: 'gainSlider',
   contrastSliderId: 'contrastSlider',
@@ -883,6 +899,7 @@ getWavesurfer().on('decode', () => {
   freqHoverControl?.refreshHover();
   autoIdControl?.updateMarkers();
   updateSpectrogramSettingsText();
+  restoreImageEnhancement(); // Restore brightness/contrast/gain settings after decode
 });
 
 document.body.addEventListener('touchstart', () => {
@@ -1122,6 +1139,7 @@ function handleFftSize(size) {
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
       updateSpectrogramSettingsText();
+      restoreImageEnhancement(); // Restore brightness/contrast/gain settings
     },
     currentFftSize,
     currentWindowType
@@ -1145,6 +1163,7 @@ function handleWindowType(type) {
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
       updateSpectrogramSettingsText();
+      restoreImageEnhancement(); // Restore brightness/contrast/gain settings
     },
     currentFftSize,
     currentWindowType
@@ -1167,6 +1186,7 @@ duration = getWavesurfer().getDuration();
 zoomControl.applyZoom();
 renderAxes();
 updateSpectrogramSettingsText();
+restoreImageEnhancement(); // Restore brightness/contrast/gain settings
 }
 );
 }
@@ -1194,6 +1214,7 @@ freqHoverControl.setFrequencyRange(currentFreqMin, currentFreqMax);
 autoIdControl?.updateMarkers();
 }
 updateSpectrogramSettingsText();
+restoreImageEnhancement(); // Restore brightness/contrast/gain settings
 }
 );
 }
@@ -1324,6 +1345,7 @@ initPeakControl({
         freqHoverControl?.refreshHover();
         autoIdControl?.updateMarkers();
         updateSpectrogramSettingsText();
+        restoreImageEnhancement(); // Restore brightness/contrast/gain settings
       },
       currentFftSize,
       currentWindowType,
@@ -1345,6 +1367,7 @@ initPeakControl({
         freqHoverControl?.refreshHover();
         autoIdControl?.updateMarkers();
         updateSpectrogramSettingsText();
+        restoreImageEnhancement(); // Restore brightness/contrast/gain settings
       },
       currentFftSize,
       currentWindowType,

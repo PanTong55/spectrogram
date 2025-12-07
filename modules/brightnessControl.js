@@ -4,6 +4,9 @@
  * Simplified Brightness/Contrast/Gain Control
  * Acts as a "dumb" UI controller that emits slider values.
  * The Spectrogram instance handles the actual image processing.
+ * 
+ * Returns a control object with a getter for current settings,
+ * allowing main.js to restore settings when the plugin is recreated.
  */
 export function initBrightnessControl({
   brightnessSliderId,
@@ -16,7 +19,7 @@ export function initBrightnessControl({
   defaultBrightness = 0.0,
   defaultGain = 1.0,
   defaultContrast = 1.0,
-  onSettingsChanged, // Callback for slider value changes
+  onSettingsChanged,
 }) {
   const brightnessSlider = document.getElementById(brightnessSliderId);
   const gainSlider = document.getElementById(gainSliderId);
@@ -34,26 +37,22 @@ export function initBrightnessControl({
       brightnessSlider.min = -1;
       brightnessSlider.max = 1;
       brightnessSlider.step = 0.01;
-      brightnessSlider.value = defaultBrightness;
+      // Do not overwrite value if it's already set (preserves state across re-inits if elements persist)
+      if (!brightnessSlider.value) brightnessSlider.value = defaultBrightness;
     }
     if (gainSlider) {
       gainSlider.min = 0;
       gainSlider.max = 5;
       gainSlider.step = 0.01;
-      gainSlider.value = defaultGain;
+      if (!gainSlider.value) gainSlider.value = defaultGain;
     }
     if (contrastSlider) {
       contrastSlider.min = 0;
       contrastSlider.max = 5;
       contrastSlider.step = 0.01;
-      contrastSlider.value = defaultContrast;
+      if (!contrastSlider.value) contrastSlider.value = defaultContrast;
     }
     updateLabels();
-    console.log('[BrightnessControl] Sliders initialized:', {
-      brightness: defaultBrightness,
-      gain: defaultGain,
-      contrast: defaultContrast
-    });
   }
 
   // Update label text based on slider values
@@ -69,18 +68,20 @@ export function initBrightnessControl({
     }
   }
 
+  // Get current settings - used by main.js to restore settings
+  function getCurrentSettings() {
+    return {
+      brightness: brightnessSlider ? parseFloat(brightnessSlider.value) : defaultBrightness,
+      contrast: contrastSlider ? parseFloat(contrastSlider.value) : defaultContrast,
+      gain: gainSlider ? parseFloat(gainSlider.value) : defaultGain
+    };
+  }
+
   // Emit the current settings to the callback
   function emitChanges() {
     updateLabels();
-    
-    const settings = {
-      brightness: parseFloat(brightnessSlider.value),
-      contrast: parseFloat(contrastSlider.value),
-      gain: parseFloat(gainSlider.value)
-    };
-    
+    const settings = getCurrentSettings();
     console.log('[BrightnessControl] Settings changed:', settings);
-    
     if (typeof onSettingsChanged === 'function') {
       onSettingsChanged(settings);
     }
@@ -108,7 +109,12 @@ export function initBrightnessControl({
 
   // Initialize
   initAttributes();
-  // Emit initial settings
-  emitChanges();
+  // Don't emit immediately on init to avoid double-render during startup,
+  // Main.js will pull values when needed.
+
+  // Return the control interface with getter
+  return {
+    getSettings: getCurrentSettings
+  };
 }
 
