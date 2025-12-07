@@ -394,7 +394,10 @@ class h extends s {
             overflowX: "hidden",
             overflowY: "hidden"
         }),
-        this.subscriptions.push(this.wavesurfer.on("redraw", ( () => this.render())))
+        this.subscriptions.push(this.wavesurfer.on("redraw", ( () => this.render()))),
+        // 初始化後創建色圖下拉菜單並繪製 color-bar
+        this._createColorMapDropdown(),
+        this.drawColorMapBar()
     }
     destroy() {
         this.unAll(),
@@ -419,6 +422,9 @@ class h extends s {
             this._wasmEngine.set_color_map(this._colorMapUint);
             console.log(`✅ [Spectrogram] 色彩映射已切換至: ${mapName}`);
         }
+        
+        // 更新 color-bar canvas 的顯示
+        this.drawColorMapBar();
         
         // 觸發重新渲染（利用 WASM 中已緩存的頻譜數據）
         if (this.lastRenderData) {
@@ -453,35 +459,21 @@ class h extends s {
             }
         }, this.wrapper)),
         
-        // 創建顏色映射選擇下拉菜單
-        this._createColorMapDropdown(),
-        
         this.wrapper.addEventListener("click", this._onWrapperClick)
     }
     _createColorMapDropdown() {
-        // 查找 spectrogram-settings 中的 color-bar canvas
+        // 查找 color-bar canvas
         const colorBarCanvas = document.getElementById("color-bar");
         if (!colorBarCanvas) {
             console.warn("⚠️ [Spectrogram] color-bar canvas not found");
             return;
         }
         
-        // 創建隱藏的下拉菜單容器（附加到 spectrogram-settings）
-        const settingsContainer = document.getElementById("spectrogram-settings");
-        this.colorMapDropdown = i("div", {
-            style: {
-                display: "none",
-                position: "absolute",
-                top: "25px",
-                left: "0px",
-                zIndex: 1000,
-                backgroundColor: "#f0f0f0",
-                border: "1px solid #999",
-                borderRadius: "4px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                minWidth: "150px"
-            }
-        }, settingsContainer);
+        // 創建下拉菜單容器（使用 dropdown-menu 樣式類）
+        this.colorMapDropdown = document.createElement("div");
+        this.colorMapDropdown.className = "dropdown-menu";
+        this.colorMapDropdown.style.display = "none";
+        document.body.appendChild(this.colorMapDropdown);
         
         // 色彩映射選項
         const colorMapOptions = [
@@ -492,59 +484,81 @@ class h extends s {
             { name: "jet", label: "彩虹 (Jet)" }
         ];
         
-        // 為每個選項創建菜單項
-        colorMapOptions.forEach(option => {
-            const item = i("div", {
-                textContent: option.label,
-                style: {
-                    padding: "10px 15px",
-                    cursor: "pointer",
-                    fontSize: "13px",
-                    borderBottom: "1px solid #ddd"
-                }
-            }, this.colorMapDropdown);
-            
-            // 鼠標懸停效果
-            item.addEventListener("mouseenter", () => {
-                item.style.backgroundColor = "#e0e0e0";
-            });
-            item.addEventListener("mouseleave", () => {
-                item.style.backgroundColor = "transparent";
-            });
+        // 為每個選項創建菜單項（使用 dropdown-item 樣式類）
+        colorMapOptions.forEach((option, index) => {
+            const item = document.createElement("div");
+            item.className = "dropdown-item";
+            item.textContent = option.label;
+            item.dataset.colorMapName = option.name;
+            item.dataset.index = index;
             
             // 點擊事件：切換色彩映射
             item.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this.setColorMap(option.name);
-                this._hideColorMapDropdown();
+                this.colorMapDropdown.style.display = "none";
+                // 更新選中狀態（添加/移除 selected class）
+                this.colorMapDropdown.querySelectorAll(".dropdown-item").forEach((el, idx) => {
+                    el.classList.toggle("selected", idx === index);
+                });
             });
+            
+            this.colorMapDropdown.appendChild(item);
         });
         
-        // 在 color-bar canvas 點擊時顯示下拉菜單
+        // 在 color-bar canvas 點擊時顯示/隱藏下拉菜單
         colorBarCanvas.addEventListener("click", (e) => {
             e.stopPropagation();
-            this._toggleColorMapDropdown(e);
+            const isOpen = this.colorMapDropdown.style.display !== "none";
+            if (isOpen) {
+                this.colorMapDropdown.style.display = "none";
+            } else {
+                const rect = colorBarCanvas.getBoundingClientRect();
+                this.colorMapDropdown.style.left = (rect.left + window.scrollX) + "px";
+                this.colorMapDropdown.style.top = (rect.bottom + window.scrollY) + "px";
+                this.colorMapDropdown.style.minWidth = rect.width + "px";
+                this.colorMapDropdown.style.display = "block";
+            }
         });
         
         // 點擊其他地方時隱藏下拉菜單
-        document.addEventListener("click", () => {
-            this._hideColorMapDropdown();
+        document.addEventListener("click", (e) => {
+            if (!this.colorMapDropdown.contains(e.target) && e.target !== colorBarCanvas) {
+                this.colorMapDropdown.style.display = "none";
+            }
         });
     }
-    _toggleColorMapDropdown(e) {
-        if (this.colorMapDropdown.style.display === "none") {
-            this.colorMapDropdown.style.display = "block";
-            if (e) {
-                this.colorMapDropdown.style.top = (e.clientY - e.target.getBoundingClientRect().top) + "px";
+    drawColorMapBar() {
+        // 將當前色圖繪製到 color-bar canvas
+        const canvas = document.getElementById("color-bar");
+        if (!canvas || !this._colorMapUint) return;
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        
+        const imageData = ctx.createImageData(canvas.width, canvas.height);
+        const data = imageData.data;
+        
+        // 橫向填充色圖 256 色到 canvas 寬度
+        const step = 256 / canvas.width;
+        for (let x = 0; x < canvas.width; x++) {
+            const colorIdx = Math.floor(x * step);
+            const r = this._colorMapUint[colorIdx * 4];
+            const g = this._colorMapUint[colorIdx * 4 + 1];
+            const b = this._colorMapUint[colorIdx * 4 + 2];
+            const a = this._colorMapUint[colorIdx * 4 + 3];
+            
+            // 填充此列的所有像素
+            for (let y = 0; y < canvas.height; y++) {
+                const idx = (y * canvas.width + x) * 4;
+                data[idx] = r;
+                data[idx + 1] = g;
+                data[idx + 2] = b;
+                data[idx + 3] = a;
             }
-        } else {
-            this.colorMapDropdown.style.display = "none";
         }
-    }
-    _hideColorMapDropdown() {
-        if (this.colorMapDropdown) {
-            this.colorMapDropdown.style.display = "none";
-        }
+        
+        ctx.putImageData(imageData, 0, 0);
     }
     createCanvas() {
         this.canvas = i("canvas", {

@@ -811,6 +811,13 @@ duration = getWavesurfer().getDuration();
   );
   drawColorBar(colorMap);
   },
+onSpectrogramRender: () => {
+  // 使用當前已選擇的色彩映射重新渲染 spectrogram
+  const plugin = getPlugin();
+  if (plugin && plugin.render) {
+    plugin.render();
+  }
+},
 });
 
 initDragDropLoader({

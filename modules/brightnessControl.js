@@ -12,6 +12,7 @@ export function initBrightnessControl({
   defaultGain = 2.1,
   defaultContrast = 1.25,
   onColorMapUpdated,
+  onSpectrogramRender,
 }) {
   const brightnessSlider = document.getElementById(brightnessSliderId);
   const gainSlider = document.getElementById(gainSliderId);
@@ -52,6 +53,11 @@ export function initBrightnessControl({
 
     if (typeof onColorMapUpdated === 'function') {
       onColorMapUpdated(colorMap);
+    }
+    
+    // 👉 如果提供了 onSpectrogramRender 回調，則觸發 spectrogram 重新渲染
+    if (typeof onSpectrogramRender === 'function') {
+      onSpectrogramRender();
     }
   }
 
