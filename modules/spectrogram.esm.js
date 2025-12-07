@@ -459,12 +459,20 @@ class h extends s {
         this.wrapper.addEventListener("click", this._onWrapperClick)
     }
     _createColorMapDropdown() {
-        // 創建隱藏的下拉菜單容器
+        // 查找 spectrogram-settings 中的 color-bar canvas
+        const colorBarCanvas = document.getElementById("color-bar");
+        if (!colorBarCanvas) {
+            console.warn("⚠️ [Spectrogram] color-bar canvas not found");
+            return;
+        }
+        
+        // 創建隱藏的下拉菜單容器（附加到 spectrogram-settings）
+        const settingsContainer = document.getElementById("spectrogram-settings");
         this.colorMapDropdown = i("div", {
             style: {
                 display: "none",
                 position: "absolute",
-                top: "30px",
+                top: "25px",
                 left: "0px",
                 zIndex: 1000,
                 backgroundColor: "#f0f0f0",
@@ -473,7 +481,7 @@ class h extends s {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
                 minWidth: "150px"
             }
-        }, this.wrapper);
+        }, settingsContainer);
         
         // 色彩映射選項
         const colorMapOptions = [
@@ -512,13 +520,11 @@ class h extends s {
             });
         });
         
-        // 在色彩條點擊時顯示下拉菜單
-        if (this.labelsEl) {
-            this.labelsEl.addEventListener("click", (e) => {
-                e.stopPropagation();
-                this._toggleColorMapDropdown(e);
-            });
-        }
+        // 在 color-bar canvas 點擊時顯示下拉菜單
+        colorBarCanvas.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this._toggleColorMapDropdown(e);
+        });
         
         // 點擊其他地方時隱藏下拉菜單
         document.addEventListener("click", () => {
