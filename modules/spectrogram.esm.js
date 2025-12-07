@@ -204,6 +204,81 @@ function a(t, e, s, r) {
         return f
     }
 }
+
+// 顏色映射生成函數 - 支持 Inferno, Viridis, Magma, Grayscale, Jet
+function generateColorMapRGBA(mapName) {
+    const lut = new Uint8ClampedArray(256 * 4);
+    
+    // 定義顏色映射的關鍵點 (位置，RGB值)
+    const colorMaps = {
+        inferno: [
+            { pos: 0.0, r: 0, g: 0, b: 4 },
+            { pos: 0.25, r: 87, g: 16, b: 109 },
+            { pos: 0.5, r: 188, g: 48, b: 60 },
+            { pos: 0.75, r: 253, g: 128, b: 25 },
+            { pos: 1.0, r: 252, g: 255, b: 164 }
+        ],
+        viridis: [
+            { pos: 0.0, r: 68, g: 1, b: 84 },
+            { pos: 0.25, r: 59, g: 82, b: 139 },
+            { pos: 0.5, r: 33, g: 145, b: 140 },
+            { pos: 0.75, r: 253, g: 231, b: 37 },
+            { pos: 1.0, r: 255, g: 255, b: 0 }
+        ],
+        magma: [
+            { pos: 0.0, r: 0, g: 0, b: 4 },
+            { pos: 0.25, r: 86, g: 25, b: 114 },
+            { pos: 0.5, r: 177, g: 60, b: 120 },
+            { pos: 0.75, r: 250, g: 155, b: 135 },
+            { pos: 1.0, r: 252, g: 253, b: 191 }
+        ],
+        grayscale: [
+            { pos: 0.0, r: 255, g: 255, b: 255 },
+            { pos: 1.0, r: 0, g: 0, b: 0 }
+        ],
+        jet: [
+            { pos: 0.0, r: 0, g: 0, b: 255 },
+            { pos: 0.25, r: 0, g: 255, b: 255 },
+            { pos: 0.5, r: 0, g: 255, b: 0 },
+            { pos: 0.75, r: 255, g: 255, b: 0 },
+            { pos: 1.0, r: 255, g: 0, b: 0 }
+        ]
+    };
+    
+    const keyframes = colorMaps[mapName] || colorMaps.viridis;
+    
+    // 插值生成 256 個顏色
+    for (let i = 0; i < 256; i++) {
+        const pos = i / 255;
+        
+        // 找到相鄰的關鍵點
+        let lower = keyframes[0];
+        let upper = keyframes[keyframes.length - 1];
+        
+        for (let j = 0; j < keyframes.length - 1; j++) {
+            if (keyframes[j].pos <= pos && pos <= keyframes[j + 1].pos) {
+                lower = keyframes[j];
+                upper = keyframes[j + 1];
+                break;
+            }
+        }
+        
+        // 線性插值
+        const t = (pos - lower.pos) / (upper.pos - lower.pos);
+        const r = Math.round(lower.r + t * (upper.r - lower.r));
+        const g = Math.round(lower.g + t * (upper.g - lower.g));
+        const b = Math.round(lower.b + t * (upper.b - lower.b));
+        const a = 255;
+        
+        lut[i * 4] = r;
+        lut[i * 4 + 1] = g;
+        lut[i * 4 + 2] = b;
+        lut[i * 4 + 3] = a;
+    }
+    
+    return lut;
+}
+
 const n = 1e3 * Math.log(10) / 107.939;
 class h extends s {
     static create(t) {
@@ -332,6 +407,24 @@ class h extends s {
         this.wrapper = null),
         super.destroy()
     }
+    setColorMap(mapName) {
+        // 生成新的色彩映射
+        const newColorMap = generateColorMapRGBA(mapName);
+        
+        // 更新實例的色彩映射數據
+        this._colorMapUint = newColorMap;
+        
+        // 如果 WASM 引擎已初始化，更新色彩映射
+        if (this._wasmEngine && this._wasmEngine.set_color_map) {
+            this._wasmEngine.set_color_map(this._colorMapUint);
+            console.log(`✅ [Spectrogram] 色彩映射已切換至: ${mapName}`);
+        }
+        
+        // 觸發重新渲染（利用 WASM 中已緩存的頻譜數據）
+        if (this.lastRenderData) {
+            this.drawSpectrogram(this.lastRenderData);
+        }
+    }
     loadFrequenciesData(e) {
         return t(this, void 0, void 0, (function*() {
             const t = yield fetch(e);
@@ -359,7 +452,93 @@ class h extends s {
                 height: "100%"
             }
         }, this.wrapper)),
+        
+        // 創建顏色映射選擇下拉菜單
+        this._createColorMapDropdown(),
+        
         this.wrapper.addEventListener("click", this._onWrapperClick)
+    }
+    _createColorMapDropdown() {
+        // 創建隱藏的下拉菜單容器
+        this.colorMapDropdown = i("div", {
+            style: {
+                display: "none",
+                position: "absolute",
+                top: "30px",
+                left: "0px",
+                zIndex: 1000,
+                backgroundColor: "#f0f0f0",
+                border: "1px solid #999",
+                borderRadius: "4px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                minWidth: "150px"
+            }
+        }, this.wrapper);
+        
+        // 色彩映射選項
+        const colorMapOptions = [
+            { name: "inferno", label: "烈焰 (Inferno)" },
+            { name: "viridis", label: "科學 (Viridis)" },
+            { name: "magma", label: "岩漿 (Magma)" },
+            { name: "grayscale", label: "灰度 (Grayscale)" },
+            { name: "jet", label: "彩虹 (Jet)" }
+        ];
+        
+        // 為每個選項創建菜單項
+        colorMapOptions.forEach(option => {
+            const item = i("div", {
+                textContent: option.label,
+                style: {
+                    padding: "10px 15px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    borderBottom: "1px solid #ddd"
+                }
+            }, this.colorMapDropdown);
+            
+            // 鼠標懸停效果
+            item.addEventListener("mouseenter", () => {
+                item.style.backgroundColor = "#e0e0e0";
+            });
+            item.addEventListener("mouseleave", () => {
+                item.style.backgroundColor = "transparent";
+            });
+            
+            // 點擊事件：切換色彩映射
+            item.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.setColorMap(option.name);
+                this._hideColorMapDropdown();
+            });
+        });
+        
+        // 在色彩條點擊時顯示下拉菜單
+        if (this.labelsEl) {
+            this.labelsEl.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this._toggleColorMapDropdown(e);
+            });
+        }
+        
+        // 點擊其他地方時隱藏下拉菜單
+        document.addEventListener("click", () => {
+            this._hideColorMapDropdown();
+        });
+    }
+    _toggleColorMapDropdown(e) {
+        if (this.colorMapDropdown.style.display === "none") {
+            this.colorMapDropdown.style.display = "block";
+            if (e) {
+                this.colorMapDropdown.style.top = (e.clientY - e.target.getBoundingClientRect().top) + "px";
+            }
+        } else {
+            this.colorMapDropdown.style.display = "none";
+        }
+    }
+    _hideColorMapDropdown() {
+        if (this.colorMapDropdown) {
+            this.colorMapDropdown.style.display = "none";
+        }
     }
     createCanvas() {
         this.canvas = i("canvas", {
@@ -389,6 +568,9 @@ class h extends s {
         }
     }
     drawSpectrogram(t) {
+        // 保存最後的渲染數據，用於色彩映射切換時快速重新渲染
+        this.lastRenderData = t;
+        
         // 檢查 wrapper 和 canvas 是否已被清空
         if (!this.wrapper || !this.canvas) {
             return;
