@@ -271,6 +271,7 @@ class h extends s {
             // 設置色彩映射到 WASM
             if (this._colorMapUint && this._colorMapUint.length === 1024) {
                 this._wasmEngine.set_color_map(this._colorMapUint);
+                console.log('✅ [Spectrogram] 色彩映射已初始化到 WASM SpectrogramEngine');
             }
             
             // 設置光譜配置
@@ -279,6 +280,7 @@ class h extends s {
                 this.frequencyMin,
                 this.frequencyMax
             );
+            console.log('✅ [Spectrogram] WASM SpectrogramEngine 已初始化，準備使用新渲染管道');
         });
 
         // 濾波器組相關字段
@@ -384,8 +386,11 @@ class h extends s {
         }
     }
     drawSpectrogram(t) {
+        console.log('🎯 [Spectrogram] drawSpectrogram() called');
+        
         // 檢查 wrapper 和 canvas 是否已被清空
         if (!this.wrapper || !this.canvas) {
+            console.warn('⚠️ [Spectrogram] Wrapper 或 Canvas 不存在');
             return;
         }
         
@@ -398,11 +403,20 @@ class h extends s {
         
         const canvasCtx = this.spectrCc;
         if (!canvasCtx || !this._wasmEngine) {
+            console.warn('❌ [Spectrogram] Canvas 上下文或 WASM Engine 不可用');
             return;
+        }
+
+        // 驗證色彩映射是否已初始化
+        if (!this._colorMapUint || this._colorMapUint.length !== 1024) {
+            console.warn('⚠️ [Spectrogram] 色彩映射未初始化或大小不正確，使用 JS 實現');
+        } else {
+            console.log('✅ [Spectrogram] 使用預計算色彩映射 (新方法)');
         }
 
         // 使用 WASM 渲染每個通道
         for (let channelIdx = 0; channelIdx < t.length; channelIdx++) {
+            console.log(`📊 [Spectrogram] 渲染通道 ${channelIdx + 1}/${t.length}`);
             const channelData = t[channelIdx];  // Uint8Array with frame spectrum data
             
             // 根據當前配置確定頻率軸高度
@@ -425,19 +439,38 @@ class h extends s {
             const imgData = new ImageData(canvasWidth, resampled[0].length);
             
             // 填充 ImageData (使用緩存的色彩映射)
-            for (let x = 0; x < resampled.length; x++) {
-                for (let y = 0; y < resampled[x].length; y++) {
-                    let intensity = resampled[x][y];
-                    if (intensity < 0) intensity = 0;
-                    else if (intensity > 255) intensity = 255;
-                    
-                    const cmapIdx = intensity * 4;
-                    const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
-                    
-                    imgData.data[pixelIdx] = this._colorMapUint[cmapIdx];
-                    imgData.data[pixelIdx + 1] = this._colorMapUint[cmapIdx + 1];
-                    imgData.data[pixelIdx + 2] = this._colorMapUint[cmapIdx + 2];
-                    imgData.data[pixelIdx + 3] = this._colorMapUint[cmapIdx + 3];
+            if (this._colorMapUint && this._colorMapUint.length === 1024) {
+                // 新方法: 使用 WASM 預計算的色彩映射
+                for (let x = 0; x < resampled.length; x++) {
+                    for (let y = 0; y < resampled[x].length; y++) {
+                        let intensity = resampled[x][y];
+                        if (intensity < 0) intensity = 0;
+                        else if (intensity > 255) intensity = 255;
+                        
+                        const cmapIdx = intensity * 4;
+                        const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
+                        
+                        imgData.data[pixelIdx] = this._colorMapUint[cmapIdx];
+                        imgData.data[pixelIdx + 1] = this._colorMapUint[cmapIdx + 1];
+                        imgData.data[pixelIdx + 2] = this._colorMapUint[cmapIdx + 2];
+                        imgData.data[pixelIdx + 3] = this._colorMapUint[cmapIdx + 3];
+                    }
+                }
+            } else {
+                // 備用方法: 直接使用灰度值 (如果色彩映射未初始化)
+                console.warn('⚠️ [Spectrogram] 通道 ' + (channelIdx + 1) + ' 使用備用灰度方案');
+                for (let x = 0; x < resampled.length; x++) {
+                    for (let y = 0; y < resampled[x].length; y++) {
+                        let intensity = resampled[x][y];
+                        if (intensity < 0) intensity = 0;
+                        else if (intensity > 255) intensity = 255;
+                        
+                        const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
+                        imgData.data[pixelIdx] = intensity;
+                        imgData.data[pixelIdx + 1] = intensity;
+                        imgData.data[pixelIdx + 2] = intensity;
+                        imgData.data[pixelIdx + 3] = 255;
+                    }
                 }
             }
             
@@ -453,6 +486,7 @@ class h extends s {
             const sourceY = Math.round(resampled[0].length * (1 - p));
             
             createImageBitmap(imgData, 0, sourceY, canvasWidth, sourceHeight).then((bitmap => {
+                console.log(`🎨 [Spectrogram] 通道 ${channelIdx + 1} 位圖已繪製`);
                 canvasCtx.drawImage(bitmap, 0, this.height * (channelIdx + 1 - p / f), canvasWidth, this.height * p / f);
             }));
         }
@@ -470,6 +504,7 @@ class h extends s {
             );
         }
         
+        console.log('✅ [Spectrogram] drawSpectrogram() 已完成');
         this.emit("ready");
     }
     createFilterBank(t, e, s, r) {
