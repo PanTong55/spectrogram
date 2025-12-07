@@ -69,7 +69,8 @@ export function replacePlugin(
   fftSamples = currentFftSize,
   windowFunc = currentWindowType,
   peakMode = currentPeakMode,
-  peakThreshold = currentPeakThreshold
+  peakThreshold = currentPeakThreshold,
+  onColorMapChanged = null  // 新增：色彩圖變更 callback
 ) {
   if (!ws) throw new Error('Wavesurfer not initialized.');
   const container = document.getElementById("spectrogram-only");
@@ -107,6 +108,11 @@ export function replacePlugin(
     peakMode,
     peakThreshold,
   });
+
+  // 如果提供了 onColorMapChanged callback，附加到 plugin 的 colorMapChanged 事件
+  if (typeof onColorMapChanged === 'function' && plugin && plugin.on) {
+    plugin.on('colorMapChanged', onColorMapChanged);
+  }
 
   ws.registerPlugin(plugin);
 

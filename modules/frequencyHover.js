@@ -65,6 +65,48 @@ export function initFrequencyHover({
   getZoomLevel,
   getDuration
 }) {
+  // Inject CSS for hover theme switching (only once)
+  if (!document.getElementById('hover-theme-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'hover-theme-style';
+    styleEl.textContent = `
+      :root {
+        --hover-color: #ffffff;
+        --selection-border: #ffffff;
+        --selection-bg: rgba(255, 255, 255, 0.2);
+        --text-color: #ffffff;
+        --text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+      }
+      
+      #viewer-wrapper.theme-light {
+        --hover-color: #000000;
+        --selection-border: #000000;
+        --selection-bg: rgba(0, 0, 0, 0.2);
+        --text-color: #000000;
+        --text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+      }
+      
+      #hover-line, .persistent-line {
+        border-color: var(--hover-color);
+      }
+      
+      #hover-line-v {
+        border-color: var(--hover-color);
+      }
+      
+      .selection-rect {
+        border-color: var(--selection-border);
+        background-color: var(--selection-bg);
+      }
+      
+      #hover-label, .tooltip {
+        color: var(--text-color);
+        text-shadow: var(--text-shadow);
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
   const viewer = document.getElementById(viewerId);
   const wrapper = document.getElementById(wrapperId);
   const hoverLine = document.getElementById(hoverLineId);
@@ -1311,6 +1353,15 @@ const upHandler = () => {
       }
     },
     setPersistentLinesEnabled: (val) => { persistentLinesEnabled = val; },
-    getHoveredSelection: () => (selections.includes(hoveredSelection) ? hoveredSelection : null)
+    getHoveredSelection: () => (selections.includes(hoveredSelection) ? hoveredSelection : null),
+    updateHoverTheme: (colorMapName) => {
+      // Switch theme based on color map
+      // mono_light uses dark/black theme, all others use default white theme
+      if (colorMapName === 'mono_light') {
+        wrapper.classList.add('theme-light');
+      } else {
+        wrapper.classList.remove('theme-light');
+      }
+    }
   };
 }

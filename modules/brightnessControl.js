@@ -20,6 +20,7 @@ export function initBrightnessControl({
   defaultGain = 1.0,
   defaultContrast = 1.0,
   onSettingsChanged,
+  getResetValues, // [NEW] Callback to get dynamic defaults based on active color map
 }) {
   const brightnessSlider = document.getElementById(brightnessSliderId);
   const gainSlider = document.getElementById(gainSliderId);
@@ -77,6 +78,23 @@ export function initBrightnessControl({
     };
   }
 
+  // Set slider values programmatically (used for auto-applying color map defaults)
+  // Does not emit events
+  function setValues({ brightness, contrast, gain }) {
+    if (brightnessSlider) {
+      brightnessSlider.value = brightness;
+      if (brightnessVal) brightnessVal.textContent = parseFloat(brightness).toFixed(2);
+    }
+    if (contrastSlider) {
+      contrastSlider.value = contrast;
+      if (contrastVal) contrastVal.textContent = parseFloat(contrast).toFixed(2);
+    }
+    if (gainSlider) {
+      gainSlider.value = gain;
+      if (gainVal) gainVal.textContent = parseFloat(gain).toFixed(2);
+    }
+  }
+
   // Emit the current settings to the callback
   function emitChanges() {
     updateLabels();
@@ -100,9 +118,20 @@ export function initBrightnessControl({
   // Reset button
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      if (brightnessSlider) brightnessSlider.value = defaultBrightness;
-      if (gainSlider) gainSlider.value = defaultGain;
-      if (contrastSlider) contrastSlider.value = defaultContrast;
+      let defaults = {
+        brightness: defaultBrightness,
+        contrast: defaultContrast,
+        gain: defaultGain
+      };
+      // If a callback was provided for getting reset values (e.g., current colormap defaults),
+      // use those instead of the hardcoded defaults
+      if (typeof getResetValues === 'function') {
+        const callbackDefaults = getResetValues();
+        if (callbackDefaults) {
+          defaults = callbackDefaults;
+        }
+      }
+      setValues(defaults);
       emitChanges();
     });
   }
@@ -112,9 +141,10 @@ export function initBrightnessControl({
   // Don't emit immediately on init to avoid double-render during startup,
   // Main.js will pull values when needed.
 
-  // Return the control interface with getter
+  // Return the control interface with getter and setter
   return {
-    getSettings: getCurrentSettings
+    getSettings: getCurrentSettings,
+    setValues: setValues
   };
 }
 

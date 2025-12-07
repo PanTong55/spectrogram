@@ -1,5 +1,16 @@
 import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 
+// ===== COLOR MAP DEFAULTS =====
+export const COLOR_MAP_DEFAULTS = {
+    'mono_light': { brightness: 0.80, contrast: 2.10, gain: 0.55 },
+    'viridis': { brightness: 0.00, contrast: 1.60, gain: 1.25 },
+    'default': { brightness: 0.00, contrast: 1.00, gain: 1.00 }
+};
+
+export function getColorMapDefaults(name) {
+    return COLOR_MAP_DEFAULTS[name] || COLOR_MAP_DEFAULTS['default'];
+}
+
 // WASM 初始化 Promise
 let wasmReady = init();
 
@@ -424,8 +435,13 @@ class h extends s {
         // cache for resample mappings keyed by inputLen:outputWidth
         this._resampleCache = {};
         
-        // --- NEW: Image Enhancement State ---
-        this.imgParams = { brightness: 0, contrast: 1, gain: 1 };
+        // --- NEW: Image Enhancement State with Color Map Defaults ---
+        const defaults = getColorMapDefaults(this.colorMapName);
+        this.imgParams = { 
+            brightness: defaults.brightness, 
+            contrast: defaults.contrast, 
+            gain: defaults.gain 
+        };
         this._baseColorMapUint = new Uint8ClampedArray(256 * 4);   // Original pure colormap
         this._activeColorMapUint = new Uint8ClampedArray(256 * 4); // Processed (with B/C/G applied)
         
@@ -518,25 +534,36 @@ class h extends s {
         super.destroy()
     }
     setColorMap(mapName) {
-        // Update the name tracking
         this.colorMapName = mapName;
         
-        // 1. Generate new base map
+        // 1. Get and Apply Defaults
+        const defaults = getColorMapDefaults(mapName);
+        this.imgParams.brightness = defaults.brightness;
+        this.imgParams.contrast = defaults.contrast;
+        this.imgParams.gain = defaults.gain;
+
+        // 2. Generate new base map
         const newBaseMap = generateColorMapRGBA(mapName);
         this._baseColorMapUint.set(newBaseMap);
         this._colorMapUint.set(newBaseMap); // Keep backup for compatibility
         
-        // 2. Re-apply current brightness/contrast/gain to create active map
+        // 3. Re-apply active map with new params
         this._updateActiveColorMap();
         
-        // 3. Update Dropdown UI (if exists)
+        // 4. Update Dropdown UI (if exists)
         if (this.colorMapDropdown) {
             this.colorMapDropdown.querySelectorAll(".dropdown-item").forEach(el => {
                 el.classList.toggle("selected", el.dataset.colorMapName === mapName);
             });
         }
         
-        console.log(`✅ [Spectrogram] 色彩映射已切換至: ${mapName} (並應用當前的亮度/對比度/增益)`);
+        // 5. Emit event for Main.js to sync UI
+        this.emit('colorMapChanged', {
+            name: mapName,
+            settings: defaults
+        });
+        
+        console.log(`✅ [Spectrogram] Switched to ${mapName} with defaults:`, defaults);
     }
     
     // [NEW] Public API for brightness/contrast/gain control

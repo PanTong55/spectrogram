@@ -25,6 +25,7 @@ import { initZoomControls } from './modules/zoomControl.js';
 import { initFileLoader, getWavSampleRate } from './modules/fileLoader.js';
 import { initBrightnessControl } from './modules/brightnessControl.js';
 import { initFrequencyHover } from './modules/frequencyHover.js';
+import { getColorMapDefaults } from './modules/spectrogram.esm.js';
 import { cropWavBlob } from './modules/cropAudio.js';
 import { drawTimeAxis, drawFrequencyGrid } from './modules/axisRenderer.js';
 import { initExportCsv } from './modules/exportCsv.js';
@@ -242,7 +243,12 @@ if (timeExpBtn) {
             freqHoverControl?.refreshHover();
             autoIdControl?.updateMarkers();
             updateSpectrogramSettingsText();
-          }
+          },
+          undefined,  // fftSamples (use default)
+          undefined,  // windowFunc (use default)
+          undefined,  // peakMode (use default)
+          undefined,  // peakThreshold (use default)
+          handleColorMapChange  // onColorMapChanged callback
         );
       }
     } catch (err) {
@@ -593,7 +599,12 @@ duration = getWavesurfer().getDuration();
     autoIdControl?.updateMarkers();
     updateSpectrogramSettingsText();
     restoreImageEnhancement(); // ✅ Restore Brightness/Contrast/Gain
-  }
+  },
+  undefined,  // fftSamples (use default)
+  undefined,  // windowFunc (use default)
+  undefined,  // peakMode (use default)
+  undefined,  // peakThreshold (use default)
+  handleColorMapChange  // onColorMapChanged callback
 );
 }
 
@@ -802,6 +813,22 @@ viewer.addEventListener('fit-window-selection', async (e) => {
   }
 });
 
+// Handle color map changes: auto-apply defaults and update hover theme
+function handleColorMapChange(event) {
+  const { name: colorMapName, settings: defaults } = event;
+  console.log('[ColorMapChanged] Updating UI for:', colorMapName, defaults);
+  
+  // Update slider values to color map defaults
+  if (brightnessController && brightnessController.setValues) {
+    brightnessController.setValues(defaults);
+  }
+  
+  // Update hover line colors based on color map
+  if (freqHoverControl && freqHoverControl.updateHoverTheme) {
+    freqHoverControl.updateHoverTheme(colorMapName);
+  }
+}
+
 brightnessController = initBrightnessControl({
   brightnessSliderId: 'brightnessSlider',
   gainSliderId: 'gainSlider',
@@ -810,6 +837,11 @@ brightnessController = initBrightnessControl({
   gainValId: 'gainVal',
   contrastValId: 'contrastVal',
   resetBtnId: 'resetButton',
+  // Callback to get reset values based on current color map
+  getResetValues: () => {
+    const mapName = getEffectiveColorMap();
+    return getColorMapDefaults(mapName);
+  },
   // Connect UI directly to Spectrogram's image enhancement method
   onSettingsChanged: ({ brightness, contrast, gain }) => {
     const plugin = getPlugin();
@@ -1144,7 +1176,10 @@ function handleFftSize(size) {
       restoreImageEnhancement(); // Restore brightness/contrast/gain settings
     },
     currentFftSize,
-    currentWindowType
+    currentWindowType,
+    undefined,  // peakMode (use default)
+    undefined,  // peakThreshold (use default)
+    handleColorMapChange  // onColorMapChanged callback
   );
 }
 
@@ -1168,7 +1203,10 @@ function handleWindowType(type) {
       restoreImageEnhancement(); // Restore brightness/contrast/gain settings
     },
     currentFftSize,
-    currentWindowType
+    currentWindowType,
+    undefined,  // peakMode (use default)
+    undefined,  // peakThreshold (use default)
+    handleColorMapChange  // onColorMapChanged callback
   );
 }
 
@@ -1189,7 +1227,12 @@ zoomControl.applyZoom();
 renderAxes();
 updateSpectrogramSettingsText();
 restoreImageEnhancement(); // Restore brightness/contrast/gain settings
-}
+},
+undefined,  // fftSamples (use default)
+undefined,  // windowFunc (use default)
+undefined,  // peakMode (use default)
+undefined,  // peakThreshold (use default)
+handleColorMapChange  // onColorMapChanged callback
 );
 }
 
@@ -1217,7 +1260,12 @@ autoIdControl?.updateMarkers();
 }
 updateSpectrogramSettingsText();
 restoreImageEnhancement(); // Restore brightness/contrast/gain settings
-}
+},
+undefined,  // fftSamples (use default)
+undefined,  // windowFunc (use default)
+undefined,  // peakMode (use default)
+undefined,  // peakThreshold (use default)
+handleColorMapChange  // onColorMapChanged callback
 );
 }
 
@@ -1287,7 +1335,12 @@ clearTrashBtn.addEventListener('click', () => {
             getOverlapPercent(),
             () => {
               updateSpectrogramSettingsText();
-            }
+            },
+            undefined,  // fftSamples (use default)
+            undefined,  // windowFunc (use default)
+            undefined,  // peakMode (use default)
+            undefined,  // peakThreshold (use default)
+            handleColorMapChange  // onColorMapChanged callback
           );
           showDropOverlay();
           loadingOverlay.style.display = 'none';
@@ -1351,7 +1404,9 @@ initPeakControl({
       },
       currentFftSize,
       currentWindowType,
-      isActive
+      isActive,
+      undefined,  // peakThreshold (use default)
+      handleColorMapChange  // onColorMapChanged callback
     );
   },
   onThresholdChanged: (threshold) => {
@@ -1374,7 +1429,8 @@ initPeakControl({
       currentFftSize,
       currentWindowType,
       isPeakModeActive(),
-      threshold
+      threshold,
+      handleColorMapChange  // onColorMapChanged callback
     );
   }
 });
