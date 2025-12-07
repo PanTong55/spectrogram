@@ -35,7 +35,7 @@ export function initBrightnessControl({
   // Initialize slider DOM attributes
   function initAttributes() {
     if (brightnessSlider) {
-      brightnessSlider.min = -1;
+      brightnessSlider.min = -0.2;
       brightnessSlider.max = 1;
       brightnessSlider.step = 0.01;
       // Do not overwrite value if it's already set (preserves state across re-inits if elements persist)
@@ -43,13 +43,13 @@ export function initBrightnessControl({
     }
     if (gainSlider) {
       gainSlider.min = 0;
-      gainSlider.max = 5;
+      gainSlider.max = 4;
       gainSlider.step = 0.01;
       if (!gainSlider.value) gainSlider.value = defaultGain;
     }
     if (contrastSlider) {
       contrastSlider.min = 0;
-      contrastSlider.max = 5;
+      contrastSlider.max = 2;
       contrastSlider.step = 0.01;
       if (!contrastSlider.value) contrastSlider.value = defaultContrast;
     }
