@@ -268,7 +268,6 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.75, r: 255, g: 230, b: 0 }, 
             { pos: 1.0, r: 255, g: 40, b: 0 } 
         ],
-        // [New] 4. Iron (Thermal Style)
         iron: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
             { pos: 0.3, r: 0, g: 0, b: 255 },     // Blue
@@ -276,13 +275,15 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.8, r: 255, g: 128, b: 0 },   // Orange
             { pos: 1.0, r: 255, g: 255, b: 255 }  // White
         ],
-        // [New] 5. Neon (Cyberpunk)
-        neon: [
-            { pos: 0.0, r: 10, g: 0, b: 20 },      // Dark Purple
-            { pos: 0.3, r: 60, g: 0, b: 180 },     // Purple
-            { pos: 0.6, r: 0, g: 255, b: 255 },    // Cyan
-            { pos: 1.0, r: 255, g: 0, b: 200 }     // Magenta
-        ]
+        rainbow: [
+            { pos: 0.0, r: 255, g: 255, b: 255 },
+            { pos: 0.15, r: 255, g: 180, b: 180 }, // 0.15: 噪聲起點 (Light Pinkish Red)
+            { pos: 0.3, r: 255, g: 0, b: 0 },   // 0.3: 低頻噪聲/底部橫條 (Red)
+            { pos: 0.5, r: 255, g: 255, b: 0 },  // 蝙蝠叫聲的外圍輪廓，訊號邊緣/過渡區 (Yellow)
+            { pos: 0.7, r: 0, g: 255, b: 0 },   // 訊號主體 (Vibrant Green)
+            { pos: 0.85, r: 0, g: 255, b: 255 },    // 強訊號區 (Cyan)
+            { pos: 1.0, r: 0, g: 0, b: 255 }   // 最強的能量是藍色
+        ],
     };
     
     const keyframes = colorMaps[mapName] || colorMaps.viridis;
@@ -359,7 +360,7 @@ class h extends s {
             case "mono_light":
             case "kaleidoscope":
             case "iron":
-            case "neon": {
+            case "rainbow": {
                 // Use generateColorMapRGBA function to generate color mapping
                 const colorMapUint = generateColorMapRGBA(this.colorMap);
                 this.colorMap = [];
@@ -674,7 +675,7 @@ class h extends s {
             { name: "mono_light", label: "Mono Light" },
             { name: "kaleidoscope", label: "Kaleidoscope" },
             { name: "iron", label: "Iron" },
-            { name: "neon", label: "Neon" }
+            { name: "rainbow", label: "Rainbow" }
         ];
         
         // Create menu items for each option (using dropdown-item style class)
