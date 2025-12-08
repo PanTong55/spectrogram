@@ -277,12 +277,12 @@ function generateColorMapRGBA(mapName) {
         ],
         rainbow: [
             { pos: 0.0, r: 255, g: 255, b: 255 },
-            { pos: 0.2, r: 255, g: 255, b: 255 }, // 0.15: 噪聲起點 (Light Pinkish Red)
-            { pos: 0.3, r: 255, g: 48, b: 48 },   // 0.3: 低頻噪聲/底部橫條 (Red)
-            { pos: 0.4, r: 255, g: 255, b: 0 },  // 蝙蝠叫聲的外圍輪廓，訊號邊緣/過渡區 (Yellow)
-            { pos: 0.6, r: 0, g: 255, b: 0 },   // 訊號主體 (Vibrant Green)
+            { pos: 0.25, r: 255, g: 255, b: 255 }, // 0.15: 噪聲起點 (Light Pinkish Red)
+            { pos: 0.35, r: 255, g: 127, b: 128 },   // 0.3: 低頻噪聲/底部橫條 (Red)
+            { pos: 0.45, r: 255, g: 255, b: 0 },  // 蝙蝠叫聲的外圍輪廓，訊號邊緣/過渡區 (Yellow)
+            { pos: 0.65, r: 0, g: 255, b: 0 },   // 訊號主體 (Vibrant Green)
             { pos: 0.7, r: 0, g: 255, b: 255 },    // 強訊號區 (Cyan)
-            { pos: 1.0, r: 0, g: 0, b: 255 }   // 最強的能量是藍色
+            { pos: 1.0, r: 0, g: 0, b: 39 }   // 最強的能量是藍色
         ],
     };
     
