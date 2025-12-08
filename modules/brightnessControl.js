@@ -112,6 +112,31 @@ export function initBrightnessControl({
       // emitChanges internally calls updateLabels, so we get both label updates and spectrogram changes
       slider.addEventListener('input', emitChanges);
       slider.addEventListener('change', emitChanges);
+
+      // Mouse wheel support for fine-tuning values
+      slider.addEventListener('wheel', (e) => {
+        e.preventDefault(); // Prevent page scrolling while adjusting slider
+        
+        const step = parseFloat(slider.step) || 0.01;
+        const min = parseFloat(slider.min);
+        const max = parseFloat(slider.max);
+        const currentVal = parseFloat(slider.value);
+        
+        // deltaY < 0 means scrolling up (increase value)
+        // deltaY > 0 means scrolling down (decrease value)
+        const direction = e.deltaY < 0 ? 1 : -1;
+        
+        let newVal = currentVal + (direction * step);
+        
+        // Clamp value between min and max
+        newVal = Math.max(min, Math.min(max, newVal));
+        
+        // Update slider and trigger changes
+        if (newVal !== currentVal) {
+          slider.value = newVal;
+          emitChanges();
+        }
+      }, { passive: false });
     }
   });
 
