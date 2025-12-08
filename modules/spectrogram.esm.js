@@ -3,8 +3,8 @@ import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 // ===== COLOR MAP DEFAULTS =====
 export const COLOR_MAP_DEFAULTS = {
     'mono_light': { brightness: 0.80, contrast: 2.10, gain: 0.55 },
-    'viridis': { brightness: 0.00, contrast: 1.60, gain: 1.25 },
-    'inferno': { brightness: 0.00, contrast: 1.30, gain: 1.20 },   
+    'viridis': { brightness: 0.00, contrast: 1.30, gain: 1.00 },
+    'inferno': { brightness: 0.00, contrast: 1.20, gain: 1.10 },   
     'default': { brightness: 0.00, contrast: 1.00, gain: 1.00 }
 };
 
@@ -233,7 +233,7 @@ function generateColorMapRGBA(mapName) {
         ],
         viridis: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
-            { pos: 0.15, r: 0, g: 0, b: 0 }, 
+            { pos: 0.2, r: 0, g: 0, b: 0 }, 
             { pos: 0.5, r: 59, g: 82, b: 139 },
             { pos: 0.75, r: 33, g: 145, b: 140 },
             { pos: 0.85, r: 253, g: 231, b: 37 },
@@ -246,8 +246,7 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.75, r: 250, g: 155, b: 135 },
             { pos: 1.0, r: 252, g: 253, b: 191 }
         ],
-        // [New] 1. Cool Black & Yellow (High Contrast)
-        SonoRadar: [
+        sonoradar: [
             // 背景：從純黑改為深午夜藍 (Deep Midnight Blue)
             { pos: 0.0, r: 5, g: 10, b: 30 },            
             // 過渡：加入一點紫紅色調，讓藍色到橘色的融合更自然 (Dark Purple/Red)
@@ -679,9 +678,9 @@ class h extends s {
             { name: "inferno", label: "Inferno" },
             { name: "viridis", label: "Viridis" },
             { name: "magma", label: "Magma" },
-            { name: "bat_yellow", label: "Bat Yellow (High Contrast)" },
-            { name: "mono_dark", label: "Mono Dark (Black BG)" },
-            { name: "mono_light", label: "Mono Light (White BG)" },
+            { name: "sonoradar", label: "SonoRadar" },
+            { name: "mono_dark", label: "Mono Dark" },
+            { name: "mono_light", label: "Mono Light" },
             { name: "kaleidoscope", label: "Kaleidoscope" },
             { name: "iron", label: "Iron" },
             { name: "neon", label: "Neon" }
