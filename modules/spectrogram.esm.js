@@ -358,7 +358,7 @@ class h extends s {
             case "inferno":
             case "viridis":
             case "magma":
-            case "bat_yellow":
+            case "sonoradar":
             case "mono_dark":
             case "mono_light":
             case "kaleidoscope":
