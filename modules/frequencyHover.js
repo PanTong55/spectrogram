@@ -88,7 +88,7 @@ export function initFrequencyHover({
         --selection-border: #000000;
         --selection-bg: rgba(0, 0, 0, 0.2);
         --selection-bg-hover: rgba(0, 0, 0, 0.3);
-        --btn-group-bg: rgba(0, 0, 0, 0.1);
+        --btn-group-bg: rgba(0, 0, 0, 0.7);
         --btn-group-color: #000;
         --text-color: #000000;
         --text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
@@ -116,7 +116,6 @@ export function initFrequencyHover({
 
       .selection-btn-group {
         background-color: var(--btn-group-bg) !important;
-        border-radius: 4px;
         color: var(--btn-group-color);
       }
     `;
