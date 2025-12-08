@@ -260,12 +260,13 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.0, r: 255, g: 255, b: 255 },
             { pos: 1.0, r: 0, g: 0, b: 0 }
         ],
-        kaleidoscope: [
-            { pos: 0.0, r: 0, g: 0, b: 0 },
+kaleidoscope: [
+            { pos: 0.0, r: 0, g: 0, b: 0 }, 
             { pos: 0.2, r: 0, g: 0, b: 0 }, 
-            { pos: 0.5, r: 0, g: 255, b: 0 },   // 明亮的純綠色
-            { pos: 0.7, r: 255, g: 255, b: 0 }, 
-            { pos: 1.0, r: 255, g: 0, b: 0 }  // 最強的能量顯示為紅色
+            { pos: 0.35, r: 0, g: 80, b: 120 }, 
+            { pos: 0.6, r: 0, g: 180, b: 60 }, 
+            { pos: 0.75, r: 255, g: 230, b: 0 }, 
+            { pos: 1.0, r: 255, g: 40, b: 0 } 
         ],
         // [New] 4. Iron (Thermal Style)
         iron: [
