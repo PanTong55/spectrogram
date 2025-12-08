@@ -4,6 +4,7 @@ import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 export const COLOR_MAP_DEFAULTS = {
     'mono_light': { brightness: 0.80, contrast: 2.10, gain: 0.55 },
     'viridis': { brightness: 0.00, contrast: 1.60, gain: 1.25 },
+    'inferno': { brightness: 0.00, contrast: 1.30, gain: 1.20 },   
     'default': { brightness: 0.00, contrast: 1.00, gain: 1.00 }
 };
 
@@ -224,13 +225,15 @@ function generateColorMapRGBA(mapName) {
         // Existing Scientific Maps
         inferno: [
             { pos: 0.0, r: 0, g: 0, b: 4 },
+            { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.5, r: 87, g: 16, b: 109 },
             { pos: 0.75, r: 188, g: 48, b: 60 },
             { pos: 0.85, r: 253, g: 128, b: 25 },
             { pos: 1.0, r: 252, g: 255, b: 164 }
         ],
         viridis: [
-            { pos: 0.0, r: 68, g: 1, b: 84 },
+            { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.5, r: 59, g: 82, b: 139 },
             { pos: 0.75, r: 33, g: 145, b: 140 },
             { pos: 0.85, r: 253, g: 231, b: 37 },
@@ -244,12 +247,17 @@ function generateColorMapRGBA(mapName) {
             { pos: 1.0, r: 252, g: 253, b: 191 }
         ],
         // [New] 1. Cool Black & Yellow (High Contrast)
-        bat_yellow: [
-            { pos: 0.0, r: 0, g: 0, b: 0 },
-            { pos: 0.25, r: 60, g: 0, b: 0 },
-            { pos: 0.5, r: 180, g: 60, b: 0 },
-            { pos: 0.75, r: 255, g: 180, b: 0 },
-            { pos: 1.0, r: 255, g: 255, b: 200 }
+        SonoRadar: [
+            // 背景：從純黑改為深午夜藍 (Deep Midnight Blue)
+            { pos: 0.0, r: 5, g: 10, b: 30 },            
+            // 過渡：加入一點紫紅色調，讓藍色到橘色的融合更自然 (Dark Purple/Red)
+            { pos: 0.25, r: 85, g: 30, b: 60 },            
+            // 中段：飽和的焦橘色 (Burnt Orange)
+            { pos: 0.5, r: 200, g: 80, b: 20 },            
+            // 高亮：明亮的金黃色 (Golden Yellow)
+            { pos: 0.75, r: 255, g: 190, b: 50 },            
+            // 峰值：接近白色的極亮黃 (Pale Yellow/White)
+            { pos: 1.0, r: 255, g: 255, b: 240 }
         ],
         // [New] 2. Inversed Grayscale (Black Background -> White Signal)
         mono_dark: [
@@ -263,12 +271,12 @@ function generateColorMapRGBA(mapName) {
         ],
         // [New] 3. Kaleidoscope Style (Bioacoustics Standard: Blue->Green->Red)
         kaleidoscope: [
-            { pos: 0.0, r: 0, g: 0, b: 0 },       // Black
-            { pos: 0.2, r: 0, g: 0, b: 255 },     // Blue
-            { pos: 0.4, r: 0, g: 255, b: 255 },   // Cyan
-            { pos: 0.6, r: 0, g: 255, b: 0 },     // Green
-            { pos: 0.8, r: 255, g: 255, b: 0 },   // Yellow
-            { pos: 1.0, r: 255, g: 0, b: 0 }      // Red
+            { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 0.15, r: 0, g: 0, b: 0 }, 
+            { pos: 0.16, r: 0, g: 128, b: 50 }, // 訊號起始區 (Green)
+            { pos: 0.4, r: 0, g: 255, b: 0 },   // 明亮的純綠色
+            { pos: 0.7, r: 255, 255, b: 0 }, 
+            { pos: 1.0, r: 255, g: 0, b: 0 }  // 最強的能量顯示為紅色
         ],
         // [New] 4. Iron (Thermal Style)
         iron: [
