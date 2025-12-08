@@ -472,7 +472,6 @@ onBeforeLoad: () => {
     }
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
-    drawColorBar(getCurrentColorMap());
     updateSpectrogramSettingsText();
   },
 onSampleRateDetected: autoSetSampleRate
@@ -875,7 +874,6 @@ freqHoverControl?.clearSelections();
     }
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
-    drawColorBar(getCurrentColorMap());
     updateSpectrogramSettingsText();
   },
 onSampleRateDetected: autoSetSampleRate
@@ -1068,21 +1066,6 @@ function updateSpectrogramSettingsText() {
   if (textElem) {
     textElem.textContent =
       `Sampling rate: ${sampleRate / 1000}kHz, FFT size: ${fftSize}, Overlap size: ${overlapText}, ${windowType} window`;
-  }
-}
-
-function drawColorBar(colorMap) {
-  const canvas = document.getElementById('color-bar');
-  if (!canvas || !colorMap) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const width = canvas.width;
-  const height = canvas.height;
-  const step = width / colorMap.length;
-  for (let i = 0; i < colorMap.length; i++) {
-    const [r, g, b, a] = colorMap[i];
-    ctx.fillStyle = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a})`;
-    ctx.fillRect(i * step, 0, step, height);
   }
 }
 
