@@ -84,6 +84,7 @@ export function initFrequencyHover({
       
       #hover-line, .persistent-line {
         border-color: var(--hover-color);
+        background-color: var(--hover-color);
       }
       
       #hover-line-vertical, #hover-line-v {
