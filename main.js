@@ -822,10 +822,14 @@ function handleColorMapChange(event) {
     brightnessController.setValues(defaults);
   }
   
-  // Update hover line colors based on color map
+  // Update hover line colors and toggle theme based on color map
   if (freqHoverControl && freqHoverControl.updateHoverTheme) {
     freqHoverControl.updateHoverTheme(colorMapName);
   }
+
+  // Re-render axes (Grid) to adapt color to the new theme immediately
+  // drawFrequencyGrid in axisRenderer.js checks the 'theme-light' class to decide line color
+  renderAxes();
 }
 
 brightnessController = initBrightnessControl({
