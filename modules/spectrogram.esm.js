@@ -219,7 +219,7 @@ function a(t, e, s, r) {
 }
 
 // Color map generation - optimized for bioacoustics
-function generateColorMapRGBA(mapName) {
+function generateColorMapRGBA(mapName, gain = 1.0) {
     const lut = new Uint8ClampedArray(256 * 4);
     
     const colorMaps = {
@@ -288,6 +288,15 @@ function generateColorMapRGBA(mapName) {
     };
     
     const keyframes = colorMaps[mapName] || colorMaps.viridis;
+    
+    // Apply gain transformation to keyframe positions (except 0.0 and 1.0 to preserve range limits)
+    if (gain !== 1.0) {
+        for (let k = 0; k < keyframes.length; k++) {
+            if (keyframes[k].pos > 0.0 && keyframes[k].pos < 1.0) {
+                keyframes[k].pos = Math.pow(keyframes[k].pos, gain);
+            }
+        }
+    }
     
     // Interpolation Logic
     for (let i = 0; i < 256; i++) {
@@ -468,6 +477,10 @@ class h extends s {
     _updateActiveColorMap() {
         const { brightness, contrast, gain } = this.imgParams;
 
+        // Regenerate the base map using the current gain value to modify keyframe distribution
+        const newBaseMap = generateColorMapRGBA(this.colorMapName, gain);
+        this._baseColorMapUint.set(newBaseMap);
+
         for (let i = 0; i < 256; i++) {
             const baseIdx = i * 4;
             
@@ -481,9 +494,6 @@ class h extends s {
 
                 // 2. Brightness (Linear offset)
                 v = v + brightness;
-
-                // 3. Gain (Linear multiplier)
-                v = v * gain;
 
                 // Clamp to 0.0-1.0
                 v = Math.max(0, Math.min(1, v));
@@ -542,8 +552,8 @@ class h extends s {
         this.imgParams.contrast = defaults.contrast;
         this.imgParams.gain = defaults.gain;
 
-        // 2. Generate new base map
-        const newBaseMap = generateColorMapRGBA(mapName);
+        // 2. Generate new base map with the default gain value
+        const newBaseMap = generateColorMapRGBA(mapName, defaults.gain);
         this._baseColorMapUint.set(newBaseMap);
         this._colorMapUint.set(newBaseMap); // Keep backup for compatibility
         

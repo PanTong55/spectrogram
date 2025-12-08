@@ -1349,8 +1349,9 @@ const upHandler = () => {
     getHoveredSelection: () => (selections.includes(hoveredSelection) ? hoveredSelection : null),
     updateHoverTheme: (colorMapName) => {
       // Switch theme based on color map
-      // mono_light uses dark/black theme, all others use default white theme
-      if (colorMapName === 'mono_light') {
+      // mono_light and rainbow use light theme (dark lines for visibility on light backgrounds)
+      // all others use default white theme
+      if (colorMapName === 'mono_light' || colorMapName === 'rainbow') {
         wrapper.classList.add('theme-light');
       } else {
         wrapper.classList.remove('theme-light');
