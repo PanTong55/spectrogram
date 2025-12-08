@@ -3,6 +3,7 @@ import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 // ===== COLOR MAP DEFAULTS =====
 export const COLOR_MAP_DEFAULTS = {
     'mono_light': { brightness: 0.10, contrast: 1.25, gain: 0.75 },
+    'mono_dark': { brightness: 0.00, contrast: 2.00, gain: 0.85 },   
     'viridis': { brightness: 0.00, contrast: 1.30, gain: 1.00 },
     'inferno': { brightness: 0.00, contrast: 1.00, gain: 1.00 },
     'sonoradar': { brightness: 0.00, contrast: 1.10, gain: 1.00 },      
