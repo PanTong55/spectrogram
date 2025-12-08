@@ -536,6 +536,20 @@ class h extends s {
         this.drawColorMapBar()
     }
     destroy() {
+        // Clean up event listeners for color bar and dropdown
+        if (this._colorBarClickHandler) {
+            const colorBarCanvas = document.getElementById("color-bar");
+            if (colorBarCanvas) {
+                colorBarCanvas.removeEventListener("click", this._colorBarClickHandler);
+            }
+            this._colorBarClickHandler = null;
+        }
+        
+        if (this._documentClickHandler) {
+            document.removeEventListener("click", this._documentClickHandler);
+            this._documentClickHandler = null;
+        }
+        
         this.unAll(),
         this.wavesurfer.un("ready", this._onReady),
         this.wavesurfer.un("redraw", this._onRender),
@@ -665,19 +679,79 @@ class h extends s {
         
         this.wrapper.addEventListener("click", this._onWrapperClick)
     }
+
+    // Helper method to draw a preview canvas for a color map with its defaults applied
+    _drawPreviewToCanvas(canvas, mapName) {
+        if (!canvas) return;
+        
+        const defaults = getColorMapDefaults(mapName);
+        const { brightness, contrast, gain } = defaults;
+        
+        // Generate base map with gain transformation
+        const baseMap = generateColorMapRGBA(mapName, gain);
+        
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        
+        const width = canvas.width || 300;
+        const height = canvas.height || 20;
+        const imageData = ctx.createImageData(width, height);
+        const data = imageData.data;
+        
+        // Fill the canvas with the color map with brightness and contrast applied
+        for (let x = 0; x < width; x++) {
+            const colorIdx = Math.floor((x / width) * 255);
+            const baseIdx = colorIdx * 4;
+            
+            // Extract base color values
+            let r = baseMap[baseIdx] / 255;
+            let g = baseMap[baseIdx + 1] / 255;
+            let b = baseMap[baseIdx + 2] / 255;
+            
+            // Apply Contrast (expand from center 0.5)
+            r = (r - 0.5) * contrast + 0.5;
+            g = (g - 0.5) * contrast + 0.5;
+            b = (b - 0.5) * contrast + 0.5;
+            
+            // Apply Brightness (linear offset)
+            r = r + brightness;
+            g = g + brightness;
+            b = b + brightness;
+            
+            // Clamp to 0.0-1.0
+            r = Math.max(0, Math.min(1, r));
+            g = Math.max(0, Math.min(1, g));
+            b = Math.max(0, Math.min(1, b));
+            
+            // Convert back to 0-255 and fill all rows with this color
+            const pixelR = Math.round(r * 255);
+            const pixelG = Math.round(g * 255);
+            const pixelB = Math.round(b * 255);
+            
+            for (let y = 0; y < height; y++) {
+                const idx = (y * width + x) * 4;
+                data[idx] = pixelR;
+                data[idx + 1] = pixelG;
+                data[idx + 2] = pixelB;
+                data[idx + 3] = 255;
+            }
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+    }
+
     _createColorMapDropdown() {
-        // 查找 color-bar canvas
+        // Get the static dropdown container from HTML
         const colorBarCanvas = document.getElementById("color-bar");
-        if (!colorBarCanvas) {
-            console.warn("⚠️ [Spectrogram] color-bar canvas not found");
+        this.colorMapDropdown = document.getElementById("color-map-dropdown");
+        
+        if (!colorBarCanvas || !this.colorMapDropdown) {
+            console.warn("⚠️ [Spectrogram] color-bar or color-map-dropdown not found");
             return;
         }
         
-        // 創建下拉菜單容器（使用 dropdown-menu 樣式類）
-        this.colorMapDropdown = document.createElement("div");
-        this.colorMapDropdown.className = "dropdown-menu";
-        this.colorMapDropdown.style.display = "none";
-        document.body.appendChild(this.colorMapDropdown);
+        // Clear any existing content
+        this.colorMapDropdown.innerHTML = '';
         
         // Color map options
         const colorMapOptions = [
@@ -692,25 +766,40 @@ class h extends s {
             { name: "rainbow", label: "Rainbow" }
         ];
         
-        // Create menu items for each option (using dropdown-item style class)
+        // Create menu items for each option with preview canvases
         colorMapOptions.forEach((option, index) => {
             const item = document.createElement("div");
-            item.className = "dropdown-item";
-            item.textContent = option.label;
+            item.className = "colormap-option";
             item.dataset.colorMapName = option.name;
             item.dataset.index = index;
+            
+            // Create name label
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "colormap-name";
+            nameSpan.textContent = option.label;
+            item.appendChild(nameSpan);
+            
+            // Create preview canvas
+            const previewCanvas = document.createElement("canvas");
+            previewCanvas.className = "colormap-preview";
+            previewCanvas.width = 300;
+            previewCanvas.height = 20;
+            item.appendChild(previewCanvas);
+            
+            // Draw the preview immediately
+            this._drawPreviewToCanvas(previewCanvas, option.name);
             
             // Apply selected class if this is the currently active color map
             if (option.name === this.colorMapName) {
                 item.classList.add('selected');
             }
             
-            // 點擊事件：切換色彩映射（不關閉菜單，允許多次點擊）
+            // Click event: switch color map
             item.addEventListener("click", (e) => {
                 e.stopPropagation();
                 this.setColorMap(option.name);
-                // 更新選中狀態（添加/移除 selected class）
-                this.colorMapDropdown.querySelectorAll(".dropdown-item").forEach((el, idx) => {
+                // Update selected state
+                this.colorMapDropdown.querySelectorAll(".colormap-option").forEach((el, idx) => {
                     el.classList.toggle("selected", idx === index);
                 });
             });
@@ -718,27 +807,27 @@ class h extends s {
             this.colorMapDropdown.appendChild(item);
         });
         
-        // 在 color-bar canvas 點擊時顯示/隱藏下拉菜單
-        colorBarCanvas.addEventListener("click", (e) => {
+        // Store reference to the click handler so we can remove it later
+        this._colorBarClickHandler = (e) => {
             e.stopPropagation();
             const isOpen = this.colorMapDropdown.style.display !== "none";
             if (isOpen) {
                 this.colorMapDropdown.style.display = "none";
             } else {
-                const rect = colorBarCanvas.getBoundingClientRect();
-                this.colorMapDropdown.style.left = (rect.left + window.scrollX) + "px";
-                this.colorMapDropdown.style.top = (rect.bottom + window.scrollY) + "px";
-                this.colorMapDropdown.style.minWidth = rect.width + "px";
                 this.colorMapDropdown.style.display = "block";
             }
-        });
+        };
         
-        // 點擊其他地方時隱藏下拉菜單
-        document.addEventListener("click", (e) => {
+        // Store reference to the document click handler so we can remove it later
+        this._documentClickHandler = (e) => {
             if (!this.colorMapDropdown.contains(e.target) && e.target !== colorBarCanvas) {
                 this.colorMapDropdown.style.display = "none";
             }
-        });
+        };
+        
+        // Attach click listeners
+        colorBarCanvas.addEventListener("click", this._colorBarClickHandler);
+        document.addEventListener("click", this._documentClickHandler);
     }
     drawColorMapBar() {
         // 將當前色圖繪製到 color-bar canvas (使用處理後的活躍色圖)
