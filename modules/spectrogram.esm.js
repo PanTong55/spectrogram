@@ -252,8 +252,9 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
         sonoradar: [
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
             { pos: 0.2, r: 0, g: 0, b: 0 }, 
-            { pos: 0.8, r: 255, g: 215, b: 60 }, 
-            { pos: 1.0, r: 255, g: 255, b: 230 }
+            { pos: 0.7, r: 255, g: 215, b: 0 },             
+            { pos: 0.8, r: 255, g: 215, b: 0 }, 
+            { pos: 1.0, r: 255, g: 255, b: 255 }
         ],
         mono_dark: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
