@@ -241,10 +241,11 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
             { pos: 1.0, r: 255, g: 255, b: 0 }
         ],
         magma: [
-            { pos: 0.0, r: 0, g: 0, b: 4 },
-            { pos: 0.25, r: 86, g: 25, b: 114 },
-            { pos: 0.5, r: 177, g: 60, b: 120 },
-            { pos: 0.75, r: 250, g: 155, b: 135 },
+            { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 0.15, r: 0, g: 0, b: 0 },            
+            { pos: 0.45, r: 86, g: 25, b: 114 },
+            { pos: 0.75, r: 177, g: 60, b: 120 },
+            { pos: 0.85, r: 250, g: 155, b: 135 },
             { pos: 1.0, r: 252, g: 253, b: 191 }
         ],
         sonoradar: [
