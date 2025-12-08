@@ -23,7 +23,7 @@ export function initZoomControls(ws, container, duration, applyZoomCallback,
         if (dur < 3000) return 3000;
       }
     }
-    return 2500;
+    return 5000;
   }
 
   function computeMinZoomLevel() {
