@@ -4,7 +4,8 @@ import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 export const COLOR_MAP_DEFAULTS = {
     'mono_light': { brightness: 0.80, contrast: 2.10, gain: 0.55 },
     'viridis': { brightness: 0.00, contrast: 1.30, gain: 1.00 },
-    'inferno': { brightness: 0.00, contrast: 1.20, gain: 1.10 },   
+    'inferno': { brightness: 0.00, contrast: 1.20, gain: 1.10 },
+    'sonoradar': { brightness: 0.00, contrast: 1.10, gain: 1.10 },      
     'default': { brightness: 0.00, contrast: 1.00, gain: 1.00 }
 };
 
@@ -251,22 +252,18 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.7, r: 255, g: 215, b: 60 }, 
             { pos: 1.0, r: 255, g: 255, b: 230 }
         ],
-        // [New] 2. Inversed Grayscale (Black Background -> White Signal)
         mono_dark: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
             { pos: 1.0, r: 255, g: 255, b: 255 }
         ],
-        // [Renamed] Standard Grayscale (White Background -> Black Signal)
         mono_light: [
             { pos: 0.0, r: 255, g: 255, b: 255 },
             { pos: 1.0, r: 0, g: 0, b: 0 }
         ],
-        // [New] 3. Kaleidoscope Style (Bioacoustics Standard: Blue->Green->Red)
         kaleidoscope: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
-            { pos: 0.15, r: 0, g: 0, b: 0 }, 
-            { pos: 0.16, r: 0, g: 128, b: 50 }, // 訊號起始區 (Green)
-            { pos: 0.4, r: 0, g: 255, b: 0 },   // 明亮的純綠色
+            { pos: 0.2, r: 0, g: 0, b: 0 }, 
+            { pos: 0.5, r: 0, g: 255, b: 0 },   // 明亮的純綠色
             { pos: 0.7, r: 255, g: 255, b: 0 }, 
             { pos: 1.0, r: 255, g: 0, b: 0 }  // 最強的能量顯示為紅色
         ],
