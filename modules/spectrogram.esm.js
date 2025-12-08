@@ -275,7 +275,7 @@ function generateColorMapRGBA(mapName) {
             { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.16, r: 0, g: 128, b: 50 }, // 訊號起始區 (Green)
             { pos: 0.4, r: 0, g: 255, b: 0 },   // 明亮的純綠色
-            { pos: 0.7, r: 255, 255, b: 0 }, 
+            { pos: 0.7, r: 255, g: 255, b: 0 }, 
             { pos: 1.0, r: 255, g: 0, b: 0 }  // 最強的能量顯示為紅色
         ],
         // [New] 4. Iron (Thermal Style)
