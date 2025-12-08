@@ -77,7 +77,13 @@ export function drawFrequencyGrid({
 
   const ctx = gridCanvas.getContext('2d');
   ctx.clearRect(0, 0, width, spectrogramHeight);
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+  
+  // Check if the viewer-wrapper has the theme-light class to determine grid color
+  const viewerWrapper = document.getElementById('viewer-wrapper');
+  const isLightTheme = viewerWrapper && viewerWrapper.classList.contains('theme-light');
+  
+  // In light mode (mono_light colormap), use dark grid; in dark mode, use white grid
+  ctx.strokeStyle = isLightTheme ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.3)';
   ctx.lineWidth = 0.4;
 
   const range = maxFrequency;

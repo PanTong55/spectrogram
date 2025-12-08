@@ -108,9 +108,9 @@ export function initBrightnessControl({
   // Bind slider events
   [brightnessSlider, gainSlider, contrastSlider].forEach(slider => {
     if (slider) {
-      // Update label on input (live preview during drag)
-      slider.addEventListener('input', updateLabels);
-      // Emit to callback when slider is released (change event)
+      // Trigger immediate update while dragging (input event) and when released (change event)
+      // emitChanges internally calls updateLabels, so we get both label updates and spectrogram changes
+      slider.addEventListener('input', emitChanges);
       slider.addEventListener('change', emitChanges);
     }
   });
