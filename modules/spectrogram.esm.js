@@ -248,9 +248,9 @@ function generateColorMapRGBA(mapName) {
         sonoradar: [
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
             { pos: 0.2, r: 0, g: 0, b: 0 }, 
-            { pos: 0.25, r: 80, g: 50, b: 0 }, // 訊號剛出現時，呈現深琥珀色/深棕色，而不是紅色
-            { pos: 0.5, r: 200, g: 150, b: 10 }, // 經典的金色質感 (R 高，G 中，B 低)
-            { pos: 0.75, r: 255, g: 220, b: 50 }, // 明亮的黃色
+            { pos: 0.45, r: 80, g: 50, b: 0 }, // 訊號剛出現時，呈現深琥珀色/深棕色，而不是紅色
+            { pos: 0.6, r: 200, g: 150, b: 10 }, // 經典的金色質感 (R 高，G 中，B 低)
+            { pos: 0.85, r: 255, g: 220, b: 50 }, // 明亮的黃色
             { pos: 1.0, r: 255, g: 255, b: 200 } // 能量最強處接近白色，模擬「發光」的感覺
         ],
         // [New] 2. Inversed Grayscale (Black Background -> White Signal)
