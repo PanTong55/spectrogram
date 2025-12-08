@@ -2,10 +2,10 @@ import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 
 // ===== COLOR MAP DEFAULTS =====
 export const COLOR_MAP_DEFAULTS = {
-    'mono_light': { brightness: 0.80, contrast: 2.10, gain: 0.55 },
+    'mono_light': { brightness: 0.00, contrast: 1.00, gain: 1.00 },
     'viridis': { brightness: 0.00, contrast: 1.30, gain: 1.00 },
     'inferno': { brightness: 0.00, contrast: 1.00, gain: 1.00 },
-    'sonoradar': { brightness: 0.00, contrast: 1.10, gain: 1.10 },      
+    'sonoradar': { brightness: 0.00, contrast: 1.10, gain: 1.00 },      
     'default': { brightness: 0.00, contrast: 1.00, gain: 1.00 }
 };
 
@@ -249,15 +249,17 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
         sonoradar: [
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
             { pos: 0.2, r: 0, g: 0, b: 0 }, 
-            { pos: 0.7, r: 255, g: 215, b: 60 }, 
+            { pos: 0.8, r: 255, g: 215, b: 60 }, 
             { pos: 1.0, r: 255, g: 255, b: 230 }
         ],
         mono_dark: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
+            { pos: 0.5, r: 137, g: 137, b: 137 },           
             { pos: 1.0, r: 255, g: 255, b: 255 }
         ],
         mono_light: [
             { pos: 0.0, r: 255, g: 255, b: 255 },
+            { pos: 0.5, r: 137, g: 137, b: 137 },
             { pos: 1.0, r: 0, g: 0, b: 0 }
         ],
         kaleidoscope: [
