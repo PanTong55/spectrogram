@@ -222,7 +222,6 @@ function generateColorMapRGBA(mapName) {
     const lut = new Uint8ClampedArray(256 * 4);
     
     const colorMaps = {
-        // Existing Scientific Maps
         inferno: [
             { pos: 0.0, r: 0, g: 0, b: 4 },
             { pos: 0.15, r: 0, g: 0, b: 0 }, 
@@ -247,16 +246,12 @@ function generateColorMapRGBA(mapName) {
             { pos: 1.0, r: 252, g: 253, b: 191 }
         ],
         sonoradar: [
-            // 背景：從純黑改為深午夜藍 (Deep Midnight Blue)
-            { pos: 0.0, r: 5, g: 10, b: 30 },            
-            // 過渡：加入一點紫紅色調，讓藍色到橘色的融合更自然 (Dark Purple/Red)
-            { pos: 0.25, r: 85, g: 30, b: 60 },            
-            // 中段：飽和的焦橘色 (Burnt Orange)
-            { pos: 0.5, r: 200, g: 80, b: 20 },            
-            // 高亮：明亮的金黃色 (Golden Yellow)
-            { pos: 0.75, r: 255, g: 190, b: 50 },            
-            // 峰值：接近白色的極亮黃 (Pale Yellow/White)
-            { pos: 1.0, r: 255, g: 255, b: 240 }
+            { pos: 0.0, r: 0, g: 0, b: 0 }, 
+            { pos: 0.2, r: 0, g: 0, b: 0 }, 
+            { pos: 0.25, r: 80, g: 50, b: 0 }, // 訊號剛出現時，呈現深琥珀色/深棕色，而不是紅色
+            { pos: 0.5, r: 200, g: 150, b: 10 }, // 經典的金色質感 (R 高，G 中，B 低)
+            { pos: 0.75, r: 255, g: 220, b: 50 }, // 明亮的黃色
+            { pos: 1.0, r: 255, g: 255, b: 200 } // 能量最強處接近白色，模擬「發光」的感覺
         ],
         // [New] 2. Inversed Grayscale (Black Background -> White Signal)
         mono_dark: [
