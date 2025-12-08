@@ -234,7 +234,7 @@ function generateColorMapRGBA(mapName) {
         viridis: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
             { pos: 0.15, r: 0, g: 0, b: 0 }, 
-            { pos: 0.5, r: 59, g: 82, b: 139 },
+            { pos: 0.45, r: 59, g: 82, b: 139 },
             { pos: 0.75, r: 33, g: 145, b: 140 },
             { pos: 0.85, r: 253, g: 231, b: 37 },
             { pos: 1.0, r: 255, g: 255, b: 0 }
@@ -262,8 +262,8 @@ function generateColorMapRGBA(mapName) {
         ],
         kaleidoscope: [
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
-            { pos: 0.25, r: 0, g: 0, b: 0 }, 
-            { pos: 0.30, r: 0, g: 80, b: 120 }, 
+            { pos: 0.15, r: 0, g: 0, b: 0 }, 
+            { pos: 0.20, r: 0, g: 80, b: 120 }, 
             { pos: 0.50, r: 0, g: 180, b: 60 }, 
             { pos: 0.75, r: 255, g: 230, b: 0 }, 
             { pos: 1.0, r: 255, g: 40, b: 0 } 
