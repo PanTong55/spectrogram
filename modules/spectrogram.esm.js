@@ -274,9 +274,10 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
         ],
         iron: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
-            { pos: 0.3, r: 0, g: 0, b: 255 },     // Blue
-            { pos: 0.55, r: 255, g: 0, b: 128 },  // Purple/Magenta
-            { pos: 0.8, r: 255, g: 128, b: 0 },   // Orange
+            { pos: 0.15, r: 0, g: 0, b: 0 },            
+            { pos: 0.5, r: 0, g: 0, b: 255 }, // Blue
+            { pos: 0.75, r: 255, g: 0, b: 128 },  // Purple/Magenta
+            { pos: 0.85, r: 255, g: 128, b: 0 },   // Orange
             { pos: 1.0, r: 255, g: 255, b: 255 }  // White
         ],
         rainbow: [
