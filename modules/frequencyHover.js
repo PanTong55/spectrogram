@@ -82,12 +82,7 @@ export function initFrequencyHover({
         --selection-bg: rgba(0, 0, 0, 0.2);
       }
       
-      #hover-line, .persistent-line {
-        border-color: var(--hover-color);
-        background-color: var(--hover-color);
-      }
-      
-      #hover-line-vertical, #hover-line-v {
+      #hover-line-vertical, #hover-line {
         border-color: var(--hover-color);
         background-color: var(--hover-color);
       }

@@ -4,7 +4,7 @@ import init, { SpectrogramEngine } from './spectrogram_wasm.js';
 export const COLOR_MAP_DEFAULTS = {
     'mono_light': { brightness: 0.80, contrast: 2.10, gain: 0.55 },
     'viridis': { brightness: 0.00, contrast: 1.30, gain: 1.00 },
-    'inferno': { brightness: 0.00, contrast: 1.20, gain: 1.10 },
+    'inferno': { brightness: 0.00, contrast: 1.00, gain: 1.00 },
     'sonoradar': { brightness: 0.00, contrast: 1.10, gain: 1.10 },      
     'default': { brightness: 0.00, contrast: 1.00, gain: 1.00 }
 };
@@ -224,7 +224,7 @@ function generateColorMapRGBA(mapName) {
     
     const colorMaps = {
         inferno: [
-            { pos: 0.0, r: 0, g: 0, b: 4 },
+            { pos: 0.0, r: 0, g: 0, b: 0 },
             { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.5, r: 87, g: 16, b: 109 },
             { pos: 0.75, r: 188, g: 48, b: 60 },
@@ -233,7 +233,7 @@ function generateColorMapRGBA(mapName) {
         ],
         viridis: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
-            { pos: 0.2, r: 0, g: 0, b: 0 }, 
+            { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.5, r: 59, g: 82, b: 139 },
             { pos: 0.75, r: 33, g: 145, b: 140 },
             { pos: 0.85, r: 253, g: 231, b: 37 },
@@ -248,7 +248,7 @@ function generateColorMapRGBA(mapName) {
         ],
         sonoradar: [
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
-            { pos: 0.25, r: 0, g: 0, b: 0 }, 
+            { pos: 0.2, r: 0, g: 0, b: 0 }, 
             { pos: 0.7, r: 255, g: 215, b: 60 }, 
             { pos: 1.0, r: 255, g: 255, b: 230 }
         ],
