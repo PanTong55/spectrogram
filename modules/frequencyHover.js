@@ -74,12 +74,10 @@ export function initFrequencyHover({
         /* Default (Dark Mode) Variables */
         --hover-color: #ffffff;
         --selection-border: #ffffff;
-        --selection-bg: rgba(255, 255, 255, 0.2);
-        --selection-bg-hover: rgba(255, 255, 255, 0.4);
+        --selection-bg: rgba(255, 255, 255, 0.1);
+        --selection-bg-hover: rgba(255, 255, 255, 0.2);
         --btn-group-bg: rgba(255, 255, 255, 0.3);
         --btn-group-color: #333;
-        --text-color: #ffffff;
-        --text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
       }
       
       #viewer-wrapper.theme-light {
@@ -90,8 +88,6 @@ export function initFrequencyHover({
         --selection-bg-hover: rgba(0, 0, 0, 0.3);
         --btn-group-bg: rgba(0, 0, 0, 0.7);
         --btn-group-color: #000;
-        --text-color: #000000;
-        --text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
       }
       
       #hover-line-vertical, #hover-line {
@@ -107,11 +103,6 @@ export function initFrequencyHover({
 
       .selection-rect:hover {
         background-color: var(--selection-bg-hover) !important;
-      }
-      
-      #hover-label, .tooltip {
-        color: var(--text-color);
-        text-shadow: var(--text-shadow);
       }
 
       .selection-btn-group {
