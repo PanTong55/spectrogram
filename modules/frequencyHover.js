@@ -74,8 +74,8 @@ export function initFrequencyHover({
         /* Default (Dark Mode) Variables */
         --hover-color: #ffffff;
         --selection-border: #ffffff;
-        --selection-bg: rgba(255, 255, 255, 0.1);
-        --selection-bg-hover: rgba(255, 255, 255, 0.2);
+        --selection-bg: rgba(255, 255, 255, 0.03);
+        --selection-bg-hover: rgba(255, 255, 255, 0.1);
         --btn-group-bg: rgba(255, 255, 255, 0.3);
         --btn-group-color: #333;
       }
@@ -84,8 +84,8 @@ export function initFrequencyHover({
         /* Light Mode Variables */
         --hover-color: #000000;
         --selection-border: #000000;
-        --selection-bg: rgba(0, 0, 0, 0.2);
-        --selection-bg-hover: rgba(0, 0, 0, 0.3);
+        --selection-bg: rgba(0, 0, 0, 0.05);
+        --selection-bg-hover: rgba(0, 0, 0, 0.1);
         --btn-group-bg: rgba(0, 0, 0, 0.7);
         --btn-group-color: #000;
       }
