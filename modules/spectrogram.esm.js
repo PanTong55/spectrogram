@@ -224,9 +224,9 @@ function generateColorMapRGBA(mapName) {
         // Existing Scientific Maps
         inferno: [
             { pos: 0.0, r: 0, g: 0, b: 4 },
-            { pos: 0.25, r: 87, g: 16, b: 109 },
-            { pos: 0.5, r: 188, g: 48, b: 60 },
-            { pos: 0.75, r: 253, g: 128, b: 25 },
+            { pos: 0.4, r: 87, g: 16, b: 109 },
+            { pos: 0.6, r: 188, g: 48, b: 60 },
+            { pos: 0.85, r: 253, g: 128, b: 25 },
             { pos: 1.0, r: 252, g: 255, b: 164 }
         ],
         viridis: [
