@@ -13,60 +13,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <style>
-    /* Color Map Dropdown Styles */
-    #color-bar-container {
-      position: relative;
-      display: inline-block;
-    }
-
-    #color-map-dropdown {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      z-index: 1000;
-      background: #2b2b2b;
-      border: 1px solid #444;
-      border-radius: 4px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-      min-width: 350px;
-      max-height: 400px;
-      overflow-y: auto;
-      display: none; /* Hidden by default */
-    }
-
-    .colormap-option {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-bottom: 1px solid #333;
-      color: #eee;
-      font-size: 13px;
-    }
-
-    .colormap-option:hover {
-      background-color: #444;
-    }
-
-    .colormap-option.selected {
-      background-color: #005a9e;
-    }
-
-    .colormap-name {
-      flex: 1;
-      margin-right: 10px;
-      min-width: 80px;
-    }
-
-    .colormap-preview {
-      border: 1px solid #555;
-      background: #000;
-      width: 300px;
-      height: 20px;
-    }
-  </style>
 </head>
 <body>
 
