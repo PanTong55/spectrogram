@@ -406,6 +406,37 @@ const overlay = document.getElementById('drop-overlay');
 const loadingOverlay = document.getElementById('loading-overlay');
 const uploadOverlay = document.getElementById('upload-overlay');
 
+// Initialize loading overlay theme styles
+function initLoadingOverlayTheme() {
+  if (!document.getElementById('loading-overlay-theme-style')) {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'loading-overlay-theme-style';
+    styleEl.textContent = `
+      #loading-overlay {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+      
+      #loading-overlay .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #ffffff;
+      }
+      
+      #viewer-wrapper.theme-light #loading-overlay {
+        background-color: rgba(0, 0, 0, 0.3);
+      }
+      
+      #viewer-wrapper.theme-light #loading-overlay .spinner {
+        border: 4px solid rgb(255 255 255 / 30%);
+        border-top: 4px solid #ffffff;
+      }
+    `;
+    document.head.appendChild(styleEl);
+  }
+}
+
+// Initialize on load
+initLoadingOverlayTheme();
+
 function showDropOverlay() {
 overlay.style.display = 'flex';
 overlay.style.pointerEvents = 'auto';
@@ -839,6 +870,18 @@ function handleColorMapChange(event) {
   // Update hover line colors and toggle theme based on color map
   if (freqHoverControl && freqHoverControl.updateHoverTheme) {
     freqHoverControl.updateHoverTheme(colorMapName);
+  }
+
+  // Update loading overlay theme to match color map theme
+  const wrapper = document.getElementById('viewer-wrapper');
+  if (wrapper) {
+    if (colorMapName === 'mono_light' || colorMapName === 'rainbow') {
+      // Light theme: loading overlay uses light background
+      wrapper.classList.add('theme-light');
+    } else {
+      // Dark theme: loading overlay uses dark background
+      wrapper.classList.remove('theme-light');
+    }
   }
 
   // Re-render axes (Grid) to adapt color to the new theme immediately
