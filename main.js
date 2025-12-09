@@ -1131,7 +1131,9 @@ function updateSpectrogramSettingsText() {
 }
 
 function getOverlapPercent() {
-  if (currentOverlap === 'auto') return null;
+  if (currentOverlap === 'auto') {
+    return getAutoOverlapPercent(); 
+  }
   const parsed = parseInt(currentOverlap, 10);
   return isNaN(parsed) ? null : parsed;
 }
@@ -1167,7 +1169,8 @@ function getAutoOverlapPercent(overriddenBufferLength = null) {
   if (bufferLength && canvasWidth && fft) {
     const samplesPerCol = bufferLength / canvasWidth;
     const noverlap = Math.max(0, Math.round(fft - samplesPerCol));
-    return Math.round((noverlap / fft) * 100);
+    const pct = Math.round((noverlap / fft) * 100);
+    return Math.max(5, pct);
   }
   return null;
 }
