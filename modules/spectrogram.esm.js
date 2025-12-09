@@ -269,13 +269,13 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
             { pos: 1.0, r: 0, g: 0, b: 0 }
         ],
         kaleidoscope: [
-            { pos: 0.0, r: 0, g: 0, b: 0 },
-            { pos: 0.15, r: 0, g: 0, b: 0 },
-            { pos: 0.2, r: 0, g: 60, b: 90 },
-            { pos: 0.35, r: 0, g: 70, b: 25 },
-            { pos: 0.5, r: 0, g: 180, b: 60 },
-            { pos: 0.83, r: 255, g: 230, b: 0 },
-            { pos: 1.0, r: 255, g: 40, b: 0 }
+            { pos: 0.0, r: 0, g: 0, b: 0 }, 
+            { pos: 0.15, r: 0, g: 0, b: 0 }, 
+            { pos: 0.2, r: 0, g: 80, b: 120 },
+            { pos: 0.35, r: 0, g: 133, b: 44 },              
+            { pos: 0.5, r: 0, g: 180, b: 60 }, 
+            { pos: 0.85, r: 255, g: 230, b: 0 }, 
+            { pos: 1.0, r: 255, g: 40, b: 0 } 
         ],
         iron: [
             { pos: 0.0, r: 0, g: 0, b: 0 },
