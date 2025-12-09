@@ -549,8 +549,8 @@ freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
 const toggleSmoothSwitch = document.getElementById('toggleSmoothSwitch');
 
 if (toggleSmoothSwitch) {
-  // Initialize: default to false (pixelated mode)
-  toggleSmoothSwitch.checked = false;
+  // Initialize: default to true (smooth mode)
+  toggleSmoothSwitch.checked = true;
   
   // Listen for switch changes and call setSmoothMode
   toggleSmoothSwitch.addEventListener('change', (e) => {
