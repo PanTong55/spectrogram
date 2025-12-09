@@ -270,6 +270,7 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
         ],
         kaleidoscope: [
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
+            { pos: 0.01, r: 0, g: 0, b: 3 },
             { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.2, r: 0, g: 60, b: 90 },
             { pos: 0.35, r: 0, g: 133, b: 44 },              
