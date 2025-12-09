@@ -10,6 +10,7 @@ let currentFftSize = 1024;
 let currentWindowType = 'hann';
 let currentPeakMode = false;
 let currentPeakThreshold = 0.4;
+let currentSmoothMode = false;
 
 export function initWavesurfer({
   container,
@@ -116,6 +117,11 @@ export function replacePlugin(
 
   ws.registerPlugin(plugin);
 
+  // Apply saved smooth mode to the newly created plugin
+  if (plugin && plugin.setSmoothMode) {
+    plugin.setSmoothMode(currentSmoothMode);
+  }
+
   try {
     plugin.render();
     requestAnimationFrame(() => {
@@ -177,6 +183,13 @@ export function setPeakThreshold(peakThreshold) {
 
 export function getPeakThreshold() {
   return currentPeakThreshold;
+}
+
+export function setSmoothMode(isSmooth) {
+  currentSmoothMode = isSmooth;
+  if (plugin && plugin.setSmoothMode) {
+    plugin.setSmoothMode(isSmooth);
+  }
 }
 
 export function initScrollSync({

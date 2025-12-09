@@ -19,6 +19,7 @@ initScrollSync,
 setPeakMode,
 setPeakThreshold,
 getPeakThreshold,
+setSmoothMode,
 } from './modules/wsManager.js';
 
 import { initZoomControls } from './modules/zoomControl.js';
@@ -547,42 +548,14 @@ freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
 // Smooth rendering toggle
 const toggleSmoothSwitch = document.getElementById('toggleSmoothSwitch');
 
-function applySpectrogramSmoothing() {
-  const isSmooth = toggleSmoothSwitch.checked;
-  const canvas = document.querySelector('#spectrogram-only canvas');
-  if (canvas) {
-    // 'auto' enables browser's default smoothing (bilinear/bicubic)
-    // 'pixelated' forces nearest-neighbor
-    canvas.style.imageRendering = isSmooth ? 'auto' : 'pixelated';
-  }
-}
-
-// 1. Listen for switch changes
 if (toggleSmoothSwitch) {
-  toggleSmoothSwitch.addEventListener('change', applySpectrogramSmoothing);
-}
-
-// 2. Re-apply smoothing whenever the spectrogram is redrawn/created
-// (Assuming 'getWavesurfer()' is available globally or imported)
-const wsInstance = getWavesurfer();
-if (wsInstance) {
-  wsInstance.on('redraw', applySpectrogramSmoothing);
-  wsInstance.on('ready', applySpectrogramSmoothing);
-}
-
-// 3. Fallback: MutationObserver to catch canvas recreation if wavesurfer events miss it
-const specContainer = document.getElementById('spectrogram-only');
-if (specContainer) {
-  const observer = new MutationObserver(() => {
-    applySpectrogramSmoothing();
-  });
-  observer.observe(specContainer, { childList: true, subtree: true });
-}
-
-// Initialize default state (pixelated/sharp)
-if (toggleSmoothSwitch) {
+  // Initialize: default to false (pixelated mode)
   toggleSmoothSwitch.checked = false;
-  applySpectrogramSmoothing();
+  
+  // Listen for switch changes and call setSmoothMode
+  toggleSmoothSwitch.addEventListener('change', (e) => {
+    setSmoothMode(e.target.checked);
+  });
 }
 
 async function applySampleRate(rate, reloadFile = true) {
