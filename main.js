@@ -413,21 +413,25 @@ function initLoadingOverlayTheme() {
     styleEl.id = 'loading-overlay-theme-style';
     styleEl.textContent = `
       #loading-overlay {
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.85);
       }
       
       #loading-overlay .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        border-top: 4px solid #ffffff;
+        border: 3px solid transparent;
+        border-top-color: #FFD700;
+        box-shadow: 0 0 15px #FFD700;
+        animation: electricSpin 1s linear infinite;
       }
       
       #viewer-wrapper.theme-light #loading-overlay {
-        background-color: rgba(255, 255, 255, 0.6);
+        background-color: rgba(255, 255, 255, 0.9);
       }
       
       #viewer-wrapper.theme-light #loading-overlay .spinner {
-        border: 4px solid rgba(0, 0, 0, 0.3);
-        border-top: 4px solid #333;
+        border: 3px solid transparent;
+        border-top-color: #FFA500;
+        box-shadow: 0 0 15px #FFA500;
+        animation: electricSpin 1s linear infinite;
       }
     `;
     document.head.appendChild(styleEl);
