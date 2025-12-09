@@ -477,6 +477,10 @@ class h extends s {
             // Copy to base colormap
             this._baseColorMapUint.set(this._colorMapUint);
         }
+
+        // NEW: Smooth mode state
+        this.smoothMode = false;
+        this.smoothStrength = 0.5;
         
         // Generate initial active colormap with current enhancement params
         this._updateActiveColorMap();
@@ -904,6 +908,15 @@ class h extends s {
         }
     }
 
+    // [NEW] 設置平滑強度 (模糊半徑)
+    setSmoothStrength(value) {
+        this.smoothStrength = parseFloat(value);
+        // 如果平滑模式啟用且有緩存數據，立即重繪
+        if (this.lastRenderData && this.smoothMode) {
+            this.drawSpectrogram(this.lastRenderData);
+        }
+    }
+
     drawSpectrogram(t) {
         // 保存最後的渲染數據，用於色彩映射切換時快速重新渲染
         this.lastRenderData = t;
@@ -930,6 +943,13 @@ class h extends s {
         const isSmooth = this.smoothMode || false;
         canvasCtx.imageSmoothingEnabled = isSmooth;
         canvasCtx.imageSmoothingQuality = isSmooth ? 'high' : 'low';
+
+        // Apply Blur Filter if strength > 0 and smooth mode is enabled
+        if (isSmooth && this.smoothStrength > 0) {
+            canvasCtx.filter = `blur(${this.smoothStrength}px)`;
+        } else {
+            canvasCtx.filter = 'none';
+        }
 
         // 使用 WASM 渲染每個通道
         for (let channelIdx = 0; channelIdx < t.length; channelIdx++) {
@@ -1061,6 +1081,10 @@ class h extends s {
                 // Peak Mode 疊加層 (保持不變)
                 // 因為 Peak 數據是基於原始 FFT bin 的，所以此處邏輯無需更改
                 if (this.options && this.options.peakMode && this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[channelIdx]) {
+                    // Temporarily disable filter for sharp peak markers
+                    const savedFilter = canvasCtx.filter;
+                    canvasCtx.filter = 'none';
+                    
                     const peaks = this.peakBandArrayPerChannel[channelIdx];
                     
                     // Get View Range (Hz)
@@ -1106,6 +1130,9 @@ class h extends s {
                             }
                         }
                     }
+                    
+                    // Restore filter
+                    canvasCtx.filter = savedFilter;
                 }
             }));
         }
