@@ -993,6 +993,13 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
     // 2025 v2: 逐步縮小搜尋範圍
     const measurements = [];
     
+    // ============================================================
+    // 2025 BUG FIX: Initialize tracker for immediate stop on major jump
+    // This prevents "Stable Noise" problem where noise creates a stable 
+    // plateau after a huge jump (e.g., 83kHz -> 97kHz -> 97kHz).
+    // ============================================================
+    let lastValidHighFreq_kHz = null;
+    
     for (const testThreshold_dB of thresholdRange) {
       // Build Max Hold Spectrum for current search range
       const currentMaxSpectrum = new Float32Array(numBins).fill(-Infinity);
@@ -1088,6 +1095,28 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
         highFreq_Hz = null;
         startFreq_Hz = null;
         highFreqFrameIdx = 0;
+      }
+      
+      // ============================================================
+      // 2025 BUG FIX: Immediate Stop on Major Jump
+      // Prevent "Stable Noise" problem where noise creates a stable plateau
+      // after a huge jump (e.g., 83kHz -> 97kHz -> 97kHz).
+      // Stop BEFORE pushing the bad measurement.
+      // ============================================================
+      if (foundBin && highFreq_Hz !== null) {
+        const currentHighFreq_kHz = highFreq_Hz / 1000;
+        
+        if (lastValidHighFreq_kHz !== null) {
+          const jumpDiff = Math.abs(currentHighFreq_kHz - lastValidHighFreq_kHz);
+          if (jumpDiff > 4.0) {
+            // Major jump detected (> 4.0 kHz).
+            // This indicates we hit the noise floor. Stop immediately.
+            // Do NOT record this measurement.
+            break;
+          }
+        }
+        // Update valid tracker
+        lastValidHighFreq_kHz = currentHighFreq_kHz;
       }
       
       measurements.push({
