@@ -422,12 +422,12 @@ function initLoadingOverlayTheme() {
       }
       
       #viewer-wrapper.theme-light #loading-overlay {
-        background-color: rgba(0, 0, 0, 0.3);
+        background-color: rgba(255, 255, 255, 0.6);
       }
       
       #viewer-wrapper.theme-light #loading-overlay .spinner {
-        border: 4px solid rgb(255 255 255 / 30%);
-        border-top: 4px solid #ffffff;
+        border: 4px solid rgba(0, 0, 0, 0.3);
+        border-top: 4px solid #333;
       }
     `;
     document.head.appendChild(styleEl);
