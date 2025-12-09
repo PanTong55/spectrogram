@@ -271,8 +271,8 @@ function generateColorMapRGBA(mapName, gain = 1.0) {
             { pos: 0.0, r: 0, g: 0, b: 0 }, 
             { pos: 0.15, r: 0, g: 0, b: 0 }, 
             { pos: 0.30, r: 0, g: 80, b: 120 }, 
-            { pos: 0.45, r: 0, g: 180, b: 60 }, 
-            { pos: 0.75, r: 255, g: 230, b: 0 }, 
+            { pos: 0.40, r: 0, g: 180, b: 60 }, 
+            { pos: 0.80, r: 255, g: 230, b: 0 }, 
             { pos: 1.0, r: 255, g: 40, b: 0 } 
         ],
         iron: [
@@ -927,7 +927,7 @@ class h extends s {
 
         // [NEW] 根據 Smooth Mode 設定 Canvas 的平滑屬性
         // 這會啟用 GPU 的雙線性插值，讓邊緣變平滑
-        const isSmooth = this.smoothMode || false;
+        const isSmooth = this.smoothMode || true;
         canvasCtx.imageSmoothingEnabled = isSmooth;
         canvasCtx.imageSmoothingQuality = isSmooth ? 'high' : 'low';
 
