@@ -1027,28 +1027,35 @@ findOptimalHighFrequencyThreshold(spectrogram, freqBins, flowKHz, fhighKHz, call
       const highFreqThreshold_dB = stablePeakPower_dB + testThreshold_dB;
       
       // ============================================================
-      // 計算 HIGH FREQUENCY（從高到低掃描）
-      // 使用當前搜尋範圍內的 Max Spectrum
+      // 計算 HIGH FREQUENCY（改為：從低到高掃描 Low -> High）
+      // 方向：由低頻往高頻，尋找「上升緣」(Signal -> Noise)
+      // 沿著叫聲能量軌跡「逆流而上」，鎖定信號的上邊界
       // ============================================================
-      for (let binIdx = currentMaxSpectrum.length - 1; binIdx >= 0; binIdx--) {
-        if (currentMaxSpectrum[binIdx] > highFreqThreshold_dB) {
+      for (let binIdx = 0; binIdx < currentMaxSpectrum.length - 1; binIdx++) {
+        const thisPower = currentMaxSpectrum[binIdx];
+        const nextPower = currentMaxSpectrum[binIdx + 1];
+
+        // 檢測條件：尋找信號的「上緣」(Upper Edge)
+        // 當前 bin 在閾值之上 (Signal)，且下一個 bin 掉到閾值之下 (Noise)
+        if (thisPower > highFreqThreshold_dB && nextPower < highFreqThreshold_dB) {
+          
+          // 記錄此處為 High Frequency 候選點
           highFreq_Hz = freqBins[binIdx];
           highFreqBinIdx = binIdx;
-          highFreqFrameIdx = frameIndexForBin[binIdx];  // 記錄找到的幀索引
+          highFreqFrameIdx = frameIndexForBin[binIdx]; // 記錄該頻率發生的 Frame
           foundBin = true;
           
-          // 嘗試線性插值
-          if (binIdx < currentMaxSpectrum.length - 1) {
-            const thisPower = currentMaxSpectrum[binIdx];
-            const nextPower = currentMaxSpectrum[binIdx + 1];
-            
-            if (nextPower < highFreqThreshold_dB && thisPower > highFreqThreshold_dB) {
-              const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
-              const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
-              highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
-            }
-          }
-          break;
+          // 執行線性插值 (Linear Interpolation) 以獲得 Sub-bin 精度
+          // 插值區間：binIdx (Signal) 到 binIdx+1 (Noise)
+          const powerRatio = (thisPower - highFreqThreshold_dB) / (thisPower - nextPower);
+          const freqDiff = freqBins[binIdx + 1] - freqBins[binIdx];
+          
+          // 更新 High Frequency (Base + Ratio * Width)
+          highFreq_Hz = freqBins[binIdx] + powerRatio * freqDiff;
+          
+          // Note: Loop continues to ensure we find the highest frequency edge if there are multiple harmonics, 
+          // or break here if we strictly want the fundamental's upper edge. 
+          // For now, continuing allows finding the absolute max frequency edge effectively.
         }
       }
       
