@@ -1,6 +1,7 @@
 // modules/powerSpectrum.js
 // Power Spectrum 繪製、計算和互動模塊
 // 提供 Power Spectrum 的計算、繪製和用戶交互功能
+// 2025 優化：計算邏輯已遷移至 Rust/WASM，此模塊專注於繪製和交互
 
 /**
  * 尋找最優的 overlap 值
@@ -17,178 +18,91 @@ export function findOptimalOverlap(audioData, sampleRate, fftSize, windowType) {
 }
 
 /**
- * 計算 Power Spectrum (使用 Goertzel 算法，考慮 Overlap)
+ * 計算 Power Spectrum (使用 WASM FFT，考慮 Overlap)
+ * 2025: 完全由 Rust/WASM 實現，JavaScript 僅作為包裝器
  */
 export function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, overlap = 'auto') {
   if (!audioData || audioData.length === 0) return null;
 
-  // 如果音頻短於 FFT 大小，直接計算單幀
-  if (audioData.length < fftSize) {
-    return calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType);
+  // 確保 WASM 已加載
+  if (!globalThis._spectrogramWasm || !globalThis._spectrogramWasm.compute_power_spectrum) {
+    console.error('[powerSpectrum] WASM module not loaded. Cannot compute power spectrum.');
+    return null;
   }
 
-  // 確定 hop size (每幀之間的步長)
-  let hopSize;
-  if (overlap === 'auto' || overlap === '') {
-    // Auto mode：使用 75% overlap
-    hopSize = Math.floor(fftSize * (1 - 0.75));
+  // 將 overlap 參數轉換為 0-100 的百分比，或 null 表示 auto (75%)
+  let overlapPercent = null;
+  if (overlap === 'auto' || overlap === '' || overlap === null || overlap === undefined) {
+    overlapPercent = 75; // WASM 中的 auto 模式
   } else {
-    const overlapPercent = parseInt(overlap, 10);
-    if (isNaN(overlapPercent) || overlapPercent < 0 || overlapPercent > 99) {
-      // 預設 75% overlap
-      hopSize = Math.floor(fftSize * (1 - 0.75));
+    const parsed = parseInt(overlap, 10);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 99) {
+      overlapPercent = parsed;
     } else {
-      hopSize = Math.floor(fftSize * (1 - overlapPercent / 100));
+      // 預設 75% overlap
+      overlapPercent = 75;
     }
   }
 
-  // 確保 hopSize > 0
-  hopSize = Math.max(1, hopSize);
+  try {
+    // 調用 WASM 函數計算 Power Spectrum
+    const spectrum = globalThis._spectrogramWasm.compute_power_spectrum(
+      audioData,
+      sampleRate,
+      fftSize,
+      windowType.toLowerCase(),
+      overlapPercent
+    );
 
-  const freqResolution = sampleRate / fftSize;
-  const maxFreqToCompute = sampleRate / 2;
-  const spectrum = new Float32Array(Math.floor(maxFreqToCompute / freqResolution) + 1);
-  let spectrumCount = 0;
-
-  // 對音頻進行分幀處理
-  for (let offset = 0; offset + fftSize <= audioData.length; offset += hopSize) {
-    const frameData = audioData.slice(offset, offset + fftSize);
-    
-    // 計算該幀的頻譜
-    const windowed = applyWindow(frameData, windowType);
-
-    // 預處理：移除直流分量
-    let dcOffset = 0;
-    for (let i = 0; i < windowed.length; i++) {
-      dcOffset += windowed[i];
-    }
-    dcOffset /= windowed.length;
-
-    const dcRemovedData = new Float32Array(windowed.length);
-    for (let i = 0; i < windowed.length; i++) {
-      dcRemovedData[i] = windowed[i] - dcOffset;
-    }
-
-    // 計算該幀的能量 (在時域中累加，不在 dB 域)
-    for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
-      const freq = binIndex * freqResolution;
-      if (freq > maxFreqToCompute) break;
-
-      const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
-      // 累加時域能量值（不轉換為 dB）
-      spectrum[binIndex] += energy;
-    }
-
-    spectrumCount++;
+    return spectrum && spectrum.length > 0 ? new Float32Array(spectrum) : null;
+  } catch (err) {
+    console.error('[powerSpectrum] Error computing spectrum via WASM:', err);
+    return null;
   }
-
-  // 計算平均能量，然後轉換為 dB
-  if (spectrumCount > 0) {
-    for (let i = 0; i < spectrum.length; i++) {
-      const avgEnergy = spectrum[i] / spectrumCount;
-      // RMS 值
-      const rms = Math.sqrt(avgEnergy);
-      // 計算 Power Spectrum Density (PSD)：歸一化為單位頻率的功率
-      // PSD = (RMS^2) / (fftSize)
-      // 轉換為 dB：10 * log10(PSD)
-      const psd = (rms * rms) / fftSize;
-      spectrum[i] = 10 * Math.log10(Math.max(psd, 1e-16));
-    }
-  }
-
-  return spectrum;
 }
 
 /**
- * 計算 Power Spectrum (使用 Goertzel 算法，與 Peak Freq 計算一致)
+ * 計算 Power Spectrum (單幀，不使用 Overlap)
+ * 2025: 已遷移至 WASM
  */
 export function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
   if (!audioData || audioData.length === 0) return null;
 
-  // 應用窗口函數
-  const windowed = applyWindow(audioData, windowType);
-
-  // freqMin 和 freqMax 需要計算的頻率範圍
-  const freqResolution = sampleRate / fftSize;
-  const maxFreqToCompute = sampleRate / 2; // Nyquist 頻率
-
-  // 計算頻譜 - 使用 Goertzel 算法進行逐頻率計算
-  const spectrum = new Float32Array(Math.floor(maxFreqToCompute / freqResolution) + 1);
-
-  // 預處理：移除直流分量（DC offset）
-  let dcOffset = 0;
-  for (let i = 0; i < windowed.length; i++) {
-    dcOffset += windowed[i];
-  }
-  dcOffset /= windowed.length;
-
-  const dcRemovedData = new Float32Array(windowed.length);
-  for (let i = 0; i < windowed.length; i++) {
-    dcRemovedData[i] = windowed[i] - dcOffset;
-  }
-
-  // 計算每個頻率點的功率 (使用 Goertzel 算法)
-  for (let binIndex = 0; binIndex < spectrum.length; binIndex++) {
-    const freq = binIndex * freqResolution;
-    if (freq > maxFreqToCompute) break;
-
-    const energy = goertzelEnergy(dcRemovedData, freq, sampleRate);
-    // RMS 值
-    const rms = Math.sqrt(energy);
-    // 計算 Power Spectrum Density (PSD)
-    // PSD = (RMS^2) / (fftSize)
-    // 轉換為 dB：10 * log10(PSD)
-    const psd = (rms * rms) / fftSize;
-    spectrum[binIndex] = 10 * Math.log10(Math.max(psd, 1e-16));
-  }
-
-  return spectrum;
+  // 使用 WASM 版本，設 overlap = 0 表示單幀
+  return calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, 0);
 }
 
 /**
  * 從 Power Spectrum 頻譜數組中找到峰值頻率 (直接對應顯示的曲線)
+ * 2025: 已遷移至 WASM 實現拋物線插值
  */
 export function findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz) {
   if (!spectrum || spectrum.length === 0) return null;
 
-  const freqResolution = sampleRate / fftSize;
-  const minBinFreq = flowKHz * 1000;
-  const maxBinFreq = fhighKHz * 1000;
-  const minBin = Math.max(0, Math.floor(minBinFreq / freqResolution));
-  const maxBin = Math.min(spectrum.length - 1, Math.floor(maxBinFreq / freqResolution));
-
-  if (minBin >= maxBin) return null;
-
-  // 在頻譜中找到最大值
-  let peakBin = minBin;
-  let peakDb = spectrum[minBin];
-
-  for (let i = minBin + 1; i <= maxBin; i++) {
-    if (spectrum[i] > peakDb) {
-      peakDb = spectrum[i];
-      peakBin = i;
-    }
+  // 確保 WASM 已加載
+  if (!globalThis._spectrogramWasm || !globalThis._spectrogramWasm.find_peak_frequency_from_spectrum) {
+    console.error('[powerSpectrum] WASM module not loaded. Cannot find peak frequency.');
+    return null;
   }
 
-  // 如果峰值在中間，進行拋物線插值提高精度
-  if (peakBin > minBin && peakBin < maxBin) {
-    const db0 = spectrum[peakBin - 1];
-    const db1 = spectrum[peakBin];
-    const db2 = spectrum[peakBin + 1];
+  try {
+    const flowHz = flowKHz * 1000;
+    const fhighHz = fhighKHz * 1000;
 
-    // 拋物線頂點公式
-    const a = (db2 - 2 * db1 + db0) / 2;
-    if (Math.abs(a) > 1e-10) {
-      const binCorrection = (db0 - db2) / (4 * a);
-      const refinedBin = peakBin + binCorrection;
-      const peakFreqHz = refinedBin * freqResolution;
-      return peakFreqHz / 1000; // 轉換為 kHz
-    }
+    // 調用 WASM 函數找峰值
+    const peakFreqHz = globalThis._spectrogramWasm.find_peak_frequency_from_spectrum(
+      spectrum,
+      sampleRate,
+      fftSize,
+      flowHz,
+      fhighHz
+    );
+
+    return peakFreqHz > 0 ? peakFreqHz / 1000 : null; // 轉換為 kHz
+  } catch (err) {
+    console.error('[powerSpectrum] Error finding peak frequency via WASM:', err);
+    return null;
   }
-
-  // 沒有進行插值時，直接使用 bin 位置
-  const peakFreqHz = peakBin * freqResolution;
-  return peakFreqHz / 1000; // 轉換為 kHz
 }
 
 /**
@@ -805,123 +719,19 @@ export function drawPowerSpectrumSVG(svg, spectrum, sampleRate, flowKHz, fhighKH
   });
 }
 
-/**
- * Goertzel 算法 - 精確計算特定頻率的能量
- */
-function goertzelEnergy(audioData, freq, sampleRate) {
-  const w = (2 * Math.PI * freq) / sampleRate;
-  const coeff = 2 * Math.cos(w);
+// ============================================================
+// 2025 優化：以下計算函數已遷移至 Rust/WASM
+// ============================================================
 
-  let s0 = 0, s1 = 0, s2 = 0;
-
-  for (let i = 0; i < audioData.length; i++) {
-    s0 = audioData[i] + coeff * s1 - s2;
-    s2 = s1;
-    s1 = s0;
-  }
-
-  // 計算複數功率 (實部和虛部)
-  const realPart = s1 - s2 * Math.cos(w);
-  const imagPart = s2 * Math.sin(w);
-
-  const energy = realPart * realPart + imagPart * imagPart;
-  return energy;
-}
-
-/**
- * 應用窗口函數
- */
-function applyWindow(data, windowType) {
-  const n = data.length;
-  const windowed = new Float32Array(n);
-  let window;
-
-  switch (windowType.toLowerCase()) {
-    case 'blackman':
-      window = createBlackmanWindow(n);
-      break;
-    case 'hamming':
-      window = createHammingWindow(n);
-      break;
-    case 'hann':
-      window = createHannWindow(n);
-      break;
-    case 'triangular':
-      window = createTriangularWindow(n);
-      break;
-    case 'rectangular':
-      window = createRectangularWindow(n);
-      break;
-    case 'gauss':
-      window = createGaussWindow(n);
-      break;
-    default:
-      window = createHannWindow(n);
-  }
-
-  for (let i = 0; i < n; i++) {
-    windowed[i] = data[i] * window[i];
-  }
-
-  return windowed;
-}
-
-/**
- * 窗口函數生成器
- */
-function createHannWindow(n) {
-  const w = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    w[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)));
-  }
-  return w;
-}
-
-function createHammingWindow(n) {
-  const w = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    w[i] = 0.54 - 0.46 * Math.cos((2 * Math.PI * i) / (n - 1));
-  }
-  return w;
-}
-
-function createBlackmanWindow(n) {
-  const w = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const x = (2 * Math.PI * i) / (n - 1);
-    w[i] = 0.42 - 0.5 * Math.cos(x) + 0.08 * Math.cos(2 * x);
-  }
-  return w;
-}
-
-function createTriangularWindow(n) {
-  const w = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    w[i] = 1 - Math.abs((i - (n - 1) / 2) / ((n - 1) / 2));
-  }
-  return w;
-}
-
-function createRectangularWindow(n) {
-  return new Float32Array(n).fill(1);
-}
-
-function createGaussWindow(n) {
-  const w = new Float32Array(n);
-  const sigma = (n - 1) / 4;
-  for (let i = 0; i < n; i++) {
-    const x = i - (n - 1) / 2;
-    w[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
-  }
-  return w;
-}
-
-// 導出輔助函數供其他模塊使用
+// 導出輔助函數供其他模塊使用（現在只作為空保留，以防舊代碼直接調用）
 export function getApplyWindowFunction() {
-  return applyWindow;
+  console.warn('[powerSpectrum] getApplyWindowFunction() is deprecated. Window application is now done in WASM.');
+  return null;
 }
 
 export function getGoertzelEnergyFunction() {
-  return goertzelEnergy;
+  console.warn('[powerSpectrum] getGoertzelEnergyFunction() is deprecated. Energy calculation is now done in WASM.');
+  return null;
 }
+
 

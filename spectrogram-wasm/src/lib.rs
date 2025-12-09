@@ -967,3 +967,182 @@ impl WaveformEngine {
         self.channels.clear();
     }
 }
+
+// ============================================================
+// 獨立的 Power Spectrum 計算函數（2025 優化）
+// 用於 JavaScript powerSpectrum.js 的 WASM 加速版本
+// ============================================================
+
+/// 計算 Power Spectrum (使用 FFT，支持 Overlap)
+/// 
+/// # Arguments
+/// * `audio_data` - 音頻數據 (Float32Array)
+/// * `sample_rate` - 採樣率 (Hz)
+/// * `fft_size` - FFT 大小
+/// * `window_type` - 窗函數類型 (hann, hamming, blackman, gauss, rectangular, triangular)
+/// * `overlap_percent` - 重疊百分比 (0-99, 或 null/0 表示自動 75%)
+/// 
+/// # Returns
+/// 頻域功率譜 (dB 值)
+#[wasm_bindgen]
+pub fn compute_power_spectrum(
+    audio_data: &[f32],
+    sample_rate: u32,
+    fft_size: usize,
+    window_type: &str,
+    overlap_percent: Option<f32>,
+) -> Vec<f32> {
+    if audio_data.is_empty() {
+        return Vec::new();
+    }
+
+    // 確定 hop size (每幀之間的步長)
+    let overlap = overlap_percent.unwrap_or(0.0);
+    let hop_size = if overlap <= 0.0 || overlap >= 100.0 {
+        // Auto mode: 使用 75% overlap
+        (fft_size as f32 * 0.25) as usize
+    } else {
+        (fft_size as f32 * (1.0 - overlap / 100.0)) as usize
+    };
+    let hop_size = hop_size.max(1); // 至少 1
+
+    // 創建窗函數
+    let window = create_window(window_type, fft_size, 0.16);
+
+    // 計算頻率解析度
+    let freq_resolution = sample_rate as f32 / fft_size as f32;
+    let max_freq = sample_rate as f32 / 2.0; // Nyquist
+    let num_bins = ((max_freq / freq_resolution) as usize) + 1;
+
+    // 初始化累積能量譜
+    let mut spectrum = vec![0.0f32; num_bins];
+    let mut frame_count = 0usize;
+
+    // 創建 FFT 規劃器
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(fft_size);
+
+    // 分幀處理音頻
+    let mut offset = 0;
+    while offset + fft_size <= audio_data.len() {
+        // 提取幀
+        let frame = &audio_data[offset..offset + fft_size];
+
+        // 應用窗函數
+        let mut windowed = vec![0.0f32; fft_size];
+        for i in 0..fft_size {
+            windowed[i] = frame[i] * window[i];
+        }
+
+        // 移除 DC 偏移
+        let mut dc_sum = 0.0f32;
+        for &val in &windowed {
+            dc_sum += val;
+        }
+        let dc_offset = dc_sum / fft_size as f32;
+        for val in &mut windowed {
+            *val -= dc_offset;
+        }
+
+        // 準備 FFT 輸入 (Complex 數據)
+        let mut fft_input: Vec<Complex<f32>> = windowed
+            .iter()
+            .map(|&v| Complex::new(v, 0.0))
+            .collect();
+
+        // 執行 FFT
+        fft.process(&mut fft_input);
+
+        // 提取功率譜並累積
+        for bin in 0..num_bins {
+            if bin < fft_input.len() {
+                let magnitude = fft_input[bin].norm();
+                let power = magnitude * magnitude;
+                spectrum[bin] += power;
+            }
+        }
+
+        frame_count += 1;
+        offset += hop_size;
+    }
+
+    // 如果幀數為 0，返回空
+    if frame_count == 0 {
+        return Vec::new();
+    }
+
+    // 計算平均能量並轉換為 dB
+    let frame_count_f = frame_count as f32;
+    for i in 0..spectrum.len() {
+        let avg_power = spectrum[i] / frame_count_f;
+        // RMS
+        let rms = avg_power.sqrt();
+        // PSD = (RMS^2) / fft_size
+        let psd = (rms * rms) / fft_size as f32;
+        // 轉換為 dB
+        spectrum[i] = 10.0 * psd.max(1e-16).log10();
+    }
+
+    spectrum
+}
+
+/// 從 Power Spectrum 中找到峰值頻率
+/// 
+/// # Arguments
+/// * `spectrum` - Power Spectrum (dB 值)
+/// * `sample_rate` - 採樣率
+/// * `fft_size` - FFT 大小
+/// * `flow_hz` - 最低頻率 (Hz)
+/// * `fhigh_hz` - 最高頻率 (Hz)
+/// 
+/// # Returns
+/// 峰值頻率 (Hz)，如果未找到返回 0
+#[wasm_bindgen]
+pub fn find_peak_frequency_from_spectrum(
+    spectrum: &[f32],
+    sample_rate: u32,
+    fft_size: usize,
+    flow_hz: f32,
+    fhigh_hz: f32,
+) -> f32 {
+    if spectrum.is_empty() {
+        return 0.0;
+    }
+
+    let freq_resolution = sample_rate as f32 / fft_size as f32;
+    let min_bin = ((flow_hz / freq_resolution) as usize).max(0);
+    let max_bin = ((fhigh_hz / freq_resolution) as usize)
+        .min(spectrum.len().saturating_sub(1));
+
+    if min_bin >= max_bin {
+        return 0.0;
+    }
+
+    // 找到最大值 bin
+    let mut peak_bin = min_bin;
+    let mut peak_db = spectrum[min_bin];
+
+    for i in (min_bin + 1)..=max_bin {
+        if spectrum[i] > peak_db {
+            peak_db = spectrum[i];
+            peak_bin = i;
+        }
+    }
+
+    // 如果峰值在中間，進行拋物線插值
+    if peak_bin > min_bin && peak_bin < max_bin {
+        let db0 = spectrum[peak_bin - 1];
+        let db1 = spectrum[peak_bin];
+        let db2 = spectrum[peak_bin + 1];
+
+        let a = (db2 - 2.0 * db1 + db0) / 2.0;
+        if a.abs() > 1e-10 {
+            let bin_correction = (db0 - db2) / (4.0 * a);
+            let refined_bin = peak_bin as f32 + bin_correction;
+            return refined_bin * freq_resolution;
+        }
+    }
+
+    // 無插值，直接返回
+    peak_bin as f32 * freq_resolution
+}
