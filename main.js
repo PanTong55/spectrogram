@@ -20,7 +20,6 @@ setPeakMode,
 setPeakThreshold,
 getPeakThreshold,
 setSmoothMode,
-setSmoothStrength,
 } from './modules/wsManager.js';
 
 import { initZoomControls } from './modules/zoomControl.js';
@@ -548,39 +547,14 @@ freqGrid.style.display = toggleGridSwitch.checked ? 'block' : 'none';
 
 // Smooth rendering toggle
 const toggleSmoothSwitch = document.getElementById('toggleSmoothSwitch');
-const smoothStrengthControl = document.getElementById('smoothStrengthControl');
-const smoothStrengthSlider = document.getElementById('smoothStrengthSlider');
-const smoothStrengthVal = document.getElementById('smoothStrengthVal');
 
 if (toggleSmoothSwitch) {
-  // Initialize: default to false (pixelated mode)
-  toggleSmoothSwitch.checked = false;
-  smoothStrengthControl.style.display = 'none';
+  // Initialize: default to true (smooth mode)
+  toggleSmoothSwitch.checked = true;
   
-  // Listen for switch changes
+  // Listen for switch changes and call setSmoothMode
   toggleSmoothSwitch.addEventListener('change', (e) => {
-    const isChecked = e.target.checked;
-    // Toggle strength control visibility
-    smoothStrengthControl.style.display = isChecked ? 'flex' : 'none';
-    // Apply smooth mode to plugin
-    setSmoothMode(isChecked);
-    // If enabling smooth mode, apply current strength
-    if (isChecked && smoothStrengthSlider) {
-      const plugin = getPlugin();
-      if (plugin && plugin.setSmoothStrength) {
-        plugin.setSmoothStrength(parseFloat(smoothStrengthSlider.value));
-      }
-    }
-  });
-}
-
-// Smooth strength slider
-if (smoothStrengthSlider) {
-  smoothStrengthSlider.addEventListener('input', (e) => {
-    const value = parseFloat(e.target.value);
-    smoothStrengthVal.textContent = value.toFixed(1);
-    // Update plugin strength through wsManager
-    setSmoothStrength(value);
+    setSmoothMode(e.target.checked);
   });
 }
 

@@ -10,8 +10,7 @@ let currentFftSize = 1024;
 let currentWindowType = 'hann';
 let currentPeakMode = false;
 let currentPeakThreshold = 0.4;
-let currentSmoothMode = false;
-let currentSmoothStrength = 0.5;
+let currentSmoothMode = true;
 
 export function initWavesurfer({
   container,
@@ -118,12 +117,9 @@ export function replacePlugin(
 
   ws.registerPlugin(plugin);
 
-  // Apply saved smooth mode and strength to the newly created plugin
+  // Apply saved smooth mode to the newly created plugin
   if (plugin && plugin.setSmoothMode) {
     plugin.setSmoothMode(currentSmoothMode);
-  }
-  if (plugin && plugin.setSmoothStrength) {
-    plugin.setSmoothStrength(currentSmoothStrength);
   }
 
   try {
@@ -193,13 +189,6 @@ export function setSmoothMode(isSmooth) {
   currentSmoothMode = isSmooth;
   if (plugin && plugin.setSmoothMode) {
     plugin.setSmoothMode(isSmooth);
-  }
-}
-
-export function setSmoothStrength(value) {
-  currentSmoothStrength = parseFloat(value);
-  if (plugin && plugin.setSmoothStrength) {
-    plugin.setSmoothStrength(currentSmoothStrength);
   }
 }
 
