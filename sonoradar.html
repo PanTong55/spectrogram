@@ -15,14 +15,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-  <!-- High-Tech Black-Yellow Loading Overlay -->
-  <div id="loading-overlay" style="display: flex;">
-    <div class="spinner-energy-loops black-yellow">
-      <div class="loop loop-a"></div>
-      <div class="loop loop-b"></div>
-    </div>
-    <div class="loading-text">DATA STREAMING...</div>
-  </div>
 
   <div id="layout">
     <!-- Sidebar -->
@@ -323,6 +315,9 @@
               <i class="fas fa-cloud-arrow-up drop-icon"></i>
               <div>Drop WAV file(s) or folder here</div>
             </div>
+            </div>
+            <div id="loading-overlay" class="loading-overlay">
+              <div class="spinner"></div>
             </div>
             <div id="upload-overlay" class="upload-overlay">
               <div class="spinner"></div>

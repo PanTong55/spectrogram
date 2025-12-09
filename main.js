@@ -437,25 +437,6 @@ function initLoadingOverlayTheme() {
 // Initialize on load
 initLoadingOverlayTheme();
 
-/** 顯示載入遮罩 */
-function showLoadingOverlay() {
-  if (loadingOverlay) {
-    loadingOverlay.style.display = 'flex';
-    loadingOverlay.style.opacity = '1';
-  }
-}
-
-/** 隱藏載入遮罩 (使用 fade-out 過渡效果) */
-function hideLoadingOverlay() {
-  if (loadingOverlay) {
-    loadingOverlay.style.opacity = '0';
-    // 等待過渡動畫完成後再徹底隱藏
-    setTimeout(() => {
-      loadingOverlay.style.display = 'none';
-    }, 500); // 這裡的 500ms 應與 CSS 中的 transition 時間匹配
-  }
-}
-
 function showDropOverlay() {
 overlay.style.display = 'flex';
 overlay.style.pointerEvents = 'auto';
@@ -497,7 +478,7 @@ onBeforeLoad: () => {
     demoFetchController = null;
   }
   if (uploadOverlay.style.display !== 'flex') {
-    showLoadingOverlay();
+    loadingOverlay.style.display = 'flex';
   }
   // ✅ 在加載新文件前重置 container 寬度，避免先前 zoom 的殘留
   container.style.width = '100%';
@@ -943,14 +924,14 @@ sidebarControl.refresh(file.name);
 },
 onBeforeLoad: () => {
 if (uploadOverlay.style.display !== 'flex') {
-showLoadingOverlay();
+loadingOverlay.style.display = 'flex';
 }
 freqHoverControl?.hideHover();
 freqHoverControl?.clearSelections();
 },
   onAfterLoad: () => {
     if (uploadOverlay.style.display !== 'flex') {
-      hideLoadingOverlay();
+      loadingOverlay.style.display = 'none';
     }
     freqHoverControl?.refreshHover();
     autoIdControl?.updateMarkers();
@@ -983,8 +964,6 @@ getWavesurfer().on('ready', () => {
       freqHoverControl?.refreshHover();
       autoIdControl?.updateMarkers();
       updateSpectrogramSettingsText();
-      // Hide loading overlay once spectrogram is ready
-      hideLoadingOverlay();
     });
   });
 
