@@ -22,11 +22,15 @@ export function findOptimalOverlap(audioData, sampleRate, fftSize, windowType) {
  * 2025: 完全由 Rust/WASM 實現，JavaScript 僅作為包裝器
  */
 export function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, overlap = 'auto') {
-  if (!audioData || audioData.length === 0) return null;
+  if (!audioData || audioData.length === 0) {
+    console.warn('[powerSpectrum] calculatePowerSpectrumWithOverlap - No audio data provided');
+    return null;
+  }
 
   // 確保 WASM 已加載
   if (!globalThis._spectrogramWasm || !globalThis._spectrogramWasm.compute_power_spectrum) {
-    console.error('[powerSpectrum] WASM module not loaded. Cannot compute power spectrum.');
+    console.error('[powerSpectrum] ❌ WASM module not loaded. Cannot compute power spectrum.');
+    console.warn('[powerSpectrum] globalThis._spectrogramWasm:', globalThis._spectrogramWasm);
     return null;
   }
 
@@ -44,6 +48,15 @@ export function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize
     }
   }
 
+  const startTime = performance.now();
+  
+  console.log('[powerSpectrum] 📊 Computing Power Spectrum with WASM FFT:');
+  console.log(`  Audio samples: ${audioData.length}`);
+  console.log(`  Sample rate: ${sampleRate} Hz`);
+  console.log(`  FFT size: ${fftSize}`);
+  console.log(`  Window type: ${windowType.toLowerCase()}`);
+  console.log(`  Overlap: ${overlapPercent}%`);
+
   try {
     // 調用 WASM 函數計算 Power Spectrum
     const spectrum = globalThis._spectrogramWasm.compute_power_spectrum(
@@ -54,9 +67,28 @@ export function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize
       overlapPercent
     );
 
-    return spectrum && spectrum.length > 0 ? new Float32Array(spectrum) : null;
+    const computeTime = (performance.now() - startTime).toFixed(2);
+    
+    if (spectrum && spectrum.length > 0) {
+      const spectrumArray = new Float32Array(spectrum);
+      const minDb = Math.min(...spectrumArray).toFixed(2);
+      const maxDb = Math.max(...spectrumArray).toFixed(2);
+      const meanDb = (spectrumArray.reduce((a, b) => a + b, 0) / spectrumArray.length).toFixed(2);
+      
+      console.log(`✅ Power Spectrum computed successfully (${computeTime}ms):`);
+      console.log(`  Spectrum bins: ${spectrumArray.length}`);
+      console.log(`  dB range: ${minDb} to ${maxDb} dB`);
+      console.log(`  Mean dB: ${meanDb}`);
+      
+      return spectrumArray;
+    } else {
+      console.warn('[powerSpectrum] ⚠️  Empty spectrum returned from WASM');
+      return null;
+    }
   } catch (err) {
-    console.error('[powerSpectrum] Error computing spectrum via WASM:', err);
+    const computeTime = (performance.now() - startTime).toFixed(2);
+    console.error(`[powerSpectrum] ❌ Error computing spectrum via WASM (${computeTime}ms):`, err);
+    console.error('[powerSpectrum] Stack trace:', err.stack);
     return null;
   }
 }
@@ -66,8 +98,12 @@ export function calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize
  * 2025: 已遷移至 WASM
  */
 export function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowType) {
-  if (!audioData || audioData.length === 0) return null;
+  if (!audioData || audioData.length === 0) {
+    console.warn('[powerSpectrum] calculatePowerSpectrum - No audio data provided');
+    return null;
+  }
 
+  console.log('[powerSpectrum] 📊 Computing single-frame Power Spectrum (no overlap)');
   // 使用 WASM 版本，設 overlap = 0 表示單幀
   return calculatePowerSpectrumWithOverlap(audioData, sampleRate, fftSize, windowType, 0);
 }
@@ -77,13 +113,25 @@ export function calculatePowerSpectrum(audioData, sampleRate, fftSize, windowTyp
  * 2025: 已遷移至 WASM 實現拋物線插值
  */
 export function findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flowKHz, fhighKHz) {
-  if (!spectrum || spectrum.length === 0) return null;
+  if (!spectrum || spectrum.length === 0) {
+    console.warn('[powerSpectrum] findPeakFrequencyFromSpectrum - No spectrum data provided');
+    return null;
+  }
 
   // 確保 WASM 已加載
   if (!globalThis._spectrogramWasm || !globalThis._spectrogramWasm.find_peak_frequency_from_spectrum) {
-    console.error('[powerSpectrum] WASM module not loaded. Cannot find peak frequency.');
+    console.error('[powerSpectrum] ❌ WASM module not loaded. Cannot find peak frequency.');
+    console.warn('[powerSpectrum] globalThis._spectrogramWasm:', globalThis._spectrogramWasm);
     return null;
   }
+
+  const startTime = performance.now();
+  
+  console.log('[powerSpectrum] 🔍 Finding peak frequency from spectrum:');
+  console.log(`  Spectrum bins: ${spectrum.length}`);
+  console.log(`  Frequency range: ${flowKHz.toFixed(2)} - ${fhighKHz.toFixed(2)} kHz`);
+  console.log(`  Sample rate: ${sampleRate} Hz`);
+  console.log(`  FFT size: ${fftSize}`);
 
   try {
     const flowHz = flowKHz * 1000;
@@ -98,9 +146,20 @@ export function findPeakFrequencyFromSpectrum(spectrum, sampleRate, fftSize, flo
       fhighHz
     );
 
-    return peakFreqHz > 0 ? peakFreqHz / 1000 : null; // 轉換為 kHz
+    const searchTime = (performance.now() - startTime).toFixed(2);
+    
+    if (peakFreqHz > 0) {
+      const peakFreqKHz = peakFreqHz / 1000;
+      console.log(`✅ Peak frequency found (${searchTime}ms): ${peakFreqKHz.toFixed(3)} kHz`);
+      return peakFreqKHz;
+    } else {
+      console.warn(`[powerSpectrum] ⚠️  No peak frequency found in range [${flowKHz.toFixed(2)}, ${fhighKHz.toFixed(2)}] kHz`);
+      return null;
+    }
   } catch (err) {
-    console.error('[powerSpectrum] Error finding peak frequency via WASM:', err);
+    const searchTime = (performance.now() - startTime).toFixed(2);
+    console.error(`[powerSpectrum] ❌ Error finding peak frequency via WASM (${searchTime}ms):`, err);
+    console.error('[powerSpectrum] Stack trace:', err.stack);
     return null;
   }
 }

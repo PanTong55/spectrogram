@@ -211,6 +211,13 @@ export function showCallAnalysisPopup({
     }
 
     // 計算 Power Spectrum（使用 Power Spectrum 配置）
+    console.log('[callAnalysisPopup] 📈 Starting Power Spectrum calculation...');
+    console.log(`  Configuration:`, {
+      fftSize: powerSpectrumConfig.fftSize,
+      windowType: powerSpectrumConfig.windowType,
+      overlap: overlapValue
+    });
+    
     const spectrum = calculatePowerSpectrumWithOverlap(
       audioData,
       sampleRate,
@@ -220,6 +227,8 @@ export function showCallAnalysisPopup({
     );
 
     // 計算 Peak Frequency - 直接從頻譜中找到峰值 (與顯示的曲線對應)
+    console.log('[callAnalysisPopup] 🔍 Searching for peak frequency...');
+    
     const peakFreq = findPeakFrequencyFromSpectrum(
       spectrum,
       sampleRate,
@@ -248,6 +257,11 @@ export function showCallAnalysisPopup({
     }
 
     // 繪製 Power Spectrum
+    console.log('[callAnalysisPopup] 🎨 Drawing Power Spectrum SVG:');
+    console.log(`  SVG container: ${svg ? 'Valid' : 'Invalid'}`);
+    console.log(`  Spectrum data: ${spectrum ? `${spectrum.length} bins` : 'None'}`);
+    console.log(`  Peak frequency: ${peakFreq ? peakFreq.toFixed(3) + ' kHz' : 'Not found'}`);
+    
     drawPowerSpectrumSVG(
       svg,
       spectrum,
@@ -257,6 +271,8 @@ export function showCallAnalysisPopup({
       powerSpectrumConfig.fftSize,
       peakFreq
     );
+    
+    console.log('✅ Power Spectrum visualization complete');
   };
 
   // 根據 peakFreq 計算最佳的高通濾波器頻率（Auto Mode 使用）
