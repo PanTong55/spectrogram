@@ -894,6 +894,16 @@ class h extends s {
             }
         }
     }
+
+    // [NEW] 設置平滑渲染模式
+    setSmoothMode(isSmooth) {
+        this.smoothMode = isSmooth;
+        // 如果有緩存的數據，立即重繪
+        if (this.lastRenderData) {
+            this.drawSpectrogram(this.lastRenderData);
+        }
+    }
+
     drawSpectrogram(t) {
         // 保存最後的渲染數據，用於色彩映射切換時快速重新渲染
         this.lastRenderData = t;
@@ -915,6 +925,12 @@ class h extends s {
             return;
         }
 
+        // [NEW] 根據 Smooth Mode 設定 Canvas 的平滑屬性
+        // 這會啟用 GPU 的雙線性插值，讓邊緣變平滑
+        const isSmooth = this.smoothMode || false;
+        canvasCtx.imageSmoothingEnabled = isSmooth;
+        canvasCtx.imageSmoothingQuality = isSmooth ? 'high' : 'low';
+
         // 使用 WASM 渲染每個通道
         for (let channelIdx = 0; channelIdx < t.length; channelIdx++) {
             const channelData = t[channelIdx];  // Uint8Array with frame spectrum data
@@ -927,28 +943,65 @@ class h extends s {
             const canvasWidth = this.getWidth();
             const canvasHeight = this.height;
             
-            // 調用 WASM 進行完整的渲染 (FFT 已在 getFrequencies 中完成，這裡直接使用頻譜數據)
-            // 注意: channelData 已經是 u8 量化的頻譜，需要在 WASM 中進行重採樣和色彩化
-            // 但 compute_spectrogram_image 期望的是原始音頻數據
-            // 因此我們需要一個新方法: compute_spectrogram_from_u8_frames
+            // ============================================================
+            // 核心差異：Smooth Mode vs Pixelated Mode
+            // ============================================================
+            let renderPixels;
             
-            // 臨時方案: 保持使用 JS 重採樣邏輯，但色彩化在 WASM 中完成
-            const resampled = this.resample(channelData);  // 仍然使用 JS resample
+            if (isSmooth) {
+                // [Smooth Mode]: 
+                // 1. 跳過 CPU resample，直接使用原始 FFT 數據 (channelData)
+                // 2. 這提高了效率，因為不需要執行昂貴的重採樣算法
+                // 3. 繪製時會由 drawImage 自動進行拉伸和平滑
+                renderPixels = channelData;
+            } else {
+                // [Default Mode]: 
+                // 1. 使用現有的 resample 函數將數據調整為屏幕寬度
+                // 2. 這會產生銳利的像素感 (一格一格)
+                renderPixels = this.resample(channelData);
+            }
             
+            // 獲取圖像尺寸
+            // 在 Smooth Mode 下，width 是原始 FFT 幀數；在 Default Mode 下，width 是 canvasWidth
+            const imgWidth = Array.isArray(renderPixels) && renderPixels[0] 
+                ? renderPixels.length 
+                : renderPixels.length;
+            const imgHeight = Array.isArray(renderPixels) && renderPixels[0]
+                ? renderPixels[0].length
+                : 1;
+
             // 創建 ImageData
-            const imgData = new ImageData(canvasWidth, resampled[0].length);
+            const imgData = new ImageData(imgWidth, imgHeight);
             
             // 填充 ImageData (使用緩存的色彩映射)
             if (this._activeColorMapUint && this._activeColorMapUint.length === 1024) {
                 // 使用處理後的活躍色彩映射 (已套用亮度/對比度/增益)
-                for (let x = 0; x < resampled.length; x++) {
-                    for (let y = 0; y < resampled[x].length; y++) {
-                        let intensity = resampled[x][y];
+                if (Array.isArray(renderPixels) && renderPixels[0]) {
+                    // 2D array case
+                    for (let x = 0; x < renderPixels.length; x++) {
+                        for (let y = 0; y < renderPixels[x].length; y++) {
+                            let intensity = renderPixels[x][y];
+                            if (intensity < 0) intensity = 0;
+                            else if (intensity > 255) intensity = 255;
+                            
+                            const cmapIdx = intensity * 4;
+                            const pixelIdx = (((renderPixels[x].length - 1 - y) * imgWidth + x)) * 4;
+                            
+                            imgData.data[pixelIdx] = this._activeColorMapUint[cmapIdx];
+                            imgData.data[pixelIdx + 1] = this._activeColorMapUint[cmapIdx + 1];
+                            imgData.data[pixelIdx + 2] = this._activeColorMapUint[cmapIdx + 2];
+                            imgData.data[pixelIdx + 3] = this._activeColorMapUint[cmapIdx + 3];
+                        }
+                    }
+                } else {
+                    // 1D array case (Smooth Mode with Uint8Array)
+                    for (let i = 0; i < renderPixels.length; i++) {
+                        let intensity = renderPixels[i];
                         if (intensity < 0) intensity = 0;
                         else if (intensity > 255) intensity = 255;
                         
                         const cmapIdx = intensity * 4;
-                        const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
+                        const pixelIdx = i * 4;
                         
                         imgData.data[pixelIdx] = this._activeColorMapUint[cmapIdx];
                         imgData.data[pixelIdx + 1] = this._activeColorMapUint[cmapIdx + 1];
@@ -958,13 +1011,24 @@ class h extends s {
                 }
             } else {
                 // 備用方法: 直接使用灰度值 (如果色彩映射未初始化)
-                for (let x = 0; x < resampled.length; x++) {
-                    for (let y = 0; y < resampled[x].length; y++) {
-                        let intensity = resampled[x][y];
-                        if (intensity < 0) intensity = 0;
-                        else if (intensity > 255) intensity = 255;
-                        
-                        const pixelIdx = (((resampled[x].length - 1 - y) * canvasWidth + x)) * 4;
+                if (Array.isArray(renderPixels) && renderPixels[0]) {
+                    for (let x = 0; x < renderPixels.length; x++) {
+                        for (let y = 0; y < renderPixels[x].length; y++) {
+                            let intensity = renderPixels[x][y];
+                            if (intensity < 0) intensity = 0;
+                            else if (intensity > 255) intensity = 255;
+                            
+                            const pixelIdx = (((renderPixels[x].length - 1 - y) * imgWidth + x)) * 4;
+                            imgData.data[pixelIdx] = intensity;
+                            imgData.data[pixelIdx + 1] = intensity;
+                            imgData.data[pixelIdx + 2] = intensity;
+                            imgData.data[pixelIdx + 3] = 255;
+                        }
+                    }
+                } else {
+                    for (let i = 0; i < renderPixels.length; i++) {
+                        let intensity = renderPixels[i];
+                        const pixelIdx = i * 4;
                         imgData.data[pixelIdx] = intensity;
                         imgData.data[pixelIdx + 1] = intensity;
                         imgData.data[pixelIdx + 2] = intensity;
@@ -981,19 +1045,21 @@ class h extends s {
             const f = this.hzToScale(freqMax) / this.hzToScale(sampleRate);
             const p = Math.min(1, f);
             
-            const sourceHeight = Math.round(resampled[0].length * (p - u));
-            const sourceY = Math.round(resampled[0].length * (1 - p));
+            const sourceHeight = Math.round(imgHeight * (p - u));
+            const sourceY = Math.round(imgHeight * (1 - p));
             
-            createImageBitmap(imgData, 0, sourceY, canvasWidth, sourceHeight).then((bitmap => {
+            createImageBitmap(imgData, 0, sourceY, imgWidth, sourceHeight).then((bitmap => {
                 const drawY = this.height * (channelIdx + 1 - p / f);
                 const drawH = this.height * p / f;
                 
-                // 1. Draw the Spectrogram Bitmap
+                // 繪製 Bitmap
+                // Canvas 會自動處理縮放：
+                // 如果是 Smooth Mode: imgWidth (原始幀數) -> canvasWidth (屏幕寬度) [GPU 插值]
+                // 如果是 Default Mode: imgWidth (屏幕寬度) -> canvasWidth (屏幕寬度) [1:1 繪製]
                 canvasCtx.drawImage(bitmap, 0, drawY, canvasWidth, drawH);
 
-                // 2. Overlay Peak Mode Dots (if active)
-                // This ensures peaks are drawn on top of the new color map system
-                // Added "this.options &&" check to prevent crash if plugin destroyed during async render
+                // Peak Mode 疊加層 (保持不變)
+                // 因為 Peak 數據是基於原始 FFT bin 的，所以此處邏輯無需更改
                 if (this.options && this.options.peakMode && this.peakBandArrayPerChannel && this.peakBandArrayPerChannel[channelIdx]) {
                     const peaks = this.peakBandArrayPerChannel[channelIdx];
                     
@@ -1006,7 +1072,6 @@ class h extends s {
                     const nyquistHz = this.buffer.sampleRate / 2;
                     
                     // Total Bins in the underlying data (0 to Nyquist)
-                    // In Linear mode, peak indices are 0..fftSamples/2
                     const totalBins = (this.scale !== "linear" && this._wasmEngine.get_num_filters() > 0) 
                         ? this._wasmEngine.get_num_filters() 
                         : (this.fftSamples / 2);
@@ -1027,16 +1092,12 @@ class h extends s {
                                 peakFreqHz = (peakData.bin / totalBins) * nyquistHz;
                             } else {
                                 // Non-linear fallback: Assume bins map to view range (simplified)
-                                // or use filter bank logic if precise mapping needed.
-                                // For Bat analysis (Linear), the above block is critical.
                                 peakFreqHz = viewMinHz + (peakData.bin / totalBins) * viewRangeHz;
                             }
                             
                             // Only draw if within the current visible frequency range
                             if (peakFreqHz >= viewMinHz && peakFreqHz <= viewMaxHz) {
                                 // Map Hz to Canvas Y (0Hz is Bottom, MaxHz is Top)
-                                // drawY corresponds to viewMaxHz (Top of strip)
-                                // drawY + drawH corresponds to viewMinHz (Bottom of strip)
                                 const yFraction = (peakFreqHz - viewMinHz) / viewRangeHz;
                                 const yPos = drawY + drawH - (yFraction * drawH);
                                 
