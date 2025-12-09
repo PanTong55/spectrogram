@@ -497,6 +497,36 @@ export class WaveformEngine {
 if (Symbol.dispose) WaveformEngine.prototype[Symbol.dispose] = WaveformEngine.prototype.free;
 
 /**
+ * 計算 Power Spectrum (使用 FFT，支持 Overlap)
+ *
+ * # Arguments
+ * * `audio_data` - 音頻數據 (Float32Array)
+ * * `sample_rate` - 採樣率 (Hz)
+ * * `fft_size` - FFT 大小
+ * * `window_type` - 窗函數類型 (hann, hamming, blackman, gauss, rectangular, triangular)
+ * * `overlap_percent` - 重疊百分比 (0-99, 或 null/0 表示自動 75%)
+ *
+ * # Returns
+ * 頻域功率譜 (dB 值)
+ * @param {Float32Array} audio_data
+ * @param {number} sample_rate
+ * @param {number} fft_size
+ * @param {string} window_type
+ * @param {number | null} [overlap_percent]
+ * @returns {Float32Array}
+ */
+export function compute_power_spectrum(audio_data, sample_rate, fft_size, window_type, overlap_percent) {
+    const ptr0 = passArrayF32ToWasm0(audio_data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(window_type, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.compute_power_spectrum(ptr0, len0, sample_rate, fft_size, ptr1, len1, isLikeNone(overlap_percent) ? 0x100000001 : Math.fround(overlap_percent));
+    var v3 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+    return v3;
+}
+
+/**
  * 計算波形峰值用於可視化
  *
  * 該函數對音頻通道進行下采樣，將其縮放為指定數量的峰值點。
@@ -540,6 +570,32 @@ export function find_global_max(channel_data) {
     const ptr0 = passArrayF32ToWasm0(channel_data, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.find_global_max(ptr0, len0);
+    return ret;
+}
+
+/**
+ * 從 Power Spectrum 中找到峰值頻率
+ *
+ * # Arguments
+ * * `spectrum` - Power Spectrum (dB 值)
+ * * `sample_rate` - 採樣率
+ * * `fft_size` - FFT 大小
+ * * `flow_hz` - 最低頻率 (Hz)
+ * * `fhigh_hz` - 最高頻率 (Hz)
+ *
+ * # Returns
+ * 峰值頻率 (Hz)，如果未找到返回 0
+ * @param {Float32Array} spectrum
+ * @param {number} sample_rate
+ * @param {number} fft_size
+ * @param {number} flow_hz
+ * @param {number} fhigh_hz
+ * @returns {number}
+ */
+export function find_peak_frequency_from_spectrum(spectrum, sample_rate, fft_size, flow_hz, fhigh_hz) {
+    const ptr0 = passArrayF32ToWasm0(spectrum, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.find_peak_frequency_from_spectrum(ptr0, len0, sample_rate, fft_size, flow_hz, fhigh_hz);
     return ret;
 }
 
