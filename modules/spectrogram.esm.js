@@ -927,7 +927,7 @@ class h extends s {
 
         // [NEW] 根據 Smooth Mode 設定 Canvas 的平滑屬性
         // 這會啟用 GPU 的雙線性插值，讓邊緣變平滑
-        const isSmooth = this.smoothMode || true;
+        const isSmooth = this.smoothMode || false;
         canvasCtx.imageSmoothingEnabled = isSmooth;
         canvasCtx.imageSmoothingQuality = isSmooth ? 'high' : 'low';
 

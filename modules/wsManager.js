@@ -10,7 +10,7 @@ let currentFftSize = 1024;
 let currentWindowType = 'hann';
 let currentPeakMode = false;
 let currentPeakThreshold = 0.4;
-let currentSmoothMode = false;
+let currentSmoothMode = true;
 
 export function initWavesurfer({
   container,
